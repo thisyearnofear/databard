@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { EpisodePlayer } from "@/components/EpisodePlayer";
+import type { Episode, ScriptSegment } from "@/lib/types";
 
 export default function Home() {
   const [omUrl, setOmUrl] = useState("http://localhost:8585");
@@ -8,6 +10,9 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [schemas, setSchemas] = useState<string[]>([]);
   const [status, setStatus] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [episode, setEpisode] = useState<Episode | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   async function handleConnect() {
     setStatus("Connecting…");
@@ -26,18 +31,55 @@ export default function Home() {
     }
   }
 
-  async function handleGenerate(schema: string) {
-    setStatus(`Generating episode for ${schema}…`);
-    // TODO: wire up generation pipeline
-    setStatus("Generation not yet implemented");
+  async function handleGenerate(schemaFqn: string) {
+    setGenerating(true);
+    setStatus(`Generating episode for ${schemaFqn}…`);
+
+    try {
+      const res = await fetch("/api/synthesize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: omUrl, token, schemaFqn }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        setStatus(`Error: ${err.error}`);
+        return;
+      }
+
+      const script: ScriptSegment[] = JSON.parse(
+        atob(res.headers.get("X-Episode-Script") ?? "W10=")
+      );
+      const tables = Number(res.headers.get("X-Episode-Tables") ?? "0");
+      const testsTotal = Number(res.headers.get("X-Episode-Tests-Total") ?? "0");
+      const testsFailed = Number(res.headers.get("X-Episode-Tests-Failed") ?? "0");
+      const schemaName = schemaFqn.split(".").pop() ?? schemaFqn;
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      setEpisode({
+        schemaFqn,
+        schemaName,
+        tableCount: tables,
+        qualitySummary: { passed: testsTotal - testsFailed, failed: testsFailed, total: testsTotal },
+        script,
+        audioUrl: url,
+      });
+      setAudioUrl(url);
+      setStatus("Episode ready — hit play!");
+    } catch (e: unknown) {
+      setStatus(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-8">
       <div className="text-center">
-        <h1 className="text-5xl font-bold tracking-tight mb-2">
-          🎙️ DataBard
-        </h1>
+        <h1 className="text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
         <p className="text-[var(--text-muted)] text-lg">
           Podcast-style audio docs for your data catalog
         </p>
@@ -66,6 +108,8 @@ export default function Home() {
             Connect
           </button>
         </div>
+      ) : episode && audioUrl ? (
+        <EpisodePlayer episode={episode} audioUrl={audioUrl} />
       ) : (
         <div className="w-full max-w-2xl flex flex-col gap-4">
           <h2 className="text-xl font-semibold">Select a schema</h2>
@@ -74,7 +118,8 @@ export default function Home() {
               <button
                 key={s}
                 onClick={() => handleGenerate(s)}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer"
+                disabled={generating}
+                className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
               >
                 {s}
               </button>
