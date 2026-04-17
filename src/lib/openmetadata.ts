@@ -5,11 +5,19 @@
 import type { OMConnection, SchemaMeta, TableMeta, ColumnMeta, QualityTest, LineageEdge } from "./types";
 
 async function omFetch<T>(conn: OMConnection, path: string): Promise<T | null> {
-  const res = await fetch(`${conn.url}${path}`, {
-    headers: { Authorization: `Bearer ${conn.token}` },
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<T>;
+  try {
+    const res = await fetch(`${conn.url}${path}`, {
+      headers: { Authorization: `Bearer ${conn.token}` },
+    });
+    if (!res.ok) {
+      console.error(`OpenMetadata API error: ${res.status} ${res.statusText} for ${path}`);
+      return null;
+    }
+    return res.json() as Promise<T>;
+  } catch (error) {
+    console.error(`OpenMetadata fetch failed for ${path}:`, error);
+    return null;
+  }
 }
 
 interface OMListResponse<T> { data: T[]; paging?: { total: number } }
@@ -29,10 +37,12 @@ interface OMLineageResponse { downstreamEdges?: { toEntity: { fqn: string } }[];
 /** List all schema FQNs — used by /api/connect */
 export async function listSchemas(conn: OMConnection): Promise<string[]> {
   const dbs = await omFetch<OMListResponse<OMDatabase>>(conn, "/api/v1/databases?limit=100");
-  if (!dbs) return [];
+  if (!dbs || !dbs.data) {
+    throw new Error("Failed to fetch databases from OpenMetadata");
+  }
 
   const schemas: string[] = [];
-  for (const db of dbs.data ?? []) {
+  for (const db of dbs.data) {
     const s = await omFetch<OMListResponse<OMSchema>>(
       conn,
       `/api/v1/databaseSchemas?database=${db.fullyQualifiedName}&limit=100`

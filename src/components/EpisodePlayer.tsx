@@ -12,6 +12,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // Web Audio API setup for waveform
   useEffect(() => {
@@ -62,14 +63,33 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) { audio.pause(); } else { audio.play(); }
-    setPlaying(!playing);
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.play().catch(err => console.error("Playback failed:", err));
+      setPlaying(true);
+    }
   }
 
   function seek(e: React.ChangeEvent<HTMLInputElement>) {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = Number(e.target.value);
+    const newTime = Number(e.target.value);
+    audio.currentTime = newTime;
+    setCurrentTime(newTime);
+  }
+
+  function skipForward() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.min(audio.currentTime + 10, duration);
+  }
+
+  function skipBackward() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.max(audio.currentTime - 10, 0);
   }
 
   // Estimate which segment is playing (rough: equal time per segment)
@@ -96,21 +116,43 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
         </div>
 
         {/* Waveform */}
+        {loading && (
+          <div className="w-full h-20 rounded-lg bg-[var(--bg)] mb-4 flex items-center justify-center">
+            <span className="text-xs text-[var(--text-muted)]">Loading audio...</span>
+          </div>
+        )}
         <canvas
           ref={canvasRef}
           width={600}
           height={80}
-          className="w-full h-20 rounded-lg bg-[var(--bg)] mb-4"
+          className={`w-full h-20 rounded-lg bg-[var(--bg)] mb-4 ${loading ? "hidden" : ""}`}
         />
 
         {/* Controls */}
         <div className="flex items-center gap-4">
           <button
+            onClick={skipBackward}
+            className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+            aria-label="Skip backward 10s"
+            title="Skip backward 10s"
+          >
+            ⏪
+          </button>
+          <button
             onClick={togglePlay}
-            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer"
+            disabled={loading}
+            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             aria-label={playing ? "Pause" : "Play"}
           >
             {playing ? "⏸" : "▶"}
+          </button>
+          <button
+            onClick={skipForward}
+            className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+            aria-label="Skip forward 10s"
+            title="Skip forward 10s"
+          >
+            ⏩
           </button>
           <input
             type="range"
@@ -119,7 +161,8 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
             step={0.1}
             value={currentTime}
             onChange={seek}
-            className="flex-1 accent-[var(--accent)]"
+            disabled={loading}
+            className="flex-1 accent-[var(--accent)] disabled:opacity-50"
           />
           <span className="text-xs text-[var(--text-muted)] tabular-nums w-12 text-right">
             {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, "0")}
@@ -147,8 +190,12 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
         ref={audioRef}
         src={audioUrl}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+        onLoadedMetadata={() => {
+          setDuration(audioRef.current?.duration ?? 0);
+          setLoading(false);
+        }}
         onEnded={() => setPlaying(false)}
+        onError={(e) => console.error("Audio error:", e)}
         preload="auto"
       />
     </div>

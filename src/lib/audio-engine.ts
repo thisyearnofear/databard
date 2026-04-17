@@ -15,10 +15,15 @@ const VOICES = {
 const MODEL = "eleven_multilingual_v2";
 
 let client: ElevenLabsClient | null = null;
+const audioCache = new Map<string, Buffer>();
 
 function getClient(): ElevenLabsClient {
   if (!client) {
-    client = new ElevenLabsClient(); // reads ELEVENLABS_API_KEY from env
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      throw new Error("ELEVENLABS_API_KEY not set in environment");
+    }
+    client = new ElevenLabsClient({ apiKey });
   }
   return client;
 }
@@ -37,26 +42,50 @@ export async function synthesizeSpeech(
   prevText?: string,
   nextText?: string,
 ): Promise<Buffer> {
-  const stream = await getClient().textToSpeech.convert(
-    VOICES[segment.speaker],
-    {
-      text: segment.text,
-      model_id: MODEL,
-      output_format: "mp3_44100_128",
-      ...(prevText && { previous_text: prevText }),
-      ...(nextText && { next_text: nextText }),
-    },
-  );
-  return streamToBuffer(stream);
+  const cacheKey = `speech:${segment.speaker}:${segment.text.slice(0, 50)}`;
+  if (audioCache.has(cacheKey)) {
+    return audioCache.get(cacheKey)!;
+  }
+
+  try {
+    const stream = await getClient().textToSpeech.convert(
+      VOICES[segment.speaker],
+      {
+        text: segment.text,
+        model_id: MODEL,
+        output_format: "mp3_44100_128",
+        ...(prevText && { previous_text: prevText }),
+        ...(nextText && { next_text: nextText }),
+      },
+    );
+    const buffer = await streamToBuffer(stream);
+    audioCache.set(cacheKey, buffer);
+    return buffer;
+  } catch (error) {
+    console.error("TTS synthesis failed:", error);
+    throw new Error(`Failed to synthesize speech: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
 }
 
 /** Generate a short sound effect */
 export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promise<Buffer> {
-  const stream = await getClient().textToSoundEffects.convert({
-    text: prompt,
-    duration_seconds: durationSeconds,
-  });
-  return streamToBuffer(stream);
+  const cacheKey = `sfx:${prompt}:${durationSeconds}`;
+  if (audioCache.has(cacheKey)) {
+    return audioCache.get(cacheKey)!;
+  }
+
+  try {
+    const stream = await getClient().textToSoundEffects.convert({
+      text: prompt,
+      duration_seconds: durationSeconds,
+    });
+    const buffer = await streamToBuffer(stream);
+    audioCache.set(cacheKey, buffer);
+    return buffer;
+  } catch (error) {
+    console.error("SFX synthesis failed:", error);
+    throw new Error(`Failed to synthesize sound effect: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
 }
 
 /** Synthesize full episode: intro sfx + speech segments + transition sfx + outro sfx */
