@@ -97,11 +97,14 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-8">
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-8 animate-fadeIn">
       <div className="text-center">
         <h1 className="text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
         <p className="text-[var(--text-muted)] text-lg">
           Podcast-style audio docs for your data catalog
+        </p>
+        <p className="text-[var(--text-muted)] text-sm mt-1">
+          Nobody reads data docs. So we made them a podcast.
         </p>
       </div>
 
@@ -181,6 +184,15 @@ export default function Home() {
           <p className="text-sm text-[var(--danger)]">⚠️ {error}</p>
         </div>
       )}
+
+      <footer className="mt-8 text-center text-xs text-[var(--text-muted)]">
+        <p>Built with Kiro for ElevenHacks × WeMakeDevs hackathons</p>
+        <p className="mt-1">
+          <a href="https://github.com/thisyearnofear/databard" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--accent)] transition-colors">
+            View on GitHub
+          </a>
+        </p>
+      </footer>
     </main>
   );
 }

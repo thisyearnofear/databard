@@ -97,20 +97,23 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const activeIdx = Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
 
   return (
-    <div className="w-full max-w-2xl flex flex-col gap-4">
+    <div className="w-full max-w-2xl flex flex-col gap-4 animate-fadeIn">
       {/* Episode card */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 shadow-lg">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-xl font-semibold">🎙️ {episode.schemaName}</h2>
-            <p className="text-sm text-[var(--text-muted)]">
-              {episode.tableCount} tables · {episode.qualitySummary.total} tests
+            <p className="text-sm text-[var(--text-muted)] mt-1">
+              {episode.tableCount} tables · {episode.qualitySummary.total} quality tests
               {episode.qualitySummary.failed > 0 && (
                 <span className="text-[var(--danger)]"> · {episode.qualitySummary.failed} failing</span>
               )}
+              {episode.qualitySummary.failed === 0 && episode.qualitySummary.total > 0 && (
+                <span className="text-[var(--success)]"> · all passing ✓</span>
+              )}
             </p>
           </div>
-          <span className="text-xs text-[var(--text-muted)]">
+          <span className="text-xs text-[var(--text-muted)] bg-[var(--bg)] px-2 py-1 rounded">
             {duration > 0 ? `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}` : "—"}
           </span>
         </div>
@@ -171,17 +174,25 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
       </div>
 
       {/* Segment timeline */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-64 overflow-y-auto">
-        <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Segments</h3>
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-64 overflow-y-auto shadow-lg">
+        <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
+          <span>📝</span> Transcript
+        </h3>
         {episode.script.map((seg: ScriptSegment, i: number) => (
           <div
             key={i}
-            className={`flex gap-2 py-1.5 px-2 rounded text-sm ${i === activeIdx ? "bg-[var(--accent-glow)]" : ""}`}
+            className={`flex gap-3 py-2 px-3 rounded text-sm transition-all ${
+              i === activeIdx 
+                ? "bg-[var(--accent-glow)] border-l-2 border-[var(--accent)]" 
+                : "hover:bg-[var(--bg)]"
+            }`}
           >
             <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
               {seg.speaker}
             </span>
-            <span className="text-[var(--text-muted)] truncate">{seg.text}</span>
+            <span className={`${i === activeIdx ? "text-[var(--text)]" : "text-[var(--text-muted)]"}`}>
+              {seg.text}
+            </span>
           </div>
         ))}
       </div>
