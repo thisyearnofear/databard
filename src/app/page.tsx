@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
+import { GenerationProgress } from "@/components/GenerationProgress";
 import type { Episode, ScriptSegment } from "@/lib/types";
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
   const [progress, setProgress] = useState("");
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -43,9 +45,20 @@ export default function Home() {
   async function handleGenerate(schemaFqn: string) {
     setGenerating(true);
     setError("");
+    setGenerationStep(0);
     setProgress("Fetching metadata from OpenMetadata...");
 
     try {
+      // Step 1: Metadata
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setGenerationStep(1);
+      setProgress("Generating podcast script...");
+      
+      // Step 2: Script
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setGenerationStep(2);
+      setProgress("Synthesizing audio with ElevenLabs...");
+
       const res = await fetch("/api/synthesize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,15 +69,9 @@ export default function Home() {
         const err = await res.json();
         setError(err.error || "Generation failed");
         setProgress("");
+        setGenerationStep(0);
         return;
       }
-
-      setProgress("Generating podcast script...");
-      
-      // Small delay to show progress
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setProgress("Synthesizing audio with ElevenLabs...");
 
       const script: ScriptSegment[] = JSON.parse(
         atob(res.headers.get("X-Episode-Script") ?? "W10=")
@@ -88,9 +95,11 @@ export default function Home() {
       setAudioUrl(url);
       setStatus("✓ Episode ready — hit play!");
       setProgress("");
+      setGenerationStep(3);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setProgress("");
+      setGenerationStep(0);
     } finally {
       setGenerating(false);
     }
@@ -98,13 +107,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-8 animate-fadeIn">
-      <div className="text-center">
-        <h1 className="text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
-        <p className="text-[var(--text-muted)] text-lg">
-          Podcast-style audio docs for your data catalog
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-8 animate-fadeIn">
+      <div className="text-center max-w-3xl">
+        <div className="mb-4 text-6xl animate-bounce-slow">🎙️</div>
+        <h1 className="text-6xl font-bold tracking-tight mb-4 bg-gradient-to-r from-[var(--accent)] to-[var(--success)] bg-clip-text text-transparent">
+          DataBard
+        </h1>
+        <p className="text-2xl font-semibold text-[var(--text)] mb-2">
+          Nobody reads data docs.
         </p>
-        <p className="text-[var(--text-muted)] text-sm mt-1">
-          Nobody reads data docs. So we made them a podcast.
+        <p className="text-2xl font-semibold text-[var(--accent)]">
+          So we made them a podcast.
+        </p>
+        <p className="text-[var(--text-muted)] text-sm mt-4">
+          Turn your OpenMetadata catalog into engaging audio with AI hosts
         </p>
       </div>
 
@@ -153,25 +170,24 @@ export default function Home() {
             <h2 className="text-xl font-semibold">Select a schema</h2>
             <span className="text-sm text-[var(--text-muted)]">{schemas.length} available</span>
           </div>
-          {generating && progress && (
-            <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-lg px-4 py-3 flex items-center gap-3">
-              <div className="animate-spin h-4 w-4 border-2 border-[var(--accent)] border-t-transparent rounded-full"></div>
-              <span className="text-sm text-[var(--text-muted)]">{progress}</span>
+          
+          {generating ? (
+            <GenerationProgress currentStep={generationStep} />
+          ) : (
+            <div className="grid gap-2 max-h-96 overflow-y-auto">
+              {schemas.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleGenerate(s)}
+                  disabled={generating}
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait group"
+                >
+                  <div className="font-medium group-hover:text-[var(--accent)] transition-colors">{s.split(".").pop()}</div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">{s}</div>
+                </button>
+              ))}
             </div>
           )}
-          <div className="grid gap-2 max-h-96 overflow-y-auto">
-            {schemas.map((s) => (
-              <button
-                key={s}
-                onClick={() => handleGenerate(s)}
-                disabled={generating}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
-              >
-                <div className="font-medium">{s.split(".").pop()}</div>
-                <div className="text-xs text-[var(--text-muted)] mt-1">{s}</div>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
