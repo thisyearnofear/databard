@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { cache } from "@/lib/cache";
+import { shares } from "@/lib/store";
 import type { Episode } from "@/lib/types";
 
 /**
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
 
   // Default card if no episode ID
-  const episode = id ? cache.get<Episode>(`share:${id}`) : null;
+  const episode = id ? shares.get<Episode>(id) : null;
 
   const name = episode?.schemaName ?? "Your Data Catalog";
   const tables = episode?.tableCount ?? 0;

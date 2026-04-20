@@ -6,7 +6,7 @@
 import { ElevenLabsClient } from "elevenlabs";
 import type { Readable } from "stream";
 import type { ScriptSegment } from "./types";
-import { cache } from "./cache";
+import { audioCache } from "./store";
 
 // Two fixed podcast host voices (premade, available on all paid tiers)
 const VOICES = {
@@ -16,7 +16,6 @@ const VOICES = {
 
 const MODEL = "eleven_multilingual_v2";
 const AUDIO_CACHE_TTL = 86400; // 24 hours
-const SFX_CACHE_TTL = 86400 * 30; // 30 days — SFX prompts are static
 
 let client: ElevenLabsClient | null = null;
 
@@ -54,12 +53,13 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 1000): 
 }
 
 function getCached(key: string): Buffer | null {
-  const b64 = cache.get<string>(key);
+  const b64 = audioCache.get(key);
   return b64 ? Buffer.from(b64, "base64") : null;
 }
 
 function setCached(key: string, buffer: Buffer, ttl = AUDIO_CACHE_TTL): void {
-  cache.set(key, buffer.toString("base64"), ttl);
+  if (buffer.length === 0) return; // Don't cache empty buffers (skipped SFX)
+  audioCache.set(key, buffer.toString("base64"), ttl);
 }
 
 /** Simple hash for cache keys */

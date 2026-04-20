@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listSchemas } from "@/lib/metadata-adapter";
 import type { ConnectionConfig } from "@/lib/types";
-import { validateUrl, validateToken, validateDbtConfig, validateManifestPath, ValidationError } from "@/lib/validation";
+import { validateUrl, validateToken, validateDbtConfig, validateManifestPath, ValidationError, guardMutation } from "@/lib/validation";
+import { createSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { source = "openmetadata" } = body;
 
   try {
+    guardMutation(req, { maxRequests: 20, windowMs: 3600000 });
     // Validate input based on source
     if (source === "openmetadata") {
       validateUrl(body.url);
@@ -15,9 +17,7 @@ export async function POST(req: NextRequest) {
     } else if (source === "dbt-cloud") {
       validateDbtConfig(body.dbtCloud);
     } else if (source === "dbt-local") {
-      // Accept either manifestContent (file upload) or manifestPath (legacy)
       if (body.dbtLocal?.manifestContent) {
-        // File was uploaded — validate it's parseable JSON
         try { JSON.parse(body.dbtLocal.manifestContent); } catch {
           throw new ValidationError("Invalid JSON in uploaded manifest file");
         }
@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Create server-side session — credentials stored server-side only
+    await createSession(config, schemas);
     
     return NextResponse.json({ ok: true, schemas, source });
   } catch (e: unknown) {

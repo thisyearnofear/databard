@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkProviders } from "@/lib/audio-engine-web";
+import { checkProviders } from "@/lib/audio-engine-providers";
 
 /**
  * Check which browser automation providers are available

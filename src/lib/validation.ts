@@ -99,3 +99,15 @@ export function rateLimit(
     throw new ValidationError(`Rate limit exceeded — max ${maxRequests} episodes per hour. Try again later.`);
   }
 }
+
+/**
+ * Combined auth + rate limit guard for mutation endpoints.
+ * Single call replaces separate validateApiSecret + rateLimit calls.
+ */
+export function guardMutation(
+  req: { headers: { get(name: string): string | null } },
+  opts?: { maxRequests?: number; windowMs?: number }
+): void {
+  validateApiSecret(req);
+  rateLimit(req, opts);
+}

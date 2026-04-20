@@ -4,7 +4,7 @@
  * Parses models, sources, tests, and lineage.
  */
 import type { SchemaMeta, TableMeta, ColumnMeta, QualityTest } from "./types";
-import { cache } from "./cache";
+import { metaCache } from "./store";
 
 interface DbtManifest {
   nodes: Record<string, DbtNode>;
@@ -177,7 +177,7 @@ export async function fetchDbtCloudManifest(
   token: string
 ): Promise<{ manifest: DbtManifest; runResults?: DbtRunResults }> {
   const cacheKey = `dbt:bundle:${accountId}:${projectId}`;
-  const cached = cache.get<{ manifest: DbtManifest; runResults?: DbtRunResults }>(cacheKey);
+  const cached = metaCache.get<{ manifest: DbtManifest; runResults?: DbtRunResults }>(cacheKey);
   if (cached) return cached;
 
   const baseUrl = `https://cloud.getdbt.com/api/v2/accounts/${accountId}/projects/${projectId}/artifacts`;
@@ -196,14 +196,20 @@ export async function fetchDbtCloudManifest(
   }
 
   const result = { manifest, runResults };
-  cache.set(cacheKey, result, MANIFEST_CACHE_TTL);
+  metaCache.set(cacheKey, result, MANIFEST_CACHE_TTL);
   return result;
+}
+
+/** Load manifest from uploaded JSON content (no filesystem access needed) */
+export function loadManifestFromContent(jsonContent: string): { manifest: DbtManifest; runResults?: DbtRunResults } {
+  const manifest: DbtManifest = JSON.parse(jsonContent);
+  return { manifest, runResults: undefined };
 }
 
 /** Load manifest + run_results from local files, with caching */
 export async function loadLocalManifest(path: string): Promise<{ manifest: DbtManifest; runResults?: DbtRunResults }> {
   const cacheKey = `dbt:bundle:local:${path}`;
-  const cached = cache.get<{ manifest: DbtManifest; runResults?: DbtRunResults }>(cacheKey);
+  const cached = metaCache.get<{ manifest: DbtManifest; runResults?: DbtRunResults }>(cacheKey);
   if (cached) return cached;
 
   const fs = await import("fs/promises");
@@ -221,6 +227,6 @@ export async function loadLocalManifest(path: string): Promise<{ manifest: DbtMa
   }
 
   const result = { manifest, runResults };
-  cache.set(cacheKey, result, MANIFEST_CACHE_TTL);
+  metaCache.set(cacheKey, result, MANIFEST_CACHE_TTL);
   return result;
 }

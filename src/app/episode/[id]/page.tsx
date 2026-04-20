@@ -12,6 +12,7 @@ export default function SharedEpisode() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expiresIn, setExpiresIn] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadEpisode() {
@@ -21,6 +22,7 @@ export default function SharedEpisode() {
 
         if (data.ok) {
           const ep = data.episode;
+          if (data.expiresIn != null) setExpiresIn(data.expiresIn);
 
           // Reconstruct audio from base64 if available
           if (ep.audioBase64) {
@@ -68,7 +70,13 @@ export default function SharedEpisode() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
       <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1.5">
-        ⏳ Shared episodes expire 24 hours after creation
+        ⏳ {expiresIn != null
+          ? expiresIn > 3600
+            ? `Expires in ${Math.round(expiresIn / 3600)}h`
+            : expiresIn > 60
+            ? `Expires in ${Math.round(expiresIn / 60)}m`
+            : "Expiring soon"
+          : "Shared episodes expire 24 hours after creation"}
       </div>
       <EpisodePlayer episode={episode} audioUrl={audioUrl} />
 

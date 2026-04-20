@@ -4,7 +4,7 @@
  */
 import type { ConnectionConfig, SchemaMeta } from "./types";
 import { fetchSchemaMeta as fetchOM, listSchemas as listOM } from "./openmetadata";
-import { fetchDbtCloudManifest, parseDbtManifest, loadLocalManifest } from "./dbt-adapter";
+import { fetchDbtCloudManifest, parseDbtManifest, loadLocalManifest, loadManifestFromContent } from "./dbt-adapter";
 
 async function getDbtBundle(config: ConnectionConfig) {
   if (config.source === "dbt-cloud") {
@@ -13,7 +13,13 @@ async function getDbtBundle(config: ConnectionConfig) {
   }
   if (config.source === "dbt-local") {
     if (!config.dbtLocal) throw new Error("dbt local config missing");
-    return loadLocalManifest(config.dbtLocal.manifestPath);
+    if (config.dbtLocal.manifestContent) {
+      return loadManifestFromContent(config.dbtLocal.manifestContent);
+    }
+    if (config.dbtLocal.manifestPath) {
+      return loadLocalManifest(config.dbtLocal.manifestPath);
+    }
+    throw new Error("dbt local config requires manifestContent or manifestPath");
   }
   throw new Error(`Not a dbt source: ${config.source}`);
 }

@@ -3,21 +3,24 @@ import { generateScript } from "@/lib/script-generator";
 import { synthesizeSpeech, synthesizeSfx, estimateCost } from "@/lib/audio-engine";
 import type { ConnectionConfig } from "@/lib/types";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
-import { validateSchemaFqn, validateApiSecret, ValidationError, rateLimit } from "@/lib/validation";
+import { validateSchemaFqn, ValidationError, guardMutation } from "@/lib/validation";
+import { getSessionConfig } from "@/lib/session";
 
 /**
  * Streaming synthesis — sends audio chunks as they're generated.
- * Flow: auth → rate limit → metadata → script → cost estimate → audio chunks → done
- * Respects client abort signal to stop synthesis on disconnect.
+ * Flow: auth → rate limit → session config → metadata → script → audio chunks → done
+ * Uses server-side session for credentials when available, falls back to request body.
  */
 export async function POST(req: NextRequest) {
   try {
-    validateApiSecret(req);
-    rateLimit(req);
+    guardMutation(req);
 
     const body = await req.json();
     const { schemaFqn, source = "openmetadata" } = body;
     validateSchemaFqn(schemaFqn);
+
+    // Prefer session config (credentials stored server-side), fall back to body
+    const sessionConfig = await getSessionConfig();
 
     const signal = req.signal;
     const encoder = new TextEncoder();
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const config: ConnectionConfig = {
+          const config: ConnectionConfig = sessionConfig ?? {
             source: source as ConnectionConfig["source"],
             openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
             dbtCloud: body.dbtCloud,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cache } from "@/lib/cache";
+import { shares } from "@/lib/store";
 import type { Episode } from "@/lib/types";
 
 interface SharedEpisode extends Episode {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const body: SharedEpisode = await req.json();
     const id = Math.random().toString(36).substring(2, 10);
-    cache.set(`share:${id}`, body, 86400);
+    shares.set(id, body, 86400);
     return NextResponse.json({ ok: true, id });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
@@ -31,10 +31,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Missing id parameter" }, { status: 400 });
   }
 
-  const episode = cache.get<SharedEpisode>(`share:${id}`);
-  if (!episode) {
+  const meta = shares.getMeta<SharedEpisode>(id);
+  if (!meta) {
     return NextResponse.json({ ok: false, error: "Episode not found or expired" }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, episode });
+  // Include expiry info so the client can display it
+  const expiresIn = Math.max(0, Math.round((meta.expiresAt - Date.now()) / 1000));
+
+  return NextResponse.json({ ok: true, episode: meta.data, expiresIn });
 }

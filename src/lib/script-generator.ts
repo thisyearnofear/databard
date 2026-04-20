@@ -6,7 +6,7 @@
  */
 import type { SchemaMeta, ScriptSegment } from "./types";
 import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
-import { cache } from "./cache";
+import { scriptCache } from "./store";
 
 /** Simple hash for cache keys */
 function hashSchema(schema: SchemaMeta): string {
@@ -302,8 +302,8 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights): ScriptS
 export async function generateScript(schema: SchemaMeta): Promise<ScriptSegment[]> {
   // Check script cache — same schema content = same script
   const schemaHash = hashSchema(schema);
-  const cacheKey = `script:${schemaHash}`;
-  const cached = cache.get<ScriptSegment[]>(cacheKey);
+  const cacheKey = schemaHash;
+  const cached = scriptCache.get<ScriptSegment[]>(cacheKey);
   if (cached) return cached;
 
   const insights = analyzeSchema(schema);
@@ -320,6 +320,6 @@ export async function generateScript(schema: SchemaMeta): Promise<ScriptSegment[
     script = generateTemplate(schema, insights);
   }
 
-  cache.set(cacheKey, script, 3600); // 1hr cache — regenerate picks up schema changes
+  scriptCache.set(cacheKey, script, 3600); // 1hr cache — regenerate picks up schema changes
   return script;
 }

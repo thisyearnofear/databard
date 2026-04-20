@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
-import { cache } from "@/lib/cache";
-import { validateApiSecret, ValidationError } from "@/lib/validation";
+import { shares, feedStore } from "@/lib/store";
+import { ValidationError, guardMutation } from "@/lib/validation";
+import { analyzeSchema, diffInsights } from "@/lib/schema-analysis";
 import type { ConnectionConfig, Episode } from "@/lib/types";
 
 /**
@@ -18,7 +19,7 @@ import type { ConnectionConfig, Episode } from "@/lib/types";
  */
 export async function POST(req: NextRequest) {
   try {
-    validateApiSecret(req);
+    guardMutation(req);
 
     const body = await req.json();
     const { schemaFqn, source = "openmetadata", shareId } = body;
@@ -34,8 +35,22 @@ export async function POST(req: NextRequest) {
       dbtLocal: body.dbtLocal,
     };
 
-    // Full pipeline: fetch → analyze → script → synthesize
+    // Full pipeline: fetch → analyze → diff → script → synthesize
     const meta = await fetchSchemaMeta(config, schemaFqn);
+    const insights = analyzeSchema(meta);
+
+    // Change detection: compare against previous episode if shareId provided
+    let diff: ReturnType<typeof diffInsights> | undefined;
+    if (shareId) {
+      const prevEpisode = shares.get<Episode>(shareId);
+      if (prevEpisode?.schemaMeta) {
+        const prevInsights = analyzeSchema(prevEpisode.schemaMeta);
+        const prevTableNames = prevEpisode.schemaMeta.tables.map((t) => t.name);
+        const currTableNames = meta.tables.map((t) => t.name);
+        diff = diffInsights(prevInsights, insights, prevTableNames, currTableNames);
+      }
+    }
+
     const script = await generateScript(meta);
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);
@@ -50,12 +65,42 @@ export async function POST(req: NextRequest) {
       qualitySummary: { passed: totalTests - failedTests, failed: failedTests, total: totalTests },
       script,
       schemaMeta: meta,
+      generatedAt: new Date().toISOString(),
       audioBase64: combined.toString("base64"),
     };
 
     // Store as shared episode
     const id = shareId ?? Math.random().toString(36).substring(2, 10);
-    cache.set(`share:${id}`, episode, 86400 * 7); // 7 day TTL for scheduled episodes
+    shares.set(id, episode, 86400 * 7); // 7 day TTL for scheduled episodes
+
+    // Append to feed for RSS
+    feedStore.append({
+      id,
+      schemaName: meta.name,
+      generatedAt: new Date().toISOString(),
+      tableCount: meta.tables.length,
+      testsFailed: failedTests,
+      testsTotal: totalTests,
+    });
+
+    // Webhook notification
+    const webhookUrl = process.env.DATABARD_WEBHOOK_URL;
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: "episode.generated",
+          schema: meta.name,
+          tableCount: meta.tables.length,
+          testsTotal: totalTests,
+          testsFailed: failedTests,
+          diff: diff ? { summary: diff.summary, newFailures: diff.newFailures, resolvedFailures: diff.resolvedFailures, healthScoreChange: diff.healthScoreChange } : undefined,
+          episodeUrl: `${process.env.NEXT_PUBLIC_URL || "http://localhost:3000"}/episode/${id}`,
+          generatedAt: new Date().toISOString(),
+        }),
+      }).catch((e) => console.warn("[Webhook] Failed:", e));
+    }
 
     return NextResponse.json({
       ok: true,
@@ -65,6 +110,7 @@ export async function POST(req: NextRequest) {
       testsTotal: totalTests,
       testsFailed: failedTests,
       segments: script.length,
+      diff: diff ? { summary: diff.summary, newTables: diff.newTables, removedTables: diff.removedTables, newFailures: diff.newFailures, resolvedFailures: diff.resolvedFailures, healthScoreChange: diff.healthScoreChange } : undefined,
     });
   } catch (e: unknown) {
     if (e instanceof ValidationError) {

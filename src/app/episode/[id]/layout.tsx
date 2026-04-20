@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { cache } from "@/lib/cache";
+import { shares } from "@/lib/store";
 import type { Episode } from "@/lib/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const episode = cache.get<Episode>(`share:${id}`);
+  const episode = shares.get<Episode>(id);
 
   if (!episode) {
     return { title: "Episode Not Found — DataBard" };

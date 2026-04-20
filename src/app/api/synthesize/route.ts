@@ -3,7 +3,7 @@ import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
 import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
-import { validateApiSecret, ValidationError, rateLimit } from "@/lib/validation";
+import { ValidationError, guardMutation } from "@/lib/validation";
 
 /**
  * Full pipeline: metadata → script → audio.
@@ -14,8 +14,7 @@ import { validateApiSecret, ValidationError, rateLimit } from "@/lib/validation"
  */
 export async function POST(req: NextRequest) {
   try {
-    validateApiSecret(req);
-    rateLimit(req);
+    guardMutation(req);
 
     const body = await req.json();
 
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
       if (errorMsg.includes('402') || errorMsg.includes('payment_required') || errorMsg.includes('paid_plan_required')) {
         console.log('[Synthesis] API returned 402, trying web automation...');
         try {
-          const { synthesizeEpisodeViaWeb } = await import("@/lib/audio-engine-web");
+          const { synthesizeEpisodeViaWeb } = await import("@/lib/audio-engine-providers");
           audioBuffers = await synthesizeEpisodeViaWeb(script);
         } catch {
           throw apiError; // web fallback also failed — throw original

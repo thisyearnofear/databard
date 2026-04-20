@@ -20,6 +20,9 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [generating, setGenerating] = useState(false);
   const [genStep, setGenStep] = useState(-1);
+  const [genSegments, setGenSegments] = useState(0);
+  const [genTotal, setGenTotal] = useState(0);
+  const [genStartedAt, setGenStartedAt] = useState(0);
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
@@ -135,6 +138,9 @@ export default function Home() {
   async function handleGenerate(schemaFqn: string) {
     setGenerating(true);
     setGenStep(0);
+    setGenSegments(0);
+    setGenTotal(0);
+    setGenStartedAt(0);
     setStatus(`Generating episode for ${schemaFqn}…`);
 
     try {
@@ -180,12 +186,15 @@ export default function Home() {
               script: data.script, schemaMeta: data.schemaMeta,
             };
           } else if (data.type === "estimate") {
+            setGenTotal(data.segments);
+            setGenStartedAt(Date.now());
             setStatus(`${data.totalCalls} API calls (${data.segments} speech + ${data.sfxCalls} SFX)`);
           } else if (data.type === "audio") {
             setGenStep(2);
             const audioData = Uint8Array.from(atob(data.data as string), (c) => c.charCodeAt(0));
             audioChunks.push(audioData.buffer as ArrayBuffer);
             chunkSizes.push(audioData.byteLength);
+            if (data.segment !== undefined) setGenSegments((n) => n + 1);
             setStatus(`Synthesizing… ${audioChunks.length} segments`);
           } else if (data.type === "done" && metadata) {
             const blob = new Blob(audioChunks, { type: "audio/mpeg" });
@@ -284,7 +293,7 @@ export default function Home() {
   if (generating) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
-        <GenerationProgress currentStep={genStep} />
+        <GenerationProgress currentStep={genStep} segmentsComplete={genSegments} segmentsTotal={genTotal} startedAt={genStartedAt} />
         {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
       </main>
     );
@@ -421,7 +430,7 @@ export default function Home() {
               <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={omUrl} onChange={(e) => setOmUrl(e.target.value)} placeholder="http://localhost:8585" />
               <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from Settings → Bots" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from Settings → Bots" />
             </>)}
             {source === "dbt-cloud" && (<>
               <label className="text-sm text-[var(--text-muted)]">Account ID</label>
@@ -429,7 +438,7 @@ export default function Home() {
               <label className="text-sm text-[var(--text-muted)]">Project ID</label>
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtProjectId} onChange={(e) => setDbtProjectId(e.target.value)} placeholder="From URL: …/projects/{id}" />
               <label className="text-sm text-[var(--text-muted)]">API Token</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" value={dbtToken} onChange={(e) => setDbtToken(e.target.value)} placeholder="Account Settings → API Access" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={dbtToken} onChange={(e) => setDbtToken(e.target.value)} placeholder="Account Settings → API Access" />
             </>)}
             {source === "dbt-local" && (<>
               <label className="text-sm text-[var(--text-muted)]">Upload manifest.json</label>
@@ -445,6 +454,12 @@ export default function Home() {
                 )}
               </div>
             </>)}
+
+            {source !== "dbt-local" && (
+              <p className="text-xs text-[var(--text-muted)] -mt-2 flex items-center gap-1">
+                <span>🔒</span> Credentials are sent over HTTPS and stored only for this session
+              </p>
+            )}
 
             <button onClick={handleConnect} disabled={connecting} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}

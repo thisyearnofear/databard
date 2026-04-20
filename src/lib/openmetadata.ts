@@ -4,7 +4,7 @@
  * quality tests, lineage, and classification (PII).
  */
 import type { OMConnection, SchemaMeta, TableMeta, ColumnMeta, QualityTest, LineageEdge } from "./types";
-import { cache } from "./cache";
+import { metaCache } from "./store";
 
 async function omFetch<T>(conn: OMConnection, path: string, retries = 3): Promise<T | null> {
   let lastError: Error | null = null;
@@ -73,7 +73,7 @@ interface OMLineageResponse {
 
 export async function listSchemas(conn: OMConnection): Promise<string[]> {
   const cacheKey = `om:schemas:${conn.url}`;
-  const cached = cache.get<string[]>(cacheKey);
+  const cached = metaCache.get<string[]>(cacheKey);
   if (cached) return cached;
 
   const dbs = await omFetch<OMList<OMDatabase>>(conn, "/api/v1/databases?limit=100");
@@ -89,7 +89,7 @@ export async function listSchemas(conn: OMConnection): Promise<string[]> {
     }
   }
 
-  cache.set(cacheKey, schemas, 300);
+  metaCache.set(cacheKey, schemas, 300);
   return schemas;
 }
 
@@ -99,7 +99,7 @@ export async function listSchemas(conn: OMConnection): Promise<string[]> {
  */
 export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Promise<SchemaMeta> {
   const cacheKey = `om:schema:${conn.url}:${schemaFqn}`;
-  const cached = cache.get<SchemaMeta>(cacheKey);
+  const cached = metaCache.get<SchemaMeta>(cacheKey);
   if (cached) return cached;
 
   const schemaName = schemaFqn.split(".").pop() ?? schemaFqn;
@@ -195,6 +195,6 @@ export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Pr
     tables,
     lineage: allLineage,
   };
-  cache.set(cacheKey, meta, 600);
+  metaCache.set(cacheKey, meta, 600);
   return meta;
 }

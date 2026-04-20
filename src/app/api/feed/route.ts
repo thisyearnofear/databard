@@ -1,9 +1,6 @@
 import { NextRequest } from "next/server";
+import { feedStore, shares } from "@/lib/store";
 import type { Episode } from "@/lib/types";
-import { existsSync, readdirSync, readFileSync } from "fs";
-import { join } from "path";
-
-const CACHE_DIR = join(process.cwd(), ".databard", "cache");
 
 /**
  * RSS podcast feed. Supports public and private (token-gated) feeds.
@@ -25,32 +22,32 @@ export async function GET(req: NextRequest) {
   }
 
   const baseUrl = req.nextUrl.origin;
-  const episodes: { id: string; episode: Episode }[] = [];
 
-  try {
-    if (existsSync(CACHE_DIR)) {
-      for (const file of readdirSync(CACHE_DIR)) {
-        try {
-          const raw = JSON.parse(readFileSync(join(CACHE_DIR, file), "utf-8"));
-          if (raw.data && raw.expiresAt > Date.now()) {
-            const key = Buffer.from(file.replace(".json", ""), "base64url").toString();
-            if (key.startsWith("share:")) {
-              episodes.push({ id: key.slice(6), episode: raw.data });
-            }
-          }
-        } catch { /* skip */ }
-      }
+  // Use feed store (populated by /api/regenerate) with fallback to share keys
+  let episodes = feedStore.list().map((entry) => {
+    const ep = shares.get<Episode>(entry.id);
+    return ep ? { id: entry.id, episode: ep, generatedAt: entry.generatedAt } : null;
+  }).filter(Boolean) as { id: string; episode: Episode; generatedAt: string }[];
+
+  // Fallback: scan share keys if feed store is empty (backward compat)
+  if (episodes.length === 0) {
+    const shareKeys = shares.keys();
+    for (const key of shareKeys) {
+      const id = key.replace("share:", "");
+      const ep = shares.get<Episode>(id);
+      if (ep) episodes.push({ id, episode: ep, generatedAt: new Date().toISOString() });
     }
-  } catch { /* cache not available */ }
+  }
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  const items = episodes.map(({ id, episode: ep }) => `
+  const items = episodes.map(({ id, episode: ep, generatedAt }) => `
     <item>
       <title>${esc(`🎙️ ${ep.schemaName} — ${ep.tableCount} tables, ${ep.qualitySummary.total} tests`)}</title>
       <description>${esc(`Podcast walkthrough of the ${ep.schemaName} schema. ${ep.qualitySummary.failed > 0 ? `${ep.qualitySummary.failed} failing tests.` : "All tests passing."}`)}</description>
       <link>${baseUrl}/episode/${id}</link>
       <guid isPermaLink="true">${baseUrl}/episode/${id}</guid>
+      <pubDate>${new Date(generatedAt).toUTCString()}</pubDate>
     </item>`).join("\n");
 
   const rss = `<?xml version="1.0" encoding="UTF-8"?>

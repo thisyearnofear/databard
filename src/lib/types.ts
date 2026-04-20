@@ -17,7 +17,7 @@ export interface ConnectionConfig {
   source: DataSource;
   openmetadata?: OMConnection;
   dbtCloud?: DbtConnection;
-  dbtLocal?: { manifestPath: string };
+  dbtLocal?: { manifestPath?: string; manifestContent?: string };
 }
 
 export interface ColumnMeta {
@@ -77,6 +77,8 @@ export interface Episode {
   script: ScriptSegment[];
   /** Full schema metadata for interactive drill-down in the player */
   schemaMeta?: SchemaMeta;
+  /** ISO timestamp of when this episode was generated */
+  generatedAt?: string;
   audioUrl?: string;
   duration?: number;
 }

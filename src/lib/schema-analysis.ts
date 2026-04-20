@@ -145,3 +145,45 @@ export function analyzeSchema(schema: SchemaMeta): SchemaInsights {
     owners, piiTables, glossaryTerms, staleTables, largestTables, ownerlessTables,
   };
 }
+
+/** Diff between two schema analyses — what changed since last episode */
+export interface SchemaDiff {
+  newTables: string[];
+  removedTables: string[];
+  newFailures: string[];
+  resolvedFailures: string[];
+  healthScoreChange: number;
+  testCoverageChange: number;
+  summary: string;
+}
+
+export function diffInsights(prev: SchemaInsights, curr: SchemaInsights, prevTableNames: string[], currTableNames: string[]): SchemaDiff {
+  const prevSet = new Set(prevTableNames);
+  const currSet = new Set(currTableNames);
+
+  const newTables = currTableNames.filter((t) => !prevSet.has(t));
+  const removedTables = prevTableNames.filter((t) => !currSet.has(t));
+
+  const prevFailNames = new Set(prev.criticalTables.map((c) => c.table.name));
+  const currFailNames = curr.criticalTables.map((c) => c.table.name);
+
+  const newFailures = currFailNames.filter((n) => !prevFailNames.has(n));
+  const resolvedFailures = [...prevFailNames].filter((n) => !currFailNames.includes(n));
+
+  const healthScoreChange = curr.healthScore - prev.healthScore;
+  const testCoverageChange = curr.testCoverage - prev.testCoverage;
+
+  // Build human-readable summary
+  const parts: string[] = [];
+  if (newTables.length > 0) parts.push(`${newTables.length} new table${newTables.length > 1 ? "s" : ""}`);
+  if (removedTables.length > 0) parts.push(`${removedTables.length} removed`);
+  if (newFailures.length > 0) parts.push(`${newFailures.length} new failure${newFailures.length > 1 ? "s" : ""}`);
+  if (resolvedFailures.length > 0) parts.push(`${resolvedFailures.length} resolved`);
+  if (healthScoreChange !== 0) parts.push(`health ${healthScoreChange > 0 ? "+" : ""}${healthScoreChange}`);
+
+  return {
+    newTables, removedTables, newFailures, resolvedFailures,
+    healthScoreChange, testCoverageChange,
+    summary: parts.length > 0 ? parts.join(", ") : "no changes",
+  };
+}

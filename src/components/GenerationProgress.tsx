@@ -6,12 +6,30 @@ interface Step {
   icon: string;
 }
 
-export function GenerationProgress({ currentStep }: { currentStep: number }) {
+interface Props {
+  currentStep: number;
+  segmentsComplete?: number;
+  segmentsTotal?: number;
+  startedAt?: number;
+}
+
+export function GenerationProgress({ currentStep, segmentsComplete = 0, segmentsTotal = 0, startedAt }: Props) {
   const steps: Step[] = [
     { label: "Fetching metadata", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "📊" },
     { label: "Generating script", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "✍️" },
     { label: "Synthesizing audio", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "🎵" },
   ];
+
+  // ETA calculation based on segments synthesized
+  let eta = "";
+  if (currentStep === 2 && segmentsComplete > 0 && segmentsTotal > 0 && startedAt) {
+    const elapsed = (Date.now() - startedAt) / 1000;
+    const perSegment = elapsed / segmentsComplete;
+    const remaining = Math.round(perSegment * (segmentsTotal - segmentsComplete));
+    eta = remaining > 60 ? `~${Math.ceil(remaining / 60)}m remaining` : `~${remaining}s remaining`;
+  }
+
+  const progress = segmentsTotal > 0 ? Math.round((segmentsComplete / segmentsTotal) * 100) : 0;
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-6 animate-slide-up animate-pulse-glow">
@@ -41,12 +59,26 @@ export function GenerationProgress({ currentStep }: { currentStep: number }) {
             <div className="flex-1">
               <p
                 className={`text-sm font-medium transition-all ${
-                  step.status === "active" ? "text-[var(--text)] typing-effect" : "text-[var(--text-muted)]"
+                  step.status === "active" ? "text-[var(--text)]" : "text-[var(--text-muted)]"
                 }`}
               >
                 {step.label}
               </p>
-              {step.status === "active" && (
+              {step.status === "active" && i === 2 && segmentsTotal > 0 && (
+                <div className="mt-2">
+                  <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[var(--accent)] rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(2, progress)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-xs text-[var(--text-muted)]">{segmentsComplete}/{segmentsTotal} segments</span>
+                    {eta && <span className="text-xs text-[var(--text-muted)]">{eta}</span>}
+                  </div>
+                </div>
+              )}
+              {step.status === "active" && (i < 2 || segmentsTotal === 0) && (
                 <div className="mt-2 h-1 bg-[var(--border)] rounded-full overflow-hidden">
                   <div className="h-full bg-[var(--accent)] rounded-full animate-pulse" style={{ width: "60%" }}></div>
                 </div>
@@ -57,7 +89,7 @@ export function GenerationProgress({ currentStep }: { currentStep: number }) {
       </div>
 
       <p className="text-xs text-[var(--text-muted)] text-center mt-6">
-        This usually takes 30-60 seconds depending on schema size
+        {eta || "This usually takes 30-60 seconds depending on schema size"}
       </p>
     </div>
   );
