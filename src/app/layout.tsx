@@ -22,6 +22,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="alternate" type="application/rss+xml" title="DataBard Podcast Feed" href="/api/feed" />
+      </head>
       <body>{children}</body>
     </html>
   );

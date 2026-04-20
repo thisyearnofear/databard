@@ -108,6 +108,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const [expandedSeg, setExpandedSeg] = useState<number | null>(null);
   const [clipCopied, setClipCopied] = useState(false);
   const [speed, setSpeed] = useState<number>(1);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   // Web Audio API setup for waveform
   useEffect(() => {
@@ -193,6 +194,14 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     }
   }, [activeIdx, playing]);
 
+  // Close share menu on click outside
+  useEffect(() => {
+    if (!showShareMenu) return;
+    const close = () => setShowShareMenu(false);
+    window.addEventListener("click", close, { once: true });
+    return () => window.removeEventListener("click", close);
+  }, [showShareMenu]);
+
   // Keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -262,6 +271,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   async function handleShare() {
     setSharing(true);
     try {
+      // Upload episode for shareable URL
       let audioBase64: string | undefined;
       if (audioUrl) {
         const audioRes = await fetch(audioUrl);
@@ -279,7 +289,23 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
       if (data.ok) {
         const url = `${window.location.origin}/episode/${data.id}`;
         setShareUrl(url);
-        await navigator.clipboard.writeText(url);
+
+        // Try native share sheet (mobile)
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: `🎙️ DataBard: ${episode.schemaName}`,
+              text: `Listen to a podcast walkthrough of the ${episode.schemaName} schema — ${episode.tableCount} tables, ${episode.qualitySummary.total} tests`,
+              url,
+            });
+            return;
+          } catch {
+            // User cancelled or not supported — fall through to menu
+          }
+        }
+
+        // Desktop: show share menu
+        setShowShareMenu(true);
       }
     } catch (e) {
       console.error("Share failed:", e);
@@ -288,12 +314,45 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     }
   }
 
+  function shareVia(platform: string) {
+    if (!shareUrl) return;
+    const text = `🎙️ Listen to a DataBard episode on the ${episode.schemaName} schema`;
+    const encoded = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(shareUrl);
+
+    const urls: Record<string, string> = {
+      whatsapp: `https://wa.me/?text=${encoded}%20${encodedUrl}`,
+      telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encoded}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encoded}&url=${encodedUrl}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+      copy: "",
+    };
+
+    if (platform === "copy") {
+      navigator.clipboard.writeText(shareUrl);
+      setShowShareMenu(false);
+      return;
+    }
+
+    window.open(urls[platform], "_blank", "noopener,noreferrer,width=600,height=400");
+    setShowShareMenu(false);
+  }
+
   async function handleClip() {
     const highlight = episode.script.find((s) =>
       s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
     ) ?? episode.script[0];
 
     const clipText = `🎙️ DataBard on ${episode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\n${shareUrl ?? window.location.origin}`;
+
+    // Try native share with the clip text
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `DataBard: ${episode.schemaName}`, text: clipText });
+        return;
+      } catch { /* cancelled */ }
+    }
+
     await navigator.clipboard.writeText(clipText);
     setClipCopied(true);
     setTimeout(() => setClipCopied(false), 2000);
@@ -315,7 +374,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
               {episode.tableCount} tables · {episode.qualitySummary.total} tests
             </p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 relative">
             <button
               onClick={handleDownload}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
@@ -335,10 +394,31 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
               onClick={handleShare}
               disabled={sharing}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50"
-              title="Share episode link"
+              title="Share episode"
             >
-              {shareUrl ? "✓ Link" : "Share"}
+              {sharing ? "…" : shareUrl ? "✓ Share" : "Share"}
             </button>
+
+            {/* Share menu (desktop fallback) */}
+            {showShareMenu && (
+              <div className="absolute top-full right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-10 animate-slide-up min-w-[140px]">
+                {[
+                  { id: "whatsapp", label: "WhatsApp" },
+                  { id: "telegram", label: "Telegram" },
+                  { id: "twitter", label: "Twitter/X" },
+                  { id: "linkedin", label: "LinkedIn" },
+                  { id: "copy", label: "Copy link" },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => shareVia(p.id)}
+                    className="block w-full text-left text-xs px-3 py-2 hover:bg-[var(--bg)] cursor-pointer first:rounded-t-lg last:rounded-b-lg"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
