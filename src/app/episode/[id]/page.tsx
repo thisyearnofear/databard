@@ -61,17 +61,24 @@ export default function SharedEpisode() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6 sm:gap-8">
-      <div className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
-        <p className="text-[var(--text-muted)] text-lg">Shared Episode</p>
-      </div>
-
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
       <EpisodePlayer episode={episode} audioUrl={audioUrl} />
 
-      <a href="/" className="text-sm text-[var(--accent)] hover:underline">
-        Create your own episode →
-      </a>
+      {/* CTA for shared episode visitors */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-md text-center">
+        <p className="text-sm font-medium mb-1">🎙️ This episode was made with DataBard</p>
+        <p className="text-xs text-[var(--text-muted)] mb-3">
+          Turn any data catalog into a podcast — flag quality issues, trace lineage, and keep your team informed.
+        </p>
+        <div className="flex gap-2 justify-center">
+          <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium">
+            Generate your own
+          </a>
+          <a href="/#pricing" className="bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-xs font-medium">
+            See plans
+          </a>
+        </div>
+      </div>
     </main>
   );
 }

@@ -109,6 +109,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const [clipCopied, setClipCopied] = useState(false);
   const [speed, setSpeed] = useState<number>(1);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [nudge, setNudge] = useState<string | null>(null);
 
   // Web Audio API setup for waveform
   useEffect(() => {
@@ -266,6 +267,8 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     a.href = audioUrl;
     a.download = `databard-${episode.schemaName}.mp3`;
     a.click();
+    setNudge("download");
+    setTimeout(() => setNudge(null), 8000);
   }
 
   async function handleShare() {
@@ -306,6 +309,8 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
 
         // Desktop: show share menu
         setShowShareMenu(true);
+        setNudge("share");
+        setTimeout(() => setNudge(null), 8000);
       }
     } catch (e) {
       console.error("Share failed:", e);
@@ -463,6 +468,17 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
         <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
           Space to play/pause · ← → to seek 10s · Click a segment to jump
         </p>
+
+        {/* Contextual nudge */}
+        {nudge && (
+          <div className="mt-3 text-center text-xs text-[var(--text-muted)] animate-slide-up">
+            {nudge === "download" && "💡 Want a fresh episode every week? "}
+            {nudge === "share" && "💡 Share it with your whole team automatically — "}
+            <a href="/#pricing" className="text-[var(--accent)] hover:underline">
+              Get DataBard Pro →
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Segment timeline */}
