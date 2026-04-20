@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
-import { synthesizeEpisodeViaWeb } from "@/lib/audio-engine-web";
 import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
 import { validateApiSecret, ValidationError, rateLimit } from "@/lib/validation";
 
@@ -46,10 +45,15 @@ export async function POST(req: NextRequest) {
     } catch (apiError: unknown) {
       const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
       
-      // If 402 error (free tier), fall back to web automation
+      // If 402 error (free tier), try web automation fallback
       if (errorMsg.includes('402') || errorMsg.includes('payment_required') || errorMsg.includes('paid_plan_required')) {
-        console.log('[Synthesis] API returned 402, falling back to web automation...');
-        audioBuffers = await synthesizeEpisodeViaWeb(script);
+        console.log('[Synthesis] API returned 402, trying web automation...');
+        try {
+          const { synthesizeEpisodeViaWeb } = await import("@/lib/audio-engine-web");
+          audioBuffers = await synthesizeEpisodeViaWeb(script);
+        } catch {
+          throw apiError; // web fallback also failed — throw original
+        }
       } else {
         throw apiError;
       }

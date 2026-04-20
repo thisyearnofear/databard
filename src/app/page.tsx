@@ -13,7 +13,6 @@ export default function Home() {
   const [dbtAccountId, setDbtAccountId] = useState("");
   const [dbtProjectId, setDbtProjectId] = useState("");
   const [dbtToken, setDbtToken] = useState("");
-  const [manifestPath, setManifestPath] = useState("./target/manifest.json");
 
   const [connected, setConnected] = useState(false);
   const [schemas, setSchemas] = useState<string[]>([]);
@@ -23,8 +22,36 @@ export default function Home() {
   const [genStep, setGenStep] = useState(-1);
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [showConnect, setShowConnect] = useState(false);
   const [checkoutMsg, setCheckoutMsg] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [manifestFile, setManifestFile] = useState<File | null>(null);
+
+  // Restore connection config from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("databard:connection");
+      if (saved) {
+        const cfg = JSON.parse(saved);
+        if (cfg.source) setSource(cfg.source);
+        if (cfg.omUrl) setOmUrl(cfg.omUrl);
+        if (cfg.token) setToken(cfg.token);
+        if (cfg.dbtAccountId) setDbtAccountId(cfg.dbtAccountId);
+        if (cfg.dbtProjectId) setDbtProjectId(cfg.dbtProjectId);
+        if (cfg.dbtToken) setDbtToken(cfg.dbtToken);
+      }
+    } catch { /* ignore corrupt localStorage */ }
+  }, []);
+
+  // Persist connection config to localStorage (excluding sensitive tokens from localStorage for security)
+  useEffect(() => {
+    try {
+      localStorage.setItem("databard:connection", JSON.stringify({
+        source, omUrl, dbtAccountId, dbtProjectId,
+      }));
+    } catch { /* quota exceeded or private mode */ }
+  }, [source, omUrl, dbtAccountId, dbtProjectId]);
 
   // Handle checkout return
   useEffect(() => {
@@ -70,28 +97,38 @@ export default function Home() {
   }
 
   async function handleConnect() {
+    setConnecting(true);
     setStatus("Connecting…");
-    const body: Record<string, unknown> = { source };
 
-    if (source === "openmetadata") {
-      if (!omUrl || !token) { setStatus("Error: URL and token required"); return; }
-      body.url = omUrl; body.token = token;
-    } else if (source === "dbt-cloud") {
-      if (!dbtAccountId || !dbtProjectId || !dbtToken) { setStatus("Error: All fields required"); return; }
-      body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken };
-    } else if (source === "dbt-local") {
-      if (!manifestPath) { setStatus("Error: Manifest path required"); return; }
-      body.dbtLocal = { manifestPath };
-    }
+    try {
+      const body: Record<string, unknown> = { source };
 
-    const res = await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const data = await res.json();
-    if (data.ok) {
-      setConnected(true);
-      setSchemas(data.schemas ?? []);
-      setStatus(`Connected — ${data.schemas?.length ?? 0} schemas found`);
-    } else {
-      setStatus(`Error: ${data.error}`);
+      if (source === "openmetadata") {
+        if (!omUrl || !token) { setStatus("Error: URL and token required"); setConnecting(false); return; }
+        body.url = omUrl; body.token = token;
+      } else if (source === "dbt-cloud") {
+        if (!dbtAccountId || !dbtProjectId || !dbtToken) { setStatus("Error: All fields required"); setConnecting(false); return; }
+        body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken };
+      } else if (source === "dbt-local") {
+        if (!manifestFile) { setStatus("Error: Please upload a manifest.json file"); setConnecting(false); return; }
+        const text = await manifestFile.text();
+        try { JSON.parse(text); } catch { setStatus("Error: Invalid JSON in manifest file"); setConnecting(false); return; }
+        body.dbtLocal = { manifestContent: text };
+      }
+
+      const res = await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) {
+        setConnected(true);
+        setSchemas(data.schemas ?? []);
+        setStatus(`Connected — ${data.schemas?.length ?? 0} schemas found`);
+      } else {
+        setStatus(`Error: ${data.error}`);
+      }
+    } catch (e: unknown) {
+      setStatus(`Error: ${e instanceof Error ? e.message : "Connection failed"}`);
+    } finally {
+      setConnecting(false);
     }
   }
 
@@ -104,7 +141,10 @@ export default function Home() {
       const body: Record<string, unknown> = { schemaFqn, source };
       if (source === "openmetadata") { body.url = omUrl; body.token = token; }
       else if (source === "dbt-cloud") { body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken }; }
-      else if (source === "dbt-local") { body.dbtLocal = { manifestPath }; }
+      else if (source === "dbt-local" && manifestFile) {
+        const text = await manifestFile.text();
+        body.dbtLocal = { manifestContent: text };
+      }
 
       const res = await fetch("/api/synthesize-stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!res.ok) { setStatus(`Error: ${res.statusText}`); return; }
@@ -114,15 +154,23 @@ export default function Home() {
 
       const decoder = new TextDecoder();
       const audioChunks: ArrayBuffer[] = [];
+      const chunkSizes: number[] = [];
       let metadata: Episode | null = null;
+      let sseBuffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split("\n");
+        // Keep the last (potentially incomplete) line in the buffer
+        sseBuffer = lines.pop() ?? "";
+
+        for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
-          const data = JSON.parse(line.slice(6));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let data: any;
+          try { data = JSON.parse(line.slice(6)); } catch { continue; }
 
           if (data.type === "metadata") {
             setGenStep(1);
@@ -135,13 +183,45 @@ export default function Home() {
             setStatus(`${data.totalCalls} API calls (${data.segments} speech + ${data.sfxCalls} SFX)`);
           } else if (data.type === "audio") {
             setGenStep(2);
-            const audioData = Uint8Array.from(atob(data.data), (c) => c.charCodeAt(0));
+            const audioData = Uint8Array.from(atob(data.data as string), (c) => c.charCodeAt(0));
             audioChunks.push(audioData.buffer as ArrayBuffer);
+            chunkSizes.push(audioData.byteLength);
             setStatus(`Synthesizing… ${audioChunks.length} segments`);
           } else if (data.type === "done" && metadata) {
             const blob = new Blob(audioChunks, { type: "audio/mpeg" });
-            setEpisode({ ...metadata, audioUrl: URL.createObjectURL(blob) });
-            setAudioUrl(URL.createObjectURL(blob));
+            const url = URL.createObjectURL(blob);
+            setEpisode({ ...metadata, audioUrl: url });
+            setAudioUrl(url);
+
+            // Compute proportional segment offsets from byte sizes
+            // Audio chunks include: intro jingle, then for each segment optionally a transition + speech, then outro
+            // We approximate time offsets proportional to byte sizes
+            const totalBytes = chunkSizes.reduce((a, b) => a + b, 0);
+            if (totalBytes > 0 && metadata.script.length > 0) {
+              // Build a mapping: each script segment maps to one or more audio chunks
+              // Chunk 0 = intro jingle. Then segments interleaved with optional transitions. Last = outro.
+              let chunkIdx = 1; // skip intro
+              const segByteStarts: number[] = [];
+              let byteOffset = chunkSizes[0] ?? 0; // after intro
+
+              for (let s = 0; s < metadata.script.length; s++) {
+                segByteStarts.push(byteOffset);
+                // Check if there was a transition before this segment (topic change)
+                if (s > 0 && metadata.script[s].topic !== metadata.script[s - 1].topic) {
+                  byteOffset += chunkSizes[chunkIdx] ?? 0; // transition
+                  chunkIdx++;
+                }
+                byteOffset += chunkSizes[chunkIdx] ?? 0; // speech
+                chunkIdx++;
+              }
+
+              // Convert byte offsets to time offsets (we don't know total duration yet, so use ratio)
+              // We'll store byte-proportional ratios and multiply by duration in the player
+              // Actually, store as fractions — the player will multiply by duration
+              const offsets = segByteStarts.map((b) => b / totalBytes);
+              setSegmentOffsets(offsets);
+            }
+
             setStatus("");
           } else if (data.type === "error") {
             setStatus(`Error: ${data.error}`);
@@ -164,7 +244,7 @@ export default function Home() {
   }
 
   function reset() {
-    setEpisode(null); setAudioUrl(null); setConnected(false); setShowConnect(false); setStatus("");
+    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setConnected(false); setShowConnect(false); setStatus("");
   }
 
   const sourceHelp: Record<DataSource, string> = {
@@ -177,7 +257,7 @@ export default function Home() {
   if (episode && audioUrl !== null) {
     return (
       <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6">
-        <EpisodePlayer episode={episode} audioUrl={audioUrl} />
+        <EpisodePlayer episode={episode} audioUrl={audioUrl} segmentOffsets={segmentOffsets} />
 
         <div className="flex flex-col items-center gap-3">
           <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">
@@ -227,8 +307,8 @@ export default function Home() {
             {filteredSchemas.length === 0
               ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas found</p>
               : filteredSchemas.map((s) => (
-                <button key={s} onClick={() => handleGenerate(s)}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer">
+                <button key={s} onClick={() => handleGenerate(s)} disabled={generating}
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   {s}
                 </button>
               ))
@@ -352,11 +432,24 @@ export default function Home() {
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" value={dbtToken} onChange={(e) => setDbtToken(e.target.value)} placeholder="Account Settings → API Access" />
             </>)}
             {source === "dbt-local" && (<>
-              <label className="text-sm text-[var(--text-muted)]">Manifest Path</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="./target/manifest.json" />
+              <label className="text-sm text-[var(--text-muted)]">Upload manifest.json</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => setManifestFile(e.target.files?.[0] ?? null)}
+                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm w-full file:mr-3 file:rounded file:border-0 file:bg-[var(--accent)] file:text-white file:px-3 file:py-1 file:text-xs file:cursor-pointer"
+                />
+                {manifestFile && (
+                  <p className="text-xs text-[var(--success)] mt-1">✓ {manifestFile.name} ({(manifestFile.size / 1024).toFixed(0)} KB)</p>
+                )}
+              </div>
             </>)}
 
-            <button onClick={handleConnect} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">Connect</button>
+            <button onClick={handleConnect} disabled={connecting} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {connecting ? "Connecting…" : "Connect"}
+            </button>
           </div>
         )}
         {status && <p className="text-sm text-[var(--text-muted)] text-center mt-4">{status}</p>}

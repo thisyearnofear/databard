@@ -296,31 +296,46 @@ BROWSER_PROVIDER=agent-browser
 # when prompted, and CAPTCHA may block automation
 ```
 
-## Architecture
+## Persistent User Session Flow (Signup/Login)
+
+To leverage the more generous free-character limits of the ElevenLabs web UI compared to the restricted free API tier, DataBard uses a "Persistent Session" pattern.
+
+### The Strategy
+
+1.  **Direct Connection**: The browser automation connects to your *actual* Chrome browser session (`browser-use connect`).
+2.  **One-Time Login**: You manually log in to ElevenLabs in your browser. The automation then inherits this authenticated state.
+3.  **Headless/Automated Drive**: The script `scripts/generate-demo-automated.js` then drives the web UI to select voices, input text, and trigger downloads.
+
+### Automated Demo Generation
+
+We have a dedicated script for generating high-quality home page demos using the latest 2025 voices (**Neil** and **Juniper**):
+
+```bash
+# Ensure browser-use is installed
+curl -fsSL https://browser-use.com/cli/install.sh | bash
+
+# Run the automated generator
+./scripts/generate-demo-automated.js
+```
+
+### Why This Flow?
+
+*   **Bypasses 402 Errors**: The ElevenLabs API often blocks free-tier accounts from using premade voices. The Web UI does not.
+*   **Access to New Voices**: Newer voices like "Neil" and "Juniper" are often available on the web before or instead of the free API tier.
+*   **Visual Verification**: You can see exactly what the AI is doing in your browser window, making it easier to handle unexpected UI changes or CAPTCHAs.
+
+## How It Works (Technical)
 
 ```
-┌─────────────────┐
-│  Synthesis API  │
-└────────┬────────┘
-         │
-         ├─ Try ElevenLabs API
-         │  └─ Success → Return audio
-         │
-         ├─ 402 Error → Browser Automation
-         │  │
-         │  ├─ Select Provider (auto/manual)
-         │  │  ├─ agent-browser (local)
-         │  │  ├─ browser-use CLI (local)
-         │  │  ├─ Browser Use Cloud
-         │  │  └─ TinyFish AI
-         │  │
-         │  ├─ Open ElevenLabs Web UI
-         │  ├─ Fill Form & Generate
-         │  ├─ Extract Audio URL
-         │  └─ Download MP3
-         │
-         └─ Return audio to client
+[ DataBard Script ] -> [ browser-use CLI ] -> [ Real Chrome Session ] -> [ ElevenLabs Web UI ]
 ```
+
+1.  `browser-use connect` finds the Chrome debugging port.
+2.  `browser-use open` navigates to the Speech Synthesis page.
+3.  The script loops through `public/sample-episode.json`.
+4.  For each segment, it clicks the voice, types the text, and clicks "Generate".
+5.  It then clicks "Download" which saves the file to your system's `~/Downloads` folder.
+
 
 ## Future Improvements
 

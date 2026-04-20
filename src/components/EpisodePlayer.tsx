@@ -92,7 +92,7 @@ function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdg
   );
 }
 
-export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUrl: string }) {
+export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: Episode; audioUrl: string; segmentOffsets?: number[] }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -181,10 +181,21 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     return () => cancelAnimationFrame(animRef.current);
   }, [playing, drawWaveform]);
 
-  // Auto-scroll segment list to active segment
-  const segDuration = duration / (episode.script.length || 1);
-  const activeIdx = Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
+  // Compute active segment from actual offsets (fractions of duration) or fall back to even division
+  const getActiveIdx = useCallback(() => {
+    if (segmentOffsets && segmentOffsets.length > 0 && duration > 0) {
+      for (let i = segmentOffsets.length - 1; i >= 0; i--) {
+        if (currentTime >= segmentOffsets[i] * duration) return Math.min(i, episode.script.length - 1);
+      }
+      return 0;
+    }
+    const segDuration = duration / (episode.script.length || 1);
+    return Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
+  }, [currentTime, duration, segmentOffsets, episode.script.length]);
 
+  const activeIdx = getActiveIdx();
+
+  // Auto-scroll segment list to active segment
   useEffect(() => {
     if (!playing) return;
     const list = segListRef.current;
@@ -248,7 +259,12 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   function seekToSegment(i: number) {
     const audio = audioRef.current;
     if (!audio || !duration) return;
-    audio.currentTime = i * segDuration;
+    if (segmentOffsets && segmentOffsets.length > i) {
+      audio.currentTime = segmentOffsets[i] * duration;
+    } else {
+      const segDuration = duration / (episode.script.length || 1);
+      audio.currentTime = i * segDuration;
+    }
     if (!playing) { audio.play(); setPlaying(true); }
   }
 

@@ -15,7 +15,15 @@ export async function POST(req: NextRequest) {
     } else if (source === "dbt-cloud") {
       validateDbtConfig(body.dbtCloud);
     } else if (source === "dbt-local") {
-      validateManifestPath(body.dbtLocal?.manifestPath);
+      // Accept either manifestContent (file upload) or manifestPath (legacy)
+      if (body.dbtLocal?.manifestContent) {
+        // File was uploaded — validate it's parseable JSON
+        try { JSON.parse(body.dbtLocal.manifestContent); } catch {
+          throw new ValidationError("Invalid JSON in uploaded manifest file");
+        }
+      } else {
+        validateManifestPath(body.dbtLocal?.manifestPath);
+      }
     } else {
       throw new ValidationError(`Unsupported data source: ${source}`);
     }
