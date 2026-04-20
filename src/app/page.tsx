@@ -266,6 +266,14 @@ export default function Home() {
   if (episode && audioUrl !== null) {
     return (
       <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6">
+        {/* Demo context banner */}
+        {episode.schemaFqn === "analytics.ecommerce" && (
+          <div className="w-full max-w-2xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-3 text-center animate-slide-up">
+            <p className="text-xs text-[var(--text-muted)]">
+              🎧 Demo episode analyzing a sample <span className="text-[var(--text)]">e-commerce schema</span> — 6 tables, 3 failing tests, PII governance gaps, and stale pipelines
+            </p>
+          </div>
+        )}
         <EpisodePlayer episode={episode} audioUrl={audioUrl} segmentOffsets={segmentOffsets} />
 
         <div className="flex flex-col items-center gap-3">
@@ -407,6 +415,19 @@ export default function Home() {
 
       {/* Connect CTA */}
       <section className="w-full max-w-md pb-12 sm:pb-16 flex flex-col gap-4">
+        {/* What you'll get */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+          <h3 className="text-sm font-semibold mb-3">What you get per episode</h3>
+          <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Health score & coverage</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Failing test breakdown</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Lineage risk analysis</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> PII & governance flags</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Prioritized action items</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Shareable MP3 + link</div>
+          </div>
+        </div>
+
         {/* Provider Status */}
         <ProviderStatus />
 
@@ -428,17 +449,17 @@ export default function Home() {
 
             {source === "openmetadata" && (<>
               <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={omUrl} onChange={(e) => setOmUrl(e.target.value)} placeholder="http://localhost:8585" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={omUrl} onChange={(e) => setOmUrl(e.target.value)} placeholder="http://localhost:8585" title="The base URL of your OpenMetadata instance. Default is http://localhost:8585 for local Docker installs." />
               <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from Settings → Bots" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from Settings → Bots" title="Find this in OpenMetadata: Settings → Bots → Ingestion Bot → Copy Token. It's a long JWT string." />
             </>)}
             {source === "dbt-cloud" && (<>
               <label className="text-sm text-[var(--text-muted)]">Account ID</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtAccountId} onChange={(e) => setDbtAccountId(e.target.value)} placeholder="From URL: cloud.getdbt.com/deploy/{id}" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtAccountId} onChange={(e) => setDbtAccountId(e.target.value)} placeholder="From URL: cloud.getdbt.com/deploy/{id}" title="Find this in your dbt Cloud URL: cloud.getdbt.com/deploy/{account_id}/..." />
               <label className="text-sm text-[var(--text-muted)]">Project ID</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtProjectId} onChange={(e) => setDbtProjectId(e.target.value)} placeholder="From URL: …/projects/{id}" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtProjectId} onChange={(e) => setDbtProjectId(e.target.value)} placeholder="From URL: …/projects/{id}" title="Find this in your dbt Cloud URL: .../projects/{project_id}/..." />
               <label className="text-sm text-[var(--text-muted)]">API Token</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={dbtToken} onChange={(e) => setDbtToken(e.target.value)} placeholder="Account Settings → API Access" />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={dbtToken} onChange={(e) => setDbtToken(e.target.value)} placeholder="Account Settings → API Access" title="Generate at: dbt Cloud → Account Settings → API Access → Service Tokens. Needs 'Metadata Only' permission." />
             </>)}
             {source === "dbt-local" && (<>
               <label className="text-sm text-[var(--text-muted)]">Upload manifest.json</label>
@@ -503,6 +524,55 @@ export default function Home() {
               Start Pro
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="w-full max-w-3xl pb-12 sm:pb-16" id="faq">
+        <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">Questions</h2>
+        <div className="flex flex-col gap-2">
+          {[
+            {
+              q: "Is my data sent to your servers?",
+              a: "Your credentials are stored server-side in an encrypted session that expires after 1 hour. We fetch metadata from your catalog to generate the episode, but we don't store your raw data. Audio and episode data are cached temporarily for sharing (24h for free, 7 days for Pro).",
+            },
+            {
+              q: "Do I need an ElevenLabs account?",
+              a: "For the demo, no. To generate episodes from your own data, you need an ElevenLabs API key (Starter plan at $5/mo is recommended for full API access). Free tier keys work with browser automation fallback but are slower.",
+            },
+            {
+              q: "What data sources are supported?",
+              a: "OpenMetadata (self-hosted or cloud), dbt Cloud (via API), and dbt Local (upload your manifest.json). We pull table metadata, column info, quality tests, lineage, owners, tags, and profiler data.",
+            },
+            {
+              q: "How long does generation take?",
+              a: "30-60 seconds depending on schema size. The AI analyzes your metadata, generates a two-host script, then synthesizes each segment as audio. You see real-time progress with segment-by-segment updates.",
+            },
+            {
+              q: "Can I self-host DataBard?",
+              a: "Yes. DataBard is a Next.js app that runs on any Node.js server. Clone the repo, set your API keys, and deploy. The file-backed store works on any persistent server. No database required.",
+            },
+            {
+              q: "What are the two AI hosts?",
+              a: "Alex is the enthusiastic data advocate who highlights what's working well. Morgan is the skeptical quality auditor who flags risks, failing tests, and governance gaps. Together they create a balanced, engaging walkthrough.",
+            },
+            {
+              q: "What's the Paper canvas integration?",
+              a: "If you have Paper Desktop open, DataBard can render a visual health dashboard directly on the canvas — health score, critical tables, action items, and lineage maps. Great for stakeholder reports.",
+            },
+            {
+              q: "How does the free tier work?",
+              a: "Unlimited one-off episodes, all data sources, MP3 download, sharing, and interactive drill-down. Pro adds scheduled episodes, private RSS feeds, Slack notifications, and historical comparison.",
+            },
+          ].map((item) => (
+            <details key={item.q} className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl">
+              <summary className="px-5 py-4 text-sm font-medium cursor-pointer list-none flex items-center justify-between">
+                {item.q}
+                <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+              </summary>
+              <p className="px-5 pb-4 text-sm text-[var(--text-muted)] leading-relaxed">{item.a}</p>
+            </details>
+          ))}
         </div>
       </section>
 
