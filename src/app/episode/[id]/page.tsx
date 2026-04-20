@@ -53,9 +53,14 @@ export default function SharedEpisode() {
 
   if (error || !episode || !audioUrl) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-[var(--danger)]">{error || "Episode not found or audio unavailable"}</p>
-        <a href="/" className="text-[var(--accent)] hover:underline">← Back to home</a>
+      <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
+        <p className="text-[var(--danger)]">{error || "Episode not found or expired"}</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center">
+          <p className="text-sm mb-3">This episode may have expired. Want to hear what DataBard sounds like?</p>
+          <a href="/" className="inline-block bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium">
+            ▶ Listen to a demo
+          </a>
+        </div>
       </main>
     );
   }

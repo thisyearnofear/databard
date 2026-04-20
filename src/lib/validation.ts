@@ -65,9 +65,37 @@ export function validateManifestPath(path: string): void {
  */
 export function validateApiSecret(req: { headers: { get(name: string): string | null } }): void {
   const secret = process.env.DATABARD_API_SECRET;
-  if (!secret) return; // No secret configured — open access
+  if (!secret) return;
   const provided = req.headers.get("x-api-secret") || req.headers.get("authorization")?.replace("Bearer ", "");
   if (provided !== secret) {
     throw new ValidationError("Unauthorized — invalid or missing API secret");
+  }
+}
+
+/**
+ * Simple in-memory rate limiter by IP.
+ * Limits synthesis calls to prevent credit burn.
+ */
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+export function rateLimit(
+  req: { headers: { get(name: string): string | null } },
+  { maxRequests = 5, windowMs = 3600000 } = {}
+): void {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("x-real-ip")
+    || "unknown";
+
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+
+  entry.count++;
+  if (entry.count > maxRequests) {
+    throw new ValidationError(`Rate limit exceeded — max ${maxRequests} episodes per hour. Try again later.`);
   }
 }

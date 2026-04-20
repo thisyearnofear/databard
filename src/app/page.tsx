@@ -48,33 +48,10 @@ export default function Home() {
     try {
       const res = await fetch("/sample-episode.json");
       const demo: Episode = await res.json();
-      setGenStep(1);
-
-      try {
-        const synthRes = await fetch("/api/synthesize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ script: demo.script }),
-        });
-
-        if (synthRes.ok) {
-          setGenStep(2);
-          const data = await synthRes.json();
-          if (data.ok && data.audio) {
-            const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0));
-            const blob = new Blob([bytes], { type: "audio/mpeg" });
-            setEpisode(demo);
-            setAudioUrl(URL.createObjectURL(blob));
-            setStatus("");
-            return;
-          }
-        }
-      } catch { /* fall through */ }
-
       setGenStep(2);
       setEpisode(demo);
       setAudioUrl("/demo-episode.mp3");
-      setStatus("Demo loaded — add ELEVENLABS_API_KEY for AI voices");
+      setStatus("");
     } catch (e: unknown) {
       setStatus(`Error: ${e instanceof Error ? e.message : "Failed to load demo"}`);
     } finally {

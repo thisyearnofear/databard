@@ -3,16 +3,17 @@ import { generateScript } from "@/lib/script-generator";
 import { synthesizeSpeech, synthesizeSfx, estimateCost } from "@/lib/audio-engine";
 import type { ConnectionConfig } from "@/lib/types";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
-import { validateSchemaFqn, validateApiSecret, ValidationError } from "@/lib/validation";
+import { validateSchemaFqn, validateApiSecret, ValidationError, rateLimit } from "@/lib/validation";
 
 /**
  * Streaming synthesis — sends audio chunks as they're generated.
- * Flow: auth → metadata → script → cost estimate → audio chunks → done
+ * Flow: auth → rate limit → metadata → script → cost estimate → audio chunks → done
  * Respects client abort signal to stop synthesis on disconnect.
  */
 export async function POST(req: NextRequest) {
   try {
     validateApiSecret(req);
+    rateLimit(req);
 
     const body = await req.json();
     const { schemaFqn, source = "openmetadata" } = body;
