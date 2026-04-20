@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const actionItems = generateActionItems(insights);
     const result = await renderHealthDashboard(episode!, insights, actionItems);
 
-    return NextResponse.json({ ok: true, artboardId: result.artboardId });
+    return NextResponse.json({ ok: true, artboardIds: result.artboardIds });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

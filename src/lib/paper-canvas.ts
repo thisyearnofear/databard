@@ -1,30 +1,39 @@
 /**
- * Paper Canvas integration — renders schema health dashboards
+ * Paper Canvas integration — renders multi-slide schema health dashboards
  * on a Paper.design canvas via MCP tool calls.
  *
- * Generates a visual companion to the audio episode:
- * - Health score ring
- * - Coverage bars
- * - Critical tables with risk indicators
- * - Action items as interactive cards
- * - Lineage hotspot visualization
+ * Generates 3 slides as a visual companion to the audio episode:
+ * 1. Overview — health score, coverage bars, key stats
+ * 2. Critical Tables & Actions — risk-ranked tables + prioritized action items
+ * 3. Lineage & Ownership — data flow visualization + team accountability
+ *
+ * Design system: Space Grotesk (display), Inter (body), JetBrains Mono (data)
+ * Palette: terminal mood — deep black, phosphor green, DataBard purple accent
  */
 import type { Episode } from "./types";
 import type { SchemaInsights, ActionItem } from "./schema-analysis";
 
 const PAPER_MCP_URL = "http://127.0.0.1:29979/mcp";
 
+// ── Design tokens ──
+const C = {
+  bg: "#08080C", surface: "#12121A", card: "#1E1E2A", border: "#2a2a3a",
+  text: "#E4E4EF", muted: "#8888A0", dim: "#555570",
+  accent: "#7C5BF5", success: "#5BF58C", danger: "#F55B5B", warn: "#eab308", info: "#3b82f6",
+} as const;
+
+const ARTBOARD_STYLES = {
+  backgroundColor: C.bg, display: "flex", flexDirection: "column",
+  fontFamily: "Inter", gap: "32px", height: "fit-content",
+  padding: "48px 56px", width: "1440px",
+} as const;
+
 /** Call a Paper MCP tool */
-async function callPaperTool(tool: string, args: Record<string, unknown>): Promise<unknown> {
+async function call(tool: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
   const res = await fetch(PAPER_MCP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: Date.now(),
-      method: "tools/call",
-      params: { name: tool, arguments: args },
-    }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: tool, arguments: args } }),
   });
   if (!res.ok) throw new Error(`Paper MCP error: ${res.status}`);
   const data = await res.json();
@@ -32,227 +41,384 @@ async function callPaperTool(tool: string, args: Record<string, unknown>): Promi
   return data.result;
 }
 
-/** Check if Paper Desktop is running and MCP is available */
+async function html(targetNodeId: string, content: string) {
+  await call("write_html", { targetNodeId, mode: "insert-children", html: content });
+}
+
+/** Check if Paper Desktop is running */
 export async function isPaperAvailable(): Promise<boolean> {
   try {
     const res = await fetch(PAPER_MCP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/list",
-        params: {},
-      }),
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
       signal: AbortSignal.timeout(2000),
     });
     return res.ok;
-  } catch {
-    return false;
+  } catch { return false; }
+}
+
+// ── Helpers ──
+
+function riskColor(risk: string): string {
+  return risk === "critical" ? C.danger : risk === "high" ? C.warn : C.accent;
+}
+
+function priorityColor(p: string): string {
+  return p === "critical" ? C.danger : p === "high" ? C.warn : p === "medium" ? C.info : C.muted;
+}
+
+function scoreColor(score: number): string {
+  return score >= 70 ? C.success : score >= 40 ? C.warn : C.danger;
+}
+
+// ── Slide 1: Overview ──
+
+async function renderOverview(episode: Episode, insights: SchemaInsights): Promise<string> {
+  const { nodeId } = await call("create_artboard", { name: `DataBard — Overview`, styles: ARTBOARD_STYLES }) as { nodeId: string };
+  const sc = scoreColor(insights.healthScore);
+  const circ = 2 * Math.PI * 42;
+  const offset = circ - (insights.healthScore / 100) * circ;
+  const testedCount = episode.tableCount - insights.untestedTables.length;
+  const undocCount = insights.undocumentedTables.length;
+
+  // Header
+  await html(nodeId, `
+    <div layer-name="Header" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="font-family:'Space Grotesk';font-size:28px;font-weight:700;color:${C.text};letter-spacing:-0.02em;">DataBard</span>
+        <span style="font-family:'JetBrains Mono';font-size:12px;color:${C.muted};">${episode.schemaName}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.muted};">${episode.tableCount} tables · ${episode.qualitySummary.total} tests</span>
+        <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.dim};">${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+      </div>
+    </div>
+  `);
+
+  // Hero score
+  const summaryText = [
+    insights.failingTests > 0 ? `${insights.failingTests} failing tests across ${insights.criticalTables.filter(c => c.failingTests > 0).length} critical tables with downstream dependents.` : "",
+    `${insights.docCoverage}% documentation coverage.`,
+    insights.untestedTables.length > 0 ? `${insights.untestedTables.length} tables have no quality tests configured.` : "",
+  ].filter(Boolean).join(" ");
+
+  await html(nodeId, `
+    <div layer-name="Hero Score" style="display:flex;align-items:center;gap:48px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <svg width="180" height="180" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="${C.card}" stroke-width="6"/>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="${sc}" stroke-width="6" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+          <text x="50" y="46" text-anchor="middle" dominant-baseline="central" font-family="Space Grotesk" font-size="32" font-weight="700" fill="${sc}">${insights.healthScore}</text>
+          <text x="50" y="64" text-anchor="middle" font-family="Inter" font-size="8" fill="${C.muted}">of 100</text>
+        </svg>
+        <span style="font-family:'JetBrains Mono';font-size:11px;font-weight:500;color:${sc};letter-spacing:0.08em;text-transform:uppercase;">${insights.healthLabel}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:24px;flex:1;">
+        <div style="font-family:'Space Grotesk';font-size:40px;font-weight:700;color:${C.text};letter-spacing:-0.03em;line-height:1.1;">Schema health${insights.healthLabel === "healthy" ? "<br/>looking good" : insights.healthLabel === "at-risk" ? "<br/>needs attention" : "<br/>critical issues"}</div>
+        <div style="font-family:'Inter';font-size:14px;color:${C.muted};line-height:1.6;max-width:480px;">${summaryText}</div>
+      </div>
+    </div>
+  `);
+
+  // Coverage bars
+  await html(nodeId, `
+    <div layer-name="Coverage" style="display:flex;gap:20px;">
+      <div style="flex:1;display:flex;flex-direction:column;gap:16px;padding:28px;background:${C.surface};border-radius:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-family:'Inter';font-size:12px;font-weight:500;color:${C.muted};">Test Coverage</span>
+          <span style="font-family:'JetBrains Mono';font-size:24px;font-weight:700;color:${C.accent};">${insights.testCoverage}%</span>
+        </div>
+        <div style="height:4px;background:${C.card};border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${insights.testCoverage}%;background:${C.accent};border-radius:2px;"></div>
+        </div>
+        <span style="font-family:'Inter';font-size:11px;color:${C.dim};">${testedCount} of ${episode.tableCount} tables have tests</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:16px;padding:28px;background:${C.surface};border-radius:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-family:'Inter';font-size:12px;font-weight:500;color:${C.muted};">Documentation</span>
+          <span style="font-family:'JetBrains Mono';font-size:24px;font-weight:700;color:${C.success};">${insights.docCoverage}%</span>
+        </div>
+        <div style="height:4px;background:${C.card};border-radius:2px;overflow:hidden;">
+          <div style="height:100%;width:${insights.docCoverage}%;background:${C.success};border-radius:2px;"></div>
+        </div>
+        <span style="font-family:'Inter';font-size:11px;color:${C.dim};">${undocCount} tables missing descriptions</span>
+      </div>
+    </div>
+  `);
+
+  // Stats row
+  const stats = [
+    { value: insights.failingTests, label: "Failing Tests", sub: `across ${insights.criticalTables.filter(c => c.failingTests > 0).length} tables`, color: insights.failingTests > 0 ? C.danger : C.success },
+    { value: insights.untestedTables.length, label: "Untested Tables", sub: "no quality checks", color: C.text },
+    { value: insights.ownerlessTables.length, label: "No Owner", sub: "unassigned tables", color: C.text },
+    { value: insights.passingTests, label: "Passing Tests", sub: "all green", color: C.success },
+  ];
+
+  await html(nodeId, `
+    <div layer-name="Stats" style="display:flex;gap:20px;">
+      ${stats.map(s => `
+        <div style="flex:1;padding:24px 28px;background:${C.surface};border-radius:12px;display:flex;align-items:baseline;gap:12px;">
+          <span style="font-family:'JetBrains Mono';font-size:36px;font-weight:700;color:${s.color};">${s.value}</span>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-family:'Inter';font-size:13px;font-weight:500;color:${C.text};">${s.label}</span>
+            <span style="font-family:'Inter';font-size:11px;color:${C.dim};">${s.sub}</span>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `);
+
+  return nodeId;
+}
+
+// ── Slide 2: Critical Tables & Actions ──
+
+async function renderCriticalAndActions(episode: Episode, insights: SchemaInsights, actionItems: ActionItem[]): Promise<string> {
+  const { nodeId } = await call("create_artboard", { name: `DataBard — Critical Tables & Actions`, styles: ARTBOARD_STYLES }) as { nodeId: string };
+
+  // Critical tables header
+  await html(nodeId, `
+    <div layer-name="Critical Header" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="font-family:'Space Grotesk';font-size:28px;font-weight:700;color:${C.text};letter-spacing:-0.02em;">Critical Tables</span>
+        <span style="font-family:'JetBrains Mono';font-size:12px;color:${C.danger};">${insights.criticalTables.length} at risk</span>
+      </div>
+      <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.dim};">sorted by cascading risk</span>
+    </div>
+  `);
+
+  // Table column headers
+  await html(nodeId, `
+    <div layer-name="Table Header" style="display:flex;padding:0 28px 12px;gap:16px;">
+      <span style="width:140px;font-family:'JetBrains Mono';font-size:10px;font-weight:500;color:${C.dim};letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;">Table</span>
+      <span style="width:80px;font-family:'JetBrains Mono';font-size:10px;font-weight:500;color:${C.dim};letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;">Risk</span>
+      <span style="width:100px;font-family:'JetBrains Mono';font-size:10px;font-weight:500;color:${C.dim};letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;">Failing</span>
+      <span style="width:100px;font-family:'JetBrains Mono';font-size:10px;font-weight:500;color:${C.dim};letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;">Downstream</span>
+      <span style="flex:1;font-family:'JetBrains Mono';font-size:10px;font-weight:500;color:${C.dim};letter-spacing:0.08em;text-transform:uppercase;">Impact</span>
+    </div>
+  `);
+
+  // Table rows
+  for (const ct of insights.criticalTables.slice(0, 5)) {
+    const rc = riskColor(ct.risk);
+    const failText = ct.failingTests > 0 ? `${ct.failingTests} test${ct.failingTests > 1 ? "s" : ""}` : "untested";
+    const downText = ct.downstreamCount > 0 ? `${ct.downstreamCount} table${ct.downstreamCount > 1 ? "s" : ""}` : "—";
+    const impact = ct.failingTests > 0 && ct.downstreamCount > 0
+      ? `Failures cascade to ${ct.downstreamCount} downstream dependents`
+      : ct.failingTests === 0 ? "No tests configured — silent failures possible" : "Test failures need investigation";
+
+    await html(nodeId, `
+      <div layer-name="Row: ${ct.table.name}" style="display:flex;align-items:center;padding:16px 28px;gap:16px;background:${C.surface};border-radius:10px;border-left:3px solid ${rc};">
+        <span style="width:140px;font-family:'JetBrains Mono';font-size:13px;font-weight:600;color:${C.text};flex-shrink:0;">${ct.table.name}</span>
+        <span style="width:80px;font-family:'JetBrains Mono';font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:${rc}18;color:${rc};flex-shrink:0;text-align:center;">${ct.risk}</span>
+        <span style="width:100px;font-family:'JetBrains Mono';font-size:13px;color:${ct.failingTests > 0 ? rc : C.muted};flex-shrink:0;">${failText}</span>
+        <span style="width:100px;font-family:'JetBrains Mono';font-size:13px;color:${C.text};flex-shrink:0;">${downText}</span>
+        <span style="flex:1;font-family:'Inter';font-size:12px;color:${C.muted};">${impact}</span>
+      </div>
+    `);
   }
-}
 
-/** Generate the health score ring SVG */
-function healthScoreRing(score: number, label: string): string {
-  const color = score >= 70 ? "#5bf58c" : score >= 40 ? "#eab308" : "#f55b5b";
-  const circumference = 2 * Math.PI * 45;
-  const offset = circumference - (score / 100) * circumference;
-  return `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
-      <svg width="120" height="120" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="45" fill="none" stroke="#2a2a3a" stroke-width="8"/>
-        <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="8"
-          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
-          stroke-linecap="round" transform="rotate(-90 50 50)"/>
-        <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
-          font-size="28" font-weight="bold" fill="${color}">${score}</text>
-      </svg>
-      <span style="font-size:12px;color:#8888a0;font-weight:500;">${label}</span>
-    </div>
-  `;
-}
+  // Divider
+  await html(nodeId, `<div layer-name="Divider" style="height:1px;background:${C.card};"></div>`);
 
-/** Generate a coverage bar */
-function coverageBar(label: string, pct: number, color: string): string {
-  return `
-    <div style="display:flex;flex-direction:column;gap:4px;width:100%;">
-      <div style="display:flex;justify-content:space-between;font-size:11px;">
-        <span style="color:#8888a0;">${label}</span>
-        <span style="color:#e4e4ef;font-weight:500;">${pct}%</span>
+  // Actions header
+  await html(nodeId, `
+    <div layer-name="Actions Header" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <div style="display:flex;align-items:baseline;gap:12px;">
+        <span style="font-family:'Space Grotesk';font-size:28px;font-weight:700;color:${C.text};letter-spacing:-0.02em;">Action Items</span>
+        <span style="font-family:'JetBrains Mono';font-size:12px;color:${C.accent};">${actionItems.length} items</span>
       </div>
-      <div style="height:6px;background:#2a2a3a;border-radius:3px;overflow:hidden;">
-        <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;"></div>
-      </div>
+      <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.dim};">sorted by priority</span>
     </div>
-  `;
-}
+  `);
 
-/** Generate a critical table card */
-function criticalTableCard(name: string, failing: number, downstream: number, risk: string): string {
-  const riskColor = risk === "critical" ? "#f55b5b" : risk === "high" ? "#eab308" : "#7c5bf5";
-  return `
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;border-left:3px solid ${riskColor};">
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:600;color:#e4e4ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-        <div style="font-size:10px;color:#8888a0;margin-top:2px;">
-          ${failing > 0 ? `${failing} failing` : "untested"}${downstream > 0 ? ` · ${downstream} downstream` : ""}
+  // Action items
+  for (const item of actionItems.slice(0, 5)) {
+    const pc = priorityColor(item.priority);
+    await html(nodeId, `
+      <div layer-name="Action: ${item.title.slice(0, 30)}" style="display:flex;align-items:flex-start;gap:16px;padding:20px 28px;background:${C.surface};border-radius:10px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${pc};margin-top:5px;flex-shrink:0;"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <span style="font-family:'Inter';font-size:14px;font-weight:600;color:${C.text};">${item.title}</span>
+          <span style="font-family:'Inter';font-size:12px;color:${C.muted};line-height:1.5;">${item.description}</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <span style="font-family:'JetBrains Mono';font-size:10px;padding:3px 8px;border-radius:4px;background:${pc}18;color:${pc};">${item.priority}</span>
+          <span style="font-family:'JetBrains Mono';font-size:10px;padding:3px 8px;border-radius:4px;background:${C.card};color:${C.muted};">~${item.effort}</span>
         </div>
       </div>
-      <span style="font-size:9px;padding:2px 6px;border-radius:10px;background:${riskColor}20;color:${riskColor};font-weight:500;">${risk}</span>
-    </div>
-  `;
+    `);
+  }
+
+  return nodeId;
 }
 
-/** Generate an action item card */
-function actionCard(item: ActionItem): string {
-  const colors: Record<string, string> = { critical: "#f55b5b", high: "#eab308", medium: "#3b82f6", low: "#8888a0" };
-  const color = colors[item.priority] ?? "#8888a0";
-  return `
-    <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${color};margin-top:4px;flex-shrink:0;"></div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:11px;font-weight:600;color:#e4e4ef;">${item.title}</div>
-        <div style="font-size:10px;color:#8888a0;margin-top:2px;">${item.description.slice(0, 80)}${item.description.length > 80 ? "…" : ""}</div>
-        <div style="display:flex;gap:6px;margin-top:4px;">
-          <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#2a2a3a;color:#8888a0;">${item.category}</span>
-          <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#2a2a3a;color:#8888a0;">~${item.effort}</span>
+// ── Slide 3: Lineage & Ownership ──
+
+async function renderLineageAndOwnership(episode: Episode, insights: SchemaInsights): Promise<string> {
+  const { nodeId } = await call("create_artboard", { name: `DataBard — Lineage & Ownership`, styles: ARTBOARD_STYLES }) as { nodeId: string };
+
+  // Lineage header
+  const totalConnections = episode.schemaMeta?.lineage.length ?? 0;
+  await html(nodeId, `
+    <div layer-name="Lineage Header" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <span style="font-family:'Space Grotesk';font-size:28px;font-weight:700;color:${C.text};letter-spacing:-0.02em;">Data Lineage</span>
+      <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.dim};">${totalConnections} connections across ${episode.tableCount} tables</span>
+    </div>
+  `);
+
+  // Lineage map — group tables by layer (sources → core → downstream → analytics)
+  if (insights.lineageHotspots.length > 0 && episode.schemaMeta) {
+    const tables = episode.schemaMeta.tables;
+    const lineage = episode.schemaMeta.lineage;
+
+    // Classify tables into layers based on lineage position
+    const hasUpstream = new Set(lineage.map(e => e.toTable.split(".").pop()!));
+    const hasDownstream = new Set(lineage.map(e => e.fromTable.split(".").pop()!));
+
+    const sources = tables.filter(t => !hasUpstream.has(t.name) && hasDownstream.has(t.name)).map(t => t.name);
+    const sinks = tables.filter(t => hasUpstream.has(t.name) && !hasDownstream.has(t.name)).map(t => t.name);
+    const middle = tables.filter(t => hasUpstream.has(t.name) && hasDownstream.has(t.name)).map(t => t.name);
+    const isolated = tables.filter(t => !hasUpstream.has(t.name) && !hasDownstream.has(t.name)).map(t => t.name);
+
+    const criticalNames = new Set(insights.criticalTables.map(c => c.table.name));
+
+    function tableNode(name: string): string {
+      const isCritical = criticalNames.has(name);
+      const ct = insights.criticalTables.find(c => c.table.name === name);
+      const rc = ct ? riskColor(ct.risk) : C.border;
+      const bg = isCritical ? `${rc}12` : C.card;
+      const border = isCritical ? `${rc}40` : C.border;
+      const textColor = isCritical ? rc : (sources.includes(name) || isolated.includes(name) ? C.muted : C.text);
+      const weight = isCritical ? "600" : "400";
+      return `<div style="padding:12px 20px;background:${bg};border-radius:8px;border:1px solid ${border};"><span style="font-family:'JetBrains Mono';font-size:12px;font-weight:${weight};color:${textColor};">${name}</span></div>`;
+    }
+
+    function layerColumn(label: string, names: string[]): string {
+      if (names.length === 0) return "";
+      return `
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+          <span style="font-family:'JetBrains Mono';font-size:9px;color:${C.dim};letter-spacing:0.08em;text-transform:uppercase;">${label}</span>
+          ${names.slice(0, 4).map(n => tableNode(n)).join("")}
+        </div>
+      `;
+    }
+
+    function arrows(count: number): string {
+      if (count === 0) return "";
+      return `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">${Array(Math.min(count, 4)).fill(`<span style="font-family:'Inter';font-size:20px;color:${C.dim};">→</span>`).join("")}</div>`;
+    }
+
+    const layers = [
+      { label: "Sources", names: sources },
+      { label: "Core", names: middle },
+      { label: "Downstream", names: sinks },
+    ].filter(l => l.names.length > 0);
+
+    if (isolated.length > 0) layers.push({ label: "Isolated", names: isolated });
+
+    const mapHtml = layers.map((l, i) => {
+      const col = layerColumn(l.label, l.names);
+      const arr = i < layers.length - 1 ? arrows(Math.max(l.names.length, layers[i + 1]?.names.length ?? 0)) : "";
+      return col + arr;
+    }).join("");
+
+    await html(nodeId, `
+      <div layer-name="Lineage Map" style="display:flex;gap:24px;align-items:center;padding:40px;background:${C.surface};border-radius:12px;">
+        ${mapHtml}
+      </div>
+    `);
+  } else {
+    await html(nodeId, `
+      <div layer-name="No Lineage" style="padding:40px;background:${C.surface};border-radius:12px;text-align:center;">
+        <span style="font-family:'Inter';font-size:14px;color:${C.muted};">No lineage data available. Connect to OpenMetadata for lineage tracking.</span>
+      </div>
+    `);
+  }
+
+  // Divider
+  await html(nodeId, `<div layer-name="Divider" style="height:1px;background:${C.card};"></div>`);
+
+  // Ownership header
+  const assignedCount = episode.tableCount - insights.ownerlessTables.length;
+  await html(nodeId, `
+    <div layer-name="Ownership Header" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <span style="font-family:'Space Grotesk';font-size:28px;font-weight:700;color:${C.text};letter-spacing:-0.02em;">Ownership</span>
+      <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.dim};">${assignedCount} of ${episode.tableCount} tables assigned</span>
+    </div>
+  `);
+
+  // Ownership cards
+  const ownerColors = [C.accent, C.success, "#e879f9", C.warn];
+  const ownerCards = insights.owners.slice(0, 3).map((o, i) => {
+    const color = ownerColors[i % ownerColors.length];
+    const initials = o.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+    return `
+      <div style="flex:1;padding:24px 28px;background:${C.surface};border-radius:12px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:${color}20;display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:'Inter';font-size:13px;font-weight:600;color:${color};">${initials}</span>
+          </div>
+          <div>
+            <span style="font-family:'Inter';font-size:13px;font-weight:600;color:${C.text};">${o.name}</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${o.tables.map(t => `<span style="font-family:'JetBrains Mono';font-size:10px;padding:4px 8px;background:${C.card};border-radius:4px;color:${C.text};">${t}</span>`).join("")}
         </div>
       </div>
+    `;
+  }).join("");
+
+  const unassignedCard = insights.ownerlessTables.length > 0 ? `
+    <div style="flex:1;padding:24px 28px;background:${C.surface};border-radius:12px;display:flex;flex-direction:column;gap:12px;border:1px dashed ${C.danger}40;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:${C.danger}12;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Inter';font-size:13px;color:${C.danger};">?</span>
+        </div>
+        <div>
+          <span style="font-family:'Inter';font-size:13px;font-weight:600;color:${C.danger};">Unassigned</span>
+          <span style="font-family:'Inter';font-size:11px;color:${C.dim};display:block;">${insights.ownerlessTables.length} tables need owners</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${insights.ownerlessTables.slice(0, 6).map(t => `<span style="font-family:'JetBrains Mono';font-size:10px;padding:4px 8px;background:${C.card};border-radius:4px;color:${C.muted};">${t}</span>`).join("")}
+      </div>
     </div>
-  `;
+  ` : "";
+
+  await html(nodeId, `
+    <div layer-name="Ownership Grid" style="display:flex;gap:20px;">
+      ${ownerCards}${unassignedCard}
+    </div>
+  `);
+
+  // Footer
+  await html(nodeId, `
+    <div layer-name="Footer" style="display:flex;align-items:center;justify-content:space-between;padding:20px 0 0;">
+      <span style="font-family:'Inter';font-size:11px;color:${C.dim};">Generated by DataBard · databard.thisyearnofear.com</span>
+      <span style="font-family:'JetBrains Mono';font-size:11px;color:${C.dim};">${episode.schemaName} · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+    </div>
+  `);
+
+  return nodeId;
 }
 
-/** Render a full schema health dashboard on the Paper canvas */
+// ── Public API ──
+
+/** Render a multi-slide health dashboard on the Paper canvas */
 export async function renderHealthDashboard(
   episode: Episode,
   insights: SchemaInsights,
   actionItems: ActionItem[],
-): Promise<{ artboardId: string }> {
-  // Create the artboard
-  const artboard = await callPaperTool("create_artboard", {
-    name: `DataBard: ${episode.schemaName}`,
-    styles: {
-      width: "1440px",
-      height: "900px",
-      backgroundColor: "#0a0a0f",
-      padding: "40px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "24px",
-    },
-  }) as { nodeId: string };
+): Promise<{ artboardIds: string[] }> {
+  const ids: string[] = [];
 
-  const artboardId = artboard.nodeId;
+  ids.push(await renderOverview(episode, insights));
+  ids.push(await renderCriticalAndActions(episode, insights, actionItems));
+  ids.push(await renderLineageAndOwnership(episode, insights));
 
-  // ── Header ──
-  await callPaperTool("write_html", {
-    targetNodeId: artboardId,
-    mode: "insert-children",
-    html: `
-      <div layer-name="Header" style="display:flex;align-items:center;justify-content:space-between;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:24px;">🎙️</span>
-          <div>
-            <div style="font-size:20px;font-weight:700;color:#e4e4ef;">DataBard: ${episode.schemaName}</div>
-            <div style="font-size:12px;color:#8888a0;">${episode.tableCount} tables · ${episode.qualitySummary.total} tests · Generated ${new Date().toLocaleDateString()}</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;padding:4px 10px;border-radius:6px;background:#7c5bf520;color:#7c5bf5;font-weight:500;">Health Report</span>
-        </div>
-      </div>
-    `,
-  });
+  await call("finish_working_on_nodes", {});
 
-  // ── Top row: Health Score + Coverage + Stats ──
-  await callPaperTool("write_html", {
-    targetNodeId: artboardId,
-    mode: "insert-children",
-    html: `
-      <div layer-name="Metrics" style="display:flex;gap:24px;align-items:stretch;">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;min-width:180px;">
-          ${healthScoreRing(insights.healthScore, insights.healthLabel)}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:12px;flex:1;padding:24px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;justify-content:center;">
-          ${coverageBar("Test Coverage", insights.testCoverage, "#7c5bf5")}
-          ${coverageBar("Documentation", insights.docCoverage, "#5bf58c")}
-        </div>
-        <div style="display:flex;gap:12px;">
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 24px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;">
-            <div style="font-size:28px;font-weight:700;color:${insights.failingTests > 0 ? "#f55b5b" : "#5bf58c"};">${insights.failingTests}</div>
-            <div style="font-size:10px;color:#8888a0;margin-top:4px;">Failing Tests</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 24px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;">
-            <div style="font-size:28px;font-weight:700;color:#e4e4ef;">${insights.untestedTables.length}</div>
-            <div style="font-size:10px;color:#8888a0;margin-top:4px;">Untested</div>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 24px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;">
-            <div style="font-size:28px;font-weight:700;color:#e4e4ef;">${insights.ownerlessTables.length}</div>
-            <div style="font-size:10px;color:#8888a0;margin-top:4px;">No Owner</div>
-          </div>
-        </div>
-      </div>
-    `,
-  });
-
-  // ── Bottom row: Critical Tables + Action Items ──
-  const criticalHtml = insights.criticalTables.length > 0
-    ? insights.criticalTables.slice(0, 6).map((ct) =>
-        criticalTableCard(ct.table.name, ct.failingTests, ct.downstreamCount, ct.risk)
-      ).join("")
-    : `<div style="padding:20px;text-align:center;color:#5bf58c;font-size:12px;">✓ No critical tables</div>`;
-
-  const actionsHtml = actionItems.length > 0
-    ? actionItems.slice(0, 5).map((item) => actionCard(item)).join("")
-    : `<div style="padding:20px;text-align:center;color:#5bf58c;font-size:12px;">🎉 No action items needed</div>`;
-
-  await callPaperTool("write_html", {
-    targetNodeId: artboardId,
-    mode: "insert-children",
-    html: `
-      <div layer-name="Details" style="display:flex;gap:24px;flex:1;">
-        <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:20px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;overflow:hidden;">
-          <div style="font-size:13px;font-weight:600;color:#e4e4ef;margin-bottom:4px;">Critical Tables</div>
-          ${criticalHtml}
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:20px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;overflow:hidden;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <div style="font-size:13px;font-weight:600;color:#e4e4ef;">Action Items</div>
-            <span style="font-size:10px;color:#8888a0;">${actionItems.length} total</span>
-          </div>
-          ${actionsHtml}
-        </div>
-      </div>
-    `,
-  });
-
-  // ── Lineage hotspots row ──
-  if (insights.lineageHotspots.length > 0) {
-    const hotspotsHtml = insights.lineageHotspots.map((h) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:#0a0a0f;border:1px solid #2a2a3a;border-radius:8px;">
-        <div style="width:${Math.min(40, 10 + h.connections * 4)}px;height:${Math.min(40, 10 + h.connections * 4)}px;border-radius:50%;background:#7c5bf520;border:2px solid #7c5bf5;display:flex;align-items:center;justify-content:center;">
-          <span style="font-size:10px;font-weight:700;color:#7c5bf5;">${h.connections}</span>
-        </div>
-        <span style="font-size:11px;color:#e4e4ef;font-weight:500;">${h.name}</span>
-      </div>
-    `).join("");
-
-    await callPaperTool("write_html", {
-      targetNodeId: artboardId,
-      mode: "insert-children",
-      html: `
-        <div layer-name="Lineage" style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;">
-          <div style="font-size:12px;font-weight:600;color:#8888a0;white-space:nowrap;">Lineage Hotspots</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${hotspotsHtml}
-          </div>
-        </div>
-      `,
-    });
-  }
-
-  // Mark as done
-  await callPaperTool("finish_working_on_nodes", {});
-
-  return { artboardId };
+  return { artboardIds: ids };
 }
