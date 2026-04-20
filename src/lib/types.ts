@@ -63,13 +63,6 @@ export interface ScriptSegment {
   text: string;
 }
 
-export interface EpisodeAudio {
-  intro: ArrayBuffer;
-  segments: { audio: ArrayBuffer; segment: ScriptSegment }[];
-  transitions: ArrayBuffer[];
-  outro: ArrayBuffer;
-}
-
 export interface Episode {
   schemaFqn: string;
   schemaName: string;
