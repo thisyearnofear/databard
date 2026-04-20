@@ -162,6 +162,7 @@ export default function Home() {
                 total: data.testsTotal,
               },
               script: data.script,
+              schemaMeta: data.schemaMeta,
             };
           } else if (data.type === "estimate") {
             setStatus(`${data.totalCalls} API calls (${data.segments} speech + ${data.sfxCalls} SFX)`);

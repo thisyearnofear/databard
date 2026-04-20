@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import type { ScriptSegment, Episode } from "@/lib/types";
+import type { ScriptSegment, Episode, TableMeta, LineageEdge } from "@/lib/types";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
 
@@ -11,6 +11,62 @@ function HealthBadge({ summary }: { summary: Episode["qualitySummary"] }) {
   const ratio = summary.failed / summary.total;
   if (ratio > 0.3) return <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--danger)]/20 text-[var(--danger)]">⚠ {summary.failed} failing</span>;
   return <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">⚠ {summary.failed} failing</span>;
+}
+
+function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdge[] }) {
+  const upstream = lineage.filter((e) => e.toTable.endsWith(`.${table.name}`)).map((e) => e.fromTable.split(".").pop());
+  const downstream = lineage.filter((e) => e.fromTable.endsWith(`.${table.name}`)).map((e) => e.toTable.split(".").pop());
+  const failed = table.qualityTests.filter((t) => t.status === "Failed");
+  const passed = table.qualityTests.filter((t) => t.status === "Success");
+
+  return (
+    <div className="mt-2 p-3 bg-[var(--bg)] rounded-lg text-xs space-y-2 animate-slide-up">
+      {table.description && (
+        <p className="text-[var(--text-muted)] italic">{table.description}</p>
+      )}
+
+      {/* Columns */}
+      <div>
+        <span className="text-[var(--text-muted)]">Columns ({table.columns.length}): </span>
+        <span className="text-[var(--text)]">
+          {table.columns.slice(0, 6).map((c) => `${c.name} (${c.dataType})`).join(", ")}
+          {table.columns.length > 6 && ` +${table.columns.length - 6} more`}
+        </span>
+      </div>
+
+      {/* Tests */}
+      {table.qualityTests.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {failed.map((t) => (
+            <span key={t.name} className="px-1.5 py-0.5 rounded bg-[var(--danger)]/20 text-[var(--danger)]">✗ {t.name}</span>
+          ))}
+          {passed.map((t) => (
+            <span key={t.name} className="px-1.5 py-0.5 rounded bg-[var(--success)]/20 text-[var(--success)]">✓ {t.name}</span>
+          ))}
+        </div>
+      )}
+      {table.qualityTests.length === 0 && (
+        <p className="text-[var(--text-muted)]">No quality tests configured</p>
+      )}
+
+      {/* Lineage */}
+      {(upstream.length > 0 || downstream.length > 0) && (
+        <div className="flex gap-4">
+          {upstream.length > 0 && <span className="text-[var(--text-muted)]">← {upstream.join(", ")}</span>}
+          {downstream.length > 0 && <span className="text-[var(--text-muted)]">→ {downstream.join(", ")}</span>}
+        </div>
+      )}
+
+      {/* Tags */}
+      {table.tags.length > 0 && (
+        <div className="flex gap-1.5">
+          {table.tags.map((tag) => (
+            <span key={tag} className="px-1.5 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{tag}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUrl: string }) {
@@ -307,27 +363,39 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
       </div>
 
       {/* Segment timeline */}
-      <div ref={segListRef} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-72 overflow-y-auto scroll-smooth">
+      <div ref={segListRef} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-96 overflow-y-auto scroll-smooth">
         <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Segments</h3>
-        {episode.script.map((seg: ScriptSegment, i: number) => (
-          <button
-            key={i}
-            onClick={() => {
-              if (expandedSeg === i) { setExpandedSeg(null); }
-              else { setExpandedSeg(i); seekToSegment(i); }
-            }}
-            className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
-              i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
-            }`}
-          >
-            <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
-              {seg.speaker}
-            </span>
-            <span className={`text-[var(--text-muted)] ${expandedSeg === i ? "whitespace-normal" : "truncate"}`}>
-              {seg.text}
-            </span>
-          </button>
-        ))}
+        {episode.script.map((seg: ScriptSegment, i: number) => {
+          const isExpanded = expandedSeg === i;
+          const table = isExpanded && episode.schemaMeta
+            ? episode.schemaMeta.tables.find((t) => t.name === seg.topic)
+            : null;
+
+          return (
+            <div key={i}>
+              <button
+                onClick={() => {
+                  if (isExpanded) { setExpandedSeg(null); }
+                  else { setExpandedSeg(i); seekToSegment(i); }
+                }}
+                className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
+                  i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
+                }`}
+              >
+                <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
+                  {seg.speaker}
+                </span>
+                <span className={`text-[var(--text-muted)] ${isExpanded ? "whitespace-normal" : "truncate"}`}>
+                  {seg.text}
+                </span>
+                {table && <span className="text-[var(--accent)] shrink-0 text-xs">📊</span>}
+              </button>
+              {table && (
+                <TableDetail table={table} lineage={episode.schemaMeta!.lineage} />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <audio

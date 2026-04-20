@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
             testsTotal: totalTests,
             testsFailed: failedTests,
             script,
+            schemaMeta: meta,
           });
 
           // Send cost estimate before synthesizing

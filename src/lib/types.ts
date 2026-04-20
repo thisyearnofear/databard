@@ -69,6 +69,8 @@ export interface Episode {
   tableCount: number;
   qualitySummary: { passed: number; failed: number; total: number };
   script: ScriptSegment[];
+  /** Full schema metadata for interactive drill-down in the player */
+  schemaMeta?: SchemaMeta;
   audioUrl?: string;
   duration?: number;
 }
