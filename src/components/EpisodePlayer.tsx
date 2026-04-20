@@ -127,6 +127,8 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PlayerTab>("insights");
+  const [paperRendering, setPaperRendering] = useState(false);
+  const [paperDone, setPaperDone] = useState(false);
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -151,6 +153,27 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
       try { localStorage.setItem(`databard:actions:${episode.schemaFqn}`, JSON.stringify([...next])); } catch {}
       return next;
     });
+  }
+
+  async function handleRenderToPaper() {
+    if (!insights || paperRendering) return;
+    setPaperRendering(true);
+    try {
+      const { isPaperAvailable, renderHealthDashboard } = await import("@/lib/paper-canvas");
+      const available = await isPaperAvailable();
+      if (!available) {
+        alert("Paper Desktop not detected. Make sure the Paper app is open with a file loaded.");
+        return;
+      }
+      await renderHealthDashboard(episode, insights, actionItems);
+      setPaperDone(true);
+      setTimeout(() => setPaperDone(false), 5000);
+    } catch (e) {
+      console.error("Paper render failed:", e);
+      alert(`Failed to render to Paper: ${e instanceof Error ? e.message : "Unknown error"}`);
+    } finally {
+      setPaperRendering(false);
+    }
   }
 
   // Web Audio API setup for waveform
@@ -438,6 +461,14 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 relative">
+            <button
+              onClick={handleRenderToPaper}
+              disabled={paperRendering || !insights}
+              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Render health dashboard to Paper canvas"
+            >
+              {paperRendering ? "⏳" : paperDone ? "✓ Canvas" : "📐 Canvas"}
+            </button>
             <button
               onClick={handleDownload}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
