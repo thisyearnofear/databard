@@ -16,6 +16,7 @@ const VOICES = {
 
 const MODEL = "eleven_multilingual_v2";
 const AUDIO_CACHE_TTL = 86400; // 24 hours
+const SFX_CACHE_TTL = 86400 * 30; // 30 days — SFX prompts are static
 
 let client: ElevenLabsClient | null = null;
 
@@ -54,8 +55,17 @@ function getCached(key: string): Buffer | null {
   return b64 ? Buffer.from(b64, "base64") : null;
 }
 
-function setCached(key: string, buffer: Buffer): void {
-  cache.set(key, buffer.toString("base64"), AUDIO_CACHE_TTL);
+function setCached(key: string, buffer: Buffer, ttl = AUDIO_CACHE_TTL): void {
+  cache.set(key, buffer.toString("base64"), ttl);
+}
+
+/** Simple hash for cache keys */
+function hashKey(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
 }
 
 /** Synthesize a single script segment to mp3 buffer */
@@ -64,7 +74,7 @@ export async function synthesizeSpeech(
   prevText?: string,
   nextText?: string,
 ): Promise<Buffer> {
-  const cacheKey = `audio:speech:${segment.speaker}:${segment.text.slice(0, 80)}`;
+  const cacheKey = `audio:speech:${segment.speaker}:${hashKey(segment.text)}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
@@ -85,7 +95,7 @@ export async function synthesizeSpeech(
 
 /** Generate a short sound effect */
 export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promise<Buffer> {
-  const cacheKey = `audio:sfx:${prompt}:${durationSeconds}`;
+  const cacheKey = `audio:sfx:${hashKey(prompt)}:${durationSeconds}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
@@ -94,7 +104,7 @@ export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promis
     duration_seconds: durationSeconds,
   }));
   const buffer = await streamToBuffer(stream);
-  setCached(cacheKey, buffer);
+  setCached(cacheKey, buffer, SFX_CACHE_TTL);
   return buffer;
 }
 

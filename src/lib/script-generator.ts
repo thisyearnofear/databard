@@ -6,6 +6,17 @@
  */
 import type { SchemaMeta, ScriptSegment } from "./types";
 import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
+import { cache } from "./cache";
+
+/** Simple hash for cache keys */
+function hashSchema(schema: SchemaMeta): string {
+  const sig = `${schema.fqn}:${schema.tables.length}:${schema.tables.map((t) =>
+    `${t.name}:${t.qualityTests.length}:${t.qualityTests.filter((q) => q.status === "Failed").length}:${t.columns.length}`
+  ).join(",")}`;
+  let h = 0;
+  for (let i = 0; i < sig.length; i++) h = ((h << 5) - h + sig.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
 
 const SYSTEM_PROMPT = `You are a script writer for DataBard, a podcast about data catalogs. Write a conversational two-host podcast script.
 
@@ -289,14 +300,26 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights): ScriptS
 }
 
 export async function generateScript(schema: SchemaMeta): Promise<ScriptSegment[]> {
+  // Check script cache — same schema content = same script
+  const schemaHash = hashSchema(schema);
+  const cacheKey = `script:${schemaHash}`;
+  const cached = cache.get<ScriptSegment[]>(cacheKey);
+  if (cached) return cached;
+
   const insights = analyzeSchema(schema);
+  let script: ScriptSegment[];
 
   if (process.env.OPENAI_API_KEY) {
     try {
-      return await generateWithLLM(schema, insights);
+      script = await generateWithLLM(schema, insights);
     } catch (e) {
       console.warn("LLM script generation failed, falling back to templates:", e);
+      script = generateTemplate(schema, insights);
     }
+  } else {
+    script = generateTemplate(schema, insights);
   }
-  return generateTemplate(schema, insights);
+
+  cache.set(cacheKey, script, 3600); // 1hr cache — regenerate picks up schema changes
+  return script;
 }
