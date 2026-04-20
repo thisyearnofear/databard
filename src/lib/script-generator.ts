@@ -20,6 +20,10 @@ RULES:
 - Discuss critical tables first (failing tests + many downstream dependents = cascading risk)
 - Call out documentation and test coverage gaps as patterns, not per-table
 - For lineage hotspots, explain WHY they matter ("if this table breaks, 8 others go down")
+- If PII columns exist, Morgan MUST flag them and discuss governance implications
+- If tables have owners, mention who's responsible for critical issues
+- If tables are stale (not updated recently), flag freshness concerns
+- If glossary terms exist, Alex should highlight the business context they provide
 - For large schemas (15+ tables), group by theme/domain and summarize
 - Keep each segment's text to 1-3 sentences — these get synthesized to speech
 - Make it sound like two people actually talking. Interruptions, reactions, disagreements are good
@@ -30,6 +34,11 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
   const tables = schema.tables.map((t) => ({
     name: t.name,
     description: t.description,
+    owner: t.owner,
+    rowCount: t.rowCount,
+    freshness: t.freshness,
+    piiColumns: t.piiColumns,
+    glossaryTerms: t.glossaryTerms,
     columnCount: t.columns.length,
     columnSample: t.columns.slice(0, 5).map((c) => `${c.name} (${c.dataType})`),
     tags: t.tags,
@@ -53,7 +62,6 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
     tables,
     lineageEdges: schema.lineage.length,
     lineageSample: lineage,
-    // Pre-computed insights for the LLM
     insights: {
       healthScore: insights.healthScore,
       healthLabel: insights.healthLabel,
@@ -63,13 +71,17 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
       untestedTables: insights.untestedTables,
       undocumentedTables: insights.undocumentedTables,
       criticalTables: insights.criticalTables.map((c) => ({
-        name: c.table.name,
-        failingTests: c.failingTests,
-        downstreamDependents: c.downstreamCount,
-        risk: c.risk,
+        name: c.table.name, failingTests: c.failingTests,
+        downstreamDependents: c.downstreamCount, risk: c.risk,
       })),
       lineageHotspots: insights.lineageHotspots,
       externalDeps: insights.externalDeps.length,
+      owners: insights.owners,
+      ownerlessTables: insights.ownerlessTables,
+      piiTables: insights.piiTables,
+      glossaryTerms: insights.glossaryTerms,
+      staleTables: insights.staleTables,
+      largestTables: insights.largestTables,
     },
   });
 }
@@ -186,6 +198,56 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights): ScriptS
     segments.push({
       speaker: "Alex", topic: "highlights",
       text: `On the bright side — ${names} ${healthyTables.length === 1 ? "is" : "are"} well-documented with all tests passing. That's the standard to aim for.`,
+    });
+  }
+
+  // PII / Governance
+  if (insights.piiTables.length > 0) {
+    const piiSummary = insights.piiTables.map((t) => `${t.name} (${t.columns.join(", ")})`).join("; ");
+    segments.push({
+      speaker: "Morgan", topic: "governance",
+      text: `Governance flag: ${insights.piiTables.length} table${insights.piiTables.length > 1 ? "s have" : " has"} PII-classified columns — ${piiSummary}. Make sure access policies and retention rules cover these.`,
+    });
+  }
+
+  // Owners
+  if (insights.owners.length > 0) {
+    const ownerSummary = insights.owners.slice(0, 3).map((o) => `${o.name} owns ${o.tables.join(", ")}`).join(". ");
+    segments.push({
+      speaker: "Alex", topic: "ownership",
+      text: `Ownership: ${ownerSummary}.${insights.ownerlessTables.length > 0 ? ` But ${insights.ownerlessTables.length} tables have no owner assigned.` : ""}`,
+    });
+  } else if (insights.ownerlessTables.length > 0) {
+    segments.push({
+      speaker: "Morgan", topic: "ownership",
+      text: `No table owners assigned in this schema. When something breaks, who's responsible? That needs to be defined.`,
+    });
+  }
+
+  // Freshness
+  if (insights.staleTables.length > 0) {
+    const stale = insights.staleTables[0];
+    segments.push({
+      speaker: "Morgan", topic: "freshness",
+      text: `Freshness concern: ${stale.name} hasn't been updated in ${stale.hoursAgo} hours.${insights.staleTables.length > 1 ? ` ${insights.staleTables.length - 1} other tables are also stale.` : ""} Are the pipelines running?`,
+    });
+  }
+
+  // Glossary terms
+  if (insights.glossaryTerms.length > 0) {
+    segments.push({
+      speaker: "Alex", topic: "glossary",
+      text: `Nice — this schema uses glossary terms: ${insights.glossaryTerms.slice(0, 5).join(", ")}. That's business context baked right into the metadata.`,
+    });
+  }
+
+  // Row counts
+  if (insights.largestTables.length > 0) {
+    const top = insights.largestTables[0];
+    const fmt = top.rowCount > 1_000_000 ? `${(top.rowCount / 1_000_000).toFixed(1)}M` : top.rowCount > 1000 ? `${(top.rowCount / 1000).toFixed(0)}K` : `${top.rowCount}`;
+    segments.push({
+      speaker: "Alex", topic: "scale",
+      text: `Scale check: ${top.name} is the largest table at ${fmt} rows.${insights.largestTables.length > 1 ? ` Followed by ${insights.largestTables[1].name}.` : ""}`,
     });
   }
 

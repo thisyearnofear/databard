@@ -45,6 +45,12 @@ export interface TableMeta {
   columns: ColumnMeta[];
   qualityTests: QualityTest[];
   tags: string[];
+  /** OpenMetadata-enriched fields (optional — populated when source is OM) */
+  owner?: string;
+  rowCount?: number;
+  freshness?: string;  // ISO timestamp of last update
+  glossaryTerms?: string[];
+  piiColumns?: string[];
 }
 
 export interface SchemaMeta {

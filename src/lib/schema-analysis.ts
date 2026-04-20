@@ -3,39 +3,33 @@
  * Sits between metadata fetch and script generation.
  * Both the LLM prompt and template fallback consume these insights.
  */
-import type { SchemaMeta, TableMeta, LineageEdge } from "./types";
+import type { SchemaMeta, TableMeta } from "./types";
 
 export interface SchemaInsights {
-  /** Overall health: 0-100 */
   healthScore: number;
   healthLabel: "healthy" | "at-risk" | "critical";
 
-  /** Tables sorted by risk (most failing tests + most downstream dependents first) */
   criticalTables: { table: TableMeta; failingTests: number; downstreamCount: number; risk: string }[];
-
-  /** Tables with zero tests */
   untestedTables: string[];
-
-  /** Tables with no description */
   undocumentedTables: string[];
-
-  /** Documentation coverage percentage */
   docCoverage: number;
-
-  /** Test coverage percentage (tables with ≥1 test) */
   testCoverage: number;
 
-  /** Lineage hotspots — tables with most connections (upstream + downstream) */
   lineageHotspots: { name: string; connections: number }[];
-
-  /** Cross-schema dependencies (lineage edges that leave this schema) */
   externalDeps: { fromTable: string; toTable: string }[];
 
-  /** Summary stats */
   totalTests: number;
   passingTests: number;
   failingTests: number;
   queuedTests: number;
+
+  /** OpenMetadata-enriched insights (populated when data is available) */
+  owners: { name: string; tables: string[] }[];
+  piiTables: { name: string; columns: string[] }[];
+  glossaryTerms: string[];
+  staleTables: { name: string; freshness: string; hoursAgo: number }[];
+  largestTables: { name: string; rowCount: number }[];
+  ownerlessTables: string[];
 }
 
 export function analyzeSchema(schema: SchemaMeta): SchemaInsights {
@@ -53,27 +47,21 @@ export function analyzeSchema(schema: SchemaMeta): SchemaInsights {
   const testCoverage = tables.length > 0 ? Math.round(((tables.length - untestedTables.length) / tables.length) * 100) : 0;
   const docCoverage = tables.length > 0 ? Math.round(((tables.length - undocumentedTables.length) / tables.length) * 100) : 0;
 
-  // Lineage: count connections per table
+  // Lineage
   const connectionCount = new Map<string, number>();
+  const downstreamCount = new Map<string, number>();
   for (const edge of lineage) {
     const from = edge.fromTable.split(".").pop()!;
     const to = edge.toTable.split(".").pop()!;
     connectionCount.set(from, (connectionCount.get(from) ?? 0) + 1);
     connectionCount.set(to, (connectionCount.get(to) ?? 0) + 1);
-  }
-
-  // Downstream count per table (how many things depend on it)
-  const downstreamCount = new Map<string, number>();
-  for (const edge of lineage) {
-    const from = edge.fromTable.split(".").pop()!;
     downstreamCount.set(from, (downstreamCount.get(from) ?? 0) + 1);
   }
 
-  // External dependencies (edges where one side is outside this schema)
   const schemaTableFqns = new Set(tables.map((t) => t.fqn));
   const externalDeps = lineage.filter((e) => !schemaTableFqns.has(e.fromTable) || !schemaTableFqns.has(e.toTable));
 
-  // Critical tables: sorted by risk = failing tests × (1 + downstream dependents)
+  // Critical tables
   const criticalTables = tables
     .map((t) => {
       const failing = t.qualityTests.filter((q) => q.status === "Failed").length;
@@ -89,37 +77,71 @@ export function analyzeSchema(schema: SchemaMeta): SchemaInsights {
     .sort((a, b) => b.riskScore - a.riskScore)
     .map(({ riskScore, ...rest }) => rest);
 
-  // Lineage hotspots
   const lineageHotspots = [...connectionCount.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([name, connections]) => ({ name, connections }));
 
-  // Health score: 100 = all tests passing, good coverage. Penalize failures and gaps.
+  // ── OpenMetadata-enriched insights ──
+
+  // Owners: group tables by owner
+  const ownerMap = new Map<string, string[]>();
+  const ownerlessTables: string[] = [];
+  for (const t of tables) {
+    if (t.owner) {
+      if (!ownerMap.has(t.owner)) ownerMap.set(t.owner, []);
+      ownerMap.get(t.owner)!.push(t.name);
+    } else {
+      ownerlessTables.push(t.name);
+    }
+  }
+  const owners = [...ownerMap.entries()].map(([name, tbls]) => ({ name, tables: tbls }));
+
+  // PII tables
+  const piiTables = tables
+    .filter((t) => t.piiColumns && t.piiColumns.length > 0)
+    .map((t) => ({ name: t.name, columns: t.piiColumns! }));
+
+  // Glossary terms across schema
+  const glossaryTerms = [...new Set(tables.flatMap((t) => t.glossaryTerms ?? []))];
+
+  // Stale tables (freshness > 24h)
+  const now = Date.now();
+  const staleTables = tables
+    .filter((t) => t.freshness)
+    .map((t) => {
+      const hoursAgo = Math.round((now - new Date(t.freshness!).getTime()) / 3600000);
+      return { name: t.name, freshness: t.freshness!, hoursAgo };
+    })
+    .filter((t) => t.hoursAgo > 24)
+    .sort((a, b) => b.hoursAgo - a.hoursAgo);
+
+  // Largest tables by row count
+  const largestTables = tables
+    .filter((t) => t.rowCount != null && t.rowCount > 0)
+    .sort((a, b) => (b.rowCount ?? 0) - (a.rowCount ?? 0))
+    .slice(0, 5)
+    .map((t) => ({ name: t.name, rowCount: t.rowCount! }));
+
+  // Health score
   let healthScore = 100;
   if (totalTests > 0) healthScore -= Math.round((failingTests / totalTests) * 40);
   if (tables.length > 0) {
     healthScore -= Math.round((untestedTables.length / tables.length) * 30);
-    healthScore -= Math.round((undocumentedTables.length / tables.length) * 15);
+    healthScore -= Math.round((undocumentedTables.length / tables.length) * 10);
+    healthScore -= Math.round((ownerlessTables.length / tables.length) * 5);
   }
   if (lineage.length === 0 && tables.length > 1) healthScore -= 15;
+  if (staleTables.length > 0) healthScore -= Math.min(10, staleTables.length * 3);
   healthScore = Math.max(0, Math.min(100, healthScore));
 
   const healthLabel = healthScore >= 70 ? "healthy" : healthScore >= 40 ? "at-risk" : "critical";
 
   return {
-    healthScore,
-    healthLabel,
-    criticalTables,
-    untestedTables,
-    undocumentedTables,
-    docCoverage,
-    testCoverage,
-    lineageHotspots,
-    externalDeps,
-    totalTests,
-    passingTests,
-    failingTests,
-    queuedTests,
+    healthScore, healthLabel,
+    criticalTables, untestedTables, undocumentedTables, docCoverage, testCoverage,
+    lineageHotspots, externalDeps,
+    totalTests, passingTests, failingTests, queuedTests,
+    owners, piiTables, glossaryTerms, staleTables, largestTables, ownerlessTables,
   };
 }
