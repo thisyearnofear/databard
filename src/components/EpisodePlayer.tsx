@@ -16,6 +16,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [expandedSeg, setExpandedSeg] = useState<number | null>(null);
+  const [clipCopied, setClipCopied] = useState(false);
 
   // Web Audio API setup for waveform
   useEffect(() => {
@@ -167,6 +168,18 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     }
   }
 
+  async function handleClip() {
+    // Pick the most interesting segment: quality failures > intro > first
+    const highlight = episode.script.find((s) =>
+      s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
+    ) ?? episode.script[0];
+
+    const clipText = `🎙️ DataBard on ${episode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\n${shareUrl ?? window.location.origin}`;
+    await navigator.clipboard.writeText(clipText);
+    setClipCopied(true);
+    setTimeout(() => setClipCopied(false), 2000);
+  }
+
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const segDuration = duration / (episode.script.length || 1);
   const activeIdx = Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
@@ -195,12 +208,19 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
               ↓
             </button>
             <button
+              onClick={handleClip}
+              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
+              title="Copy highlight quote for social sharing"
+            >
+              {clipCopied ? "✓ Clip" : "Clip"}
+            </button>
+            <button
               onClick={handleShare}
               disabled={sharing}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50"
-              title="Share episode"
+              title="Share episode link"
             >
-              {shareUrl ? "✓ Copied" : "Share"}
+              {shareUrl ? "✓ Link" : "Share"}
             </button>
           </div>
         </div>
