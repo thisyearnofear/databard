@@ -1,0 +1,23 @@
+{
+  "schemaFqn": "analytics.ecommerce",
+  "schemaName": "ecommerce",
+  "tableCount": 4,
+  "qualitySummary": { "passed": 5, "failed": 2, "total": 7 },
+  "script": [
+    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard! Today we're diving into the ecommerce schema — 4 tables to explore. Let's get into it." },
+    { "speaker": "Morgan", "topic": "intro", "text": "I've been looking at the quality scores and lineage for this one. There's some interesting stuff — and a few things we need to talk about." },
+    { "speaker": "Alex", "topic": "orders", "text": "Next up is orders. The core transaction table — every purchase flows through here. It has 6 columns including order_id, customer_id, total_amount and more." },
+    { "speaker": "Morgan", "topic": "orders", "text": "Red flag on orders. 1 of 3 quality tests are failing: not_null_order_id. 2 passing. This needs attention." },
+    { "speaker": "Alex", "topic": "customers", "text": "Next up is customers. Our customer master data — names, emails, signup dates. It has customer_id as bigint, email as varchar, created_at as timestamp." },
+    { "speaker": "Alex", "topic": "customers", "text": "It's tagged with PII, retention-policy — so the team has been classifying this one." },
+    { "speaker": "Morgan", "topic": "customers", "text": "Good news — all 2 quality tests on customers are passing. Solid." },
+    { "speaker": "Alex", "topic": "products", "text": "Next up is products. The product catalog — SKUs, prices, categories. It has 5 columns including product_id, name, price and more." },
+    { "speaker": "Morgan", "topic": "products", "text": "No quality tests on products. That's a gap. We're flying blind on data integrity here." },
+    { "speaker": "Alex", "topic": "order_items", "text": "Next up is order_items. Line items linking orders to products. It has item_id, order_id, product_id, quantity, unit_price." },
+    { "speaker": "Morgan", "topic": "order_items", "text": "Red flag on order_items. 1 of 2 quality tests are failing: positive_quantity. 1 passing. This needs attention." },
+    { "speaker": "Alex", "topic": "lineage", "text": "Let's talk data flow. We've got 3 lineage connections. customers feeds into orders. products feeds into order_items. orders feeds into order_items." },
+    { "speaker": "Morgan", "topic": "lineage", "text": "That lineage map tells you where a problem in one table cascades. Worth reviewing if any of those upstream tables have failing tests." },
+    { "speaker": "Alex", "topic": "outro", "text": "That's the ecommerce schema — 4 tables, 7 quality tests, 3 lineage edges. Thanks for listening." },
+    { "speaker": "Morgan", "topic": "outro", "text": "And 2 failing tests to go fix. Don't ignore those. Until next time." }
+  ]
+}

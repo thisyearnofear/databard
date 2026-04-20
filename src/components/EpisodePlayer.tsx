@@ -77,10 +77,19 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   async function handleShare() {
     setSharing(true);
     try {
+      // Fetch audio blob and convert to base64 for persistent sharing
+      let audioBase64: string | undefined;
+      if (audioUrl) {
+        const audioRes = await fetch(audioUrl);
+        const blob = await audioRes.blob();
+        const buffer = await blob.arrayBuffer();
+        audioBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      }
+
       const res = await fetch("/api/share", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(episode),
+        body: JSON.stringify({ ...episode, audioBase64 }),
       });
       const data = await res.json();
       if (data.ok) {

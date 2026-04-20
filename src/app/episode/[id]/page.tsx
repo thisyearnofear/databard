@@ -9,6 +9,7 @@ export default function SharedEpisode() {
   const params = useParams();
   const id = params.id as string;
   const [episode, setEpisode] = useState<Episode | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,9 +18,18 @@ export default function SharedEpisode() {
       try {
         const res = await fetch(`/api/share?id=${id}`);
         const data = await res.json();
-        
+
         if (data.ok) {
-          setEpisode(data.episode);
+          const ep = data.episode;
+
+          // Reconstruct audio from base64 if available
+          if (ep.audioBase64) {
+            const bytes = Uint8Array.from(atob(ep.audioBase64), (c) => c.charCodeAt(0));
+            const blob = new Blob([bytes], { type: "audio/mpeg" });
+            setAudioUrl(URL.createObjectURL(blob));
+          }
+
+          setEpisode(ep);
         } else {
           setError(data.error);
         }
@@ -29,7 +39,7 @@ export default function SharedEpisode() {
         setLoading(false);
       }
     }
-    
+
     loadEpisode();
   }, [id]);
 
@@ -41,13 +51,11 @@ export default function SharedEpisode() {
     );
   }
 
-  if (error || !episode) {
+  if (error || !episode || !audioUrl) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-[var(--danger)]">{error || "Episode not found"}</p>
-        <a href="/" className="text-[var(--accent)] hover:underline">
-          ← Back to home
-        </a>
+        <p className="text-[var(--danger)]">{error || "Episode not found or audio unavailable"}</p>
+        <a href="/" className="text-[var(--accent)] hover:underline">← Back to home</a>
       </main>
     );
   }
@@ -59,7 +67,7 @@ export default function SharedEpisode() {
         <p className="text-[var(--text-muted)] text-lg">Shared Episode</p>
       </div>
 
-      <EpisodePlayer episode={episode} audioUrl={episode.audioUrl ?? ""} />
+      <EpisodePlayer episode={episode} audioUrl={audioUrl} />
 
       <a href="/" className="text-sm text-[var(--accent)] hover:underline">
         Create your own episode →

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
         // Fetch metadata and generate script
         const meta = await fetchSchemaMeta(config, schemaFqn);
-        const script = generateScript(meta);
+        const script = await generateScript(meta);
 
         // Send metadata header
         const totalTests = meta.tables.reduce((n, t) => n + t.qualityTests.length, 0);
