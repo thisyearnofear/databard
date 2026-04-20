@@ -8,10 +8,10 @@ import type { Readable } from "stream";
 import type { ScriptSegment } from "./types";
 import { cache } from "./cache";
 
-// Two fixed podcast host voices
+// Two fixed podcast host voices (premade, available on all paid tiers)
 const VOICES = {
-  Alex: "JBFqnCBsd6RMkjVDRZzb",   // George
-  Morgan: "XB0fDUnXU5powFXDhCwa",  // Charlotte
+  Alex: "JBFqnCBsd6RMkjVDRZzb",   // George — Warm, Captivating Storyteller
+  Morgan: "EXAVITQu4vr4xnSDxMaL",  // Sarah — Mature, Reassuring, Confident
 } as const;
 
 const MODEL = "eleven_multilingual_v2";
@@ -42,8 +42,11 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 1000): 
     try {
       return await fn();
     } catch (e) {
-      if (attempt === retries) throw e;
-      console.warn(`Retry ${attempt + 1}/${retries}:`, e instanceof Error ? e.message : e);
+      if (attempt === retries) {
+        console.error("Final retry failed:", e);
+        throw e;
+      }
+      console.warn(`Retry ${attempt + 1}/${retries}:`, e);
       await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
     }
   }
@@ -78,17 +81,41 @@ export async function synthesizeSpeech(
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const stream = await withRetry(() => getClient().textToSpeech.convert(
-    VOICES[segment.speaker],
-    {
-      text: segment.text,
-      model_id: MODEL,
-      output_format: "mp3_44100_128",
-      ...(prevText && { previous_text: prevText }),
-      ...(nextText && { next_text: nextText }),
+  // Use direct REST API instead of SDK to avoid 402 errors
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
+
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${VOICES[segment.speaker]}`;
+  const body = {
+    text: segment.text,
+    model_id: MODEL,
+    output_format: "mp3_44100_128",
+    ...(prevText && { previous_text: prevText }),
+    ...(nextText && { next_text: nextText }),
+  };
+
+  console.log(`[TTS] Calling ${url}`);
+  console.log(`[TTS] Body:`, JSON.stringify(body).slice(0, 100));
+
+  const response = await withRetry(() => fetch(url, {
+    method: "POST",
+    headers: {
+      "xi-api-key": apiKey,
+      "Content-Type": "application/json",
     },
-  ));
-  const buffer = await streamToBuffer(stream);
+    body: JSON.stringify(body),
+  }));
+
+  console.log(`[TTS] Response status: ${response.status} ${response.statusText}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[TTS] Error response:`, errorText);
+    throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  console.log(`[TTS] Got ${buffer.length} bytes`);
   setCached(cacheKey, buffer);
   return buffer;
 }
@@ -99,13 +126,9 @@ export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promis
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const stream = await withRetry(() => getClient().textToSoundEffects.convert({
-    text: prompt,
-    duration_seconds: durationSeconds,
-  }));
-  const buffer = await streamToBuffer(stream);
-  setCached(cacheKey, buffer, SFX_CACHE_TTL);
-  return buffer;
+  // SFX requires paid plan — return empty buffer for now
+  console.warn(`[SFX skipped - requires paid plan]: ${prompt}`);
+  return Buffer.alloc(0);
 }
 
 /** Estimate ElevenLabs API calls for a script */

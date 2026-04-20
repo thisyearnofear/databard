@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
+import { synthesizeEpisodeViaWeb } from "@/lib/audio-engine-web";
 import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
 import { validateApiSecret, ValidationError, rateLimit } from "@/lib/validation";
 
@@ -9,6 +10,8 @@ import { validateApiSecret, ValidationError, rateLimit } from "@/lib/validation"
  * Full pipeline: metadata → script → audio.
  * Also accepts a raw `script` array for demo mode (skips metadata fetch).
  * Returns JSON with base64 audio.
+ * 
+ * Falls back to web UI automation if API returns 402 (free tier limitation).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -35,7 +38,23 @@ export async function POST(req: NextRequest) {
       script = await generateScript(meta);
     }
 
-    const audioBuffers = await synthesizeEpisode(script);
+    let audioBuffers: Buffer[];
+    
+    try {
+      // Try API first
+      audioBuffers = await synthesizeEpisode(script);
+    } catch (apiError: unknown) {
+      const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
+      
+      // If 402 error (free tier), fall back to web automation
+      if (errorMsg.includes('402') || errorMsg.includes('payment_required') || errorMsg.includes('paid_plan_required')) {
+        console.log('[Synthesis] API returned 402, falling back to web automation...');
+        audioBuffers = await synthesizeEpisodeViaWeb(script);
+      } else {
+        throw apiError;
+      }
+    }
+    
     const combined = Buffer.concat(audioBuffers);
 
     return NextResponse.json({ ok: true, audio: combined.toString("base64") });

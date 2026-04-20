@@ -74,6 +74,55 @@ curl -X POST http://localhost:3000/api/synthesize \
 
 This will take 30-60 seconds and save the podcast as `episode.mp3`.
 
+#### Test Browser Automation (Experimental)
+
+Browser automation is available as a fallback for free tier users, but requires ElevenLabs web UI authentication.
+
+**Check which providers are available:**
+```bash
+curl http://localhost:3000/api/providers
+
+# Expected response:
+# {
+#   "ok": true,
+#   "configured": "auto",
+#   "providers": {
+#     "agent-browser": true,
+#     "browser-use": false,
+#     "browser-use-cli": false,
+#     "tinyfish": false
+#   },
+#   "available": ["agent-browser"],
+#   "recommendation": "agent-browser"
+# }
+```
+
+**Setup agent-browser (recommended for local testing):**
+```bash
+npm install -g agent-browser
+agent-browser install
+```
+
+**Or use cloud providers:**
+```bash
+# Option 1: Browser Use Cloud
+export BROWSER_USE_API_KEY=your_key_here
+
+# Option 2: TinyFish AI
+export TINYFISH_API_KEY=sk-tinyfish-your_key_here
+
+# Option 3: browser-use CLI (local Python)
+curl -fsSL https://browser-use.com/cli/install.sh | bash
+```
+
+**Important Limitations:**
+- Browser automation requires ElevenLabs web UI login
+- CAPTCHA may block automated access
+- Much slower than API (~30s per segment vs ~5s)
+- Not recommended for production use
+
+**Recommended**: Upgrade to ElevenLabs Starter plan ($5/month) for reliable API access.
+
 ### 3. Test the UI
 
 1. Open http://localhost:3000
@@ -104,7 +153,20 @@ This will take 30-60 seconds and save the podcast as `episode.mp3`.
 ### Audio doesn't play
 - Check browser console for errors
 - Verify `ELEVENLABS_API_KEY` is set in `.env`
+- **Recommended**: Upgrade to ElevenLabs Starter plan ($5/month) for API access
 - Check that the API response has `Content-Type: audio/mpeg`
+- **Free tier users**: Browser automation requires web UI login (experimental)
+
+### Browser automation fails
+- **Important**: ElevenLabs free tier does NOT support API access to any voices
+- **agent-browser**: Run `agent-browser install` to set up the browser
+- **browser-use-cli**: Run the installer script from docs
+- **browser-use**: Verify `BROWSER_USE_API_KEY` is set correctly
+- **tinyfish**: Verify `TINYFISH_API_KEY` starts with `sk-tinyfish-`
+- Check `/api/providers` endpoint to see which providers are available
+- Web automation requires ElevenLabs login and may be blocked by CAPTCHA
+- Web automation takes longer (~30s per segment vs ~5s via API)
+- **Solution**: Upgrade to Starter plan for reliable API access
 
 ### Waveform doesn't animate
 - Web Audio API requires user interaction to start

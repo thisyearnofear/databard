@@ -65,6 +65,7 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 
 - **Deep OpenMetadata integration** — owners, PII, glossary, profiler, quality, lineage
 - **Two-voice AI podcast** — Alex (advocate) and Morgan (auditor) via ElevenLabs
+- **Multiple audio providers** — Direct API (recommended) or browser automation fallback
 - **LLM-powered scripts** — GPT-4o-mini generates natural dialogue (template fallback)
 - **Interactive drill-down** — click any segment to see columns, tests, lineage, tags
 - **Health scoring** — 0-100 score based on test coverage, failures, documentation, freshness
@@ -82,11 +83,18 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 git clone https://github.com/thisyearnofear/databard.git
 cd databard
 npm install
+
 cp .env.example .env
-# Add your ELEVENLABS_API_KEY (required)
+# Add your ELEVENLABS_API_KEY (Starter plan or higher recommended)
 # Add OPENAI_API_KEY for LLM scripts (optional)
 npm run dev
 ```
+
+**ElevenLabs Setup:**
+1. Sign up at [elevenlabs.io](https://elevenlabs.io)
+2. Upgrade to Starter plan ($5/month) for API access
+3. Get your API key from Profile → API Keys
+4. Add to `.env`: `ELEVENLABS_API_KEY=sk_your_key_here`
 
 **OpenMetadata setup:**
 ```bash
@@ -111,12 +119,110 @@ Open [localhost:3000](http://localhost:3000) → Connect → Select a schema →
 
 ## What's Next
 
-- [ ] Real-time demo episode with ElevenLabs voices
+- [ ] Real-time demo episode with ElevenLabs voices (requires paid API plan)
 - [ ] Vercel deployment with KV cache
 - [ ] Scheduled regeneration via Vercel Cron
 - [ ] Historical comparison ("last week 3 failures, this week 7")
 - [ ] Slack integration for episode drops
 - [ ] Custom voice personalities
+
+## Audio Generation & Browser Automation
+
+DataBard uses ElevenLabs for text-to-speech. For the best experience, we recommend a **paid ElevenLabs plan** ($5/month Starter) which unlocks full API access to all voices.
+
+### ElevenLabs API Tiers
+
+| Tier | API Access | Voices Available | Best For |
+|---|---|---|---|
+| **Free** | ❌ No API access | Web UI only | Testing the web interface |
+| **Starter ($5/mo)** | ✅ Full API | All premade voices | Development & production |
+| **Creator ($22/mo)** | ✅ Full API | All voices + cloning | Professional use |
+
+**Important**: Free tier ElevenLabs accounts cannot use ANY voices via API, even premade ones. The API returns 402 "payment_required" for all voice requests on free tier.
+
+### Browser Automation Fallback (Experimental)
+
+For free tier users or as a fallback, DataBard includes browser automation that can use the ElevenLabs web UI. However, **this requires authentication** and is slower than the API.
+
+#### Three Browser Automation Options
+
+| Provider | Type | Speed | Cost | Authentication | Setup |
+|---|---|---|---|---|---|
+| **agent-browser** | Local Rust CLI | Fast | Free | Required | `npm install -g agent-browser && agent-browser install` |
+| **browser-use CLI** | Local Python | Fast | Free | Can reuse Chrome login | `curl -fsSL https://browser-use.com/cli/install.sh \| bash` |
+| **TinyFish** | Cloud AI Agent | Medium | Pay-per-use | Required | Set `TINYFISH_API_KEY` |
+
+#### Configuration
+
+```bash
+# Option 1: Auto-detect (default) - tries providers in order
+BROWSER_PROVIDER=auto
+
+# Option 2: agent-browser (Vercel Labs - Rust CLI)
+BROWSER_PROVIDER=agent-browser
+npm install -g agent-browser
+agent-browser install
+
+# Option 3: browser-use CLI (Python-based)
+BROWSER_PROVIDER=browser-use-cli
+curl -fsSL https://browser-use.com/cli/install.sh | bash
+
+# Option 4: TinyFish (Cloud AI)
+BROWSER_PROVIDER=tinyfish
+TINYFISH_API_KEY=sk-tinyfish-your_key_here
+
+# Option 5: Browser Use Cloud API
+BROWSER_PROVIDER=browser-use
+BROWSER_USE_API_KEY=your_key_here
+```
+
+#### How It Works
+
+1. **API First**: Tries the ElevenLabs REST API
+2. **402 Detection**: If API returns "payment_required", falls back to browser automation
+3. **Provider Selection**: Uses configured provider (or auto-detects first available)
+4. **Web UI Automation**: Navigates to ElevenLabs, fills form, generates audio
+5. **Audio Extraction**: Downloads generated MP3 and returns to client
+
+#### Limitations
+
+- **Authentication Required**: ElevenLabs web UI requires login (CAPTCHA may block automation)
+- **Slower**: ~30s per segment vs ~5s via API
+- **Less Reliable**: Web UI changes can break automation
+- **Rate Limits**: Web UI has stricter rate limits than API
+
+#### Check Provider Status
+
+```bash
+curl http://localhost:3000/api/providers
+# Returns: { "configured": "auto", "available": ["agent-browser"], "recommendation": "agent-browser" }
+```
+
+### Recommended Setup
+
+**For Development & Production:**
+```bash
+# 1. Get ElevenLabs Starter plan ($5/month)
+# 2. Add API key to .env
+ELEVENLABS_API_KEY=sk_your_key_here
+
+# 3. Use premade voices (free tier compatible)
+# Alex: Antoni (ErXwobaYiN019PkySvjV)
+# Morgan: Rachel (21m00Tcm4TlvDq8ikWAM)
+```
+
+**For Testing Without Payment:**
+```bash
+# Install local browser automation
+npm install -g agent-browser
+agent-browser install
+
+# Set provider
+BROWSER_PROVIDER=agent-browser
+
+# Note: You'll need to manually log in to ElevenLabs
+# in the browser when prompted
+```
 
 ## License
 

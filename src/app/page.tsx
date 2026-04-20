@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
+import { ProviderStatus } from "@/components/ProviderStatus";
 import type { Episode, DataSource } from "@/lib/types";
 
 export default function Home() {
@@ -50,7 +51,15 @@ export default function Home() {
       const demo: Episode = await res.json();
       setGenStep(2);
       setEpisode(demo);
-      setAudioUrl("/demo-episode.mp3");
+      
+      // Check if demo audio exists
+      const audioCheck = await fetch("/demo-episode.mp3", { method: "HEAD" });
+      if (audioCheck.ok) {
+        setAudioUrl("/demo-episode.mp3");
+      } else {
+        setStatus("Demo loaded (audio requires ElevenLabs API key to generate)");
+      }
+      
       setStatus("");
     } catch (e: unknown) {
       setStatus(`Error: ${e instanceof Error ? e.message : "Failed to load demo"}`);
@@ -308,7 +317,10 @@ export default function Home() {
       </section>
 
       {/* Connect CTA */}
-      <section className="w-full max-w-md pb-12 sm:pb-16">
+      <section className="w-full max-w-md pb-12 sm:pb-16 flex flex-col gap-4">
+        {/* Provider Status */}
+        <ProviderStatus />
+
         {!showConnect ? (
           <button onClick={() => setShowConnect(true)}
             className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-4 text-sm font-medium cursor-pointer transition-colors text-center">
