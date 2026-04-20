@@ -3,21 +3,15 @@
 import { useState } from "react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
-import type { Episode, ScriptSegment, DataSource } from "@/lib/types";
+import type { Episode, DataSource } from "@/lib/types";
 
 export default function Home() {
   const [source, setSource] = useState<DataSource>("openmetadata");
-
-  // OpenMetadata
   const [omUrl, setOmUrl] = useState("http://localhost:8585");
   const [token, setToken] = useState("");
-
-  // dbt Cloud
   const [dbtAccountId, setDbtAccountId] = useState("");
   const [dbtProjectId, setDbtProjectId] = useState("");
   const [dbtToken, setDbtToken] = useState("");
-
-  // dbt Local
   const [manifestPath, setManifestPath] = useState("./target/manifest.json");
 
   const [connected, setConnected] = useState(false);
@@ -28,6 +22,7 @@ export default function Home() {
   const [genStep, setGenStep] = useState(-1);
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [showConnect, setShowConnect] = useState(false);
 
   const filteredSchemas = schemas.filter((s) =>
     s.toLowerCase().includes(searchQuery.toLowerCase())
@@ -36,37 +31,42 @@ export default function Home() {
   async function handleDemo() {
     setGenerating(true);
     setGenStep(0);
-    setStatus("Loading demo episode…");
+    setStatus("Loading demo…");
 
     try {
       const res = await fetch("/sample-episode.json");
       const demo: Episode = await res.json();
       setGenStep(1);
 
-      // Synthesize audio via streaming API using demo script
-      const synthRes = await fetch("/api/synthesize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script: demo.script }),
-      });
+      // Try to synthesize with ElevenLabs, fall back to bundled silent MP3
+      try {
+        const synthRes = await fetch("/api/synthesize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ script: demo.script }),
+        });
 
-      if (synthRes.ok) {
-        setGenStep(2);
-        const data = await synthRes.json();
-        if (data.audio) {
-          const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0));
-          const blob = new Blob([bytes], { type: "audio/mpeg" });
-          const url = URL.createObjectURL(blob);
-          setEpisode(demo);
-          setAudioUrl(url);
-          setStatus("Demo episode ready — hit play!");
+        if (synthRes.ok) {
+          setGenStep(2);
+          const data = await synthRes.json();
+          if (data.ok && data.audio) {
+            const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0));
+            const blob = new Blob([bytes], { type: "audio/mpeg" });
+            setEpisode(demo);
+            setAudioUrl(URL.createObjectURL(blob));
+            setStatus("Demo episode ready — hit play!");
+            return;
+          }
         }
-      } else {
-        // No ElevenLabs key — show episode without audio
-        setEpisode(demo);
-        setAudioUrl("");
-        setStatus("Demo loaded (set ELEVENLABS_API_KEY for audio)");
+      } catch {
+        // ElevenLabs unavailable — fall through to bundled audio
       }
+
+      // Fallback: use bundled demo MP3
+      setGenStep(2);
+      setEpisode(demo);
+      setAudioUrl("/demo-episode.mp3");
+      setStatus("Demo loaded — connect your catalog for AI-voiced episodes");
     } catch (e: unknown) {
       setStatus(`Error: ${e instanceof Error ? e.message : "Failed to load demo"}`);
     } finally {
@@ -191,144 +191,50 @@ export default function Home() {
     }
   }
 
+  function reset() {
+    setEpisode(null);
+    setAudioUrl(null);
+    setConnected(false);
+    setShowConnect(false);
+    setStatus("");
+  }
+
   const sourceHelp: Record<DataSource, string> = {
     openmetadata: "Run OpenMetadata locally with Docker, or connect to a hosted instance.",
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
   };
 
-  function renderConnectionForm() {
-    if (source === "openmetadata") {
-      return (
-        <>
-          <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
-          <input
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-            value={omUrl}
-            onChange={(e) => setOmUrl(e.target.value)}
-            placeholder="http://localhost:8585"
-          />
-          <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
-          <input
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="JWT from OpenMetadata → Settings → Bots"
-          />
-        </>
-      );
-    } else if (source === "dbt-cloud") {
-      return (
-        <>
-          <label className="text-sm text-[var(--text-muted)]">Account ID</label>
-          <input
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-            value={dbtAccountId}
-            onChange={(e) => setDbtAccountId(e.target.value)}
-            placeholder="From URL: cloud.getdbt.com/deploy/{account_id}"
-          />
-          <label className="text-sm text-[var(--text-muted)]">Project ID</label>
-          <input
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-            value={dbtProjectId}
-            onChange={(e) => setDbtProjectId(e.target.value)}
-            placeholder="From URL: …/projects/{project_id}"
-          />
-          <label className="text-sm text-[var(--text-muted)]">API Token</label>
-          <input
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-            type="password"
-            value={dbtToken}
-            onChange={(e) => setDbtToken(e.target.value)}
-            placeholder="Account Settings → API Access → Service Tokens"
-          />
-        </>
-      );
-    } else {
-      return (
-        <>
-          <label className="text-sm text-[var(--text-muted)]">Manifest Path</label>
-          <input
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-            value={manifestPath}
-            onChange={(e) => setManifestPath(e.target.value)}
-            placeholder="./target/manifest.json"
-          />
-        </>
-      );
-    }
+  // ─── Episode player view ───
+  if (episode && audioUrl !== null) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
+        <EpisodePlayer episode={episode} audioUrl={audioUrl} />
+        <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">
+          ← Generate another
+        </button>
+      </main>
+    );
   }
 
-  return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6 sm:gap-8">
-      <div className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
-        <p className="text-[var(--text-muted)] text-lg">
-          Podcast-style audio docs for your data catalog
-        </p>
-      </div>
-
-      {generating ? (
+  // ─── Generating view ───
+  if (generating) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
         <GenerationProgress currentStep={genStep} />
-      ) : !connected && !episode ? (
-        <div className="flex flex-col gap-4 w-full max-w-md">
-          {/* Demo button */}
-          <button
-            onClick={handleDemo}
-            className="bg-[var(--surface)] border-2 border-dashed border-[var(--accent)] hover:bg-[var(--accent-glow)] rounded-xl px-4 py-4 text-sm font-medium cursor-pointer transition-colors"
-          >
-            <span className="text-lg">▶</span> Try with sample data — no setup required
-          </button>
+        {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
+      </main>
+    );
+  }
 
-          <div className="flex items-center gap-3 text-[var(--text-muted)] text-xs">
-            <div className="flex-1 h-px bg-[var(--border)]" />
-            or connect your catalog
-            <div className="flex-1 h-px bg-[var(--border)]" />
-          </div>
-
-          <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border border-[var(--border)]">
-            <label className="text-sm text-[var(--text-muted)]">Data Source</label>
-            <select
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
-              value={source}
-              onChange={(e) => setSource(e.target.value as DataSource)}
-            >
-              <option value="openmetadata">OpenMetadata</option>
-              <option value="dbt-cloud">dbt Cloud</option>
-              <option value="dbt-local">dbt Local (manifest.json)</option>
-            </select>
-
-            <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
-
-            {renderConnectionForm()}
-
-            <button
-              onClick={handleConnect}
-              className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
-            >
-              Connect
-            </button>
-          </div>
-        </div>
-      ) : episode && audioUrl !== null ? (
-        <div className="flex flex-col items-center gap-4">
-          <EpisodePlayer episode={episode} audioUrl={audioUrl} />
-          <button
-            onClick={() => { setEpisode(null); setAudioUrl(null); setConnected(false); setStatus(""); }}
-            className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
-          >
-            ← Generate another
-          </button>
-        </div>
-      ) : (
+  // ─── Schema picker view ───
+  if (connected) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
         <div className="w-full max-w-2xl flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Select a schema</h2>
-            <button
-              onClick={() => { setConnected(false); setEpisode(null); setAudioUrl(null); }}
-              className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
-            >
+            <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">
               ← Change source
             </button>
           </div>
@@ -351,8 +257,7 @@ export default function Home() {
                 <button
                   key={s}
                   onClick={() => handleGenerate(s)}
-                  disabled={generating}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer"
                 >
                   {s}
                 </button>
@@ -360,11 +265,109 @@ export default function Home() {
             )}
           </div>
         </div>
-      )}
+        {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
+      </main>
+    );
+  }
 
-      {status && !generating && (
-        <p className="text-sm text-[var(--text-muted)]">{status}</p>
-      )}
+  // ─── Landing page ───
+  return (
+    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
+      {/* Hero */}
+      <section className="flex flex-col items-center text-center pt-16 sm:pt-24 pb-12 sm:pb-16 max-w-2xl">
+        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
+          Turn your data catalog into a podcast
+        </h1>
+        <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
+          Two AI hosts walk through your schemas, debate tradeoffs, and flag quality issues — so your team actually knows what's in the warehouse.
+        </p>
+
+        <button
+          onClick={handleDemo}
+          className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-8 py-4 text-lg font-medium cursor-pointer transition-all hover:scale-[1.02] mb-3"
+        >
+          ▶ Listen to a demo episode
+        </button>
+        <p className="text-xs text-[var(--text-muted)]">No signup, no API keys — hear it instantly</p>
+      </section>
+
+      {/* How it works */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 w-full max-w-3xl pb-12 sm:pb-16">
+        {[
+          { icon: "📊", title: "Connect", desc: "Point at OpenMetadata, dbt Cloud, or a local manifest.json" },
+          { icon: "✍️", title: "Generate", desc: "AI writes a podcast script from your schema metadata and quality tests" },
+          { icon: "🎙️", title: "Listen", desc: "Two distinct voices discuss your data — stream it, share it, download it" },
+        ].map((step) => (
+          <div key={step.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center">
+            <div className="text-2xl mb-2">{step.icon}</div>
+            <h3 className="font-semibold mb-1">{step.title}</h3>
+            <p className="text-sm text-[var(--text-muted)]">{step.desc}</p>
+          </div>
+        ))}
+      </section>
+
+      {/* Connect CTA */}
+      <section className="w-full max-w-md pb-16">
+        {!showConnect ? (
+          <button
+            onClick={() => setShowConnect(true)}
+            className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-4 text-sm font-medium cursor-pointer transition-colors text-center"
+          >
+            Connect your own data catalog →
+          </button>
+        ) : (
+          <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border border-[var(--border)] animate-slide-up">
+            <label className="text-sm text-[var(--text-muted)]">Data Source</label>
+            <select
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
+              value={source}
+              onChange={(e) => setSource(e.target.value as DataSource)}
+            >
+              <option value="openmetadata">OpenMetadata</option>
+              <option value="dbt-cloud">dbt Cloud</option>
+              <option value="dbt-local">dbt Local (manifest.json)</option>
+            </select>
+
+            <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
+
+            {source === "openmetadata" && (
+              <>
+                <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
+                <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={omUrl} onChange={(e) => setOmUrl(e.target.value)} placeholder="http://localhost:8585" />
+                <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
+                <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from OpenMetadata → Settings → Bots" />
+              </>
+            )}
+            {source === "dbt-cloud" && (
+              <>
+                <label className="text-sm text-[var(--text-muted)]">Account ID</label>
+                <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtAccountId} onChange={(e) => setDbtAccountId(e.target.value)} placeholder="From URL: cloud.getdbt.com/deploy/{account_id}" />
+                <label className="text-sm text-[var(--text-muted)]">Project ID</label>
+                <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={dbtProjectId} onChange={(e) => setDbtProjectId(e.target.value)} placeholder="From URL: …/projects/{project_id}" />
+                <label className="text-sm text-[var(--text-muted)]">API Token</label>
+                <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" value={dbtToken} onChange={(e) => setDbtToken(e.target.value)} placeholder="Account Settings → API Access → Service Tokens" />
+              </>
+            )}
+            {source === "dbt-local" && (
+              <>
+                <label className="text-sm text-[var(--text-muted)]">Manifest Path</label>
+                <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={manifestPath} onChange={(e) => setManifestPath(e.target.value)} placeholder="./target/manifest.json" />
+              </>
+            )}
+
+            <button onClick={handleConnect} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
+              Connect
+            </button>
+          </div>
+        )}
+
+        {status && <p className="text-sm text-[var(--text-muted)] text-center mt-4">{status}</p>}
+      </section>
+
+      {/* Footer */}
+      <footer className="text-xs text-[var(--text-muted)] pb-8">
+        Powered by ElevenLabs · Built with Next.js
+      </footer>
     </main>
   );
 }

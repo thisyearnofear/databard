@@ -36,6 +36,19 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 1000): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (attempt === retries) throw e;
+      console.warn(`Retry ${attempt + 1}/${retries}:`, e instanceof Error ? e.message : e);
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 function getCached(key: string): Buffer | null {
   const b64 = cache.get<string>(key);
   return b64 ? Buffer.from(b64, "base64") : null;
@@ -55,7 +68,7 @@ export async function synthesizeSpeech(
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const stream = await getClient().textToSpeech.convert(
+  const stream = await withRetry(() => getClient().textToSpeech.convert(
     VOICES[segment.speaker],
     {
       text: segment.text,
@@ -64,7 +77,7 @@ export async function synthesizeSpeech(
       ...(prevText && { previous_text: prevText }),
       ...(nextText && { next_text: nextText }),
     },
-  );
+  ));
   const buffer = await streamToBuffer(stream);
   setCached(cacheKey, buffer);
   return buffer;
@@ -76,10 +89,10 @@ export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promis
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const stream = await getClient().textToSoundEffects.convert({
+  const stream = await withRetry(() => getClient().textToSoundEffects.convert({
     text: prompt,
     duration_seconds: durationSeconds,
-  });
+  }));
   const buffer = await streamToBuffer(stream);
   setCached(cacheKey, buffer);
   return buffer;
