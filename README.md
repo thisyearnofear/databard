@@ -1,87 +1,122 @@
-# DataBard 🎙️
+# 🎙️ DataBard
 
-Generative podcast-style audio documentation for your data catalog.
+**Your data catalog, as a podcast.**
 
-Point DataBard at any data catalog (OpenMetadata, dbt Cloud, or local dbt) and it generates a two-host podcast episode that walks through your schemas, tables, data quality scores, and lineage — with AI voices debating tradeoffs and flagging issues.
+Two AI hosts walk through your OpenMetadata schemas, flag failing tests, trace lineage, call out PII columns, and debate what needs fixing — so your team actually knows what's in the warehouse.
+
+> **[▶ Listen to a demo episode](https://databard.vercel.app)** — no signup required
+
+---
+
+## The Problem
+
+Data catalogs have hundreds of tables. Nobody reads the docs. Quality tests fail silently. New team members take weeks to understand the warehouse. The metadata is there — but nobody consumes it.
+
+## The Solution
+
+DataBard generates podcast-style audio episodes from your OpenMetadata instance. Two AI hosts — Alex (the enthusiast) and Morgan (the skeptic) — have a natural conversation about your schemas, surfacing insights that matter:
+
+- 🔴 **"orders has 3 failing tests and 8 downstream dependents — if this breaks, it cascades"**
+- 🔒 **"Governance flag: customers has PII columns — email, phone_number"**
+- 👤 **"This table is owned by the analytics team. Hey analytics team, your tests are failing"**
+- 📊 **"Health score 58 out of 100. Only 50% test coverage. Let's talk about what's broken."**
+- 🕐 **"events hasn't been updated in 36 hours. Are the pipelines running?"**
+
+Click any segment to drill down into the actual columns, tests, lineage, and tags.
+
+## How It Uses OpenMetadata
+
+DataBard deeply integrates with OpenMetadata's API surface:
+
+| API | What DataBard Does With It |
+|---|---|
+| **Tables** (columns, tags) | Discusses schema structure, column types, data modeling choices |
+| **Data Quality / Test Cases** | Flags failures, computes health scores, identifies cascading risks |
+| **Lineage** | Maps data flow, identifies hotspots, warns about upstream failures |
+| **Owners** | Names who's responsible for broken tables |
+| **Profiler Data** | Reports row counts, flags stale tables by freshness timestamps |
+| **Glossary Terms** | Highlights business context baked into metadata |
+| **Classification (PII/Sensitive)** | Governance alerts for columns with PII tags |
+| **Database Schemas** | Schema descriptions, catalog browsing |
+
+The analysis layer computes **health scores**, **critical table rankings** (failing tests × downstream dependents), **coverage gaps**, and **lineage hotspots** before generating the script.
+
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────┐
+│ OpenMetadata │────▶│   Analysis   │────▶│   Script    │────▶│  Audio   │
+│  dbt Cloud   │     │ Health score │     │ LLM / tmpl  │     │ ElevenLabs│
+│  dbt Local   │     │ Critical tbl │     │ Two hosts   │     │ TTS + SFX │
+└─────────────┘     │ PII, owners  │     └─────────────┘     └──────────┘
+                    │ Lineage risk │                               │
+                    └──────────────┘                               ▼
+                                                          ┌──────────────┐
+                                                          │  Interactive │
+                                                          │   Player     │
+                                                          │ Drill-down   │
+                                                          │ Share/RSS    │
+                                                          └──────────────┘
+```
+
+**Pipeline:** Metadata fetch → Schema analysis → Script generation (LLM or template) → Streaming audio synthesis → Interactive player with data drill-down
 
 ## Features
 
-- **Multiple data sources** — OpenMetadata, dbt Cloud API, or local dbt manifest.json
-- **Two-voice AI podcast** — Two distinct ElevenLabs voices discuss your data catalog like co-hosts
-- **Streaming synthesis** — Start listening while audio generates (no waiting for full episode)
-- **Smart caching** — Metadata and episodes cached to reduce API calls and speed up regeneration
-- **Visual episode cards** — Waveform animations and episode artwork as audio plays
-- **Sound design** — ElevenLabs-generated intro jingles, transitions, and alert stings for quality issues
-- **Shareable episodes** — One-click sharing with unique URLs (24hr expiry)
-- **Schema search** — Filter large catalogs to find the schema you need
+- **Deep OpenMetadata integration** — owners, PII, glossary, profiler, quality, lineage
+- **Two-voice AI podcast** — Alex (advocate) and Morgan (auditor) via ElevenLabs
+- **LLM-powered scripts** — GPT-4o-mini generates natural dialogue (template fallback)
+- **Interactive drill-down** — click any segment to see columns, tests, lineage, tags
+- **Health scoring** — 0-100 score based on test coverage, failures, documentation, freshness
+- **Streaming synthesis** — start listening while audio generates
+- **Multi-platform sharing** — WhatsApp, Telegram, Twitter, native share sheet, RSS feed
+- **MP3 download** — take episodes offline
+- **Smart caching** — SFX cached 30 days, speech 24hr, scripts 1hr, metadata 5-10min
+- **Rate limiting** — 5 episodes/hr per IP to protect API credits
+- **OG images** — dynamic social preview cards for shared episodes
+- **Monetization-ready** — Stripe checkout, private RSS feeds, cron-ready regeneration
 
-## Tech Stack
-
-- **Next.js** — Web UI with episode cards, waveform visualization, catalog browser
-- **OpenMetadata / dbt** — Metadata fetching via REST API or manifest parsing
-- **ElevenLabs** — Text-to-Speech (two voices), Sound Effects, Music Generation
-- **Kiro** — Spec-driven development (see `.kiro/` directory)
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- ElevenLabs API key
-- One of:
-  - Docker Desktop (for local OpenMetadata)
-  - dbt Cloud account with API access
-  - Local dbt project with compiled manifest.json
-
-### Setup
+## Quick Start
 
 ```bash
-# Install dependencies
+git clone https://github.com/thisyearnofear/databard.git
+cd databard
 npm install
-
-# Copy env template
 cp .env.example .env
-# Add your ELEVENLABS_API_KEY
-
-# Run the app
+# Add your ELEVENLABS_API_KEY (required)
+# Add OPENAI_API_KEY for LLM scripts (optional)
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-### Data Source Setup
-
-**OpenMetadata:**
+**OpenMetadata setup:**
 ```bash
-# Start OpenMetadata locally
-curl -sL -o docker-compose-postgres.yml https://github.com/open-metadata/OpenMetadata/releases/download/1.10.4-release/docker-compose-postgres.yml
+curl -sL -o docker-compose-postgres.yml \
+  https://github.com/open-metadata/OpenMetadata/releases/download/1.10.4-release/docker-compose-postgres.yml
 docker compose -f docker-compose-postgres.yml up --detach
 ```
 
-**dbt Cloud:**
-- Get your Account ID and Project ID from dbt Cloud URL
-- Generate an API token from Account Settings → API Access
+Open [localhost:3000](http://localhost:3000) → Connect → Select a schema → Listen.
 
-**dbt Local:**
-- Run `dbt compile` in your dbt project
-- Point DataBard to `./target/manifest.json`
+## Tech Stack
 
-## How Kiro Was Used
+| Layer | Technology |
+|---|---|
+| Web UI | Next.js 15, React 19, Tailwind CSS 4 |
+| Metadata | OpenMetadata REST API, dbt manifest parsing |
+| AI Scripts | OpenAI-compatible API (GPT-4o-mini default) |
+| Audio | ElevenLabs TTS (two voices) + Sound Effects |
+| Caching | File-backed with TTL (no external dependencies) |
+| Payments | Stripe Checkout |
+| Development | Kiro (spec-driven, see `.kiro/` directory) |
 
-See the `.kiro/` directory for specs, hooks, and steering docs that guided development.
+## What's Next
 
-## Roadmap
-
-- [x] Multi-source support (OpenMetadata, dbt Cloud, dbt local)
-- [x] Streaming synthesis (start playback immediately)
-- [x] Smart caching (reduce API calls)
-- [x] Episode sharing with unique URLs
-- [x] Schema search/filter
-- [ ] Custom voice personalities (adjust host tone/focus)
-- [ ] Multi-episode playlists (full database documentation series)
-- [ ] Scheduled regeneration as catalog changes
-- [ ] Analytics (track which schemas get listened to)
-- [ ] Embeddable player widget
+- [ ] Real-time demo episode with ElevenLabs voices
+- [ ] Vercel deployment with KV cache
+- [ ] Scheduled regeneration via Vercel Cron
+- [ ] Historical comparison ("last week 3 failures, this week 7")
+- [ ] Slack integration for episode drops
+- [ ] Custom voice personalities
 
 ## License
 
