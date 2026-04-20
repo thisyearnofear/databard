@@ -3,10 +3,21 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import type { ScriptSegment, Episode } from "@/lib/types";
 
+const SPEEDS = [1, 1.25, 1.5, 2] as const;
+
+function HealthBadge({ summary }: { summary: Episode["qualitySummary"] }) {
+  if (summary.total === 0) return <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--border)] text-[var(--text-muted)]">No tests</span>;
+  if (summary.failed === 0) return <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--success)]/20 text-[var(--success)]">✓ Healthy</span>;
+  const ratio = summary.failed / summary.total;
+  if (ratio > 0.3) return <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--danger)]/20 text-[var(--danger)]">⚠ {summary.failed} failing</span>;
+  return <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">⚠ {summary.failed} failing</span>;
+}
+
 export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUrl: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const segListRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
@@ -17,6 +28,7 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const [sharing, setSharing] = useState(false);
   const [expandedSeg, setExpandedSeg] = useState<number | null>(null);
   const [clipCopied, setClipCopied] = useState(false);
+  const [speed, setSpeed] = useState<number>(1);
 
   // Web Audio API setup for waveform
   useEffect(() => {
@@ -88,10 +100,23 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     return () => cancelAnimationFrame(animRef.current);
   }, [playing, drawWaveform]);
 
+  // Auto-scroll segment list to active segment
+  const segDuration = duration / (episode.script.length || 1);
+  const activeIdx = Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
+
+  useEffect(() => {
+    if (!playing) return;
+    const list = segListRef.current;
+    if (!list) return;
+    const activeEl = list.children[activeIdx + 1] as HTMLElement; // +1 for the h3 header
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activeIdx, playing]);
+
   // Keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      // Don't capture when typing in inputs
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       const audio = audioRef.current;
@@ -129,6 +154,22 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = Number(e.target.value);
+  }
+
+  function seekToSegment(i: number) {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    audio.currentTime = i * segDuration;
+    if (!playing) { audio.play(); setPlaying(true); }
+  }
+
+  function cycleSpeed() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const idx = SPEEDS.indexOf(speed as typeof SPEEDS[number]);
+    const next = SPEEDS[(idx + 1) % SPEEDS.length];
+    audio.playbackRate = next;
+    setSpeed(next);
   }
 
   function handleDownload() {
@@ -169,7 +210,6 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   }
 
   async function handleClip() {
-    // Pick the most interesting segment: quality failures > intro > first
     const highlight = episode.script.find((s) =>
       s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
     ) ?? episode.script[0];
@@ -181,21 +221,19 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   }
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-  const segDuration = duration / (episode.script.length || 1);
-  const activeIdx = Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
 
   return (
-    <div className="w-full max-w-2xl flex flex-col gap-4">
+    <div className="w-full max-w-2xl flex flex-col gap-4 animate-slide-up">
       {/* Episode card */}
       <div ref={containerRef} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 sm:p-6">
         <div className="flex items-start justify-between mb-4 gap-2">
           <div className="min-w-0">
-            <h2 className="text-lg sm:text-xl font-semibold truncate">🎙️ {episode.schemaName}</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg sm:text-xl font-semibold truncate">🎙️ {episode.schemaName}</h2>
+              <HealthBadge summary={episode.qualitySummary} />
+            </div>
             <p className="text-xs sm:text-sm text-[var(--text-muted)]">
               {episode.tableCount} tables · {episode.qualitySummary.total} tests
-              {episode.qualitySummary.failed > 0 && (
-                <span className="text-[var(--danger)]"> · {episode.qualitySummary.failed} failing</span>
-              )}
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -251,25 +289,35 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
             className="flex-1 accent-[var(--accent)]"
             aria-label="Seek"
           />
+          <button
+            onClick={cycleSpeed}
+            className="text-[10px] font-mono bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded px-1.5 py-0.5 cursor-pointer shrink-0 tabular-nums"
+            title="Playback speed"
+          >
+            {speed}×
+          </button>
           <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0">
             {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "—"}
           </span>
         </div>
 
         <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
-          Space to play/pause · ← → to seek 10s
+          Space to play/pause · ← → to seek 10s · Click a segment to jump
         </p>
       </div>
 
       {/* Segment timeline */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-72 overflow-y-auto">
+      <div ref={segListRef} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-72 overflow-y-auto scroll-smooth">
         <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Segments</h3>
         {episode.script.map((seg: ScriptSegment, i: number) => (
           <button
             key={i}
-            onClick={() => setExpandedSeg(expandedSeg === i ? null : i)}
-            className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-colors ${
-              i === activeIdx ? "bg-[var(--accent-glow)]" : "hover:bg-[var(--bg)]"
+            onClick={() => {
+              if (expandedSeg === i) { setExpandedSeg(null); }
+              else { setExpandedSeg(i); seekToSegment(i); }
+            }}
+            className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
+              i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
             }`}
           >
             <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
