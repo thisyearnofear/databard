@@ -5,6 +5,19 @@
  */
 import type { SchemaMeta, TableMeta } from "./types";
 
+export type ActionPriority = "critical" | "high" | "medium" | "low";
+export type ActionCategory = "test" | "documentation" | "ownership" | "governance" | "freshness";
+
+export interface ActionItem {
+  id: string;
+  priority: ActionPriority;
+  category: ActionCategory;
+  title: string;
+  description: string;
+  table?: string;
+  effort: "5min" | "30min" | "1hr" | "half-day";
+}
+
 export interface SchemaInsights {
   healthScore: number;
   healthLabel: "healthy" | "at-risk" | "critical";
@@ -144,6 +157,112 @@ export function analyzeSchema(schema: SchemaMeta): SchemaInsights {
     totalTests, passingTests, failingTests, queuedTests,
     owners, piiTables, glossaryTerms, staleTables, largestTables, ownerlessTables,
   };
+}
+
+/** Generate prioritized action items from schema insights */
+export function generateActionItems(insights: SchemaInsights): ActionItem[] {
+  const items: ActionItem[] = [];
+  let idx = 0;
+
+  // Critical: failing tests on high-downstream tables
+  for (const ct of insights.criticalTables) {
+    if (ct.failingTests > 0) {
+      items.push({
+        id: `action-${idx++}`,
+        priority: ct.risk === "critical" ? "critical" : "high",
+        category: "test",
+        title: `Fix ${ct.failingTests} failing test${ct.failingTests > 1 ? "s" : ""} on ${ct.table.name}`,
+        description: ct.downstreamCount > 0
+          ? `${ct.downstreamCount} downstream table${ct.downstreamCount > 1 ? "s" : ""} depend on this — failures cascade.`
+          : `Test${ct.failingTests > 1 ? "s are" : " is"} failing. Investigate and fix or update expectations.`,
+        table: ct.table.name,
+        effort: ct.failingTests > 3 ? "1hr" : "30min",
+      });
+    }
+  }
+
+  // High: untested tables with downstream dependents
+  for (const name of insights.untestedTables.slice(0, 5)) {
+    items.push({
+      id: `action-${idx++}`,
+      priority: "high",
+      category: "test",
+      title: `Add tests to ${name}`,
+      description: "No quality tests configured. Add not_null, unique, or accepted_values checks.",
+      table: name,
+      effort: "30min",
+    });
+  }
+
+  // Medium: undocumented tables
+  if (insights.undocumentedTables.length > 0) {
+    if (insights.undocumentedTables.length <= 3) {
+      for (const name of insights.undocumentedTables) {
+        items.push({
+          id: `action-${idx++}`,
+          priority: "medium",
+          category: "documentation",
+          title: `Document ${name}`,
+          description: "No description set. Add a brief explanation of what this table contains and its purpose.",
+          table: name,
+          effort: "5min",
+        });
+      }
+    } else {
+      items.push({
+        id: `action-${idx++}`,
+        priority: "medium",
+        category: "documentation",
+        title: `Document ${insights.undocumentedTables.length} tables`,
+        description: `Only ${insights.docCoverage}% documentation coverage. Tables: ${insights.undocumentedTables.slice(0, 5).join(", ")}${insights.undocumentedTables.length > 5 ? "…" : ""}`,
+        effort: "1hr",
+      });
+    }
+  }
+
+  // Medium: ownerless tables
+  if (insights.ownerlessTables.length > 0) {
+    items.push({
+      id: `action-${idx++}`,
+      priority: "medium",
+      category: "ownership",
+      title: `Assign owners to ${insights.ownerlessTables.length} table${insights.ownerlessTables.length > 1 ? "s" : ""}`,
+      description: `Tables without owners: ${insights.ownerlessTables.slice(0, 4).join(", ")}${insights.ownerlessTables.length > 4 ? "…" : ""}. Ownership ensures accountability when issues arise.`,
+      effort: "5min",
+    });
+  }
+
+  // Medium: PII governance
+  for (const pii of insights.piiTables) {
+    items.push({
+      id: `action-${idx++}`,
+      priority: "medium",
+      category: "governance",
+      title: `Review PII access on ${pii.name}`,
+      description: `Contains PII columns: ${pii.columns.join(", ")}. Verify access policies and retention rules.`,
+      table: pii.name,
+      effort: "30min",
+    });
+  }
+
+  // Low: stale tables
+  for (const stale of insights.staleTables.slice(0, 3)) {
+    items.push({
+      id: `action-${idx++}`,
+      priority: stale.hoursAgo > 72 ? "high" : "low",
+      category: "freshness",
+      title: `Investigate stale ${stale.name}`,
+      description: `Last updated ${stale.hoursAgo}h ago. Check if the pipeline is running or if this table is deprecated.`,
+      table: stale.name,
+      effort: "30min",
+    });
+  }
+
+  // Sort by priority
+  const priorityOrder: Record<ActionPriority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  items.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  return items;
 }
 
 /** Diff between two schema analyses — what changed since last episode */

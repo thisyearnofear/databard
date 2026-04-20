@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import type { ScriptSegment, Episode, TableMeta, LineageEdge } from "@/lib/types";
+import { analyzeSchema, generateActionItems, type ActionItem, type ActionPriority } from "@/lib/schema-analysis";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
+type PlayerTab = "segments" | "insights" | "actions";
 
 function HealthBadge({ summary }: { summary: Episode["qualitySummary"] }) {
   if (summary.total === 0) return <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--border)] text-[var(--text-muted)]">No tests</span>;
@@ -92,6 +94,20 @@ function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdg
   );
 }
 
+function PriorityBadge({ priority }: { priority: ActionPriority }) {
+  const styles: Record<ActionPriority, string> = {
+    critical: "bg-[var(--danger)]/20 text-[var(--danger)]",
+    high: "bg-yellow-500/20 text-yellow-400",
+    medium: "bg-blue-500/20 text-blue-400",
+    low: "bg-[var(--border)] text-[var(--text-muted)]",
+  };
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${styles[priority]}`}>
+      {priority}
+    </span>
+  );
+}
+
 export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: Episode; audioUrl: string; segmentOffsets?: number[] }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -110,6 +126,32 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
   const [speed, setSpeed] = useState<number>(1);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<PlayerTab>("insights");
+  const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const saved = localStorage.getItem(`databard:actions:${episode.schemaFqn}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Compute insights and action items from schema metadata
+  const { insights, actionItems } = useMemo(() => {
+    if (!episode.schemaMeta) return { insights: null, actionItems: [] };
+    const ins = analyzeSchema(episode.schemaMeta);
+    const items = generateActionItems(ins);
+    return { insights: ins, actionItems: items };
+  }, [episode.schemaMeta]);
+
+  // Persist checked actions
+  function toggleAction(id: string) {
+    setCheckedActions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(`databard:actions:${episode.schemaFqn}`, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
 
   // Web Audio API setup for waveform
   useEffect(() => {
@@ -497,40 +539,233 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
         )}
       </div>
 
-      {/* Segment timeline */}
-      <div ref={segListRef} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-96 overflow-y-auto scroll-smooth">
-        <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Segments</h3>
-        {episode.script.map((seg: ScriptSegment, i: number) => {
-          const isExpanded = expandedSeg === i;
-          const table = isExpanded && episode.schemaMeta
-            ? episode.schemaMeta.tables.find((t) => t.name === seg.topic)
-            : null;
-
-          return (
-            <div key={i}>
-              <button
-                onClick={() => {
-                  if (isExpanded) { setExpandedSeg(null); }
-                  else { setExpandedSeg(i); seekToSegment(i); }
-                }}
-                className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
-                  i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
-                }`}
-              >
-                <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
-                  {seg.speaker}
+      {/* Tabbed panel: Insights | Actions | Segments */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
+        {/* Tab bar */}
+        <div className="flex border-b border-[var(--border)]">
+          {([
+            { id: "insights" as const, label: "Summary", count: insights ? `${insights.healthScore}` : undefined },
+            { id: "actions" as const, label: "Actions", count: actionItems.length > 0 ? `${actionItems.length - checkedActions.size}` : undefined },
+            { id: "segments" as const, label: "Transcript" },
+          ]).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 px-3 py-2.5 text-xs font-medium cursor-pointer transition-colors relative ${
+                activeTab === tab.id
+                  ? "text-[var(--accent)] bg-[var(--accent-glow)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)]"
+              }`}
+            >
+              {tab.label}
+              {tab.count && (
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
+                  activeTab === tab.id ? "bg-[var(--accent)] text-white" : "bg-[var(--border)] text-[var(--text-muted)]"
+                }`}>
+                  {tab.count}
                 </span>
-                <span className={`text-[var(--text-muted)] ${isExpanded ? "whitespace-normal" : "truncate"}`}>
-                  {seg.text}
-                </span>
-                {table && <span className="text-[var(--accent)] shrink-0 text-xs">📊</span>}
-              </button>
-              {table && (
-                <TableDetail table={table} lineage={episode.schemaMeta!.lineage} />
               )}
+            </button>
+          ))}
+        </div>
+
+        {/* Insights tab */}
+        {activeTab === "insights" && insights && (
+          <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+            {/* Health score */}
+            <div className="flex items-center gap-4">
+              <div className={`text-3xl font-bold tabular-nums ${
+                insights.healthLabel === "healthy" ? "text-[var(--success)]"
+                : insights.healthLabel === "at-risk" ? "text-yellow-400"
+                : "text-[var(--danger)]"
+              }`}>
+                {insights.healthScore}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">Health Score</div>
+                <div className="text-xs text-[var(--text-muted)]">
+                  {insights.healthLabel === "healthy" ? "Looking good" : insights.healthLabel === "at-risk" ? "Needs attention" : "Critical issues"}
+                </div>
+              </div>
             </div>
-          );
-        })}
+
+            {/* Coverage bars */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-[var(--text-muted)]">Test coverage</span>
+                  <span className="tabular-nums">{insights.testCoverage}%</span>
+                </div>
+                <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--accent)] rounded-full transition-all" style={{ width: `${insights.testCoverage}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-[var(--text-muted)]">Documentation</span>
+                  <span className="tabular-nums">{insights.docCoverage}%</span>
+                </div>
+                <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--success)] rounded-full transition-all" style={{ width: `${insights.docCoverage}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Key stats */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-[var(--bg)] rounded-lg p-2">
+                <div className="text-lg font-semibold tabular-nums">{insights.failingTests}</div>
+                <div className="text-[10px] text-[var(--text-muted)]">Failing</div>
+              </div>
+              <div className="bg-[var(--bg)] rounded-lg p-2">
+                <div className="text-lg font-semibold tabular-nums">{insights.untestedTables.length}</div>
+                <div className="text-[10px] text-[var(--text-muted)]">Untested</div>
+              </div>
+              <div className="bg-[var(--bg)] rounded-lg p-2">
+                <div className="text-lg font-semibold tabular-nums">{insights.ownerlessTables.length}</div>
+                <div className="text-[10px] text-[var(--text-muted)]">No owner</div>
+              </div>
+            </div>
+
+            {/* Critical tables */}
+            {insights.criticalTables.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Critical Tables</h4>
+                <div className="space-y-1.5">
+                  {insights.criticalTables.slice(0, 5).map((ct) => (
+                    <div key={ct.table.name} className="flex items-center gap-2 text-xs bg-[var(--bg)] rounded-lg px-3 py-2">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${
+                        ct.risk === "critical" ? "bg-[var(--danger)]" : ct.risk === "high" ? "bg-yellow-400" : "bg-[var(--border)]"
+                      }`} />
+                      <span className="font-medium truncate">{ct.table.name}</span>
+                      <span className="text-[var(--text-muted)] ml-auto shrink-0">
+                        {ct.failingTests > 0 && `${ct.failingTests} failing`}
+                        {ct.failingTests > 0 && ct.downstreamCount > 0 && " · "}
+                        {ct.downstreamCount > 0 && `${ct.downstreamCount} downstream`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lineage hotspots */}
+            {insights.lineageHotspots.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Lineage Hotspots</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {insights.lineageHotspots.map((h) => (
+                    <span key={h.name} className="text-xs px-2 py-1 rounded bg-[var(--bg)] text-[var(--text-muted)]">
+                      {h.name} <span className="text-[var(--accent)]">({h.connections})</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Insights fallback when no schemaMeta */}
+        {activeTab === "insights" && !insights && (
+          <div className="p-6 text-center text-sm text-[var(--text-muted)]">
+            <p>Schema metadata not available for this episode.</p>
+            <p className="text-xs mt-1">Connect to a data source to see full insights.</p>
+          </div>
+        )}
+
+        {/* Actions tab */}
+        {activeTab === "actions" && (
+          <div className="p-4 max-h-96 overflow-y-auto">
+            {actionItems.length === 0 ? (
+              <div className="text-center text-sm text-[var(--text-muted)] py-6">
+                <p>🎉 No action items — your schema is in great shape!</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {checkedActions.size}/{actionItems.length} resolved
+                  </span>
+                  <div className="h-1 flex-1 mx-3 bg-[var(--border)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[var(--success)] rounded-full transition-all"
+                      style={{ width: `${actionItems.length > 0 ? (checkedActions.size / actionItems.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+                {actionItems.map((item) => {
+                  const checked = checkedActions.has(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-start gap-2.5 text-xs rounded-lg px-3 py-2.5 transition-all ${
+                        checked ? "bg-[var(--bg)] opacity-60" : "bg-[var(--bg)]"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAction(item.id)}
+                        className="mt-0.5 accent-[var(--accent)] cursor-pointer shrink-0"
+                        aria-label={`Mark "${item.title}" as done`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <PriorityBadge priority={item.priority} />
+                          <span className={`font-medium ${checked ? "line-through text-[var(--text-muted)]" : ""}`}>
+                            {item.title}
+                          </span>
+                        </div>
+                        <p className="text-[var(--text-muted)] leading-relaxed">{item.description}</p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.category}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">~{item.effort}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Segments tab (transcript) */}
+        {activeTab === "segments" && (
+          <div ref={segListRef} className="p-4 max-h-96 overflow-y-auto scroll-smooth">
+            {episode.script.map((seg: ScriptSegment, i: number) => {
+              const isExpanded = expandedSeg === i;
+              const table = isExpanded && episode.schemaMeta
+                ? episode.schemaMeta.tables.find((t) => t.name === seg.topic)
+                : null;
+
+              return (
+                <div key={i}>
+                  <button
+                    onClick={() => {
+                      if (isExpanded) { setExpandedSeg(null); }
+                      else { setExpandedSeg(i); seekToSegment(i); }
+                    }}
+                    className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
+                      i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
+                    }`}
+                  >
+                    <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
+                      {seg.speaker}
+                    </span>
+                    <span className={`text-[var(--text-muted)] ${isExpanded ? "whitespace-normal" : "truncate"}`}>
+                      {seg.text}
+                    </span>
+                    {table && <span className="text-[var(--accent)] shrink-0 text-xs">📊</span>}
+                  </button>
+                  {table && (
+                    <TableDetail table={table} lineage={episode.schemaMeta!.lineage} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <audio
