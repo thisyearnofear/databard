@@ -1,21 +1,161 @@
 {
   "schemaFqn": "analytics.ecommerce",
   "schemaName": "ecommerce",
-  "tableCount": 4,
-  "qualitySummary": { "passed": 5, "failed": 2, "total": 7 },
+  "tableCount": 6,
+  "qualitySummary": { "passed": 8, "failed": 3, "total": 11 },
+  "generatedAt": "2026-04-21T12:00:00Z",
+  "schemaMeta": {
+    "fqn": "analytics.ecommerce",
+    "name": "ecommerce",
+    "description": "Core e-commerce data warehouse schema powering analytics, reporting, and operational dashboards.",
+    "tables": [
+      {
+        "fqn": "analytics.ecommerce.orders",
+        "name": "orders",
+        "description": "Core transaction table — every purchase flows through here. Contains order status, timestamps, and customer references.",
+        "columns": [
+          { "name": "order_id", "dataType": "BIGINT", "description": "Primary key", "tags": [] },
+          { "name": "customer_id", "dataType": "BIGINT", "description": "FK to customers", "tags": [] },
+          { "name": "order_date", "dataType": "TIMESTAMP", "description": "When the order was placed", "tags": [] },
+          { "name": "status", "dataType": "VARCHAR", "description": "pending, confirmed, shipped, delivered, cancelled", "tags": [] },
+          { "name": "total_amount", "dataType": "DECIMAL", "description": "Order total in USD", "tags": [] },
+          { "name": "shipping_address", "dataType": "VARCHAR", "tags": [] },
+          { "name": "created_at", "dataType": "TIMESTAMP", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "not_null_order_id", "status": "Success", "column": "order_id" },
+          { "name": "unique_order_id", "status": "Success", "column": "order_id" },
+          { "name": "accepted_values_status", "status": "Failed", "column": "status" }
+        ],
+        "tags": ["critical", "tier-1"],
+        "owner": "Sarah Chen",
+        "rowCount": 2450000,
+        "freshness": "2026-04-21T08:30:00Z"
+      },
+      {
+        "fqn": "analytics.ecommerce.customers",
+        "name": "customers",
+        "description": "Customer master data including profile, signup date, and lifetime metrics.",
+        "columns": [
+          { "name": "customer_id", "dataType": "BIGINT", "description": "Primary key", "tags": [] },
+          { "name": "email", "dataType": "VARCHAR", "description": "Customer email address", "tags": ["PII"] },
+          { "name": "full_name", "dataType": "VARCHAR", "description": "Customer full name", "tags": ["PII"] },
+          { "name": "signup_date", "dataType": "DATE", "tags": [] },
+          { "name": "lifetime_value", "dataType": "DECIMAL", "description": "Total spend to date", "tags": [] },
+          { "name": "segment", "dataType": "VARCHAR", "description": "Customer segment: vip, regular, new", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "not_null_customer_id", "status": "Success", "column": "customer_id" },
+          { "name": "unique_email", "status": "Success", "column": "email" },
+          { "name": "not_null_email", "status": "Success", "column": "email" }
+        ],
+        "tags": ["master-data"],
+        "owner": "Sarah Chen",
+        "rowCount": 185000,
+        "freshness": "2026-04-21T06:00:00Z",
+        "piiColumns": ["email", "full_name"],
+        "glossaryTerms": ["Customer Lifetime Value", "Customer Segment"]
+      },
+      {
+        "fqn": "analytics.ecommerce.order_items",
+        "name": "order_items",
+        "description": "Line items for each order — links orders to products with quantity and pricing.",
+        "columns": [
+          { "name": "item_id", "dataType": "BIGINT", "tags": [] },
+          { "name": "order_id", "dataType": "BIGINT", "description": "FK to orders", "tags": [] },
+          { "name": "product_id", "dataType": "BIGINT", "description": "FK to products", "tags": [] },
+          { "name": "quantity", "dataType": "INT", "tags": [] },
+          { "name": "unit_price", "dataType": "DECIMAL", "tags": [] },
+          { "name": "discount_pct", "dataType": "DECIMAL", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "not_null_order_id", "status": "Success", "column": "order_id" },
+          { "name": "positive_quantity", "status": "Failed", "column": "quantity" }
+        ],
+        "tags": [],
+        "rowCount": 8900000,
+        "freshness": "2026-04-21T08:30:00Z"
+      },
+      {
+        "fqn": "analytics.ecommerce.products",
+        "name": "products",
+        "columns": [
+          { "name": "product_id", "dataType": "BIGINT", "tags": [] },
+          { "name": "name", "dataType": "VARCHAR", "tags": [] },
+          { "name": "category", "dataType": "VARCHAR", "tags": [] },
+          { "name": "price", "dataType": "DECIMAL", "tags": [] },
+          { "name": "is_active", "dataType": "BOOLEAN", "tags": [] }
+        ],
+        "qualityTests": [],
+        "tags": [],
+        "rowCount": 12000
+      },
+      {
+        "fqn": "analytics.ecommerce.payments",
+        "name": "payments",
+        "description": "Payment transactions linked to orders. Supports multiple payment methods per order.",
+        "columns": [
+          { "name": "payment_id", "dataType": "BIGINT", "tags": [] },
+          { "name": "order_id", "dataType": "BIGINT", "description": "FK to orders", "tags": [] },
+          { "name": "method", "dataType": "VARCHAR", "description": "credit_card, paypal, bank_transfer", "tags": [] },
+          { "name": "amount", "dataType": "DECIMAL", "tags": [] },
+          { "name": "status", "dataType": "VARCHAR", "tags": [] },
+          { "name": "processed_at", "dataType": "TIMESTAMP", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "not_null_payment_id", "status": "Success", "column": "payment_id" },
+          { "name": "payment_amount_positive", "status": "Failed", "column": "amount" }
+        ],
+        "tags": ["financial"],
+        "owner": "Mike Kumar",
+        "rowCount": 3100000,
+        "freshness": "2026-04-20T14:00:00Z"
+      },
+      {
+        "fqn": "analytics.ecommerce.revenue_daily",
+        "name": "revenue_daily",
+        "description": "Daily aggregated revenue metrics by product category and customer segment.",
+        "columns": [
+          { "name": "date", "dataType": "DATE", "tags": [] },
+          { "name": "category", "dataType": "VARCHAR", "tags": [] },
+          { "name": "segment", "dataType": "VARCHAR", "tags": [] },
+          { "name": "revenue", "dataType": "DECIMAL", "tags": [] },
+          { "name": "order_count", "dataType": "INT", "tags": [] },
+          { "name": "avg_order_value", "dataType": "DECIMAL", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "not_null_date", "status": "Success", "column": "date" }
+        ],
+        "tags": ["reporting"],
+        "owner": "Mike Kumar",
+        "rowCount": 45000,
+        "freshness": "2026-04-20T02:00:00Z"
+      }
+    ],
+    "lineage": [
+      { "fromTable": "analytics.ecommerce.customers", "toTable": "analytics.ecommerce.orders" },
+      { "fromTable": "analytics.ecommerce.orders", "toTable": "analytics.ecommerce.order_items" },
+      { "fromTable": "analytics.ecommerce.products", "toTable": "analytics.ecommerce.order_items" },
+      { "fromTable": "analytics.ecommerce.orders", "toTable": "analytics.ecommerce.payments" },
+      { "fromTable": "analytics.ecommerce.orders", "toTable": "analytics.ecommerce.revenue_daily" },
+      { "fromTable": "analytics.ecommerce.payments", "toTable": "analytics.ecommerce.revenue_daily" }
+    ]
+  },
   "script": [
-    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard! Today we're looking at the ecommerce schema — 4 tables, health score 58 out of 100. Let's dig in." },
-    { "speaker": "Morgan", "topic": "intro", "text": "Mixed bag here. 71% test coverage, 50% documented. Some gaps to address." },
+    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard! Today we're looking at the ecommerce schema — 6 tables, health score 52 out of 100. Let's dig in." },
+    { "speaker": "Morgan", "topic": "intro", "text": "This one needs work. 3 failing tests and only 67% test coverage. Plus payments hasn't been updated in over 30 hours. Let's talk about what's broken." },
     { "speaker": "Morgan", "topic": "critical", "text": "Let's start with the fires. There are 2 tables I'm worried about." },
-    { "speaker": "Morgan", "topic": "orders", "text": "orders is critical — 1 failing test and 2 tables depend on it. If this breaks, it cascades." },
-    { "speaker": "Alex", "topic": "orders", "text": "For context, orders is the core transaction table — every purchase flows through here." },
-    { "speaker": "Morgan", "topic": "order_items", "text": "order_items has 1 failing test — positive_quantity. Needs attention." },
-    { "speaker": "Morgan", "topic": "coverage", "text": "products has zero quality tests. That's 25% of the schema flying blind." },
-    { "speaker": "Alex", "topic": "documentation", "text": "Only 50% of tables are documented. products and order_items have no description at all." },
-    { "speaker": "Alex", "topic": "highlights", "text": "On the bright side — customers is well-documented with all tests passing. That's the standard to aim for." },
-    { "speaker": "Alex", "topic": "lineage", "text": "Data flow: 3 lineage connections. orders is the busiest node with 3 connections." },
-    { "speaker": "Morgan", "topic": "lineage", "text": "All lineage is internal to this schema. That's good for isolation, but make sure upstream sources are monitored." },
-    { "speaker": "Alex", "topic": "outro", "text": "That's the ecommerce schema — health score 58, 4 tables, 7 tests. Thanks for listening." },
-    { "speaker": "Morgan", "topic": "outro", "text": "Priority one: fix those 2 failing tests. Priority two: get test coverage above 71%. Until next time." }
+    { "speaker": "Morgan", "topic": "orders", "text": "orders is critical — the accepted_values test on status is failing, and 3 tables depend on it. order_items, payments, and revenue_daily all cascade from here." },
+    { "speaker": "Alex", "topic": "orders", "text": "For context, orders is the core transaction table. 2.4 million rows, every purchase flows through here. Sarah Chen owns it." },
+    { "speaker": "Morgan", "topic": "order_items", "text": "order_items has a failing positive_quantity test. Someone's inserting zero or negative quantities. That's 8.9 million rows of line item data with bad records." },
+    { "speaker": "Morgan", "topic": "payments", "text": "payments has a failing payment_amount_positive test, and it hasn't been refreshed in over 30 hours. Mike Kumar owns this one — might want to check the pipeline." },
+    { "speaker": "Morgan", "topic": "coverage", "text": "products has zero quality tests. No not_null, no unique checks, nothing. That's a table with no safety net." },
+    { "speaker": "Alex", "topic": "documentation", "text": "Documentation is at 83% which isn't bad — only products is missing a description. But order_items and products have no owner assigned." },
+    { "speaker": "Alex", "topic": "highlights", "text": "On the bright side — customers is solid. All 3 tests passing, well-documented, PII columns properly tagged. That's the standard." },
+    { "speaker": "Morgan", "topic": "governance", "text": "Speaking of PII — customers has email and full_name flagged as personal data. Make sure access policies and retention rules cover those columns." },
+    { "speaker": "Alex", "topic": "lineage", "text": "Data flow: 6 lineage connections. orders is the busiest node with 4 connections — it feeds order_items, payments, and revenue_daily." },
+    { "speaker": "Morgan", "topic": "lineage", "text": "All lineage is internal to this schema. That's good for isolation, but the orders table is a single point of failure for the entire downstream chain." },
+    { "speaker": "Alex", "topic": "outro", "text": "That's the ecommerce schema — health score 52, 6 tables, 11 tests. Thanks for listening." },
+    { "speaker": "Morgan", "topic": "outro", "text": "Priority one: fix those 3 failing tests on orders, order_items, and payments. Priority two: add tests to products. Priority three: check why payments is stale. Until next time." }
   ]
 }
