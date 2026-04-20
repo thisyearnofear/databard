@@ -6,6 +6,7 @@ import type { ScriptSegment, Episode } from "@/lib/types";
 export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUrl: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
@@ -14,11 +15,12 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
   const [duration, setDuration] = useState(0);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [expandedSeg, setExpandedSeg] = useState<number | null>(null);
 
   // Web Audio API setup for waveform
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !audioUrl) return;
     const ctx = new AudioContext();
     const source = ctx.createMediaElementSource(audio);
     const analyser = ctx.createAnalyser();
@@ -28,6 +30,28 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     analyserRef.current = analyser;
     return () => { ctx.close(); };
   }, [audioUrl]);
+
+  // Responsive canvas sizing
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const resize = () => {
+      const w = container.clientWidth;
+      canvas.width = w * window.devicePixelRatio;
+      canvas.height = 80 * window.devicePixelRatio;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = "80px";
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   // Waveform animation
   const drawWaveform = useCallback(() => {
@@ -39,14 +63,16 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     const data = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(data);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const barW = canvas.width / data.length;
-    const mid = canvas.height / 2;
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+    const barW = w / data.length;
+    const mid = h / 2;
 
     for (let i = 0; i < data.length; i++) {
-      const h = (data[i] / 255) * mid;
+      const barH = (data[i] / 255) * mid;
       ctx.fillStyle = `hsl(258, 80%, ${50 + (data[i] / 255) * 30}%)`;
-      ctx.fillRect(i * barW, mid - h, barW - 1, h * 2);
+      ctx.fillRect(i * barW, mid - barH, barW - 1, barH * 2);
     }
 
     animRef.current = requestAnimationFrame(drawWaveform);
@@ -61,10 +87,40 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     return () => cancelAnimationFrame(animRef.current);
   }, [playing, drawWaveform]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      // Don't capture when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      switch (e.key) {
+        case " ":
+          e.preventDefault();
+          if (playing) audio.pause(); else audio.play();
+          setPlaying(!playing);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          audio.currentTime = Math.max(0, audio.currentTime - 10);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 10);
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [playing]);
+
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) { audio.pause(); } else { audio.play(); }
+    if (playing) audio.pause(); else audio.play();
     setPlaying(!playing);
   }
 
@@ -74,10 +130,17 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     audio.currentTime = Number(e.target.value);
   }
 
+  function handleDownload() {
+    if (!audioUrl) return;
+    const a = document.createElement("a");
+    a.href = audioUrl;
+    a.download = `databard-${episode.schemaName}.mp3`;
+    a.click();
+  }
+
   async function handleShare() {
     setSharing(true);
     try {
-      // Fetch audio blob and convert to base64 for persistent sharing
       let audioBase64: string | undefined;
       if (audioUrl) {
         const audioRes = await fetch(audioUrl);
@@ -104,52 +167,56 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
     }
   }
 
-  // Estimate which segment is playing (rough: equal time per segment)
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   const segDuration = duration / (episode.script.length || 1);
   const activeIdx = Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-4">
       {/* Episode card */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">🎙️ {episode.schemaName}</h2>
-            <p className="text-sm text-[var(--text-muted)]">
+      <div ref={containerRef} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 sm:p-6">
+        <div className="flex items-start justify-between mb-4 gap-2">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-semibold truncate">🎙️ {episode.schemaName}</h2>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)]">
               {episode.tableCount} tables · {episode.qualitySummary.total} tests
               {episode.qualitySummary.failed > 0 && (
                 <span className="text-[var(--danger)]"> · {episode.qualitySummary.failed} failing</span>
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleDownload}
+              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
+              title="Download MP3"
+              aria-label="Download episode as MP3"
+            >
+              ↓
+            </button>
             <button
               onClick={handleShare}
               disabled={sharing}
-              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-3 py-1.5 cursor-pointer disabled:opacity-50"
+              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50"
               title="Share episode"
             >
               {shareUrl ? "✓ Copied" : "Share"}
             </button>
-            <span className="text-xs text-[var(--text-muted)]">
-              {duration > 0 ? `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}` : "—"}
-            </span>
           </div>
         </div>
 
         {/* Waveform */}
         <canvas
           ref={canvasRef}
-          width={600}
-          height={80}
-          className="w-full h-20 rounded-lg bg-[var(--bg)] mb-4"
+          className="w-full rounded-lg bg-[var(--bg)] mb-4"
+          style={{ height: "80px" }}
         />
 
         {/* Controls */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={togglePlay}
-            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer"
+            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
             aria-label={playing ? "Pause" : "Play"}
           >
             {playing ? "⏸" : "▶"}
@@ -162,26 +229,36 @@ export function EpisodePlayer({ episode, audioUrl }: { episode: Episode; audioUr
             value={currentTime}
             onChange={seek}
             className="flex-1 accent-[var(--accent)]"
+            aria-label="Seek"
           />
-          <span className="text-xs text-[var(--text-muted)] tabular-nums w-12 text-right">
-            {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, "0")}
+          <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0">
+            {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "—"}
           </span>
         </div>
+
+        <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
+          Space to play/pause · ← → to seek 10s
+        </p>
       </div>
 
       {/* Segment timeline */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-64 overflow-y-auto">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-h-72 overflow-y-auto">
         <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Segments</h3>
         {episode.script.map((seg: ScriptSegment, i: number) => (
-          <div
+          <button
             key={i}
-            className={`flex gap-2 py-1.5 px-2 rounded text-sm ${i === activeIdx ? "bg-[var(--accent-glow)]" : ""}`}
+            onClick={() => setExpandedSeg(expandedSeg === i ? null : i)}
+            className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-colors ${
+              i === activeIdx ? "bg-[var(--accent-glow)]" : "hover:bg-[var(--bg)]"
+            }`}
           >
             <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
               {seg.speaker}
             </span>
-            <span className="text-[var(--text-muted)] truncate">{seg.text}</span>
-          </div>
+            <span className={`text-[var(--text-muted)] ${expandedSeg === i ? "whitespace-normal" : "truncate"}`}>
+              {seg.text}
+            </span>
+          </button>
         ))}
       </div>
 

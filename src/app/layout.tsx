@@ -2,8 +2,19 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DataBard",
-  description: "Podcast-style audio documentation for your data catalog",
+  title: "DataBard — Podcast-style audio docs for your data catalog",
+  description: "Point DataBard at any data catalog and it generates a two-host podcast episode walking through your schemas, tables, data quality, and lineage.",
+  openGraph: {
+    title: "🎙️ DataBard",
+    description: "Podcast-style audio documentation for your data catalog. Two AI hosts discuss your schemas, flag quality issues, and trace lineage.",
+    type: "website",
+    siteName: "DataBard",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "🎙️ DataBard",
+    description: "Podcast-style audio documentation for your data catalog.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

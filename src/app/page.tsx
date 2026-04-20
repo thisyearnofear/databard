@@ -261,9 +261,9 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 gap-8">
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6 sm:gap-8">
       <div className="text-center">
-        <h1 className="text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-2">🎙️ DataBard</h1>
         <p className="text-[var(--text-muted)] text-lg">
           Podcast-style audio docs for your data catalog
         </p>
