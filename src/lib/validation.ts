@@ -58,3 +58,16 @@ export function validateManifestPath(path: string): void {
     throw new ValidationError("Manifest path must point to a .json file");
   }
 }
+
+/**
+ * Validate API secret for mutation endpoints.
+ * Skipped if DATABARD_API_SECRET is not configured (open access).
+ */
+export function validateApiSecret(req: { headers: { get(name: string): string | null } }): void {
+  const secret = process.env.DATABARD_API_SECRET;
+  if (!secret) return; // No secret configured — open access
+  const provided = req.headers.get("x-api-secret") || req.headers.get("authorization")?.replace("Bearer ", "");
+  if (provided !== secret) {
+    throw new ValidationError("Unauthorized — invalid or missing API secret");
+  }
+}

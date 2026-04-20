@@ -163,6 +163,8 @@ export default function Home() {
               },
               script: data.script,
             };
+          } else if (data.type === "estimate") {
+            setStatus(`${data.totalCalls} API calls (${data.segments} speech + ${data.sfxCalls} SFX)`);
           } else if (data.type === "audio") {
             setGenStep(2);
             const audioData = Uint8Array.from(atob(data.data), (c) => c.charCodeAt(0));

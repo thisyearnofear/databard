@@ -3,6 +3,7 @@ import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
 import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
+import { validateApiSecret, ValidationError } from "@/lib/validation";
 
 /**
  * Full pipeline: metadata → script → audio.
@@ -11,6 +12,8 @@ import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
  */
 export async function POST(req: NextRequest) {
   try {
+    validateApiSecret(req);
+
     const body = await req.json();
 
     let script: ScriptSegment[];
@@ -36,6 +39,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, audio: combined.toString("base64") });
   } catch (e: unknown) {
+    if (e instanceof ValidationError) {
+      return NextResponse.json({ ok: false, error: e.message }, { status: e.message.includes("Unauthorized") ? 401 : 400 });
+    }
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
