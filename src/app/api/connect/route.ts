@@ -1,13 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listSchemas } from "@/lib/openmetadata";
+import { listSchemas } from "@/lib/metadata-adapter";
+import type { ConnectionConfig } from "@/lib/types";
+import { validateUrl, validateToken, validateDbtConfig, validateManifestPath, ValidationError } from "@/lib/validation";
 
 export async function POST(req: NextRequest) {
-  const { url, token } = await req.json();
+  const body = await req.json();
+  const { source = "openmetadata" } = body;
+
   try {
-    const schemas = await listSchemas({ url, token });
-    return NextResponse.json({ ok: true, schemas });
+    // Validate input based on source
+    if (source === "openmetadata") {
+      validateUrl(body.url);
+      validateToken(body.token);
+    } else if (source === "dbt-cloud") {
+      validateDbtConfig(body.dbtCloud);
+    } else if (source === "dbt-local") {
+      validateManifestPath(body.dbtLocal?.manifestPath);
+    } else {
+      throw new ValidationError(`Unsupported data source: ${source}`);
+    }
+
+    // Build connection config
+    const config: ConnectionConfig = {
+      source: source as ConnectionConfig["source"],
+      openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
+      dbtCloud: body.dbtCloud,
+      dbtLocal: body.dbtLocal,
+    };
+
+    const schemas = await listSchemas(config);
+    
+    if (schemas.length === 0) {
+      return NextResponse.json(
+        { ok: false, error: "No schemas found. Check your connection settings." },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({ ok: true, schemas, source });
   } catch (e: unknown) {
+    if (e instanceof ValidationError) {
+      return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+    }
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: msg });
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

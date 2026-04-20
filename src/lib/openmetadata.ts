@@ -3,21 +3,34 @@
  * Used by both /api/connect and /api/metadata routes (DRY).
  */
 import type { OMConnection, SchemaMeta, TableMeta, ColumnMeta, QualityTest, LineageEdge } from "./types";
+import { cache } from "./cache";
 
-async function omFetch<T>(conn: OMConnection, path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${conn.url}${path}`, {
-      headers: { Authorization: `Bearer ${conn.token}` },
-    });
-    if (!res.ok) {
-      console.error(`OpenMetadata API error: ${res.status} ${res.statusText} for ${path}`);
-      return null;
+async function omFetch<T>(conn: OMConnection, path: string, retries = 3): Promise<T | null> {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(`${conn.url}${path}`, {
+        headers: { Authorization: `Bearer ${conn.token}` },
+        signal: AbortSignal.timeout(10000), // 10s timeout
+      });
+      if (!res.ok) {
+        if (res.status >= 500 && i < retries - 1) {
+          await new Promise((r) => setTimeout(r, 1000 * (i + 1))); // exponential backoff
+          continue;
+        }
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      return res.json() as Promise<T>;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      if (i < retries - 1) {
+        await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+      }
     }
-    return res.json() as Promise<T>;
-  } catch (error) {
-    console.error(`OpenMetadata fetch failed for ${path}:`, error);
-    return null;
   }
+  
+  throw lastError ?? new Error("Unknown fetch error");
 }
 
 interface OMListResponse<T> { data: T[]; paging?: { total: number } }
@@ -36,13 +49,15 @@ interface OMLineageResponse { downstreamEdges?: { toEntity: { fqn: string } }[];
 
 /** List all schema FQNs — used by /api/connect */
 export async function listSchemas(conn: OMConnection): Promise<string[]> {
+  const cacheKey = `om:schemas:${conn.url}`;
+  const cached = cache.get<string[]>(cacheKey);
+  if (cached) return cached;
+
   const dbs = await omFetch<OMListResponse<OMDatabase>>(conn, "/api/v1/databases?limit=100");
-  if (!dbs || !dbs.data) {
-    throw new Error("Failed to fetch databases from OpenMetadata");
-  }
+  if (!dbs) return [];
 
   const schemas: string[] = [];
-  for (const db of dbs.data) {
+  for (const db of dbs.data ?? []) {
     const s = await omFetch<OMListResponse<OMSchema>>(
       conn,
       `/api/v1/databaseSchemas?database=${db.fullyQualifiedName}&limit=100`
@@ -51,11 +66,17 @@ export async function listSchemas(conn: OMConnection): Promise<string[]> {
       schemas.push(schema.fullyQualifiedName);
     }
   }
+  
+  cache.set(cacheKey, schemas, 300); // 5min cache
   return schemas;
 }
 
 /** Fetch rich metadata for a schema — tables, columns, quality, lineage, tags */
 export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Promise<SchemaMeta> {
+  const cacheKey = `om:schema:${conn.url}:${schemaFqn}`;
+  const cached = cache.get<SchemaMeta>(cacheKey);
+  if (cached) return cached;
+
   const parts = schemaFqn.split(".");
   const schemaName = parts[parts.length - 1];
 
@@ -65,10 +86,14 @@ export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Pr
     `/api/v1/tables?databaseSchema=${schemaFqn}&limit=100&fields=columns,tags`
   );
 
+  if (!tablesRes || !tablesRes.data || tablesRes.data.length === 0) {
+    throw new Error(`Schema not found or empty: ${schemaFqn}`);
+  }
+
   const tables: TableMeta[] = [];
   const allLineage: LineageEdge[] = [];
 
-  for (const t of tablesRes?.data ?? []) {
+  for (const t of tablesRes.data) {
     // Quality tests for this table
     const tests = await omFetch<OMListResponse<OMTestCase>>(
       conn,
@@ -110,5 +135,7 @@ export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Pr
     }
   }
 
-  return { fqn: schemaFqn, name: schemaName, tables, lineage: allLineage };
+  const meta = { fqn: schemaFqn, name: schemaName, tables, lineage: allLineage };
+  cache.set(cacheKey, meta, 600); // 10min cache
+  return meta;
 }

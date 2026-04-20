@@ -1,8 +1,23 @@
 /** Shared domain types — single source of truth */
 
+export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local";
+
 export interface OMConnection {
   url: string;
   token: string;
+}
+
+export interface DbtConnection {
+  accountId: string;
+  projectId: string;
+  token: string;
+}
+
+export interface ConnectionConfig {
+  source: DataSource;
+  openmetadata?: OMConnection;
+  dbtCloud?: DbtConnection;
+  dbtLocal?: { manifestPath: string };
 }
 
 export interface ColumnMeta {
