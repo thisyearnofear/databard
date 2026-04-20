@@ -5,6 +5,7 @@
  * Alex: enthusiastic data advocate. Morgan: skeptical quality auditor.
  */
 import type { SchemaMeta, ScriptSegment } from "./types";
+import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
 
 const SYSTEM_PROMPT = `You are a script writer for DataBard, a podcast about data catalogs. Write a conversational two-host podcast script.
 
@@ -14,21 +15,23 @@ HOSTS:
 
 RULES:
 - Output ONLY a JSON array of segments: [{"speaker":"Alex"|"Morgan","topic":"string","text":"string"}]
-- Start with a brief intro, discuss tables (group related ones together), cover lineage, end with a summary
+- Start with a brief intro that mentions the health score and overall vibe
+- Lead with the most critical/interesting findings — don't bury the lede
+- Discuss critical tables first (failing tests + many downstream dependents = cascading risk)
+- Call out documentation and test coverage gaps as patterns, not per-table
+- For lineage hotspots, explain WHY they matter ("if this table breaks, 8 others go down")
+- For large schemas (15+ tables), group by theme/domain and summarize
 - Keep each segment's text to 1-3 sentences — these get synthesized to speech
-- Be specific — reference actual table names, column names, test names, and quality results from the metadata
-- For large schemas (15+ tables), group tables by theme/domain and summarize groups rather than discussing each individually
-- Make it sound like two people actually talking, not reading a report. Interruptions, reactions, and disagreements are good
+- Make it sound like two people actually talking. Interruptions, reactions, disagreements are good
 - Total script should be 12-25 segments depending on schema size
 - No markdown, no code blocks — just the JSON array`;
 
-function buildUserPrompt(schema: SchemaMeta): string {
+function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
   const tables = schema.tables.map((t) => ({
     name: t.name,
     description: t.description,
-    columns: t.columns.length <= 8
-      ? t.columns.map((c) => `${c.name} (${c.dataType})`)
-      : `${t.columns.length} columns: ${t.columns.slice(0, 5).map((c) => `${c.name} (${c.dataType})`).join(", ")}...`,
+    columnCount: t.columns.length,
+    columnSample: t.columns.slice(0, 5).map((c) => `${c.name} (${c.dataType})`),
     tags: t.tags,
     tests: {
       total: t.qualityTests.length,
@@ -50,10 +53,28 @@ function buildUserPrompt(schema: SchemaMeta): string {
     tables,
     lineageEdges: schema.lineage.length,
     lineageSample: lineage,
+    // Pre-computed insights for the LLM
+    insights: {
+      healthScore: insights.healthScore,
+      healthLabel: insights.healthLabel,
+      testCoverage: `${insights.testCoverage}%`,
+      docCoverage: `${insights.docCoverage}%`,
+      failingTests: insights.failingTests,
+      untestedTables: insights.untestedTables,
+      undocumentedTables: insights.undocumentedTables,
+      criticalTables: insights.criticalTables.map((c) => ({
+        name: c.table.name,
+        failingTests: c.failingTests,
+        downstreamDependents: c.downstreamCount,
+        risk: c.risk,
+      })),
+      lineageHotspots: insights.lineageHotspots,
+      externalDeps: insights.externalDeps.length,
+    },
   });
 }
 
-async function generateWithLLM(schema: SchemaMeta): Promise<ScriptSegment[]> {
+async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights): Promise<ScriptSegment[]> {
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -68,30 +89,26 @@ async function generateWithLLM(schema: SchemaMeta): Promise<ScriptSegment[]> {
       model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildUserPrompt(schema) },
+        { role: "user", content: buildUserPrompt(schema, insights) },
       ],
       temperature: 0.8,
       response_format: { type: "json_object" },
     }),
   });
 
-  if (!res.ok) {
-    throw new Error(`LLM API error: ${res.status} ${res.statusText}`);
-  }
+  if (!res.ok) throw new Error(`LLM API error: ${res.status} ${res.statusText}`);
 
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error("Empty LLM response");
 
   const parsed = JSON.parse(content);
-  // Handle both { segments: [...] } and direct array
   const segments: ScriptSegment[] = Array.isArray(parsed) ? parsed : parsed.segments ?? parsed.script;
 
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new Error("LLM returned invalid script format");
   }
 
-  // Validate each segment has required fields
   return segments.map((s) => ({
     speaker: s.speaker === "Morgan" ? "Morgan" : "Alex",
     topic: s.topic || "discussion",
@@ -99,86 +116,125 @@ async function generateWithLLM(schema: SchemaMeta): Promise<ScriptSegment[]> {
   }));
 }
 
-/** Template fallback — used when no LLM key is configured */
-function generateTemplate(schema: SchemaMeta): ScriptSegment[] {
-  const segments: ScriptSegment[] = [
-    { speaker: "Alex", topic: "intro", text: `Welcome to DataBard! Today we're diving into the ${schema.name} schema — ${schema.tables.length} tables to explore. Let's get into it.` },
-    { speaker: "Morgan", topic: "intro", text: `I've been looking at the quality scores and lineage for this one. There's some interesting stuff — and a few things we need to talk about.` },
-  ];
+/** Template fallback — structured around insights, not raw table list */
+function generateTemplate(schema: SchemaMeta, insights: SchemaInsights): ScriptSegment[] {
+  const segments: ScriptSegment[] = [];
 
-  // For large schemas, summarize instead of listing each table
-  const tables = schema.tables.length > 15
-    ? schema.tables.slice(0, 10)
-    : schema.tables;
+  // Intro with health score
+  segments.push({
+    speaker: "Alex", topic: "intro",
+    text: `Welcome to DataBard! Today we're looking at the ${schema.name} schema — ${schema.tables.length} tables, health score ${insights.healthScore} out of 100. Let's dig in.`,
+  });
+  segments.push({
+    speaker: "Morgan", topic: "intro",
+    text: insights.healthLabel === "critical"
+      ? `This one needs work. ${insights.failingTests} failing tests and only ${insights.testCoverage}% test coverage. Let's talk about what's broken.`
+      : insights.healthLabel === "at-risk"
+      ? `Mixed bag here. ${insights.testCoverage}% test coverage, ${insights.docCoverage}% documented. Some gaps to address.`
+      : `Looking pretty solid — ${insights.testCoverage}% test coverage, ${insights.passingTests} tests all green. Let's see what's under the hood.`,
+  });
 
-  if (schema.tables.length > 15) {
+  // Critical tables first (most interesting for listeners)
+  if (insights.criticalTables.length > 0) {
     segments.push({
-      speaker: "Alex",
-      topic: "overview",
-      text: `This is a big one — ${schema.tables.length} tables. Let's focus on the most interesting ones.`,
+      speaker: "Morgan", topic: "critical",
+      text: `Let's start with the fires. ${insights.criticalTables.length === 1 ? "There's one table" : `There are ${insights.criticalTables.length} tables`} I'm worried about.`,
+    });
+
+    for (const ct of insights.criticalTables.slice(0, 3)) {
+      const t = ct.table;
+      segments.push({
+        speaker: "Morgan", topic: t.name,
+        text: ct.risk === "critical"
+          ? `${t.name} is critical — ${ct.failingTests} failing tests and ${ct.downstreamCount} tables depend on it. If this breaks, it cascades.`
+          : `${t.name} has ${ct.failingTests} failing test${ct.failingTests > 1 ? "s" : ""}${ct.downstreamCount > 0 ? ` and ${ct.downstreamCount} downstream dependents` : ""}. Needs attention.`,
+      });
+      if (t.description) {
+        segments.push({ speaker: "Alex", topic: t.name, text: `For context, ${t.name} is described as: ${t.description}` });
+      }
+    }
+  }
+
+  // Coverage gaps as patterns
+  if (insights.untestedTables.length > 0) {
+    const pct = 100 - insights.testCoverage;
+    segments.push({
+      speaker: "Morgan", topic: "coverage",
+      text: insights.untestedTables.length <= 3
+        ? `${insights.untestedTables.join(", ")} — zero quality tests. That's ${pct}% of the schema flying blind.`
+        : `${insights.untestedTables.length} tables have no tests at all — that's ${pct}% of the schema with no quality checks.`,
     });
   }
 
-  for (const table of tables) {
-    const colSummary = table.columns.length <= 5
-      ? table.columns.map((c) => `${c.name} as ${c.dataType}`).join(", ")
-      : `${table.columns.length} columns including ${table.columns.slice(0, 3).map((c) => c.name).join(", ")} and more`;
-
+  if (insights.undocumentedTables.length > 0 && insights.docCoverage < 80) {
     segments.push({
-      speaker: "Alex",
-      topic: table.name,
-      text: `Next up is ${table.name}. ${table.description ?? "No description on this one yet."} It has ${colSummary}.`,
+      speaker: "Alex", topic: "documentation",
+      text: insights.undocumentedTables.length <= 3
+        ? `Documentation gap: ${insights.undocumentedTables.join(", ")} have no description. Only ${insights.docCoverage}% coverage.`
+        : `Only ${insights.docCoverage}% of tables are documented. ${insights.undocumentedTables.length} tables have no description at all.`,
     });
+  }
 
-    if (table.tags.length > 0) {
-      segments.push({
-        speaker: "Alex",
-        topic: table.name,
-        text: `It's tagged with ${table.tags.join(", ")} — so the team has been classifying this one.`,
-      });
-    }
-
-    const failed = table.qualityTests.filter((t) => t.status === "Failed");
-    if (table.qualityTests.length === 0) {
-      segments.push({ speaker: "Morgan", topic: table.name, text: `No quality tests on ${table.name}. That's a gap. We're flying blind on data integrity here.` });
-    } else if (failed.length > 0) {
-      segments.push({ speaker: "Morgan", topic: table.name, text: `Red flag on ${table.name}. ${failed.length} of ${table.qualityTests.length} quality tests are failing: ${failed.map((t) => t.name).join(", ")}. This needs attention.` });
-    } else {
-      segments.push({ speaker: "Morgan", topic: table.name, text: `Good news — all ${table.qualityTests.length} quality tests on ${table.name} are passing. Solid.` });
-    }
+  // Highlight a few well-documented/healthy tables (balance the negativity)
+  const healthyTables = schema.tables.filter((t) =>
+    t.qualityTests.length > 0 &&
+    t.qualityTests.every((q) => q.status === "Success") &&
+    t.description
+  );
+  if (healthyTables.length > 0) {
+    const names = healthyTables.slice(0, 3).map((t) => t.name).join(", ");
+    segments.push({
+      speaker: "Alex", topic: "highlights",
+      text: `On the bright side — ${names} ${healthyTables.length === 1 ? "is" : "are"} well-documented with all tests passing. That's the standard to aim for.`,
+    });
   }
 
   // Lineage
-  if (schema.lineage.length === 0) {
-    segments.push({ speaker: "Morgan", topic: "lineage", text: `No lineage tracked for this schema yet. That's something to set up — knowing where data flows is critical.` });
-  } else {
-    const edges = schema.lineage.slice(0, 5);
-    const desc = edges.map((e) => `${e.fromTable.split(".").pop()} feeds into ${e.toTable.split(".").pop()}`).join(". ");
-    segments.push({ speaker: "Alex", topic: "lineage", text: `Let's talk data flow. We've got ${schema.lineage.length} lineage connections. ${desc}.` });
-    segments.push({ speaker: "Morgan", topic: "lineage", text: `That lineage map tells you where a problem in one table cascades. Worth reviewing if any of those upstream tables have failing tests.` });
+  if (insights.lineageHotspots.length > 0) {
+    const top = insights.lineageHotspots[0];
+    segments.push({
+      speaker: "Alex", topic: "lineage",
+      text: `Data flow: ${schema.lineage.length} lineage connections. ${top.name} is the busiest node with ${top.connections} connections.`,
+    });
+    segments.push({
+      speaker: "Morgan", topic: "lineage",
+      text: insights.externalDeps.length > 0
+        ? `${insights.externalDeps.length} dependencies cross schema boundaries. If something breaks upstream, you'll feel it here.`
+        : `All lineage is internal to this schema. That's good for isolation, but make sure upstream sources are monitored.`,
+    });
+  } else if (schema.lineage.length === 0) {
+    segments.push({
+      speaker: "Morgan", topic: "lineage",
+      text: `No lineage tracked. That's a blind spot — you can't trace where data flows or where failures cascade.`,
+    });
   }
 
   // Outro
-  const totalTests = schema.tables.reduce((n, t) => n + t.qualityTests.length, 0);
-  const totalFailed = schema.tables.reduce((n, t) => n + t.qualityTests.filter((q) => q.status === "Failed").length, 0);
-  segments.push({ speaker: "Alex", topic: "outro", text: `That's the ${schema.name} schema — ${schema.tables.length} tables, ${totalTests} quality tests, ${schema.lineage.length} lineage edges. Thanks for listening.` });
+  segments.push({
+    speaker: "Alex", topic: "outro",
+    text: `That's the ${schema.name} schema — health score ${insights.healthScore}, ${schema.tables.length} tables, ${insights.totalTests} tests. Thanks for listening.`,
+  });
   segments.push({
     speaker: "Morgan", topic: "outro",
-    text: totalFailed > 0
-      ? `And ${totalFailed} failing tests to go fix. Don't ignore those. Until next time.`
-      : `Everything looking healthy on the quality front. Keep those tests running. Until next time.`,
+    text: insights.failingTests > 0
+      ? `Priority one: fix those ${insights.failingTests} failing tests. Priority two: get test coverage above ${insights.testCoverage}%. Until next time.`
+      : insights.testCoverage < 50
+      ? `No failures, but ${insights.testCoverage}% test coverage is thin. Add tests before something slips through. Until next time.`
+      : `Clean bill of health. Keep those tests running and that documentation fresh. Until next time.`,
   });
 
   return segments;
 }
 
 export async function generateScript(schema: SchemaMeta): Promise<ScriptSegment[]> {
+  const insights = analyzeSchema(schema);
+
   if (process.env.OPENAI_API_KEY) {
     try {
-      return await generateWithLLM(schema);
+      return await generateWithLLM(schema, insights);
     } catch (e) {
       console.warn("LLM script generation failed, falling back to templates:", e);
     }
   }
-  return generateTemplate(schema);
+  return generateTemplate(schema, insights);
 }

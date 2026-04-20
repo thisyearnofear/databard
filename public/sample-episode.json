@@ -4,20 +4,18 @@
   "tableCount": 4,
   "qualitySummary": { "passed": 5, "failed": 2, "total": 7 },
   "script": [
-    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard! Today we're diving into the ecommerce schema — 4 tables to explore. Let's get into it." },
-    { "speaker": "Morgan", "topic": "intro", "text": "I've been looking at the quality scores and lineage for this one. There's some interesting stuff — and a few things we need to talk about." },
-    { "speaker": "Alex", "topic": "orders", "text": "Next up is orders. The core transaction table — every purchase flows through here. It has 6 columns including order_id, customer_id, total_amount and more." },
-    { "speaker": "Morgan", "topic": "orders", "text": "Red flag on orders. 1 of 3 quality tests are failing: not_null_order_id. 2 passing. This needs attention." },
-    { "speaker": "Alex", "topic": "customers", "text": "Next up is customers. Our customer master data — names, emails, signup dates. It has customer_id as bigint, email as varchar, created_at as timestamp." },
-    { "speaker": "Alex", "topic": "customers", "text": "It's tagged with PII, retention-policy — so the team has been classifying this one." },
-    { "speaker": "Morgan", "topic": "customers", "text": "Good news — all 2 quality tests on customers are passing. Solid." },
-    { "speaker": "Alex", "topic": "products", "text": "Next up is products. The product catalog — SKUs, prices, categories. It has 5 columns including product_id, name, price and more." },
-    { "speaker": "Morgan", "topic": "products", "text": "No quality tests on products. That's a gap. We're flying blind on data integrity here." },
-    { "speaker": "Alex", "topic": "order_items", "text": "Next up is order_items. Line items linking orders to products. It has item_id, order_id, product_id, quantity, unit_price." },
-    { "speaker": "Morgan", "topic": "order_items", "text": "Red flag on order_items. 1 of 2 quality tests are failing: positive_quantity. 1 passing. This needs attention." },
-    { "speaker": "Alex", "topic": "lineage", "text": "Let's talk data flow. We've got 3 lineage connections. customers feeds into orders. products feeds into order_items. orders feeds into order_items." },
-    { "speaker": "Morgan", "topic": "lineage", "text": "That lineage map tells you where a problem in one table cascades. Worth reviewing if any of those upstream tables have failing tests." },
-    { "speaker": "Alex", "topic": "outro", "text": "That's the ecommerce schema — 4 tables, 7 quality tests, 3 lineage edges. Thanks for listening." },
-    { "speaker": "Morgan", "topic": "outro", "text": "And 2 failing tests to go fix. Don't ignore those. Until next time." }
+    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard! Today we're looking at the ecommerce schema — 4 tables, health score 58 out of 100. Let's dig in." },
+    { "speaker": "Morgan", "topic": "intro", "text": "Mixed bag here. 71% test coverage, 50% documented. Some gaps to address." },
+    { "speaker": "Morgan", "topic": "critical", "text": "Let's start with the fires. There are 2 tables I'm worried about." },
+    { "speaker": "Morgan", "topic": "orders", "text": "orders is critical — 1 failing test and 2 tables depend on it. If this breaks, it cascades." },
+    { "speaker": "Alex", "topic": "orders", "text": "For context, orders is the core transaction table — every purchase flows through here." },
+    { "speaker": "Morgan", "topic": "order_items", "text": "order_items has 1 failing test — positive_quantity. Needs attention." },
+    { "speaker": "Morgan", "topic": "coverage", "text": "products has zero quality tests. That's 25% of the schema flying blind." },
+    { "speaker": "Alex", "topic": "documentation", "text": "Only 50% of tables are documented. products and order_items have no description at all." },
+    { "speaker": "Alex", "topic": "highlights", "text": "On the bright side — customers is well-documented with all tests passing. That's the standard to aim for." },
+    { "speaker": "Alex", "topic": "lineage", "text": "Data flow: 3 lineage connections. orders is the busiest node with 3 connections." },
+    { "speaker": "Morgan", "topic": "lineage", "text": "All lineage is internal to this schema. That's good for isolation, but make sure upstream sources are monitored." },
+    { "speaker": "Alex", "topic": "outro", "text": "That's the ecommerce schema — health score 58, 4 tables, 7 tests. Thanks for listening." },
+    { "speaker": "Morgan", "topic": "outro", "text": "Priority one: fix those 2 failing tests. Priority two: get test coverage above 71%. Until next time." }
   ]
 }

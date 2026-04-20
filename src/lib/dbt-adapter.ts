@@ -133,24 +133,27 @@ export function parseDbtManifest(manifest: DbtManifest, targetSchema?: string, r
     });
   }
 
-  // Build lineage using unique_id references (O(n), not O(n²))
+  // Build lineage using unique_id references — O(n)
+  const fqnToId = new Map<string, string>();
+  for (const [id, entry] of nodeById.entries()) {
+    fqnToId.set(entry.fqn, id);
+  }
+
   const schemas: SchemaMeta[] = [];
   for (const [fqn, tables] of schemaMap.entries()) {
     const lineage: { fromTable: string; toTable: string }[] = [];
 
     for (const table of tables) {
-      // Find the node by matching fqn
-      for (const [id, node] of Object.entries(manifest.nodes)) {
-        const entry = nodeById.get(id);
-        if (!entry || entry.fqn !== table.fqn) continue;
+      const nodeId = fqnToId.get(table.fqn);
+      if (!nodeId) continue;
+      const node = manifest.nodes[nodeId];
+      if (!node?.depends_on?.nodes) continue;
 
-        for (const depId of node.depends_on?.nodes ?? []) {
-          const dep = nodeById.get(depId);
-          if (dep) {
-            lineage.push({ fromTable: dep.fqn, toTable: table.fqn });
-          }
+      for (const depId of node.depends_on.nodes) {
+        const dep = nodeById.get(depId);
+        if (dep) {
+          lineage.push({ fromTable: dep.fqn, toTable: table.fqn });
         }
-        break;
       }
     }
 
