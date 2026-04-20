@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { cache } from "@/lib/cache";
 import type { Episode } from "@/lib/types";
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
@@ -7,14 +6,27 @@ import { join } from "path";
 const CACHE_DIR = join(process.cwd(), ".databard", "cache");
 
 /**
- * RSS feed of all shared episodes — subscribe in any podcast app.
- * GET /api/feed
+ * RSS podcast feed. Supports public and private (token-gated) feeds.
+ *
+ * Public:  GET /api/feed
+ * Private: GET /api/feed?token=your_team_token
+ *
+ * Set DATABARD_FEED_TOKEN env var to require authentication.
+ * Without it, the feed is public (fine for demos).
  */
 export async function GET(req: NextRequest) {
-  const baseUrl = req.nextUrl.origin;
+  // Token gating
+  const requiredToken = process.env.DATABARD_FEED_TOKEN;
+  if (requiredToken) {
+    const provided = req.nextUrl.searchParams.get("token");
+    if (provided !== requiredToken) {
+      return new Response("Unauthorized — append ?token=your_team_token", { status: 401 });
+    }
+  }
 
-  // Collect all shared episodes from cache
+  const baseUrl = req.nextUrl.origin;
   const episodes: { id: string; episode: Episode }[] = [];
+
   try {
     if (existsSync(CACHE_DIR)) {
       for (const file of readdirSync(CACHE_DIR)) {
@@ -23,19 +35,20 @@ export async function GET(req: NextRequest) {
           if (raw.data && raw.expiresAt > Date.now()) {
             const key = Buffer.from(file.replace(".json", ""), "base64url").toString();
             if (key.startsWith("share:")) {
-              const id = key.replace("share:", "");
-              episodes.push({ id, episode: raw.data });
+              episodes.push({ id: key.slice(6), episode: raw.data });
             }
           }
-        } catch { /* skip invalid */ }
+        } catch { /* skip */ }
       }
     }
-  } catch { /* cache dir not available */ }
+  } catch { /* cache not available */ }
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
   const items = episodes.map(({ id, episode: ep }) => `
     <item>
-      <title>🎙️ ${escXml(ep.schemaName)} — ${ep.tableCount} tables, ${ep.qualitySummary.total} tests</title>
-      <description>${escXml(`Podcast walkthrough of the ${ep.schemaName} schema. ${ep.qualitySummary.failed > 0 ? `${ep.qualitySummary.failed} failing tests.` : "All tests passing."}`)}</description>
+      <title>${esc(`🎙️ ${ep.schemaName} — ${ep.tableCount} tables, ${ep.qualitySummary.total} tests`)}</title>
+      <description>${esc(`Podcast walkthrough of the ${ep.schemaName} schema. ${ep.qualitySummary.failed > 0 ? `${ep.qualitySummary.failed} failing tests.` : "All tests passing."}`)}</description>
       <link>${baseUrl}/episode/${id}</link>
       <guid isPermaLink="true">${baseUrl}/episode/${id}</guid>
     </item>`).join("\n");
@@ -59,8 +72,4 @@ export async function GET(req: NextRequest) {
       "Cache-Control": "public, max-age=300",
     },
   });
-}
-
-function escXml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

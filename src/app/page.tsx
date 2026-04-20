@@ -365,9 +365,54 @@ export default function Home() {
         {status && <p className="text-sm text-[var(--text-muted)] text-center mt-4">{status}</p>}
       </section>
 
+      {/* Pricing */}
+      <section className="w-full max-w-3xl pb-12 sm:pb-16" id="pricing">
+        <h2 className="text-2xl font-bold text-center mb-8">Plans</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+            <h3 className="font-semibold text-lg mb-1">Free</h3>
+            <p className="text-3xl font-bold mb-4">$0</p>
+            <ul className="text-sm text-[var(--text-muted)] space-y-2 mb-6">
+              <li>✓ One-off episode generation</li>
+              <li>✓ All data sources</li>
+              <li>✓ MP3 download</li>
+              <li>✓ Public sharing</li>
+              <li>✓ Interactive drill-down</li>
+            </ul>
+            <button onClick={handleDemo} className="w-full bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
+              Try demo
+            </button>
+          </div>
+          <div className="bg-[var(--surface)] border-2 border-[var(--accent)] rounded-xl p-6 relative">
+            <span className="absolute -top-3 left-4 bg-[var(--accent)] text-white text-xs px-2 py-0.5 rounded-full">Pro</span>
+            <h3 className="font-semibold text-lg mb-1">Team</h3>
+            <p className="text-3xl font-bold mb-4">$29<span className="text-sm font-normal text-[var(--text-muted)]">/mo</span></p>
+            <ul className="text-sm text-[var(--text-muted)] space-y-2 mb-6">
+              <li>✓ Everything in Free</li>
+              <li>✓ Scheduled regeneration (daily/weekly)</li>
+              <li>✓ Private team RSS feeds</li>
+              <li>✓ Slack/webhook notifications</li>
+              <li>✓ Historical comparison</li>
+              <li>✓ Priority support</li>
+            </ul>
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: "team" }) });
+                const data = await res.json();
+                if (data.url) window.location.href = data.url;
+                else setStatus(data.error || "Checkout not available yet");
+              }}
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+            >
+              Subscribe
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="text-xs text-[var(--text-muted)] pb-8">
-        Powered by ElevenLabs · Built with Next.js
+        Powered by ElevenLabs · Built with Next.js · <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
       </footer>
     </main>
   );
