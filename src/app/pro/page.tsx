@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ScheduleConfig } from "@/lib/store";
+import { WalletConnect } from "@/components/WalletConnect";
+import { InitiaProvider } from "@/components/InitiaProvider";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function ProSettings() {
   const [customerId, setCustomerId] = useState("");
+  const [initiaAddress, setInitiaAddress] = useState<string | null>(null);
   const [schedules, setSchedules] = useState<ScheduleConfig[]>([]);
   const [feedToken, setFeedToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,7 +22,7 @@ export default function ProSettings() {
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [hour, setHour] = useState(9);
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [source, setSource] = useState<"openmetadata" | "dbt-cloud" | "dbt-local">("openmetadata");
+  const [source, setSource] = useState<"openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune">("openmetadata");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -43,6 +46,8 @@ export default function ProSettings() {
 
     const saved = localStorage.getItem("databard:customerId");
     if (saved) { setCustomerId(saved); loadSchedules(saved); }
+    const savedInitia = localStorage.getItem("databard:initiaAddress");
+    if (savedInitia) setInitiaAddress(savedInitia);
   }, []);
 
   async function loadSchedules(cid: string) {
@@ -123,9 +128,24 @@ export default function ProSettings() {
     loadSchedules(customerId);
   }
 
+  const handleAddressChange = useCallback((address: string | null) => {
+    setInitiaAddress(address);
+    if (address) {
+      localStorage.setItem("databard:initiaAddress", address);
+      // Use initia address as customer identifier if no Stripe ID
+      if (!customerId) {
+        setCustomerId(address);
+        loadSchedules(address);
+      }
+    } else {
+      localStorage.removeItem("databard:initiaAddress");
+    }
+  }, [customerId]);
+
   const feedUrl = feedToken ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/feed?token=${feedToken}` : "";
 
   return (
+    <InitiaProvider>
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6 max-w-2xl mx-auto">
       <div className="w-full">
         <a href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</a>
@@ -134,6 +154,21 @@ export default function ProSettings() {
       <div className="w-full">
         <h1 className="text-2xl font-bold mb-1">DataBard Pro</h1>
         <p className="text-sm text-[var(--text-muted)]">Manage your scheduled episodes and private RSS feed.</p>
+      </div>
+
+      {/* Initia wallet connection */}
+      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Initia Wallet</h2>
+          {initiaAddress && <span className="text-xs text-[var(--success)]">Connected</span>}
+        </div>
+        <p className="text-xs text-[var(--text-muted)]">Connect your .init wallet to authenticate with DataBard Pro on the Initia network.</p>
+        <WalletConnect onAddressChange={handleAddressChange} />
+        {initiaAddress && (
+          <p className="text-xs text-[var(--text-muted)]">
+            Episodes generated while connected will be recorded on-chain with your .init identity.
+          </p>
+        )}
       </div>
 
       {/* Customer ID lookup */}
@@ -248,11 +283,13 @@ export default function ProSettings() {
             <select
               className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm cursor-pointer"
               value={source}
-              onChange={(e) => setSource(e.target.value as "openmetadata" | "dbt-cloud" | "dbt-local")}
+              onChange={(e) => setSource(e.target.value as "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune")}
             >
               <option value="openmetadata">OpenMetadata</option>
               <option value="dbt-cloud">dbt Cloud</option>
               <option value="dbt-local">dbt Local</option>
+              <option value="the-graph">The Graph</option>
+              <option value="dune">Dune Analytics</option>
             </select>
           </div>
 
@@ -334,5 +371,6 @@ export default function ProSettings() {
 
       {status && <p className="text-sm text-[var(--text-muted)] text-center">{status}</p>}
     </main>
+    </InitiaProvider>
   );
 }

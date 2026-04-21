@@ -44,9 +44,13 @@ This project is submitted to two concurrent hackathons:
 - [x] Scheduled regeneration when catalog changes (Pro tier — `/api/schedules` + `/pro` settings UI)
 - [x] Shareable episode links / embeds (`/episode/[id]`)
 - [x] Monetization: SaaS subscription per data team (Stripe checkout + webhook → Pro activation)
+- [x] The Graph subgraph adapter — `src/lib/the-graph-adapter.ts` — introspects GraphQL schema, maps entities→tables, fields→columns, cross-entity refs→lineage
+- [x] Dune Analytics adapter — `src/lib/dune-adapter.ts` — fetches query metadata for a namespace, maps queries→tables, result columns→schema
+- [x] Initia InterwovenKit wallet connect — `/pro` page — `.init` wallet as alternative to Stripe customer ID
+- [x] On-chain episode minting — `POST /api/onchain/mint` — records schema name, health score, episode ID, author address on Initia testnet
+- [ ] Initia appchain deployment — get valid rollup chain ID on `initiation-2` testnet
 - [ ] Multi-episode playlists (full database series)
 - [ ] Custom voice cloning for branded docs
-- [ ] Onchain minting of audio docs as versioned NFTs
 
 ### Paper Canvas (developer tool)
 The Paper.design MCP integration in `src/lib/paper-canvas.ts` renders the same 3-slide dashboard onto a live Paper canvas for design iteration. This requires Paper Desktop running locally and is **not** used in the user-facing export path. Use it when iterating on the dashboard layout — the pure HTML builders (`buildOverviewHtml`, `buildCriticalAndActionsHtml`, `buildLineageAndOwnershipHtml`, `buildDashboardHtml`) are the single source of truth for both the Paper preview and the PDF export.

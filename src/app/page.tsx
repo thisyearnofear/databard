@@ -30,6 +30,10 @@ export default function Home() {
 
   const [connecting, setConnecting] = useState(false);
   const [manifestFile, setManifestFile] = useState<File | null>(null);
+  const [graphUrl, setGraphUrl] = useState("");
+  const [graphApiKey, setGraphApiKey] = useState("");
+  const [duneApiKey, setDuneApiKey] = useState("");
+  const [duneNamespace, setDuneNamespace] = useState("");
 
   // Restore connection config from localStorage
   useEffect(() => {
@@ -114,6 +118,12 @@ export default function Home() {
         const text = await manifestFile.text();
         try { JSON.parse(text); } catch { setStatus("Error: Invalid JSON in manifest file"); setConnecting(false); return; }
         body.dbtLocal = { manifestContent: text };
+      } else if (source === "the-graph") {
+        if (!graphUrl) { setStatus("Error: Subgraph URL required"); setConnecting(false); return; }
+        body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
+      } else if (source === "dune") {
+        if (!duneApiKey) { setStatus("Error: Dune API key required"); setConnecting(false); return; }
+        body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
       }
 
       const res = await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -147,6 +157,10 @@ export default function Home() {
       else if (source === "dbt-local" && manifestFile) {
         const text = await manifestFile.text();
         body.dbtLocal = { manifestContent: text };
+      } else if (source === "the-graph") {
+        body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
+      } else if (source === "dune") {
+        body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
       }
 
       const res = await fetch("/api/synthesize-stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -257,6 +271,8 @@ export default function Home() {
     openmetadata: "Run OpenMetadata locally with Docker, or connect to a hosted instance.",
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
+    "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
+    "dune": "Enter your Dune API key and a namespace (username or team) to fetch query metadata.",
   };
 
   // ─── Episode player ───
@@ -435,6 +451,8 @@ export default function Home() {
               <option value="openmetadata">OpenMetadata</option>
               <option value="dbt-cloud">dbt Cloud</option>
               <option value="dbt-local">dbt Local (manifest.json)</option>
+              <option value="the-graph">The Graph (subgraph)</option>
+              <option value="dune">Dune Analytics</option>
             </select>
             <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
 
@@ -465,6 +483,18 @@ export default function Home() {
                   <p className="text-xs text-[var(--success)] mt-1">✓ {manifestFile.name} ({(manifestFile.size / 1024).toFixed(0)} KB)</p>
                 )}
               </div>
+            </>)}
+            {source === "the-graph" && (<>
+              <label className="text-sm text-[var(--text-muted)]">Subgraph Endpoint URL</label>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={graphUrl} onChange={(e) => setGraphUrl(e.target.value)} placeholder="https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3" title="The GraphQL endpoint for your subgraph. Works with The Graph hosted service or decentralized network." />
+              <label className="text-sm text-[var(--text-muted)]">API Key (optional)</label>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={graphApiKey} onChange={(e) => setGraphApiKey(e.target.value)} placeholder="For The Graph Network endpoints" title="Required for The Graph Network (gateway.thegraph.com). Leave blank for hosted service." />
+            </>)}
+            {source === "dune" && (<>
+              <label className="text-sm text-[var(--text-muted)]">Dune API Key</label>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="From dune.com/settings/api" title="Generate at dune.com → Settings → API. Free tier available." />
+              <label className="text-sm text-[var(--text-muted)]">Namespace (username or team)</label>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap" title="The Dune username or team name whose queries you want to analyze." />
             </>)}
 
             {source !== "dbt-local" && (

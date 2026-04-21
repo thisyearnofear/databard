@@ -110,12 +110,58 @@ Open [localhost:3000](http://localhost:3000) → Connect → Select a schema →
 | Layer | Technology |
 |---|---|
 | Web UI | Next.js 15, React 19, Tailwind CSS 4 |
-| Metadata | OpenMetadata REST API, dbt manifest parsing |
+| Metadata | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics |
 | AI Scripts | OpenAI-compatible API (GPT-4o-mini default) |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
 | Payments | Stripe Checkout |
+| Onchain | Initia InterwovenKit, episode minting on Initia testnet |
 | Development | Kiro (spec-driven, see `.kiro/` directory) |
+
+## Initia Integration
+
+DataBard is being built for the [Initia INITIATE hackathon](https://docs.initia.xyz/hackathon) (AI track). The integration adds onchain identity and data provenance to audio documentation.
+
+### What's Integrated
+
+| Feature | Status | Details |
+|---|---|---|
+| **InterwovenKit wallet connect** | ✅ Live | `/pro` page — connect `.init` wallet as alternative to Stripe customer ID |
+| **On-chain episode minting** | ✅ Stub (appchain pending) | `POST /api/onchain/mint` — records schema name, health score, episode ID, author address |
+| **The Graph data source** | ✅ Live | Connect any subgraph endpoint — entities become tables, fields become columns |
+| **Dune Analytics data source** | ✅ Live | Connect Dune namespace — queries become tables, result columns become schema |
+| **Appchain deployment** | 🔄 In progress | Targeting Initia testnet `initiation-2` |
+
+### Onchain Data Sources
+
+DataBard natively supports onchain data catalogs alongside traditional ones:
+
+```
+# The Graph — paste any subgraph URL
+Source: The Graph (subgraph)
+URL: https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3
+
+# Dune Analytics — connect your query namespace
+Source: Dune Analytics
+API Key: <from dune.com/settings/api>
+Namespace: uniswap
+```
+
+DataBard introspects the GraphQL schema, maps entity types to tables, and generates an audio episode about your protocol's data health — the same way it does for dbt and OpenMetadata.
+
+### Wallet Connect (Pro Page)
+
+```
+/pro → Connect Initia Wallet (.init)
+     → Authenticate with .init username
+     → Episodes generated while connected are recorded on-chain
+```
+
+### Submission
+
+See `.initia/submission.json` for full submission metadata.
+
+Demo video: TBD — to be recorded before final submission.
 
 ## What's Next
 

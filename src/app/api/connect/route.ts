@@ -24,6 +24,10 @@ export async function POST(req: NextRequest) {
       } else {
         validateManifestPath(body.dbtLocal?.manifestPath);
       }
+    } else if (source === "the-graph") {
+      if (!body.theGraph?.subgraphUrl) throw new ValidationError("Subgraph URL required");
+    } else if (source === "dune") {
+      if (!body.dune?.apiKey) throw new ValidationError("Dune API key required");
     } else {
       throw new ValidationError(`Unsupported data source: ${source}`);
     }
@@ -34,6 +38,8 @@ export async function POST(req: NextRequest) {
       openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
       dbtCloud: body.dbtCloud,
       dbtLocal: body.dbtLocal,
+      theGraph: body.theGraph,
+      dune: body.dune,
     };
 
     const schemas = await listSchemas(config);

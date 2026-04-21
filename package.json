@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@initia/interwovenkit-react": "^2.8.0",
     "@sparticuz/chromium": "^147.0.2",
     "agent-browser": "^0.1.0",
     "elevenlabs": "^1.56.0",
