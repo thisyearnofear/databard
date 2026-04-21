@@ -94,6 +94,62 @@ function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdg
   );
 }
 
+/** Lightweight markdown → JSX for investigation results */
+function renderMarkdown(text: string) {
+  const lines = text.split("\n");
+  const elements: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Headings
+    if (line.startsWith("**") && line.endsWith("**")) {
+      elements.push(<p key={i} className="font-semibold text-[var(--text)] mt-2 mb-1">{line.replace(/\*\*/g, "")}</p>);
+      continue;
+    }
+
+    // Numbered lists
+    const numMatch = line.match(/^(\d+)\.\s+(.+)/);
+    if (numMatch) {
+      elements.push(
+        <div key={i} className="flex gap-2 py-0.5">
+          <span className="text-[var(--accent)] shrink-0 w-4 text-right">{numMatch[1]}.</span>
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(numMatch[2]) }} />
+        </div>
+      );
+      continue;
+    }
+
+    // Bullet lists
+    if (line.startsWith("- ") || line.startsWith("• ")) {
+      elements.push(
+        <div key={i} className="flex gap-2 py-0.5">
+          <span className="text-[var(--accent)] shrink-0">·</span>
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.slice(2)) }} />
+        </div>
+      );
+      continue;
+    }
+
+    // Empty lines
+    if (line.trim() === "") {
+      elements.push(<div key={i} className="h-1.5" />);
+      continue;
+    }
+
+    // Regular text with inline formatting
+    elements.push(<p key={i} className="py-0.5" dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />);
+  }
+
+  return <>{elements}</>;
+}
+
+function inlineFormat(text: string): string {
+  return text
+    .replace(/`([^`]+)`/g, '<code style="background:var(--border);padding:1px 4px;border-radius:3px;font-family:JetBrains Mono,monospace;font-size:10px;">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--text);font-weight:600;">$1</strong>');
+}
+
 function PriorityBadge({ priority }: { priority: ActionPriority }) {
   const styles: Record<ActionPriority, string> = {
     critical: "bg-[var(--danger)]/20 text-[var(--danger)]",
@@ -244,6 +300,38 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  // Draw static waveform preview when not playing
+  useEffect(() => {
+    if (playing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+
+    const bars = 128;
+    const barW = w / bars;
+    const mid = h / 2;
+
+    // Seeded pseudo-random for consistent look
+    let seed = 42;
+    const rand = () => { seed = (seed * 16807 + 0) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
+
+    for (let i = 0; i < bars; i++) {
+      // Create a natural waveform shape: louder in the middle, quieter at edges
+      const pos = i / bars;
+      const envelope = Math.sin(pos * Math.PI) * 0.7 + 0.15;
+      const noise = rand() * 0.5 + 0.5;
+      const barH = envelope * noise * mid;
+      const alpha = 0.25 + envelope * 0.35;
+      ctx.fillStyle = `hsla(258, 80%, 65%, ${alpha})`;
+      ctx.fillRect(i * barW, mid - barH, barW - 1, barH * 2);
+    }
+  }, [playing]);
 
   // Waveform animation
   const drawWaveform = useCallback(() => {
@@ -830,7 +918,7 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
                               className="text-[var(--text-muted)] hover:text-[var(--text)] text-[10px] cursor-pointer"
                             >✕</button>
                           </div>
-                          <pre className="text-[11px] text-[var(--text-muted)] leading-relaxed whitespace-pre-wrap font-[inherit]">{inv.result}</pre>
+                          <div className="text-[11px] text-[var(--text-muted)] leading-relaxed">{renderMarkdown(inv.result)}</div>
                         </div>
                       )}
                     </div>
