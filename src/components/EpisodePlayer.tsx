@@ -129,6 +129,8 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
   const [activeTab, setActiveTab] = useState<PlayerTab>("insights");
   const [paperRendering, setPaperRendering] = useState(false);
   const [paperDone, setPaperDone] = useState(false);
+  const [paperError, setPaperError] = useState<string | null>(null);
+  const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -156,23 +158,54 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
   }
 
   async function handleRenderToPaper() {
-    if (!insights || paperRendering) return;
+    if (!episode.schemaMeta || paperRendering) return;
     setPaperRendering(true);
+    setPaperError(null);
     try {
-      const { isPaperAvailable, renderHealthDashboard } = await import("@/lib/paper-canvas");
-      const available = await isPaperAvailable();
-      if (!available) {
-        alert("Paper Desktop not detected. Make sure the Paper app is open with a file loaded.");
+      // Route through server-side API (Paper MCP is localhost-only)
+      const res = await fetch("/api/canvas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episode }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setPaperError(data.error || "Failed to render canvas");
         return;
       }
-      await renderHealthDashboard(episode, insights, actionItems);
       setPaperDone(true);
       setTimeout(() => setPaperDone(false), 5000);
     } catch (e) {
       console.error("Paper render failed:", e);
-      alert(`Failed to render to Paper: ${e instanceof Error ? e.message : "Unknown error"}`);
+      setPaperError(e instanceof Error ? e.message : "Connection failed");
     } finally {
       setPaperRendering(false);
+    }
+  }
+
+  async function handleInvestigate(item: ActionItem) {
+    if (investigations[item.id]?.loading) return;
+    setInvestigations((prev) => ({ ...prev, [item.id]: { loading: true } }));
+    try {
+      const res = await fetch("/api/investigate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionItem: item, schemaName: episode.schemaName }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setInvestigations((prev) => ({
+          ...prev,
+          [item.id]: { loading: false, result: data.investigation.summary, provider: data.investigation.provider },
+        }));
+      } else {
+        setInvestigations((prev) => ({ ...prev, [item.id]: { loading: false, result: `Error: ${data.error}` } }));
+      }
+    } catch (e) {
+      setInvestigations((prev) => ({
+        ...prev,
+        [item.id]: { loading: false, result: `Error: ${e instanceof Error ? e.message : "Failed"}` },
+      }));
     }
   }
 
@@ -463,11 +496,11 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
           <div className="flex items-center gap-1.5 shrink-0 relative">
             <button
               onClick={handleRenderToPaper}
-              disabled={paperRendering || !insights}
+              disabled={paperRendering || !episode.schemaMeta}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Render health dashboard to Paper canvas"
+              title={paperError || "Render health dashboard to Paper canvas (requires Paper Desktop running locally with the DataBard server)"}
             >
-              {paperRendering ? "⏳" : paperDone ? "✓ Canvas" : "📐 Canvas"}
+              {paperRendering ? "⏳" : paperDone ? "✓ Canvas" : paperError ? "⚠ Canvas" : "📐 Canvas"}
             </button>
             <button
               onClick={handleDownload}
@@ -566,6 +599,25 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
             <a href="/#pricing" className="text-[var(--accent)] hover:underline">
               Get DataBard Pro →
             </a>
+          </div>
+        )}
+
+        {/* Paper canvas status */}
+        {paperError && (
+          <div className="mt-3 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-lg px-4 py-2.5 animate-slide-up">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium text-[var(--danger)]">Canvas rendering unavailable</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">{paperError}</p>
+              </div>
+              <button onClick={() => setPaperError(null)} className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs cursor-pointer shrink-0">✕</button>
+            </div>
+            <p className="text-xs text-[var(--text-muted)] mt-2">Paper canvas requires the DataBard server running locally with Paper Desktop open. <a href="https://paper.design/docs/mcp" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">Learn more →</a></p>
+          </div>
+        )}
+        {paperDone && (
+          <div className="mt-3 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-lg px-4 py-2 text-center animate-slide-up">
+            <p className="text-xs text-[var(--success)]">✓ 3-slide health dashboard rendered to Paper canvas</p>
           </div>
         )}
       </div>
@@ -726,33 +778,61 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
                 </div>
                 {actionItems.map((item) => {
                   const checked = checkedActions.has(item.id);
+                  const inv = investigations[item.id];
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-start gap-2.5 text-xs rounded-lg px-3 py-2.5 transition-all ${
+                      className={`text-xs rounded-lg px-3 py-2.5 transition-all ${
                         checked ? "bg-[var(--bg)] opacity-60" : "bg-[var(--bg)]"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleAction(item.id)}
-                        className="mt-0.5 accent-[var(--accent)] cursor-pointer shrink-0"
-                        aria-label={`Mark "${item.title}" as done`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <PriorityBadge priority={item.priority} />
-                          <span className={`font-medium ${checked ? "line-through text-[var(--text-muted)]" : ""}`}>
-                            {item.title}
-                          </span>
-                        </div>
-                        <p className="text-[var(--text-muted)] leading-relaxed">{item.description}</p>
-                        <div className="flex gap-2 mt-1">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.category}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">~{item.effort}</span>
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleAction(item.id)}
+                          className="mt-0.5 accent-[var(--accent)] cursor-pointer shrink-0"
+                          aria-label={`Mark "${item.title}" as done`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <PriorityBadge priority={item.priority} />
+                            <span className={`font-medium ${checked ? "line-through text-[var(--text-muted)]" : ""}`}>
+                              {item.title}
+                            </span>
+                          </div>
+                          <p className="text-[var(--text-muted)] leading-relaxed">{item.description}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.category}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">~{item.effort}</span>
+                            {!checked && !inv?.result && (
+                              <button
+                                onClick={() => handleInvestigate(item)}
+                                disabled={inv?.loading}
+                                className="text-[10px] px-2 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-auto"
+                              >
+                                {inv?.loading ? "Investigating…" : "Investigate →"}
+                              </button>
+                            )}
+                            {inv?.provider && inv.result && (
+                              <span className="text-[10px] text-[var(--text-muted)] ml-auto">via {inv.provider}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      {/* Investigation result */}
+                      {inv?.result && (
+                        <div className="mt-2 ml-6 p-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg animate-slide-up">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-medium text-[var(--accent)]">Investigation</span>
+                            <button
+                              onClick={() => setInvestigations((prev) => { const next = { ...prev }; delete next[item.id]; return next; })}
+                              className="text-[var(--text-muted)] hover:text-[var(--text)] text-[10px] cursor-pointer"
+                            >✕</button>
+                          </div>
+                          <pre className="text-[11px] text-[var(--text-muted)] leading-relaxed whitespace-pre-wrap font-[inherit]">{inv.result}</pre>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

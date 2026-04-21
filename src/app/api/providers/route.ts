@@ -1,29 +1,30 @@
 import { NextResponse } from "next/server";
-import { checkProviders } from "@/lib/audio-engine-providers";
+import { getAvailableAgents, getBestAgent, AGENT_INFO } from "@/lib/agent";
 
 /**
- * Check which browser automation providers are available
+ * Check AI agent capabilities — which providers are available
+ * for investigating and resolving data quality issues.
  */
 export async function GET() {
   try {
-    const providers = await checkProviders();
-    
-    const configured = process.env.BROWSER_PROVIDER || 'auto';
-    const available = Object.entries(providers)
-      .filter(([_, isAvailable]) => isAvailable)
-      .map(([name]) => name);
-    
+    const agents = await getAvailableAgents();
+    const best = await getBestAgent();
+
+    const available = Object.entries(agents)
+      .filter(([name, ok]) => ok && name !== "none")
+      .map(([name]) => ({ id: name, ...AGENT_INFO[name as keyof typeof AGENT_INFO] }));
+
     return NextResponse.json({
       ok: true,
-      configured,
-      providers,
+      agents,
       available,
-      recommendation: available[0] || 'none',
+      activeProvider: best,
+      canInvestigate: best !== "none" || !!process.env.OPENAI_API_KEY,
     });
   } catch (error) {
     return NextResponse.json({
       ok: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     }, { status: 500 });
   }
 }
