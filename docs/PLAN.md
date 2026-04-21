@@ -40,9 +40,13 @@ This project is submitted to two concurrent hackathons:
 - [ ] Demo video
 
 ### Phase 3: Post-Hackathon
+- [x] Visual health report — server-side PDF export (3 slides: Overview, Critical Tables & Actions, Lineage & Ownership) via `/api/canvas/export` using Puppeteer. No external runtime dependency for users.
+- [x] Scheduled regeneration when catalog changes (Pro tier — `/api/schedules` + `/pro` settings UI)
+- [x] Shareable episode links / embeds (`/episode/[id]`)
+- [x] Monetization: SaaS subscription per data team (Stripe checkout + webhook → Pro activation)
 - [ ] Multi-episode playlists (full database series)
-- [ ] Scheduled regeneration when catalog changes
 - [ ] Custom voice cloning for branded docs
 - [ ] Onchain minting of audio docs as versioned NFTs
-- [ ] Shareable episode links / embeds
-- [ ] Monetization: SaaS subscription per data team
+
+### Paper Canvas (developer tool)
+The Paper.design MCP integration in `src/lib/paper-canvas.ts` renders the same 3-slide dashboard onto a live Paper canvas for design iteration. This requires Paper Desktop running locally and is **not** used in the user-facing export path. Use it when iterating on the dashboard layout — the pure HTML builders (`buildOverviewHtml`, `buildCriticalAndActionsHtml`, `buildLineageAndOwnershipHtml`, `buildDashboardHtml`) are the single source of truth for both the Paper preview and the PDF export.

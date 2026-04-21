@@ -9,9 +9,7 @@ function getStripe(): Stripe {
 
 /**
  * Stripe checkout for DataBard Pro.
- *
  * POST /api/checkout — creates a checkout session, returns URL
- * Body: { plan: "team" }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -26,8 +24,11 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}?checkout=success`,
+      success_url: `${origin}/pro?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}?checkout=cancelled`,
+      // Collect email so we can identify the customer in webhooks
+      billing_address_collection: "auto",
+      metadata: { plan: "team" },
     });
 
     return NextResponse.json({ ok: true, url: session.url });

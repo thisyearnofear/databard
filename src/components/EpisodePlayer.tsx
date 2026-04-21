@@ -182,6 +182,8 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
   const [speed, setSpeed] = useState<number>(1);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PlayerTab>("insights");
   const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
@@ -516,6 +518,35 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
     setShowShareMenu(false);
   }
 
+  async function handleDownloadReport() {
+    if (!episode.schemaMeta) return;
+    setReportLoading(true);
+    setReportError(null);
+    try {
+      const res = await fetch("/api/canvas/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episode }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setReportError((data as { error?: string }).error ?? "Failed to generate report");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `databard-${episode.schemaName}-report.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      setReportError(e instanceof Error ? e.message : "Failed to generate report");
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
   async function handleClip() {
     const highlight = episode.script.find((s) =>
       s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
@@ -576,6 +607,16 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
             >
               {sharing ? "…" : shareUrl ? "✓ Share" : "Share"}
             </button>
+            {episode.schemaMeta && (
+              <button
+                onClick={handleDownloadReport}
+                disabled={reportLoading}
+                className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50"
+                title="Download 3-slide visual health report as PDF"
+              >
+                {reportLoading ? "…" : "📊 Report"}
+              </button>
+            )}
 
             {/* Share menu (desktop fallback) */}
             {showShareMenu && (
@@ -641,6 +682,13 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
         <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
           Space to play/pause · ← → to seek 10s · Click a segment to jump
         </p>
+
+        {/* Report error */}
+        {reportError && (
+          <div className="mt-2 text-center text-xs text-[var(--danger)] animate-slide-up">
+            {reportError}
+          </div>
+        )}
 
         {/* Contextual nudge */}
         {nudge && (

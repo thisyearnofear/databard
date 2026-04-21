@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isPaperAvailable, renderHealthDashboard } from "@/lib/paper-canvas";
+import { isPaperAvailable, renderHealthDashboard, exportDashboardScreenshots } from "@/lib/paper-canvas";
 import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
 import { shares } from "@/lib/store";
 import type { Episode } from "@/lib/types";
@@ -7,8 +7,10 @@ import type { Episode } from "@/lib/types";
 /**
  * Render a schema health dashboard to the Paper canvas.
  * POST /api/canvas
- * Body: { episodeId } — renders from a shared episode
- *   or: { episode } — renders from inline episode data
+ * Body: { episodeId|episode, export?: boolean }
+ *   export: true — render slides then capture screenshots via get_screenshot,
+ *           returns { screenshots: [{ name, dataUrl }] }
+ *   export: false (default) — render only, returns { artboardIds }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -35,11 +37,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Paper Desktop not running. Open Paper with a file to enable canvas rendering." }, { status: 503 });
     }
 
-    // Generate insights and render
     const insights = analyzeSchema(episode!.schemaMeta!);
     const actionItems = generateActionItems(insights);
-    const result = await renderHealthDashboard(episode!, insights, actionItems);
 
+    // Export mode: render + screenshot each slide
+    if (body.export) {
+      const result = await exportDashboardScreenshots(episode!, insights, actionItems);
+      return NextResponse.json({ ok: true, screenshots: result.screenshots });
+    }
+
+    // Render-only mode
+    const result = await renderHealthDashboard(episode!, insights, actionItems);
     return NextResponse.json({ ok: true, artboardIds: result.artboardIds });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";

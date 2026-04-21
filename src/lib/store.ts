@@ -176,3 +176,43 @@ export const feedStore = {
   },
   list: () => store.get<{ id: string; schemaName: string; generatedAt: string; tableCount: number; testsFailed: number; testsTotal: number }[]>("feed:episodes") ?? [],
 };
+
+export interface ProAccount {
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  plan: "team";
+  activatedAt: string;
+  schedules: ScheduleConfig[];
+  feedToken: string;
+}
+
+export interface ScheduleConfig {
+  id: string;
+  schemaFqn: string;
+  source: string;
+  frequency: "daily" | "weekly";
+  dayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, 1=Mon...
+  hour: number; // UTC hour
+  webhookUrl?: string;
+  lastRunAt?: string;
+  nextRunAt?: string;
+  shareId?: string; // ID of the last generated episode
+}
+
+export const proAccounts = {
+  set: (customerId: string, data: ProAccount) => store.set(`pro:${customerId}`, data, 86400 * 365 * 10),
+  get: (customerId: string) => store.get<ProAccount>(`pro:${customerId}`),
+  getBySubscription: (subscriptionId: string): ProAccount | null => {
+    const keys = store.keys("pro:");
+    for (const key of keys) {
+      const account = store.get<ProAccount>(key);
+      if (account?.stripeSubscriptionId === subscriptionId) return account;
+    }
+    return null;
+  },
+  update: (customerId: string, patch: Partial<ProAccount>) => {
+    const existing = store.get<ProAccount>(`pro:${customerId}`);
+    if (!existing) return;
+    store.set(`pro:${customerId}`, { ...existing, ...patch }, 86400 * 365 * 10);
+  },
+};

@@ -27,7 +27,7 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [showConnect, setShowConnect] = useState(false);
-  const [checkoutMsg, setCheckoutMsg] = useState("");
+
   const [connecting, setConnecting] = useState(false);
   const [manifestFile, setManifestFile] = useState<File | null>(null);
 
@@ -56,13 +56,10 @@ export default function Home() {
     } catch { /* quota exceeded or private mode */ }
   }, [source, omUrl, dbtAccountId, dbtProjectId]);
 
-  // Handle checkout return
+  // Handle checkout cancellation return
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("checkout") === "success") {
-      setCheckoutMsg("🎉 Welcome to DataBard Pro! Check your email for setup instructions.");
-      window.history.replaceState({}, "", "/");
-    } else if (params.get("checkout") === "cancelled") {
+    if (params.get("checkout") === "cancelled") {
       window.history.replaceState({}, "", "/");
     }
   }, []);
@@ -340,12 +337,6 @@ export default function Home() {
   // ─── Landing page ───
   return (
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
-      {checkoutMsg && (
-        <div className="w-full max-w-2xl bg-[var(--success)]/20 border border-[var(--success)] rounded-xl p-4 text-center text-sm mt-4 mb-4">
-          {checkoutMsg}
-        </div>
-      )}
-
       {/* Hero */}
       <section className="flex flex-col items-center text-center pt-12 sm:pt-20 pb-10 sm:pb-14 max-w-2xl">
         <p className="text-xs text-[var(--accent)] font-medium tracking-wider uppercase mb-4">Audio documentation for data teams</p>
@@ -523,6 +514,9 @@ export default function Home() {
             <button onClick={handleCheckout} className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
               Start Pro
             </button>
+            <a href="/pro" className="block text-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] mt-2 cursor-pointer">
+              Already subscribed? Manage schedules →
+            </a>
           </div>
         </div>
       </section>
@@ -557,8 +551,8 @@ export default function Home() {
               a: "Alex is the enthusiastic data advocate who highlights what's working well. Morgan is the skeptical quality auditor who flags risks, failing tests, and governance gaps. Together they create a balanced, engaging walkthrough.",
             },
             {
-              q: "What's the Paper canvas integration?",
-              a: "If you have Paper Desktop open, DataBard can render a visual health dashboard directly on the canvas — health score, critical tables, action items, and lineage maps. Great for stakeholder reports.",
+              q: "What's the visual report feature?",
+              a: "Click '📊 Report' on any episode to render a 3-slide visual dashboard (overview, critical tables, lineage & ownership) directly on your Paper canvas and download each slide as a high-res image. Requires Paper Desktop to be open.",
             },
             {
               q: "How does the free tier work?",
