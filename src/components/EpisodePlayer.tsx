@@ -183,9 +183,6 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PlayerTab>("insights");
-  const [paperRendering, setPaperRendering] = useState(false);
-  const [paperDone, setPaperDone] = useState(false);
-  const [paperError, setPaperError] = useState<string | null>(null);
   const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -211,32 +208,6 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
       try { localStorage.setItem(`databard:actions:${episode.schemaFqn}`, JSON.stringify([...next])); } catch {}
       return next;
     });
-  }
-
-  async function handleRenderToPaper() {
-    if (!episode.schemaMeta || paperRendering) return;
-    setPaperRendering(true);
-    setPaperError(null);
-    try {
-      // Route through server-side API (Paper MCP is localhost-only)
-      const res = await fetch("/api/canvas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episode }),
-      });
-      const data = await res.json();
-      if (!data.ok) {
-        setPaperError(data.error || "Failed to render canvas");
-        return;
-      }
-      setPaperDone(true);
-      setTimeout(() => setPaperDone(false), 5000);
-    } catch (e) {
-      console.error("Paper render failed:", e);
-      setPaperError(e instanceof Error ? e.message : "Connection failed");
-    } finally {
-      setPaperRendering(false);
-    }
   }
 
   async function handleInvestigate(item: ActionItem) {
@@ -583,14 +554,6 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
           </div>
           <div className="flex items-center gap-1.5 shrink-0 relative">
             <button
-              onClick={handleRenderToPaper}
-              disabled={paperRendering || !episode.schemaMeta}
-              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title={paperError || "Render health dashboard to Paper canvas (requires Paper Desktop running locally with the DataBard server)"}
-            >
-              {paperRendering ? "⏳" : paperDone ? "✓ Canvas" : paperError ? "⚠ Canvas" : "📐 Canvas"}
-            </button>
-            <button
               onClick={handleDownload}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
               title="Download MP3"
@@ -687,25 +650,6 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
             <a href="/#pricing" className="text-[var(--accent)] hover:underline">
               Get DataBard Pro →
             </a>
-          </div>
-        )}
-
-        {/* Paper canvas status */}
-        {paperError && (
-          <div className="mt-3 bg-[var(--danger)]/10 border border-[var(--danger)]/20 rounded-lg px-4 py-2.5 animate-slide-up">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-xs font-medium text-[var(--danger)]">Canvas rendering unavailable</p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">{paperError}</p>
-              </div>
-              <button onClick={() => setPaperError(null)} className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs cursor-pointer shrink-0">✕</button>
-            </div>
-            <p className="text-xs text-[var(--text-muted)] mt-2">Paper canvas requires the DataBard server running locally with Paper Desktop open. <a href="https://paper.design/docs/mcp" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">Learn more →</a></p>
-          </div>
-        )}
-        {paperDone && (
-          <div className="mt-3 bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-lg px-4 py-2 text-center animate-slide-up">
-            <p className="text-xs text-[var(--success)]">✓ 3-slide health dashboard rendered to Paper canvas</p>
           </div>
         )}
       </div>
