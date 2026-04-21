@@ -532,7 +532,7 @@ export default function Home() {
             },
             {
               q: "Do I need an ElevenLabs account?",
-              a: "For the demo, no. To generate episodes from your own data, you need an ElevenLabs API key (Starter plan at $5/mo is recommended for full API access). Free tier keys work with browser automation fallback but are slower.",
+              a: "For the demo, no. To generate episodes from your own data, you need an ElevenLabs API key (Starter plan at $5/mo is recommended for full API access).",
             },
             {
               q: "What data sources are supported?",
@@ -552,7 +552,7 @@ export default function Home() {
             },
             {
               q: "What's the visual report feature?",
-              a: "Click '📊 Report' on any episode to render a 3-slide visual dashboard (overview, critical tables, lineage & ownership) directly on your Paper canvas and download each slide as a high-res image. Requires Paper Desktop to be open.",
+              a: <>Click &lsquo;📊 Report&rsquo; on any episode to download a 3-slide PDF health report — overview, critical tables &amp; action items, and lineage &amp; ownership. Generated server-side using <a href="https://paper.design/" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">Paper</a>-inspired design, no external tools required.</>,
             },
             {
               q: "How does the free tier work?",
@@ -564,7 +564,7 @@ export default function Home() {
                 {item.q}
                 <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
               </summary>
-              <p className="px-5 pb-4 text-sm text-[var(--text-muted)] leading-relaxed">{item.a}</p>
+              <p className="px-5 pb-4 text-sm text-[var(--text-muted)] leading-relaxed">{item.a as React.ReactNode}</p>
             </details>
           ))}
         </div>
