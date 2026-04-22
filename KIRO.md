@@ -4,9 +4,9 @@ This document chronicles how Kiro was used to build DataBard — a podcast gener
 
 ## Project Stats
 - **Timeline**: 6 days (hackathon sprint)
-- **Lines of code**: ~800 (4 API routes, 3 lib modules, 2 components)
+- **Lines of code**: ~5,000 (15 API routes, 10 lib modules, 5 components)
 - **Kiro features used**: Specs, steering (2 files), hooks (1 active), MCP integration
-- **APIs integrated**: OpenMetadata REST API, ElevenLabs SDK (TTS + sound effects)
+- **APIs integrated**: OpenMetadata REST API, ElevenLabs SDK (TTS + Sound Effects API), dbt Cloud, The Graph (GraphQL introspection), Dune Analytics, Stripe, Initia InterwovenKit
 
 ## Workflow
 
@@ -209,6 +209,39 @@ For hackathons specifically, Kiro's value is:
 3. **Hooks catch bugs early** (no time for manual QA)
 
 Would I use Kiro for non-hackathon projects? Absolutely. The workflow scales — more complex projects benefit even more from structured specs and automated validation.
+
+The project grew from an 800-line MVP to a 5,000-line production system (Pro tier, scheduled episodes, PDF export, onchain data sources, Initia wallet integration) — all while maintaining zero TypeScript errors and consistent code style, because the steering rules and specs kept every new feature aligned with the original architecture.
+
+## Hackathon Submission
+
+### Project Description (copy-paste ready)
+
+**DataBard** turns your data catalog into a podcast. Two AI hosts — Alex (the enthusiast) and Morgan (the skeptic) — have a natural conversation about your OpenMetadata schemas, dbt models, or onchain subgraphs: flagging failing tests, tracing lineage, calling out PII columns, and debating what needs fixing.
+
+**ElevenLabs APIs used:**
+- `textToSpeech.convert()` — dual-voice synthesis with context stitching (`previous_text`/`next_text`) for natural prosody across segment boundaries
+- `textToSoundEffects.convert()` — dynamically generated transition SFX between podcast topics (cached 30 days)
+
+**Kiro workflow:**
+- Specs defined the full API contract before any code was written (prevented scope drift in a 6-day sprint)
+- Steering files (`elevenlabs.md`, `conventions.md`) ensured correct voice IDs, context stitching params, and code style were applied automatically across every generated file
+- `fileEdited` hook auto-validated API routes against the design spec on every save — caught 3 bugs before commit
+
+**Live demo:** https://databard.vercel.app  
+**Repo:** https://github.com/thisyearnofear/databard  
+**Built with:** Next.js 15, ElevenLabs SDK, OpenMetadata API, Kiro spec-driven development
+
+### Social Post Template
+
+> 🎙️ I built DataBard with @kirodotdev + @elevenlabsio — your data catalog as a podcast.
+>
+> Two AI hosts debate your schema health, flag failing tests, and trace lineage. Kiro wrote the specs, steered the ElevenLabs integration, and caught bugs before commit.
+>
+> Try it: https://databard.vercel.app
+>
+> #ElevenHacks #CodeWithKiro
+
+---
 
 ## Appendix: Prompts That Worked Well
 

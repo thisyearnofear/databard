@@ -27,6 +27,7 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [showConnect, setShowConnect] = useState(false);
+  const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
 
   const [connecting, setConnecting] = useState(false);
   const [manifestFile, setManifestFile] = useState<File | null>(null);
@@ -353,14 +354,35 @@ export default function Home() {
   // ─── Landing page ───
   return (
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
+      {/* Persona Toggle */}
+      <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] mb-8 animate-fade-in">
+        <button 
+          onClick={() => setPersona("enterprise")}
+          className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${persona === "enterprise" ? "bg-[var(--accent)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
+        >
+          🗄️ Warehouses
+        </button>
+        <button 
+          onClick={() => setPersona("web3")}
+          className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${persona === "web3" ? "bg-[var(--accent)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
+        >
+          ⛓️ Protocols
+        </button>
+      </div>
+
       {/* Hero */}
-      <section className="flex flex-col items-center text-center pt-12 sm:pt-20 pb-10 sm:pb-14 max-w-2xl">
-        <p className="text-xs text-[var(--accent)] font-medium tracking-wider uppercase mb-4">Audio documentation for data teams</p>
+      <section className="flex flex-col items-center text-center pt-8 sm:pt-12 pb-10 sm:pb-14 max-w-2xl">
+        <p className="text-xs text-[var(--accent)] font-medium tracking-wider uppercase mb-4">
+          {persona === "enterprise" ? "Audio documentation for data teams" : "On-chain observability for protocol teams"}
+        </p>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
-          Your data catalog,<br />as a podcast
+          {persona === "enterprise" ? "Your data catalog," : "Your protocol health,"}<br />as a podcast
         </h1>
         <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
-          Two AI hosts walk through your schemas, flag failing tests, trace lineage, and call out governance gaps — so your team actually knows what's in the warehouse.
+          {persona === "enterprise" 
+            ? "Two AI hosts walk through your schemas, flag failing tests, and trace lineage — so your team actually knows what's in the warehouse."
+            : "Monitor subgraphs, indexer lag, and entity shifts with verifiable health reports minted to Initia — making data quality part of consensus."
+          }
         </p>
 
         <button
@@ -374,26 +396,45 @@ export default function Home() {
 
       {/* Social proof */}
       <section className="flex flex-wrap justify-center gap-6 text-xs text-[var(--text-muted)] pb-12 sm:pb-16 max-w-2xl">
-        <span>Built on <span className="text-[var(--text)]">OpenMetadata</span></span>
+        <span>Built on <span className="text-[var(--text)]">OpenMetadata & Initia</span></span>
         <span>·</span>
         <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
         <span>·</span>
-        <span>Works with <span className="text-[var(--text)]">dbt</span></span>
+        <span>Works with <span className="text-[var(--text)]">The Graph, dbt & Dune</span></span>
       </section>
 
       {/* Why audio */}
       <section className="w-full max-w-3xl pb-12 sm:pb-16">
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-2">Why a podcast?</h2>
         <p className="text-sm text-[var(--text-muted)] text-center mb-8 max-w-lg mx-auto">
-          Your data catalog has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts.
+          {persona === "enterprise" 
+            ? "Your warehouse has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
+            : "Your protocol has thousands of entities. Dashboards get ignored. But health reports on Initia build trust."
+          }
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: "🎧", title: "Passive consumption", desc: "Listen while commuting, coding, or doing dishes. No screen required." },
-            { icon: "⚠️", title: "Issues you'd miss", desc: "AI hosts flag failing tests, stale tables, PII columns, and missing owners." },
-            { icon: "📊", title: "Click to explore", desc: "Hear something interesting? Click the segment to see columns, tests, and lineage." },
+            { 
+              icon: persona === "enterprise" ? "🎧" : "⛓️", 
+              title: persona === "enterprise" ? "Passive consumption" : "On-chain Proof", 
+              desc: persona === "enterprise" 
+                ? "Listen while commuting, coding, or doing dishes. No screen required." 
+                : "Mint every health report to Initia. Create a verifiable history of indexer reliability."
+            },
+            { 
+              icon: "⚠️", 
+              title: persona === "enterprise" ? "Issues you'd miss" : "Protocol Health", 
+              desc: persona === "enterprise"
+                ? "AI hosts flag failing tests, stale tables, PII columns, and missing owners."
+                : "Identify indexer lag, broken entity relationships, and sync gaps before they affect users."
+            },
+            { 
+              icon: "📊", 
+              title: "Click to explore", 
+              desc: "Hear something interesting? Click the segment to see columns, tests, and lineage in real-time." 
+            },
           ].map((item) => (
-            <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center">
+            <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center transition-all hover:border-[var(--accent)]/50">
               <div className="text-2xl mb-2">{item.icon}</div>
               <h3 className="font-semibold mb-1">{item.title}</h3>
               <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
@@ -407,9 +448,9 @@ export default function Home() {
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">How it works</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { step: "1", title: "Connect", desc: "Point at OpenMetadata, dbt Cloud, or a local manifest" },
-            { step: "2", title: "Generate", desc: "AI analyzes your schema — health score, critical tables, lineage risks" },
-            { step: "3", title: "Listen & share", desc: "Stream, download MP3, share via WhatsApp/Slack, or subscribe via RSS" },
+            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Point at OpenMetadata or dbt" : "Connect The Graph, Dune, or Initia" },
+            { step: "2", title: "Analyze", desc: "AI scans schemas for health, lineage risks, and indexer lag" },
+            { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & Verify", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Initia and share with your DAO" },
           ].map((item) => (
             <div key={item.step} className="flex flex-col items-center text-center">
               <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-sm font-bold mb-3">{item.step}</div>
@@ -427,9 +468,9 @@ export default function Home() {
           <h3 className="text-sm font-semibold mb-3">What you get per episode</h3>
           <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Health score & coverage</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Failing test breakdown</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</div>
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Lineage risk analysis</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> PII & governance flags</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "PII & governance flags" : "On-chain verification"}</div>
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Prioritized action items</div>
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Shareable MP3 + link</div>
           </div>
@@ -441,18 +482,22 @@ export default function Home() {
         {!showConnect ? (
           <button onClick={() => setShowConnect(true)}
             className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-4 text-sm font-medium cursor-pointer transition-colors text-center">
-            Connect your own data catalog →
+            {persona === "enterprise" ? "Connect your data catalog →" : "Monitor your protocol →"}
           </button>
         ) : (
           <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border border-[var(--border)] animate-slide-up">
             <label className="text-sm text-[var(--text-muted)]">Data Source</label>
             <select className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
               value={source} onChange={(e) => setSource(e.target.value as DataSource)}>
-              <option value="openmetadata">OpenMetadata</option>
-              <option value="dbt-cloud">dbt Cloud</option>
-              <option value="dbt-local">dbt Local (manifest.json)</option>
-              <option value="the-graph">The Graph (subgraph)</option>
-              <option value="dune">Dune Analytics</option>
+              <optgroup label="🗄️ Warehouses">
+                <option value="openmetadata">OpenMetadata</option>
+                <option value="dbt-cloud">dbt Cloud</option>
+                <option value="dbt-local">dbt Local (manifest.json)</option>
+              </optgroup>
+              <optgroup label="⛓️ Protocols">
+                <option value="the-graph">The Graph (subgraph)</option>
+                <option value="dune">Dune Analytics</option>
+              </optgroup>
             </select>
             <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
 
@@ -537,6 +582,7 @@ export default function Home() {
             <ul className="text-sm text-[var(--text-muted)] space-y-2 mb-6">
               <li>✓ Everything in Free</li>
               <li>✓ Scheduled daily/weekly episodes</li>
+              <li>✓ <b>On-chain health minting (Initia)</b></li>
               <li>✓ Private team RSS feeds</li>
               <li>✓ Slack/webhook notifications</li>
               <li>✓ Historical comparison</li>
@@ -566,7 +612,11 @@ export default function Home() {
             },
             {
               q: "What data sources are supported?",
-              a: "OpenMetadata (self-hosted or cloud), dbt Cloud (via API), and dbt Local (upload your manifest.json). We pull table metadata, column info, quality tests, lineage, owners, tags, and profiler data.",
+              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), and Dune Analytics. We pull metadata, quality tests, lineage, and indexer status to build your health profile.",
+            },
+            {
+              q: "How does the Initia integration work?",
+              a: "For protocol teams, every episode can be minted as a health attestation to the Initia appchain. This creates a verifiable history of data quality that can be shared with your community or DAO.",
             },
             {
               q: "How long does generation take?",
