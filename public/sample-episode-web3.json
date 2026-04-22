@@ -1,0 +1,89 @@
+{
+  "schemaFqn": "uniswap-v3.mainnet",
+  "schemaName": "Uniswap V3 Mainnet",
+  "tableCount": 8,
+  "qualitySummary": { "passed": 12, "failed": 2, "total": 14 },
+  "generatedAt": "2026-04-22T09:00:00Z",
+  "schemaMeta": {
+    "fqn": "uniswap-v3.mainnet",
+    "name": "Uniswap V3 Mainnet",
+    "description": "Core protocol entities for the Uniswap V3 subgraph on Ethereum mainnet, including pools, ticks, and swaps.",
+    "tables": [
+      {
+        "fqn": "uniswap-v3.mainnet.factories",
+        "name": "factories",
+        "description": "The Uniswap V3 Factory entity tracking total volume, TVL, and pool counts.",
+        "columns": [
+          { "name": "id", "dataType": "ID", "description": "Factory address", "tags": [] },
+          { "name": "poolCount", "dataType": "BigInt", "tags": [] },
+          { "name": "totalVolumeUSD", "dataType": "BigDecimal", "tags": [] },
+          { "name": "totalValueLockedUSD", "dataType": "BigDecimal", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "valid_address", "status": "Success", "column": "id" }
+        ],
+        "tags": ["protocol-level"],
+        "owner": "Uniswap Labs",
+        "rowCount": 1,
+        "freshness": "2026-04-22T08:55:00Z"
+      },
+      {
+        "fqn": "uniswap-v3.mainnet.pools",
+        "name": "pools",
+        "description": "Liquidity pools created by the factory. Contains fees, liquidity, and token references.",
+        "columns": [
+          { "name": "id", "dataType": "ID", "tags": [] },
+          { "name": "token0", "dataType": "Token", "tags": [] },
+          { "name": "token1", "dataType": "Token", "tags": [] },
+          { "name": "feeTier", "dataType": "BigInt", "tags": [] },
+          { "name": "liquidity", "dataType": "BigInt", "tags": [] },
+          { "name": "volumeUSD", "dataType": "BigDecimal", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "nonzero_liquidity", "status": "Success", "column": "liquidity" },
+          { "name": "indexer_lag_check", "status": "Failed", "column": "volumeUSD" }
+        ],
+        "tags": ["critical"],
+        "rowCount": 12500,
+        "freshness": "2026-04-22T08:30:00Z"
+      },
+      {
+        "fqn": "uniswap-v3.mainnet.swaps",
+        "name": "swaps",
+        "description": "Swap events across all pools. High-frequency data used for volume and price analysis.",
+        "columns": [
+          { "name": "id", "dataType": "ID", "tags": [] },
+          { "name": "timestamp", "dataType": "BigInt", "tags": [] },
+          { "name": "pool", "dataType": "Pool", "tags": [] },
+          { "name": "amount0", "dataType": "BigDecimal", "tags": [] },
+          { "name": "amount1", "dataType": "BigDecimal", "tags": [] },
+          { "name": "amountUSD", "dataType": "BigDecimal", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "nonzero_amount", "status": "Failed", "column": "amountUSD" },
+          { "name": "valid_timestamp", "status": "Success", "column": "timestamp" }
+        ],
+        "tags": ["event-data"],
+        "rowCount": 45000000,
+        "freshness": "2026-04-22T08:55:00Z"
+      }
+    ],
+    "lineage": [
+      { "fromTable": "uniswap-v3.mainnet.factories", "toTable": "uniswap-v3.mainnet.pools" },
+      { "fromTable": "uniswap-v3.mainnet.pools", "toTable": "uniswap-v3.mainnet.swaps" }
+    ]
+  },
+  "script": [
+    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard Web3! Today we're auditing the Uniswap V3 Mainnet subgraph — 8 entities, health score 68 out of 100. Let's see how the indexers are holding up." },
+    { "speaker": "Morgan", "topic": "intro", "text": "We've got some sync issues. Indexer lag is showing up in the pools entity, and we're seeing zero-value swap entries that shouldn't be there. Protocol health is at risk." },
+    { "speaker": "Morgan", "topic": "pools", "text": "The pools entity is flagging an indexer lag check. Volume statistics haven't refreshed in 25 minutes, which is an eternity for high-frequency DeFi data." },
+    { "speaker": "Alex", "topic": "pools", "text": "Pools are the heart of V3. 12,500 active pairs. If the volume data is stale, every downstream dashboard and arbitrage bot is flying blind." },
+    { "speaker": "Morgan", "topic": "swaps", "text": "And look at the swaps entity. 45 million records, but we're seeing a spike in failed 'nonzero_amount' tests. Some events are being indexed with zero USD value." },
+    { "speaker": "Alex", "topic": "swaps", "text": "That usually points to a price oracle failure in the subgraph mapping. If the token price isn't resolved at the block height, the swap value drops to zero." },
+    { "speaker": "Alex", "topic": "highlights", "text": "On the positive side, the factory entity is perfectly in sync. TVL and pool counts are matching the contract state exactly." },
+    { "speaker": "Morgan", "topic": "governance", "text": "We should talk about Initia minting. Since this is Uniswap's core health, we need to record this state on Initia to provide a verifiable audit trail for the DAO." },
+    { "speaker": "Alex", "topic": "lineage", "text": "The flow is clear: factories deploy pools, and pools generate swaps. If the factory metadata drifts, the entire subgraph structure is compromised." },
+    { "speaker": "Alex", "topic": "outro", "text": "That's the Uniswap V3 audit — health score 68. Some indexer turbulence but core factory state is solid." },
+    { "speaker": "Morgan", "topic": "outro", "text": "Priority one: debug the price oracle mapping in the swaps handler. Priority two: check the RPC provider for pools volume sync lag. Keep the chain moving." }
+  ]
+}

@@ -164,7 +164,19 @@ function PriorityBadge({ priority }: { priority: ActionPriority }) {
   );
 }
 
-export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: Episode; audioUrl: string; segmentOffsets?: number[] }) {
+export function EpisodePlayer({ 
+  episode, 
+  audioUrl, 
+  segmentOffsets,
+  onMint,
+  minting = false,
+}: { 
+  episode: Episode; 
+  audioUrl: string; 
+  segmentOffsets?: number[];
+  onMint?: () => void;
+  minting?: boolean;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -607,6 +619,16 @@ export function EpisodePlayer({ episode, audioUrl, segmentOffsets }: { episode: 
             >
               {sharing ? "…" : shareUrl ? "✓ Share" : "Share"}
             </button>
+            {onMint && (
+              <button
+                onClick={onMint}
+                disabled={minting}
+                className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 flex items-center gap-1 font-medium"
+                title="Mint this health report on Initia"
+              >
+                {minting ? "…" : "⛓️ Mint"}
+              </button>
+            )}
             {episode.schemaMeta && (
               <button
                 onClick={handleDownloadReport}

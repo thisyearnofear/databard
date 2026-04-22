@@ -31,6 +31,7 @@ export default function Home() {
   const [showConnect, setShowConnect] = useState(false);
   const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [minting, setMinting] = useState(false);
 
   const [connecting, setConnecting] = useState(false);
   const [manifestFile, setManifestFile] = useState<File | null>(null);
@@ -277,6 +278,50 @@ export default function Home() {
     else setStatus(data.error || "Checkout not available yet");
   }
 
+  async function handleMint() {
+    if (!episode || !walletAddress) return;
+    setMinting(true);
+    setStatus("Minting on-chain…");
+
+    try {
+      // 1. First ensure it's "shared" to get an ID (since minting needs an ID)
+      let episodeId = "";
+      const shareRes = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(episode),
+      });
+      const shareData = await shareRes.json();
+      if (shareData.ok) {
+        episodeId = shareData.id;
+      } else {
+        throw new Error(shareData.error || "Failed to prepare episode for minting");
+      }
+
+      // 2. Mint on-chain
+      const res = await fetch("/api/onchain/mint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schemaName: episode.schemaName,
+          healthScore: episode.qualitySummary.total > 0 ? Math.round((episode.qualitySummary.passed / episode.qualitySummary.total) * 100) : 100,
+          episodeId: episodeId,
+          initiaAddress: walletAddress,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setStatus(`✓ Minted on-chain! ${data.txHash ? `TX: ${data.txHash.slice(0, 8)}…` : "(Stubbed)"}`);
+      } else {
+        setStatus(`Error: ${data.error}`);
+      }
+    } catch (e: unknown) {
+      setStatus(`Error: ${e instanceof Error ? e.message : "Minting failed"}`);
+    } finally {
+      setMinting(false);
+    }
+  }
+
   function reset() {
     setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setConnected(false); setShowConnect(false); setStatus("");
   }
@@ -301,7 +346,13 @@ export default function Home() {
             </p>
           </div>
         )}
-        <EpisodePlayer episode={episode} audioUrl={audioUrl} segmentOffsets={segmentOffsets} />
+        <EpisodePlayer 
+          episode={episode} 
+          audioUrl={audioUrl} 
+          segmentOffsets={segmentOffsets} 
+          onMint={persona === "web3" && walletAddress ? handleMint : undefined}
+          minting={minting}
+        />
 
         <div className="flex flex-col items-center gap-3">
           <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">
@@ -309,17 +360,30 @@ export default function Home() {
           </button>
 
           {/* Post-experience upsell */}
-          {persona === "web3" ? (
-            <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
-              <p className="text-sm mb-2">Mint this report on-chain with Initia</p>
-              <p className="text-xs text-[var(--text-muted)] mb-3">
-                Create a verifiable health attestation for your community or DAO — $29/mo
-              </p>
-              <button onClick={handleCheckout} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer">
-                Start Pro trial
-              </button>
-            </div>
-          ) : (
+{persona === "web3" ? (
+             <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
+               <p className="text-sm mb-2">Mint this report on-chain with Initia</p>
+               <p className="text-xs text-[var(--text-muted)] mb-3">
+                 {walletAddress 
+                   ? "You're connected! Record this health snapshot on the Initia appchain."
+                   : "Create a verifiable health attestation for your community or DAO — $29/mo"
+                 }
+               </p>
+               {walletAddress ? (
+                 <button 
+                   onClick={handleMint} 
+                   disabled={minting}
+                   className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-6 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+                 >
+                   {minting ? "Minting…" : "Mint Now"}
+                </button>
+               ) : (
+                 <button onClick={handleCheckout} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer">
+                   Start Pro trial
+                 </button>
+               )}
+             </div>
+           ) : (
             <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
               <p className="text-sm mb-2">Want this for your team every week?</p>
               <p className="text-xs text-[var(--text-muted)] mb-3">
