@@ -5,6 +5,8 @@ import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
 import type { Episode, DataSource } from "@/lib/types";
+import { WalletConnect } from "@/components/WalletConnect";
+import { InitiaProvider } from "@/components/InitiaProvider";
 
 export default function Home() {
   const [source, setSource] = useState<DataSource>("openmetadata");
@@ -28,6 +30,7 @@ export default function Home() {
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [showConnect, setShowConnect] = useState(false);
   const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   const [connecting, setConnecting] = useState(false);
   const [manifestFile, setManifestFile] = useState<File | null>(null);
@@ -35,6 +38,16 @@ export default function Home() {
   const [graphApiKey, setGraphApiKey] = useState("");
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
+
+  // When persona switches, pre-select the most relevant source
+  useEffect(() => {
+    if (persona === "web3" && (source === "openmetadata" || source === "dbt-cloud" || source === "dbt-local")) {
+      setSource("the-graph");
+    } else if (persona === "enterprise" && (source === "the-graph" || source === "dune")) {
+      setSource("openmetadata");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persona]);
 
   // Restore connection config from localStorage
   useEffect(() => {
@@ -296,15 +309,27 @@ export default function Home() {
           </button>
 
           {/* Post-experience upsell */}
-          <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
-            <p className="text-sm mb-2">Want this for your team every week?</p>
-            <p className="text-xs text-[var(--text-muted)] mb-3">
-              Scheduled episodes, private feeds, Slack notifications — $29/mo
-            </p>
-            <button onClick={handleCheckout} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer">
-              Start Pro trial
-            </button>
-          </div>
+          {persona === "web3" ? (
+            <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
+              <p className="text-sm mb-2">Mint this report on-chain with Initia</p>
+              <p className="text-xs text-[var(--text-muted)] mb-3">
+                Create a verifiable health attestation for your community or DAO — $29/mo
+              </p>
+              <button onClick={handleCheckout} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer">
+                Start Pro trial
+              </button>
+            </div>
+          ) : (
+            <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
+              <p className="text-sm mb-2">Want this for your team every week?</p>
+              <p className="text-xs text-[var(--text-muted)] mb-3">
+                Scheduled episodes, private feeds, Slack notifications — $29/mo
+              </p>
+              <button onClick={handleCheckout} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer">
+                Start Pro trial
+              </button>
+            </div>
+          )}
         </div>
         {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
       </main>
@@ -353,6 +378,7 @@ export default function Home() {
 
   // ─── Landing page ───
   return (
+    <InitiaProvider>
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
       {/* Persona Toggle */}
       <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] mb-8 animate-fade-in">
@@ -478,6 +504,22 @@ export default function Home() {
 
         {/* Provider Status */}
         <ProviderStatus />
+
+        {/* Web3 persona: wallet connect option */}
+        {persona === "web3" && (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-[var(--text-muted)] text-center">Connect your Initia wallet to authenticate</p>
+            <WalletConnect onAddressChange={setWalletAddress} />
+            {walletAddress && (
+              <p className="text-xs text-[var(--success)] text-center">✓ Wallet connected — you can now generate and mint episodes</p>
+            )}
+            <div className="flex items-center gap-3 my-1">
+              <div className="flex-1 h-px bg-[var(--border)]" />
+              <span className="text-xs text-[var(--text-muted)]">or connect a data source</span>
+              <div className="flex-1 h-px bg-[var(--border)]" />
+            </div>
+          </div>
+        )}
 
         {!showConnect ? (
           <button onClick={() => setShowConnect(true)}
@@ -652,10 +694,11 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="text-xs text-[var(--text-muted)] pb-8 flex gap-3">
-        <span>Powered by ElevenLabs & OpenMetadata</span>
+        <span>{persona === "web3" ? "Powered by ElevenLabs & Initia" : "Powered by ElevenLabs & OpenMetadata"}</span>
         <span>·</span>
         <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
       </footer>
     </main>
+    </InitiaProvider>
   );
 }
