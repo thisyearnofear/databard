@@ -4,9 +4,10 @@
  * InitiaProvider — lazy loads the Initia wallet stack on the client only.
  * This avoids SSR/build-time side effects from the wallet connector.
  */
-import { useEffect, useMemo, useState, type ComponentType, type PropsWithChildren } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ComponentType, type PropsWithChildren } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, http, WagmiProvider } from "wagmi";
+import { mainnet } from "wagmi/chains";
 
 type InitiaModule = {
   InterwovenKitProvider: ComponentType<PropsWithChildren<{ defaultChainId?: string }>>;
@@ -18,6 +19,12 @@ type InitiaModule = {
 
 const DATABARD_CHAIN_ID = process.env.NEXT_PUBLIC_INITIA_CHAIN_ID ?? "initiation-2";
 const queryClient = new QueryClient();
+
+const InitiaWalletReadyContext = createContext(false);
+
+export function useInitiaWalletReady(): boolean {
+  return useContext(InitiaWalletReadyContext);
+}
 
 export function InitiaProvider({ children }: PropsWithChildren) {
   const [initiaModule, setInitiaModule] = useState<InitiaModule | null>(null);
@@ -50,27 +57,28 @@ export function InitiaProvider({ children }: PropsWithChildren) {
 
   const wagmiConfig = useMemo(() => {
     if (!initiaModule?.initiaPrivyWalletConnector) return null;
-    const chain = initiaModule.TESTNET ?? initiaModule.MAINNET;
-    if (!chain) return null;
 
     return createConfig({
       connectors: [initiaModule.initiaPrivyWalletConnector as never],
-      chains: [chain as never],
-      transports: { [chain.id]: http() },
+      chains: [mainnet],
+      transports: { [mainnet.id]: http() },
     });
   }, [initiaModule]);
 
-  if (!initiaModule?.InterwovenKitProvider || !wagmiConfig) {
-    return <>{children}</>;
-  }
-
-  const { InterwovenKitProvider } = initiaModule;
+  const InterwovenKitProvider = initiaModule?.InterwovenKitProvider;
+  const walletReady = Boolean(InterwovenKitProvider && wagmiConfig);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={wagmiConfig}>
-        <InterwovenKitProvider defaultChainId={DATABARD_CHAIN_ID}>{children}</InterwovenKitProvider>
-      </WagmiProvider>
+      <InitiaWalletReadyContext.Provider value={walletReady}>
+        {walletReady && InterwovenKitProvider && wagmiConfig ? (
+          <WagmiProvider config={wagmiConfig}>
+            <InterwovenKitProvider defaultChainId={DATABARD_CHAIN_ID}>{children}</InterwovenKitProvider>
+          </WagmiProvider>
+        ) : (
+          children
+        )}
+      </InitiaWalletReadyContext.Provider>
     </QueryClientProvider>
   );
 }

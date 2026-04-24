@@ -6,6 +6,7 @@
  * Gracefully degrades if InterwovenKit is not installed.
  */
 import { useState, useEffect } from "react";
+import { useInitiaWalletReady } from "@/components/InitiaProvider";
 
 type InterwovenKitHook = {
   initiaAddress?: string;
@@ -60,9 +61,10 @@ function WalletConnectInner({ onAddressChange }: WalletConnectProps) {
 
 export function WalletConnect({ onAddressChange }: WalletConnectProps) {
   const [mounted, setMounted] = useState(false);
+  const walletReady = useInitiaWalletReady();
   useEffect(() => setMounted(true), []);
 
-  if (!mounted || !useInterwovenKit) {
+  if (!mounted || !walletReady || !useInterwovenKit) {
     return (
       <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3">
         🔗 Initia wallet connection coming soon — authenticate with your .init username as an alternative to Stripe
