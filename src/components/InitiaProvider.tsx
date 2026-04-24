@@ -71,11 +71,11 @@ export function InitiaProvider({ children }: PropsWithChildren) {
   return (
     <InitiaWalletReadyContext.Provider value={walletReady}>
       {walletReady && InterwovenKitProvider && wagmiConfig ? (
-        <WagmiProvider config={wagmiConfig}>
-          <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <WagmiProvider config={wagmiConfig}>
             <InterwovenKitProvider defaultChainId={DATABARD_CHAIN_ID}>{children}</InterwovenKitProvider>
-          </QueryClientProvider>
-        </WagmiProvider>
+          </WagmiProvider>
+        </QueryClientProvider>
       ) : (
         children
       )}
