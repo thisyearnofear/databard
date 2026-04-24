@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { store } from "./store";
-import type { ResearchSession, ResearchSessionBranch, ResearchTrail, DataSource, SchemaMeta } from "./types";
+import type { EvidenceSourceContext, ResearchSession, ResearchSessionBranch, ResearchTrail, DataSource, SchemaMeta } from "./types";
 
 const SESSION_PREFIX = "research-session:";
 
@@ -24,6 +24,7 @@ export function createResearchSession(input: {
   source: DataSource;
   question: string;
   trail: ResearchTrail;
+  evidenceContext?: EvidenceSourceContext;
   episodeId?: string;
 }): ResearchSession {
   const now = new Date().toISOString();
@@ -32,6 +33,7 @@ export function createResearchSession(input: {
     schemaFqn: input.schemaMeta.fqn,
     schemaName: input.schemaMeta.name,
     source: input.source,
+    evidenceContext: input.evidenceContext,
     createdAt: now,
     updatedAt: now,
     schemaMeta: input.schemaMeta,

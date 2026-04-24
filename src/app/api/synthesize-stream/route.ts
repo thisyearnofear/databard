@@ -5,6 +5,7 @@ import type { ConnectionConfig } from "@/lib/types";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { buildResearchTrail } from "@/lib/research";
 import { createResearchSession } from "@/lib/research-session";
+import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { validateSchemaFqn, ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { getSessionConfig } from "@/lib/session";
@@ -56,13 +57,18 @@ export async function POST(req: NextRequest) {
           if (signal.aborted) { controller.close(); return; }
 
           const insights = analyzeSchema(meta);
-          const researchTrail = buildResearchTrail(meta, insights, normalizedResearchQuestion);
+          const evidenceContext = buildEvidenceContext(config);
+          const researchTrail = await enrichResearchTrail(
+            buildResearchTrail(meta, insights, normalizedResearchQuestion),
+            evidenceContext
+          );
           const researchSession = normalizedResearchQuestion
             ? createResearchSession({
                 schemaMeta: meta,
                 source: config.source,
                 question: normalizedResearchQuestion,
                 trail: researchTrail,
+                evidenceContext,
               })
             : null;
           const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail });

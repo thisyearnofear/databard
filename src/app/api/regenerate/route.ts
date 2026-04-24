@@ -5,6 +5,7 @@ import { synthesizeEpisode } from "@/lib/audio-engine";
 import { shares, feedStore } from "@/lib/store";
 import { buildResearchTrail } from "@/lib/research";
 import { appendResearchBranch, createResearchSession, linkEpisodeToSession } from "@/lib/research-session";
+import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { analyzeSchema, diffInsights } from "@/lib/schema-analysis";
 import type { ConnectionConfig, Episode } from "@/lib/types";
@@ -50,7 +51,8 @@ export async function POST(req: NextRequest) {
     // Full pipeline: fetch → analyze → diff → script → synthesize
     const meta = await fetchSchemaMeta(config, schemaFqn);
     const insights = analyzeSchema(meta);
-    const researchTrail = buildResearchTrail(meta, insights, effectiveResearchQuestion);
+    const evidenceContext = buildEvidenceContext(config);
+    const researchTrail = await enrichResearchTrail(buildResearchTrail(meta, insights, effectiveResearchQuestion), evidenceContext);
 
     const createdResearchSession = effectiveResearchQuestion && !previousResearchSessionId
       ? createResearchSession({
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
           source,
           question: effectiveResearchQuestion,
           trail: researchTrail,
+          evidenceContext,
         })
       : null;
 

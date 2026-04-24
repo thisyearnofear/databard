@@ -4,6 +4,7 @@ import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
 import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
 import { buildResearchTrail } from "@/lib/research";
+import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 
@@ -42,7 +43,10 @@ export async function POST(req: NextRequest) {
       };
       const meta = await fetchSchemaMeta(config, schemaFqn);
       const insights = analyzeSchema(meta);
-      const researchTrail = buildResearchTrail(meta, insights, normalizedResearchQuestion);
+      const researchTrail = await enrichResearchTrail(
+        buildResearchTrail(meta, insights, normalizedResearchQuestion),
+        buildEvidenceContext(config)
+      );
       script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail });
     }
 

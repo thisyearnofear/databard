@@ -64,6 +64,25 @@ export default async function ResearchSessionDetailPage({ params }: { params: Pr
           <h2 className="text-xl font-semibold">{latestBranch?.question}</h2>
           <p className="mt-2 text-sm text-[var(--text-muted)] leading-relaxed">{latestBranch?.researchTrail.summary}</p>
 
+          {session.evidenceContext && (
+            <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-3 text-sm">
+              <p className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-1">Evidence source</p>
+              <p className="font-medium">{session.evidenceContext.sourceLabel}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                {session.evidenceContext.provider}
+                {session.evidenceContext.sourceUrl ? (
+                  <>
+                    {' '}
+                    ·{' '}
+                    <a href={session.evidenceContext.sourceUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">
+                      Open source
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          )}
+
           {session.latestEpisodeId && (
             <Link
               href={`/episode/${session.latestEpisodeId}`}

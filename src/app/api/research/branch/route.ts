@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { synthesizeEpisode } from "@/lib/audio-engine";
 import { buildResearchTrail } from "@/lib/research";
 import { appendResearchBranch, getResearchSession } from "@/lib/research-session";
+import { enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { generateScript } from "@/lib/script-generator";
 import { shares } from "@/lib/store";
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     const meta = session.schemaMeta;
     const insights = analyzeSchema(meta);
-    const researchTrail = buildResearchTrail(meta, insights, question);
+    const researchTrail = await enrichResearchTrail(buildResearchTrail(meta, insights, question), session.evidenceContext);
     const script = await generateScript(meta, { researchQuestion: question, researchTrail });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);

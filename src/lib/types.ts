@@ -75,10 +75,22 @@ export interface SchemaMeta {
 
 export type ResearchFocus = "overview" | "quality" | "coverage" | "lineage" | "governance" | "freshness";
 
+export type EvidenceVerificationMode = "generated" | "source-linked" | "browser-verified";
+
+export interface EvidenceSourceContext {
+  provider: string;
+  sourceLabel: string;
+  sourceUrl?: string;
+}
+
 export interface ResearchCitation {
   source: string;
   reference: string;
   detail?: string;
+  sourceUrl?: string;
+  verificationMode?: EvidenceVerificationMode;
+  verifiedBy?: string;
+  verifiedAt?: string;
 }
 
 export interface ResearchEvidence {
@@ -120,6 +132,7 @@ export interface ResearchSession {
   schemaFqn: string;
   schemaName: string;
   source: DataSource;
+  evidenceContext?: EvidenceSourceContext;
   createdAt: string;
   updatedAt: string;
   schemaMeta: SchemaMeta;

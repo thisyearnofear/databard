@@ -948,10 +948,21 @@ export function EpisodePlayer({
                         {item.citations.map((citation) => (
                           <span
                             key={`${item.id}:${citation.source}:${citation.reference}`}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]"
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)] inline-flex items-center gap-1"
                             title={citation.detail}
                           >
-                            {citation.source}: {citation.reference}
+                            <span>{citation.source}: {citation.reference}</span>
+                            {citation.verificationMode && (
+                              <span className="uppercase tracking-wider">· {citation.verificationMode}</span>
+                            )}
+                            {citation.verifiedBy && citation.verificationMode === "browser-verified" && (
+                              <span className="uppercase tracking-wider">· {citation.verifiedBy}</span>
+                            )}
+                            {citation.sourceUrl && citation.sourceUrl.startsWith("http") && (
+                              <a href={citation.sourceUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">
+                                source
+                              </a>
+                            )}
                           </span>
                         ))}
                       </div>
