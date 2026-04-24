@@ -5,20 +5,29 @@
  * Alex: enthusiastic data advocate. Morgan: skeptical quality auditor.
  */
 import type { SchemaMeta, ScriptSegment } from "./types";
+import type { ResearchTrail } from "./types";
 import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
 import { scriptCache } from "./store";
 
+interface ScriptContext {
+  researchQuestion?: string;
+  researchTrail?: ResearchTrail;
+}
+
 /** Simple hash for cache keys */
-function hashSchema(schema: SchemaMeta): string {
+function hashSchema(schema: SchemaMeta, context?: ScriptContext): string {
   const sig = `${schema.fqn}:${schema.tables.length}:${schema.tables.map((t) =>
     `${t.name}:${t.qualityTests.length}:${t.qualityTests.filter((q) => q.status === "Failed").length}:${t.columns.length}`
   ).join(",")}`;
+  const questionSig = context?.researchQuestion?.trim() ? `|q:${context.researchQuestion.trim().toLowerCase()}` : "";
+  const trailSig = context?.researchTrail?.summary ? `|r:${context.researchTrail.summary.toLowerCase()}` : "";
   let h = 0;
-  for (let i = 0; i < sig.length; i++) h = ((h << 5) - h + sig.charCodeAt(i)) | 0;
+  const value = `${sig}${questionSig}${trailSig}`;
+  for (let i = 0; i < value.length; i++) h = ((h << 5) - h + value.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
 }
 
-const SYSTEM_PROMPT = `You are a script writer for DataBard, a podcast about data catalogs. Write a conversational two-host podcast script.
+const SYSTEM_PROMPT = `You are a script writer for DataBard, a question-first analytics experience that turns data catalogs into a podcast-style answer. Write a conversational two-host podcast script.
 
 HOSTS:
 - Alex: Enthusiastic data advocate. Gets excited about well-designed schemas, interesting column names, and good documentation. Speaks naturally, uses analogies.
@@ -39,9 +48,10 @@ RULES:
 - Keep each segment's text to 1-3 sentences — these get synthesized to speech
 - Make it sound like two people actually talking. Interruptions, reactions, disagreements are good
 - Total script should be 12-25 segments depending on schema size
+- If a research question is provided, answer it directly and keep it in view throughout the script
 - No markdown, no code blocks — just the JSON array`;
 
-function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
+function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): string {
   const tables = schema.tables.map((t) => ({
     name: t.name,
     description: t.description,
@@ -66,6 +76,8 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
   }));
 
   return JSON.stringify({
+    researchQuestion: context?.researchQuestion?.trim() || undefined,
+    researchTrail: context?.researchTrail,
     schema: schema.name,
     fqn: schema.fqn,
     description: schema.description,
@@ -97,7 +109,7 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights): string {
   });
 }
 
-async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights): Promise<ScriptSegment[]> {
+async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): Promise<ScriptSegment[]> {
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -112,7 +124,7 @@ async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights): Pr
       model,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildUserPrompt(schema, insights) },
+        { role: "user", content: buildUserPrompt(schema, insights, context) },
       ],
       temperature: 0.8,
       response_format: { type: "json_object" },
@@ -140,14 +152,28 @@ async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights): Pr
 }
 
 /** Template fallback — structured around insights, not raw table list */
-function generateTemplate(schema: SchemaMeta, insights: SchemaInsights): ScriptSegment[] {
+function generateTemplate(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): ScriptSegment[] {
   const segments: ScriptSegment[] = [];
+
+  const questionLead = context?.researchQuestion?.trim()
+    ? ` We started with the question: ${context.researchQuestion.trim()}`
+    : "";
 
   // Intro with health score
   segments.push({
     speaker: "Alex", topic: "intro",
-    text: `Welcome to DataBard! Today we're looking at the ${schema.name} schema — ${schema.tables.length} tables, health score ${insights.healthScore} out of 100. Let's dig in.`,
+    text: `Welcome to DataBard! Today we're looking at the ${schema.name} schema — ${schema.tables.length} tables, health score ${insights.healthScore} out of 100.${questionLead} Let's dig in.`,
   });
+  if (context?.researchTrail) {
+    segments.push({
+      speaker: "Morgan", topic: "research",
+      text: `We answered this in ${context.researchTrail.plan.length} steps and found ${context.researchTrail.evidence.length} concrete evidence points.`,
+    });
+    segments.push({
+      speaker: "Alex", topic: "research",
+      text: context.researchTrail.summary,
+    });
+  }
   segments.push({
     speaker: "Morgan", topic: "intro",
     text: insights.healthLabel === "critical"
@@ -299,9 +325,9 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights): ScriptS
   return segments;
 }
 
-export async function generateScript(schema: SchemaMeta): Promise<ScriptSegment[]> {
+export async function generateScript(schema: SchemaMeta, context?: ScriptContext): Promise<ScriptSegment[]> {
   // Check script cache — same schema content = same script
-  const schemaHash = hashSchema(schema);
+  const schemaHash = hashSchema(schema, context);
   const cacheKey = schemaHash;
   const cached = scriptCache.get<ScriptSegment[]>(cacheKey);
   if (cached) return cached;
@@ -311,13 +337,13 @@ export async function generateScript(schema: SchemaMeta): Promise<ScriptSegment[
 
   if (process.env.OPENAI_API_KEY) {
     try {
-      script = await generateWithLLM(schema, insights);
+      script = await generateWithLLM(schema, insights, context);
     } catch (e) {
       console.warn("LLM script generation failed, falling back to templates:", e);
-      script = generateTemplate(schema, insights);
+      script = generateTemplate(schema, insights, context);
     }
   } else {
-    script = generateTemplate(schema, insights);
+    script = generateTemplate(schema, insights, context);
   }
 
   scriptCache.set(cacheKey, script, 3600); // 1hr cache — regenerate picks up schema changes

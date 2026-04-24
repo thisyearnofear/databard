@@ -3,7 +3,9 @@ import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
 import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
-import { ValidationError, guardMutation } from "@/lib/validation";
+import { buildResearchTrail } from "@/lib/research";
+import { analyzeSchema } from "@/lib/schema-analysis";
+import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 
 /**
  * Full pipeline: metadata → script → audio.
@@ -25,7 +27,13 @@ export async function POST(req: NextRequest) {
       script = body.script;
     } else {
       // Normal mode — fetch metadata and generate script
-      const { schemaFqn, source = "openmetadata" } = body;
+      const { schemaFqn, source = "openmetadata", researchQuestion } = body;
+      const normalizedResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()
+        ? researchQuestion.trim()
+        : undefined;
+      if (normalizedResearchQuestion) {
+        validateResearchQuestion(normalizedResearchQuestion);
+      }
       const config: ConnectionConfig = {
         source,
         openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
@@ -33,7 +41,9 @@ export async function POST(req: NextRequest) {
         dbtLocal: body.dbtLocal,
       };
       const meta = await fetchSchemaMeta(config, schemaFqn);
-      script = await generateScript(meta);
+      const insights = analyzeSchema(meta);
+      const researchTrail = buildResearchTrail(meta, insights, normalizedResearchQuestion);
+      script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail });
     }
 
     let audioBuffers: Buffer[];

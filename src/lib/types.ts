@@ -73,6 +73,61 @@ export interface SchemaMeta {
   lineage: LineageEdge[];
 }
 
+export type ResearchFocus = "overview" | "quality" | "coverage" | "lineage" | "governance" | "freshness";
+
+export interface ResearchCitation {
+  source: string;
+  reference: string;
+  detail?: string;
+}
+
+export interface ResearchEvidence {
+  id: string;
+  label: string;
+  detail: string;
+  sourceType: "table" | "test" | "lineage" | "ownership" | "freshness" | "governance" | "coverage";
+  table?: string;
+  citations: ResearchCitation[];
+}
+
+export interface ResearchPlanStep {
+  id: string;
+  title: string;
+  intent: string;
+  evidenceIds: string[];
+}
+
+export interface ResearchTrail {
+  question: string;
+  focus: ResearchFocus;
+  summary: string;
+  plan: ResearchPlanStep[];
+  evidence: ResearchEvidence[];
+  recommendedActions: { title: string; priority: "critical" | "high" | "medium" | "low"; category: string; table?: string }[];
+}
+
+export interface ResearchSessionBranch {
+  id: string;
+  question: string;
+  createdAt: string;
+  parentBranchId?: string;
+  researchTrail: ResearchTrail;
+  episodeId?: string;
+}
+
+export interface ResearchSession {
+  id: string;
+  schemaFqn: string;
+  schemaName: string;
+  source: DataSource;
+  createdAt: string;
+  updatedAt: string;
+  schemaMeta: SchemaMeta;
+  branches: ResearchSessionBranch[];
+  latestBranchId?: string;
+  latestEpisodeId?: string;
+}
+
 export type Speaker = "Alex" | "Morgan";
 
 export interface ScriptSegment {
@@ -84,6 +139,9 @@ export interface ScriptSegment {
 export interface Episode {
   schemaFqn: string;
   schemaName: string;
+  researchQuestion?: string;
+  researchTrail?: ResearchTrail;
+  researchSessionId?: string;
   tableCount: number;
   qualitySummary: { passed: number; failed: number; total: number };
   script: ScriptSegment[];

@@ -1,10 +1,12 @@
 # 🎙️ DataBard
 
-**Your data catalog, as a podcast.**
+**Your data catalog, as a question-first podcast.**
 
-Two AI hosts walk through your OpenMetadata schemas, flag failing tests, trace lineage, call out PII columns, and debate what needs fixing — so your team actually knows what's in the warehouse.
+Start with a question, connect OpenMetadata, dbt, The Graph, or Dune, and let the agent turn the analysis into a podcast-style answer your team can actually consume.
 
 > **[▶ Listen to a demo episode](https://databard.vercel.app)** — no signup required
+
+If you're reviewing this for a hackathon, see [`docs/ZERVEHACK_PITCH.md`](docs/ZERVEHACK_PITCH.md) for the submission-ready summary and demo flow.
 
 ---
 
@@ -59,11 +61,13 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
                                                           └──────────────┘
 ```
 
-**Pipeline:** Metadata fetch → Schema analysis → Script generation (LLM or template) → Streaming audio synthesis → Interactive player with data drill-down
+**Pipeline:** Question → Metadata fetch → Schema analysis → Script generation (LLM or template) → Streaming audio synthesis → Interactive player with data drill-down
 
 ## Features
 
 - **Deep OpenMetadata integration** — owners, PII, glossary, profiler, quality, lineage
+- **Question-first analysis** — Zerve-aligned workflow that starts from a research prompt, not a blank script
+- **Research trail** — each answer now includes a plan, evidence, and recommended next actions
 - **Two-voice AI podcast** — Alex (advocate) and Morgan (auditor) via ElevenLabs
 - **LLM-powered scripts** — GPT-4o-mini generates natural dialogue (template fallback)
 - **Interactive drill-down** — click any segment to see columns, tests, lineage, tags

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
@@ -10,6 +11,7 @@ import { InitiaProvider } from "@/components/InitiaProvider";
 
 export default function Home() {
   const [source, setSource] = useState<DataSource>("openmetadata");
+  const [researchQuestion, setResearchQuestion] = useState("");
   const [omUrl, setOmUrl] = useState("http://localhost:8585");
   const [token, setToken] = useState("");
   const [dbtAccountId, setDbtAccountId] = useState("");
@@ -57,6 +59,7 @@ export default function Home() {
       if (saved) {
         const cfg = JSON.parse(saved);
         if (cfg.source) setSource(cfg.source);
+        if (cfg.researchQuestion) setResearchQuestion(cfg.researchQuestion);
         if (cfg.omUrl) setOmUrl(cfg.omUrl);
         if (cfg.token) setToken(cfg.token);
         if (cfg.dbtAccountId) setDbtAccountId(cfg.dbtAccountId);
@@ -70,10 +73,10 @@ export default function Home() {
   useEffect(() => {
     try {
       localStorage.setItem("databard:connection", JSON.stringify({
-        source, omUrl, dbtAccountId, dbtProjectId,
+        source, researchQuestion, omUrl, dbtAccountId, dbtProjectId,
       }));
     } catch { /* quota exceeded or private mode */ }
-  }, [source, omUrl, dbtAccountId, dbtProjectId]);
+  }, [source, researchQuestion, omUrl, dbtAccountId, dbtProjectId]);
 
   // Handle checkout cancellation return
   useEffect(() => {
@@ -93,7 +96,7 @@ export default function Home() {
     setStatus("Loading demo…");
 
     try {
-      const res = await fetch("/sample-episode.json");
+      const res = await fetch(persona === "web3" ? "/sample-episode-web3.json" : "/sample-episode.json");
       const demo: Episode = await res.json();
       setGenStep(2);
       setEpisode(demo);
@@ -167,6 +170,7 @@ export default function Home() {
 
     try {
       const body: Record<string, unknown> = { schemaFqn, source };
+      if (researchQuestion.trim()) body.researchQuestion = researchQuestion.trim();
       if (source === "openmetadata") { body.url = omUrl; body.token = token; }
       else if (source === "dbt-cloud") { body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken }; }
       else if (source === "dbt-local" && manifestFile) {
@@ -209,7 +213,9 @@ export default function Home() {
             metadata = {
               schemaFqn: data.schemaFqn, schemaName: data.schemaName, tableCount: data.tableCount,
               qualitySummary: { passed: data.testsTotal - data.testsFailed, failed: data.testsFailed, total: data.testsTotal },
-              script: data.script, schemaMeta: data.schemaMeta,
+              script: data.script, schemaMeta: data.schemaMeta, researchQuestion: data.researchQuestion,
+              researchTrail: data.researchTrail,
+              researchSessionId: data.researchSessionId,
             };
           } else if (data.type === "estimate") {
             setGenTotal(data.segments);
@@ -463,25 +469,62 @@ export default function Home() {
       {/* Hero */}
       <section className="flex flex-col items-center text-center pt-8 sm:pt-12 pb-10 sm:pb-14 max-w-2xl">
         <p className="text-xs text-[var(--accent)] font-medium tracking-wider uppercase mb-4">
-          {persona === "enterprise" ? "Audio documentation for data teams" : "On-chain observability for protocol teams"}
+          {persona === "enterprise" ? "Question-first audio for data teams" : "Question-first observability for protocol teams"}
         </p>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
           {persona === "enterprise" ? "Your data catalog," : "Your protocol health,"}<br />as a podcast
         </h1>
         <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
           {persona === "enterprise" 
-            ? "Two AI hosts walk through your schemas, flag failing tests, and trace lineage — so your team actually knows what's in the warehouse."
-            : "Monitor subgraphs, indexer lag, and entity shifts with verifiable health reports minted to Initia — making data quality part of consensus."
+            ? "Start with a question, connect your catalog, and let two AI hosts turn the answer into something your team will actually hear."
+            : "Start with a question, connect your protocol data, and mint verifiable health reports to Initia without losing the narrative."
           }
         </p>
 
-        <button
-          onClick={handleDemo}
-          className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-8 py-4 text-lg font-medium cursor-pointer transition-all hover:scale-[1.02] mb-3"
-        >
-          ▶ Listen to a demo episode
-        </button>
+        <div className="flex flex-wrap justify-center gap-3 mb-3">
+          <button
+            onClick={handleDemo}
+            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-8 py-4 text-lg font-medium cursor-pointer transition-all hover:scale-[1.02]"
+          >
+            ▶ Listen to a demo episode
+          </button>
+          <Link
+            href="/research/sessions"
+            className="inline-flex items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] px-6 py-4 text-sm font-medium text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+          >
+            Browse saved sessions
+          </Link>
+        </div>
         <p className="text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
+      </section>
+
+      <section className="w-full max-w-2xl pb-12 sm:pb-16">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 sm:p-6">
+          <label className="text-sm text-[var(--text-muted)]">Research question</label>
+          <textarea
+            className="mt-2 w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm min-h-24 resize-y"
+            value={researchQuestion}
+            onChange={(e) => setResearchQuestion(e.target.value)}
+            placeholder={persona === "enterprise"
+              ? "What is the biggest risk hiding in this catalog?"
+              : "Which protocol health issue should we investigate first?"}
+          />
+          <div className="flex flex-wrap gap-2 mt-3">
+            {(persona === "enterprise"
+              ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
+              : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"]
+            ).map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setResearchQuestion(preset)}
+                className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)] transition-colors cursor-pointer"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Social proof */}
@@ -592,6 +635,15 @@ export default function Home() {
           </button>
         ) : (
           <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border border-[var(--border)] animate-slide-up">
+            <label className="text-sm text-[var(--text-muted)]">Research question</label>
+            <textarea
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm min-h-24 resize-y"
+              value={researchQuestion}
+              onChange={(e) => setResearchQuestion(e.target.value)}
+              placeholder={persona === "enterprise"
+                ? "What do you want to learn from this catalog?"
+                : "What should we investigate about this protocol?"}
+            />
             <label className="text-sm text-[var(--text-muted)]">Data Source</label>
             <select className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
               value={source} onChange={(e) => setSource(e.target.value as DataSource)}>

@@ -1,6 +1,7 @@
 {
   "schemaFqn": "uniswap-v3.mainnet",
   "schemaName": "Uniswap V3 Mainnet",
+  "researchQuestion": "Which protocol health issue should we fix first?",
   "tableCount": 8,
   "qualitySummary": { "passed": 12, "failed": 2, "total": 14 },
   "generatedAt": "2026-04-22T09:00:00Z",

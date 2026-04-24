@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   const episode = id ? shares.get<Episode>(id) : null;
 
   const name = episode?.schemaName ?? "Your Data Catalog";
+  const question = episode?.researchQuestion ?? null;
   const tables = episode?.tableCount ?? 0;
   const tests = episode?.qualitySummary.total ?? 0;
   const failed = episode?.qualitySummary.failed ?? 0;
@@ -64,6 +65,21 @@ export async function GET(req: NextRequest) {
         >
           {name}
         </div>
+
+        {question && (
+          <div
+            style={{
+              fontSize: "28px",
+              lineHeight: 1.3,
+              maxWidth: "900px",
+              textAlign: "center",
+              color: "#b0b0c8",
+              marginBottom: "24px",
+            }}
+          >
+            {question}
+          </div>
+        )}
 
         {/* Stats row */}
         {episode && (

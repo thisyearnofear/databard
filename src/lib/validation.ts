@@ -38,6 +38,19 @@ export function validateSchemaFqn(fqn: string): void {
   }
 }
 
+export function validateResearchQuestion(question: string): void {
+  const trimmed = question.trim();
+  if (!trimmed) {
+    throw new ValidationError("Research question is required");
+  }
+  if (trimmed.length < 8) {
+    throw new ValidationError("Research question must be at least 8 characters");
+  }
+  if (trimmed.length > 240) {
+    throw new ValidationError("Research question must be 240 characters or fewer");
+  }
+}
+
 export function validateDbtConfig(config: { accountId: string; projectId: string; token: string }): void {
   if (!config.accountId) {
     throw new ValidationError("dbt Cloud Account ID is required");

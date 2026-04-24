@@ -3,7 +3,9 @@ import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeEpisode } from "@/lib/audio-engine";
 import { shares, feedStore } from "@/lib/store";
-import { ValidationError, guardMutation } from "@/lib/validation";
+import { buildResearchTrail } from "@/lib/research";
+import { appendResearchBranch, createResearchSession, linkEpisodeToSession } from "@/lib/research-session";
+import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { analyzeSchema, diffInsights } from "@/lib/schema-analysis";
 import type { ConnectionConfig, Episode } from "@/lib/types";
 
@@ -22,10 +24,20 @@ export async function POST(req: NextRequest) {
     guardMutation(req);
 
     const body = await req.json();
-    const { schemaFqn, source = "openmetadata", shareId } = body;
+    const { schemaFqn, source = "openmetadata", shareId, researchQuestion } = body;
 
     if (!schemaFqn) {
       return NextResponse.json({ ok: false, error: "schemaFqn required" }, { status: 400 });
+    }
+
+    const previousResearchQuestion = shareId ? shares.get<Episode>(shareId)?.researchQuestion : undefined;
+    const previousResearchSessionId = shareId ? shares.get<Episode>(shareId)?.researchSessionId : undefined;
+    const effectiveResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()
+      ? researchQuestion.trim()
+      : previousResearchQuestion;
+
+    if (typeof effectiveResearchQuestion === "string" && effectiveResearchQuestion.trim()) {
+      validateResearchQuestion(effectiveResearchQuestion);
     }
 
     const config: ConnectionConfig = {
@@ -38,6 +50,16 @@ export async function POST(req: NextRequest) {
     // Full pipeline: fetch → analyze → diff → script → synthesize
     const meta = await fetchSchemaMeta(config, schemaFqn);
     const insights = analyzeSchema(meta);
+    const researchTrail = buildResearchTrail(meta, insights, effectiveResearchQuestion);
+
+    const createdResearchSession = effectiveResearchQuestion && !previousResearchSessionId
+      ? createResearchSession({
+          schemaMeta: meta,
+          source,
+          question: effectiveResearchQuestion,
+          trail: researchTrail,
+        })
+      : null;
 
     // Change detection: compare against previous episode if shareId provided
     let diff: ReturnType<typeof diffInsights> | undefined;
@@ -51,7 +73,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const script = await generateScript(meta);
+    const script = await generateScript(meta, { researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined, researchTrail });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);
 
@@ -61,10 +83,13 @@ export async function POST(req: NextRequest) {
     const episode: Episode & { audioBase64: string } = {
       schemaFqn: meta.fqn,
       schemaName: meta.name,
+      researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion.trim() : undefined,
+      researchSessionId: previousResearchSessionId ?? createdResearchSession?.id,
       tableCount: meta.tables.length,
       qualitySummary: { passed: totalTests - failedTests, failed: failedTests, total: totalTests },
       script,
       schemaMeta: meta,
+      researchTrail,
       generatedAt: new Date().toISOString(),
       audioBase64: combined.toString("base64"),
     };
@@ -72,6 +97,19 @@ export async function POST(req: NextRequest) {
     // Store as shared episode
     const id = shareId ?? Math.random().toString(36).substring(2, 10);
     shares.set(id, episode, 86400 * 7); // 7 day TTL for scheduled episodes
+
+    if (episode.researchSessionId) {
+      if (previousResearchSessionId) {
+        appendResearchBranch({
+          sessionId: previousResearchSessionId,
+          question: episode.researchQuestion ?? effectiveResearchQuestion ?? meta.name,
+          trail: researchTrail,
+          episodeId: id,
+        });
+      } else if (createdResearchSession) {
+        linkEpisodeToSession(createdResearchSession.id, id);
+      }
+    }
 
     // Append to feed for RSS
     feedStore.append({
@@ -109,6 +147,7 @@ export async function POST(req: NextRequest) {
       tableCount: meta.tables.length,
       testsTotal: totalTests,
       testsFailed: failedTests,
+      researchSessionId: episode.researchSessionId,
       segments: script.length,
       diff: diff ? { summary: diff.summary, newTables: diff.newTables, removedTables: diff.removedTables, newFailures: diff.newFailures, resolvedFailures: diff.resolvedFailures, healthScoreChange: diff.healthScoreChange } : undefined,
     });

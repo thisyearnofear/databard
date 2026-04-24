@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import type { ScriptSegment, Episode, TableMeta, LineageEdge } from "@/lib/types";
+import type { ScriptSegment, Episode, TableMeta, LineageEdge, ResearchSession } from "@/lib/types";
 import { analyzeSchema, generateActionItems, type ActionItem, type ActionPriority } from "@/lib/schema-analysis";
+import { buildResearchTrail } from "@/lib/research";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
-type PlayerTab = "segments" | "insights" | "actions";
+type PlayerTab = "segments" | "insights" | "actions" | "research";
 
 function HealthBadge({ summary }: { summary: Episode["qualitySummary"] }) {
   if (summary.total === 0) return <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--border)] text-[var(--text-muted)]">No tests</span>;
@@ -177,6 +178,13 @@ export function EpisodePlayer({
   onMint?: () => void;
   minting?: boolean;
 }) {
+  const [currentEpisode, setCurrentEpisode] = useState<Episode>(episode);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState(audioUrl);
+  const [researchSession, setResearchSession] = useState<ResearchSession | null>(null);
+  const [researchSessionLoading, setResearchSessionLoading] = useState(false);
+  const [followUpQuestion, setFollowUpQuestion] = useState(episode.researchQuestion ?? "");
+  const [branching, setBranching] = useState(false);
+  const [branchError, setBranchError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -201,25 +209,65 @@ export function EpisodePlayer({
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
-      const saved = localStorage.getItem(`databard:actions:${episode.schemaFqn}`);
+      const saved = localStorage.getItem(`databard:actions:${currentEpisode.schemaFqn}`);
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
 
+  useEffect(() => {
+    setCurrentEpisode(episode);
+    setCurrentAudioUrl(audioUrl);
+    setFollowUpQuestion(episode.researchQuestion ?? "");
+    setBranchError(null);
+  }, [episode, audioUrl]);
+
   // Compute insights and action items from schema metadata
   const { insights, actionItems } = useMemo(() => {
-    if (!episode.schemaMeta) return { insights: null, actionItems: [] };
-    const ins = analyzeSchema(episode.schemaMeta);
+    if (!currentEpisode.schemaMeta) return { insights: null, actionItems: [] };
+    const ins = analyzeSchema(currentEpisode.schemaMeta);
     const items = generateActionItems(ins);
     return { insights: ins, actionItems: items };
-  }, [episode.schemaMeta]);
+  }, [currentEpisode.schemaMeta]);
+
+  const researchTrail = useMemo(() => {
+    if (currentEpisode.researchTrail) return currentEpisode.researchTrail;
+    if (!currentEpisode.schemaMeta || !insights) return null;
+    return buildResearchTrail(currentEpisode.schemaMeta, insights, currentEpisode.researchQuestion);
+  }, [currentEpisode.researchTrail, currentEpisode.schemaMeta, insights, currentEpisode.researchQuestion]);
+
+  useEffect(() => {
+    const sessionId = currentEpisode.researchSessionId;
+    if (!sessionId) {
+      setResearchSession(null);
+      setResearchSessionLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setResearchSessionLoading(true);
+    fetch(`/api/research/session?id=${encodeURIComponent(sessionId)}`, { signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          setResearchSession(data.session as ResearchSession);
+        } else {
+          setResearchSession(null);
+        }
+      })
+      .catch(() => {
+        setResearchSession(null);
+      })
+      .finally(() => setResearchSessionLoading(false));
+
+    return () => controller.abort();
+  }, [currentEpisode.researchSessionId]);
 
   // Persist checked actions
   function toggleAction(id: string) {
     setCheckedActions((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(`databard:actions:${episode.schemaFqn}`, JSON.stringify([...next])); } catch {}
+      try { localStorage.setItem(`databard:actions:${currentEpisode.schemaFqn}`, JSON.stringify([...next])); } catch {}
       return next;
     });
   }
@@ -231,7 +279,7 @@ export function EpisodePlayer({
       const res = await fetch("/api/investigate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actionItem: item, schemaName: episode.schemaName }),
+        body: JSON.stringify({ actionItem: item, schemaName: currentEpisode.schemaName }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -253,7 +301,7 @@ export function EpisodePlayer({
   // Web Audio API setup for waveform
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
+    if (!audio || !currentAudioUrl) return;
     const ctx = new AudioContext();
     const source = ctx.createMediaElementSource(audio);
     const analyser = ctx.createAnalyser();
@@ -262,7 +310,7 @@ export function EpisodePlayer({
     analyser.connect(ctx.destination);
     analyserRef.current = analyser;
     return () => { ctx.close(); };
-  }, [audioUrl]);
+  }, [currentAudioUrl]);
 
   // Responsive canvas sizing
   useEffect(() => {
@@ -356,13 +404,13 @@ export function EpisodePlayer({
   const getActiveIdx = useCallback(() => {
     if (segmentOffsets && segmentOffsets.length > 0 && duration > 0) {
       for (let i = segmentOffsets.length - 1; i >= 0; i--) {
-        if (currentTime >= segmentOffsets[i] * duration) return Math.min(i, episode.script.length - 1);
+        if (currentTime >= segmentOffsets[i] * duration) return Math.min(i, currentEpisode.script.length - 1);
       }
       return 0;
     }
-    const segDuration = duration / (episode.script.length || 1);
-    return Math.min(Math.floor(currentTime / segDuration), episode.script.length - 1);
-  }, [currentTime, duration, segmentOffsets, episode.script.length]);
+    const segDuration = duration / (currentEpisode.script.length || 1);
+    return Math.min(Math.floor(currentTime / segDuration), currentEpisode.script.length - 1);
+  }, [currentTime, duration, segmentOffsets, currentEpisode.script.length]);
 
   const activeIdx = getActiveIdx();
 
@@ -433,7 +481,7 @@ export function EpisodePlayer({
     if (segmentOffsets && segmentOffsets.length > i) {
       audio.currentTime = segmentOffsets[i] * duration;
     } else {
-      const segDuration = duration / (episode.script.length || 1);
+      const segDuration = duration / (currentEpisode.script.length || 1);
       audio.currentTime = i * segDuration;
     }
     if (!playing) { audio.play(); setPlaying(true); }
@@ -449,10 +497,10 @@ export function EpisodePlayer({
   }
 
   function handleDownload() {
-    if (!audioUrl) return;
+    if (!currentAudioUrl) return;
     const a = document.createElement("a");
-    a.href = audioUrl;
-    a.download = `databard-${episode.schemaName}.mp3`;
+    a.href = currentAudioUrl;
+    a.download = `databard-${currentEpisode.schemaName}.mp3`;
     a.click();
     setNudge("download");
     setTimeout(() => setNudge(null), 8000);
@@ -463,8 +511,8 @@ export function EpisodePlayer({
     try {
       // Upload episode for shareable URL
       let audioBase64: string | undefined;
-      if (audioUrl) {
-        const audioRes = await fetch(audioUrl);
+      if (currentAudioUrl) {
+        const audioRes = await fetch(currentAudioUrl);
         const blob = await audioRes.blob();
         const buffer = await blob.arrayBuffer();
         audioBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
@@ -473,7 +521,7 @@ export function EpisodePlayer({
       const res = await fetch("/api/share", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...episode, audioBase64 }),
+        body: JSON.stringify({ ...currentEpisode, audioBase64 }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -484,8 +532,8 @@ export function EpisodePlayer({
         if (navigator.share) {
           try {
             await navigator.share({
-              title: `🎙️ DataBard: ${episode.schemaName}`,
-              text: `Listen to a podcast walkthrough of the ${episode.schemaName} schema — ${episode.tableCount} tables, ${episode.qualitySummary.total} tests`,
+              title: `🎙️ DataBard: ${currentEpisode.schemaName}`,
+              text: `Listen to a podcast walkthrough of the ${currentEpisode.schemaName} schema — ${currentEpisode.tableCount} tables, ${currentEpisode.qualitySummary.total} tests`,
               url,
             });
             return;
@@ -508,7 +556,7 @@ export function EpisodePlayer({
 
   function shareVia(platform: string) {
     if (!shareUrl) return;
-    const text = `🎙️ Listen to a DataBard episode on the ${episode.schemaName} schema`;
+    const text = `🎙️ Listen to a DataBard episode on the ${currentEpisode.schemaName} schema`;
     const encoded = encodeURIComponent(text);
     const encodedUrl = encodeURIComponent(shareUrl);
 
@@ -531,14 +579,14 @@ export function EpisodePlayer({
   }
 
   async function handleDownloadReport() {
-    if (!episode.schemaMeta) return;
+    if (!currentEpisode.schemaMeta) return;
     setReportLoading(true);
     setReportError(null);
     try {
       const res = await fetch("/api/canvas/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episode }),
+        body: JSON.stringify({ episode: currentEpisode }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -549,7 +597,7 @@ export function EpisodePlayer({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `databard-${episode.schemaName}-report.pdf`;
+      a.download = `databard-${currentEpisode.schemaName}-report.pdf`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (e) {
@@ -560,16 +608,16 @@ export function EpisodePlayer({
   }
 
   async function handleClip() {
-    const highlight = episode.script.find((s) =>
+    const highlight = currentEpisode.script.find((s) =>
       s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
-    ) ?? episode.script[0];
+    ) ?? currentEpisode.script[0];
 
-    const clipText = `🎙️ DataBard on ${episode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\n${shareUrl ?? window.location.origin}`;
+    const clipText = `🎙️ DataBard on ${currentEpisode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\n${shareUrl ?? window.location.origin}`;
 
     // Try native share with the clip text
     if (navigator.share) {
       try {
-        await navigator.share({ title: `DataBard: ${episode.schemaName}`, text: clipText });
+        await navigator.share({ title: `DataBard: ${currentEpisode.schemaName}`, text: clipText });
         return;
       } catch { /* cancelled */ }
     }
@@ -577,6 +625,44 @@ export function EpisodePlayer({
     await navigator.clipboard.writeText(clipText);
     setClipCopied(true);
     setTimeout(() => setClipCopied(false), 2000);
+  }
+
+  async function handleFollowUpBranch() {
+    const sessionId = currentEpisode.researchSessionId;
+    const question = followUpQuestion.trim();
+    if (!sessionId || !question || branching) return;
+
+    setBranching(true);
+    setBranchError(null);
+
+    try {
+      const res = await fetch("/api/research/branch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          question,
+          parentBranchId: researchSession?.latestBranchId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || res.statusText || "Failed to create branch");
+      }
+
+      const audioBytes = Uint8Array.from(atob(data.episode.audioBase64), (char) => char.charCodeAt(0));
+      const nextAudioUrl = URL.createObjectURL(new Blob([audioBytes], { type: "audio/mpeg" }));
+      const { audioBase64: _audioBase64, ...nextEpisode } = data.episode;
+      setCurrentEpisode(nextEpisode);
+      setCurrentAudioUrl(nextAudioUrl);
+      setResearchSession(data.session ?? null);
+      setFollowUpQuestion("");
+      setActiveTab("research");
+    } catch (error) {
+      setBranchError(error instanceof Error ? error.message : "Failed to create follow-up branch");
+    } finally {
+      setBranching(false);
+    }
   }
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -588,11 +674,21 @@ export function EpisodePlayer({
         <div className="flex items-start justify-between mb-4 gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg sm:text-xl font-semibold truncate">🎙️ {episode.schemaName}</h2>
-              <HealthBadge summary={episode.qualitySummary} />
+              <h2 className="text-lg sm:text-xl font-semibold truncate">🎙️ {currentEpisode.schemaName}</h2>
+              <HealthBadge summary={currentEpisode.qualitySummary} />
             </div>
+            {currentEpisode.researchQuestion && (
+              <p className="text-xs sm:text-sm text-[var(--accent)]/90 mb-1">
+                Question: {currentEpisode.researchQuestion}
+              </p>
+            )}
+            {researchTrail && (
+              <p className="text-xs text-[var(--text-muted)] mb-1 max-w-md">
+                Answer: {researchTrail.summary}
+              </p>
+            )}
             <p className="text-xs sm:text-sm text-[var(--text-muted)]">
-              {episode.tableCount} tables · {episode.qualitySummary.total} tests
+              {currentEpisode.tableCount} tables · {currentEpisode.qualitySummary.total} tests
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 relative">
@@ -629,7 +725,7 @@ export function EpisodePlayer({
                 {minting ? "…" : "⛓️ Mint"}
               </button>
             )}
-            {episode.schemaMeta && (
+            {currentEpisode.schemaMeta && (
               <button
                 onClick={handleDownloadReport}
                 disabled={reportLoading}
@@ -729,6 +825,7 @@ export function EpisodePlayer({
         {/* Tab bar */}
         <div className="flex border-b border-[var(--border)]">
           {([
+            { id: "research" as const, label: "Research", count: researchTrail ? `${researchTrail.plan.length}` : undefined },
             { id: "insights" as const, label: "Summary", count: insights ? `${insights.healthScore}` : undefined },
             { id: "actions" as const, label: "Actions", count: actionItems.length > 0 ? `${actionItems.length - checkedActions.size}` : undefined },
             { id: "segments" as const, label: "Transcript" },
@@ -753,6 +850,142 @@ export function EpisodePlayer({
             </button>
           ))}
         </div>
+
+        {/* Insights tab */}
+        {activeTab === "research" && researchTrail && (
+          <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+            <div className="bg-[var(--bg)] rounded-lg p-4 border border-[var(--border)]">
+              <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Research question</div>
+              <p className="text-sm font-medium">{researchTrail.question}</p>
+              <div className="mt-3 text-xs uppercase tracking-wider text-[var(--text-muted)] mb-1">Answer</div>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">{researchTrail.summary}</p>
+            </div>
+
+            <div className="bg-[var(--bg)] rounded-lg p-4 border border-[var(--border)]">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-1">Research session</div>
+                  <p className="text-sm font-medium">
+                    {currentEpisode.researchSessionId ? `Session ${currentEpisode.researchSessionId.slice(0, 8)}` : "Session not created"}
+                  </p>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">
+                  {researchSessionLoading ? "…" : researchSession ? `${researchSession.branches.length} branches` : "No history"}
+                </span>
+              </div>
+
+              {researchSession ? (
+                <div className="space-y-2 mb-3">
+                  {researchSession.branches.slice().reverse().map((branch) => (
+                    <div key={branch.id} className="rounded-md border border-[var(--border)] p-2.5 text-xs bg-[var(--surface)]">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-medium text-[var(--text)]">{branch.question}</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{new Date(branch.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-[var(--text-muted)] leading-relaxed">{branch.researchTrail.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--text-muted)] mb-3">
+                  {researchSessionLoading ? "Loading saved branches…" : "Follow-ups will appear here after you generate a branch."}
+                </p>
+              )}
+
+              <div className="space-y-2">
+                <textarea
+                  value={followUpQuestion}
+                  onChange={(event) => setFollowUpQuestion(event.target.value)}
+                  placeholder="Ask a follow-up question about this schema"
+                  rows={3}
+                  className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm resize-none"
+                  disabled={!currentEpisode.researchSessionId || branching}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    {!currentEpisode.researchSessionId ? "Follow-up branching appears on fresh episodes with a saved research session." : "Branch the current research session without leaving the player."}
+                  </p>
+                  <button
+                    onClick={handleFollowUpBranch}
+                    disabled={!currentEpisode.researchSessionId || branching || !followUpQuestion.trim()}
+                    className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {branching ? "Branching…" : "Create branch"}
+                  </button>
+                </div>
+                {branchError && <p className="text-[10px] text-[var(--danger)]">{branchError}</p>}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Plan</h4>
+              <div className="space-y-2">
+                {researchTrail.plan.map((step) => (
+                  <div key={step.id} className="rounded-lg border border-[var(--border)] p-3 bg-[var(--bg)]">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="font-medium text-sm">{step.title}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{step.evidenceIds.length} evidence</span>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">{step.intent}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Evidence</h4>
+              <div className="space-y-2">
+                {researchTrail.evidence.map((item) => (
+                  <div key={item.id} className="rounded-lg border border-[var(--border)] p-3 bg-[var(--bg)]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{item.sourceType}</span>
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed">{item.detail}</p>
+                    {item.table && <p className="text-[10px] text-[var(--text-muted)] mt-1">Table: {item.table}</p>}
+                    {item.citations.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {item.citations.map((citation) => (
+                          <span
+                            key={`${item.id}:${citation.source}:${citation.reference}`}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]"
+                            title={citation.detail}
+                          >
+                            {citation.source}: {citation.reference}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {researchTrail.recommendedActions.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Recommended actions</h4>
+                <div className="space-y-2">
+                  {researchTrail.recommendedActions.map((action) => (
+                    <div key={action.title} className="rounded-lg border border-[var(--border)] p-3 bg-[var(--bg)] flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">{action.title}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{action.category}{action.table ? ` · ${action.table}` : ""}</p>
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{action.priority}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "research" && !researchTrail && (
+          <div className="p-6 text-center text-sm text-[var(--text-muted)]">
+            <p>No research trail available yet.</p>
+            <p className="text-xs mt-1">Generate a fresh episode to see the planner and evidence trail.</p>
+          </div>
+        )}
 
         {/* Insights tab */}
         {activeTab === "insights" && insights && (
@@ -946,10 +1179,10 @@ export function EpisodePlayer({
         {/* Segments tab (transcript) */}
         {activeTab === "segments" && (
           <div ref={segListRef} className="p-4 max-h-96 overflow-y-auto scroll-smooth">
-            {episode.script.map((seg: ScriptSegment, i: number) => {
+            {currentEpisode.script.map((seg: ScriptSegment, i: number) => {
               const isExpanded = expandedSeg === i;
-              const table = isExpanded && episode.schemaMeta
-                ? episode.schemaMeta.tables.find((t) => t.name === seg.topic)
+              const table = isExpanded && currentEpisode.schemaMeta
+                ? currentEpisode.schemaMeta.tables.find((t) => t.name === seg.topic)
                 : null;
 
               return (
@@ -972,7 +1205,7 @@ export function EpisodePlayer({
                     {table && <span className="text-[var(--accent)] shrink-0 text-xs">📊</span>}
                   </button>
                   {table && (
-                    <TableDetail table={table} lineage={episode.schemaMeta!.lineage} />
+                    <TableDetail table={table} lineage={currentEpisode.schemaMeta!.lineage} />
                   )}
                 </div>
               );
@@ -983,7 +1216,7 @@ export function EpisodePlayer({
 
       <audio
         ref={audioRef}
-        src={audioUrl}
+        src={currentAudioUrl}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
         onEnded={() => setPlaying(false)}

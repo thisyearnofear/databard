@@ -13,21 +13,23 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const desc = `${episode.tableCount} tables · ${episode.qualitySummary.total} tests${
     episode.qualitySummary.failed > 0 ? ` · ${episode.qualitySummary.failed} failing` : ""
   }`;
+  const question = episode.researchQuestion ? ` Research question: ${episode.researchQuestion}` : "";
+  const answer = episode.researchTrail?.summary ? ` Answer: ${episode.researchTrail.summary}` : "";
   const ogImage = `/api/og?id=${id}`;
 
   return {
     title: `${episode.schemaName} — DataBard`,
-    description: `Listen to a podcast walkthrough of the ${episode.schemaName} schema. ${desc}`,
+    description: `Listen to a podcast walkthrough of the ${episode.schemaName} schema. ${desc}.${question}${answer}`,
     openGraph: {
       title: `🎙️ DataBard: ${episode.schemaName}`,
-      description: `Podcast-style audio docs for the ${episode.schemaName} schema. ${desc}`,
+      description: `Podcast-style audio docs for the ${episode.schemaName} schema. ${desc}.${question}${answer}`,
       type: "music.song",
       images: [{ url: ogImage, width: 1200, height: 630, alt: `DataBard episode: ${episode.schemaName}` }],
     },
     twitter: {
       card: "summary_large_image",
       title: `🎙️ DataBard: ${episode.schemaName}`,
-      description: `Podcast-style audio docs for the ${episode.schemaName} schema. ${desc}`,
+      description: `Podcast-style audio docs for the ${episode.schemaName} schema. ${desc}.${question}${answer}`,
       images: [ogImage],
     },
   };

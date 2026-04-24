@@ -3,7 +3,10 @@ import { generateScript } from "@/lib/script-generator";
 import { synthesizeSpeech, synthesizeSfx, estimateCost } from "@/lib/audio-engine";
 import type { ConnectionConfig } from "@/lib/types";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
-import { validateSchemaFqn, ValidationError, guardMutation } from "@/lib/validation";
+import { buildResearchTrail } from "@/lib/research";
+import { createResearchSession } from "@/lib/research-session";
+import { analyzeSchema } from "@/lib/schema-analysis";
+import { validateSchemaFqn, ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { getSessionConfig } from "@/lib/session";
 
 /**
@@ -16,8 +19,14 @@ export async function POST(req: NextRequest) {
     guardMutation(req);
 
     const body = await req.json();
-    const { schemaFqn, source = "openmetadata" } = body;
+    const { schemaFqn, source = "openmetadata", researchQuestion } = body;
     validateSchemaFqn(schemaFqn);
+    const normalizedResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()
+      ? researchQuestion.trim()
+      : undefined;
+    if (normalizedResearchQuestion) {
+      validateResearchQuestion(normalizedResearchQuestion);
+    }
 
     // Prefer session config (credentials stored server-side), fall back to body
     const sessionConfig = await getSessionConfig();
@@ -46,7 +55,17 @@ export async function POST(req: NextRequest) {
           const meta = await fetchSchemaMeta(config, schemaFqn);
           if (signal.aborted) { controller.close(); return; }
 
-          const script = await generateScript(meta);
+          const insights = analyzeSchema(meta);
+          const researchTrail = buildResearchTrail(meta, insights, normalizedResearchQuestion);
+          const researchSession = normalizedResearchQuestion
+            ? createResearchSession({
+                schemaMeta: meta,
+                source: config.source,
+                question: normalizedResearchQuestion,
+                trail: researchTrail,
+              })
+            : null;
+          const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail });
           if (signal.aborted) { controller.close(); return; }
 
           // Send metadata
@@ -57,11 +76,14 @@ export async function POST(req: NextRequest) {
             type: "metadata",
             schemaFqn: meta.fqn,
             schemaName: meta.name,
+            researchQuestion: normalizedResearchQuestion,
             tableCount: meta.tables.length,
             testsTotal: totalTests,
             testsFailed: failedTests,
             script,
             schemaMeta: meta,
+            researchTrail,
+            researchSessionId: researchSession?.id,
           });
 
           // Send cost estimate before synthesizing
