@@ -2,14 +2,27 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { ScheduleConfig } from "@/lib/store";
-import { WalletConnect } from "@/components/WalletConnect";
-import { InitiaProvider } from "@/components/InitiaProvider";
+import { ProWalletIsland } from "@/components/pro/ProWalletIsland";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+type ProSession = {
+  identity: {
+    stripeCustomerId: string | null;
+    email: string | null;
+    walletAddress: string | null;
+  };
+  entitlements: {
+    stripe: boolean;
+    onchain: boolean;
+  };
+};
+
 export default function ProSettings() {
   const [customerId, setCustomerId] = useState("");
-  const [initiaAddress, setInitiaAddress] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [session, setSession] = useState<ProSession | null>(null);
   const [schedules, setSchedules] = useState<ScheduleConfig[]>([]);
   const [feedToken, setFeedToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,36 +38,24 @@ export default function ProSettings() {
   const [source, setSource] = useState<"openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune">("openmetadata");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session_id");
-    if (sessionId) {
-      fetch(`/api/checkout/session?session_id=${sessionId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.ok && data.customerId) {
-            setCustomerId(data.customerId);
-            localStorage.setItem("databard:customerId", data.customerId);
-            loadSchedules(data.customerId);
-            setStatus("🎉 Welcome to DataBard Pro!");
-            setTimeout(() => setStatus(""), 5000);
-          }
-        })
-        .catch(() => {});
-      window.history.replaceState({}, "", "/pro");
-      return;
-    }
-
-    const saved = localStorage.getItem("databard:customerId");
-    if (saved) { setCustomerId(saved); loadSchedules(saved); }
-    const savedInitia = localStorage.getItem("databard:initiaAddress");
-    if (savedInitia) setInitiaAddress(savedInitia);
+    fetch("/api/pro/auth/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.session) {
+          setSession(data.session);
+          setCustomerId(data.session.identity.stripeCustomerId ?? "");
+          setEmail(data.session.identity.email ?? "");
+          setWalletAddress(data.session.identity.walletAddress ?? null);
+          loadSchedules();
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  async function loadSchedules(cid: string) {
-    if (!cid) return;
+  async function loadSchedules() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/schedules?customerId=${cid}`);
+      const res = await fetch("/api/schedules");
       const data = await res.json();
       if (data.ok) { setSchedules(data.schedules); setFeedToken(data.feedToken); }
       else setStatus(`Error: ${data.error}`);
@@ -63,14 +64,13 @@ export default function ProSettings() {
   }
 
   async function handleSaveSchedule() {
-    if (!customerId || !schemaFqn) { setStatus("Customer ID and schema FQN required"); return; }
+    if (!schemaFqn) { setStatus("Schema FQN required"); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customerId,
           schedule: { schemaFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source },
         }),
       });
@@ -118,34 +118,43 @@ export default function ProSettings() {
   }
 
   async function handleDelete(id: string) {
-    if (!customerId) return;
-    await fetch(`/api/schedules?customerId=${customerId}&id=${id}`, { method: "DELETE" });
+    await fetch(`/api/schedules?id=${id}`, { method: "DELETE" });
     setSchedules((prev) => prev.filter((s) => s.id !== id));
   }
 
-  function handleCustomerIdSubmit() {
-    localStorage.setItem("databard:customerId", customerId);
-    loadSchedules(customerId);
+  async function handleStripeIdentitySubmit() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/pro/auth/stripe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: customerId || undefined, email: email || undefined }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Failed to link Stripe/email identity");
+      setSession(data.session);
+      await loadSchedules();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Failed to link Stripe identity");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleAddressChange = useCallback((address: string | null) => {
-    setInitiaAddress(address);
-    if (address) {
-      localStorage.setItem("databard:initiaAddress", address);
-      // Use initia address as customer identifier if no Stripe ID
-      if (!customerId) {
-        setCustomerId(address);
-        loadSchedules(address);
-      }
-    } else {
-      localStorage.removeItem("databard:initiaAddress");
-    }
-  }, [customerId]);
+    setWalletAddress(address);
+  }, []);
+
+  const handleSessionChange = useCallback((next: unknown) => {
+    const s = next as ProSession;
+    setSession(s);
+    setWalletAddress(s?.identity?.walletAddress ?? null);
+    void loadSchedules();
+  }, []);
 
   const feedUrl = feedToken ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/feed?token=${feedToken}` : "";
 
   return (
-    <InitiaProvider>
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6 max-w-2xl mx-auto">
       <div className="w-full">
         <a href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</a>
@@ -156,26 +165,13 @@ export default function ProSettings() {
         <p className="text-sm text-[var(--text-muted)]">Manage your scheduled episodes and private RSS feed.</p>
       </div>
 
-      {/* Initia wallet connection */}
-      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Initia Wallet</h2>
-          {initiaAddress && <span className="text-xs text-[var(--success)]">Connected</span>}
-        </div>
-        <p className="text-xs text-[var(--text-muted)]">Connect your .init wallet to authenticate with DataBard Pro on the Initia network.</p>
-        <WalletConnect onAddressChange={handleAddressChange} />
-        {initiaAddress && (
-          <p className="text-xs text-[var(--text-muted)]">
-            Episodes generated while connected will be recorded on-chain with your .init identity.
-          </p>
-        )}
-      </div>
+      <ProWalletIsland initiaAddress={walletAddress} onAddressChange={handleAddressChange} onSessionChange={handleSessionChange} />
 
-      {/* Customer ID lookup */}
+      {/* Stripe / Email identity (first-class, parallel to wallet) */}
       {!schedules.length && (
         <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
-          <label className="text-sm font-medium">Stripe Customer ID</label>
-          <p className="text-xs text-[var(--text-muted)]">Find this in your Stripe dashboard or the confirmation email.</p>
+          <label className="text-sm font-medium">Stripe / Email Sign-in</label>
+          <p className="text-xs text-[var(--text-muted)]">Link Stripe customer ID and/or email to unlock Pro independent of wallet auth.</p>
           <div className="flex gap-2">
             <input
               className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
@@ -183,14 +179,29 @@ export default function ProSettings() {
               onChange={(e) => setCustomerId(e.target.value)}
               placeholder="cus_..."
             />
+            <input
+              className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@company.com"
+            />
             <button
-              onClick={handleCustomerIdSubmit}
-              disabled={!customerId || loading}
+              onClick={handleStripeIdentitySubmit}
+              disabled={loading || (!customerId && !email)}
               className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
             >
-              {loading ? "Loading…" : "Load"}
+              {loading ? "Saving…" : "Link"}
             </button>
           </div>
+        </div>
+      )}
+
+      {session && (
+        <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-xs text-[var(--text-muted)]">
+          <p>Wallet: {session.identity.walletAddress ?? "—"}</p>
+          <p>Stripe: {session.identity.stripeCustomerId ?? "—"}</p>
+          <p>Email: {session.identity.email ?? "—"}</p>
+          <p>Entitlements: Stripe {session.entitlements.stripe ? "✓" : "✗"} · Onchain {session.entitlements.onchain ? "✓" : "✗"}</p>
         </div>
       )}
 
@@ -371,6 +382,5 @@ export default function ProSettings() {
 
       {status && <p className="text-sm text-[var(--text-muted)] text-center">{status}</p>}
     </main>
-    </InitiaProvider>
   );
 }

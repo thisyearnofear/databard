@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { proAccounts, type ScheduleConfig } from "@/lib/store";
-import { getSessionConfig } from "@/lib/session";
+import { requireProAccess } from "@/lib/pro-auth";
 
 /**
  * Schedule management for Pro accounts.
@@ -17,8 +17,11 @@ function getAccount(customerId: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const customerId = req.nextUrl.searchParams.get("customerId");
-  if (!customerId) return NextResponse.json({ ok: false, error: "customerId required" }, { status: 400 });
+  const auth = await requireProAccess();
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.reason }, { status: 401 });
+
+  const customerId = auth.session.identity.stripeCustomerId ?? auth.session.identity.walletAddress;
+  if (!customerId) return NextResponse.json({ ok: false, error: "No identity bound to session" }, { status: 400 });
 
   const account = getAccount(customerId);
   if (!account) return NextResponse.json({ ok: false, error: "Pro account not found" }, { status: 404 });
@@ -27,8 +30,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireProAccess();
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.reason }, { status: 401 });
+
   const body = await req.json();
-  const { customerId, schedule } = body as { customerId: string; schedule: Omit<ScheduleConfig, "id"> };
+  const { schedule } = body as { schedule: Omit<ScheduleConfig, "id"> };
+  const customerId = auth.session.identity.stripeCustomerId ?? auth.session.identity.walletAddress;
 
   if (!customerId || !schedule) {
     return NextResponse.json({ ok: false, error: "customerId and schedule required" }, { status: 400 });
@@ -57,7 +64,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const customerId = req.nextUrl.searchParams.get("customerId");
+  const auth = await requireProAccess();
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.reason }, { status: 401 });
+
+  const customerId = auth.session.identity.stripeCustomerId ?? auth.session.identity.walletAddress;
   const scheduleId = req.nextUrl.searchParams.get("id");
 
   if (!customerId || !scheduleId) {

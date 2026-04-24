@@ -6,8 +6,6 @@ import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
 import type { Episode, DataSource } from "@/lib/types";
-import { WalletConnect } from "@/components/WalletConnect";
-import { InitiaProvider } from "@/components/InitiaProvider";
 
 export default function Home() {
   const [source, setSource] = useState<DataSource>("openmetadata");
@@ -67,6 +65,14 @@ export default function Home() {
         if (cfg.dbtToken) setDbtToken(cfg.dbtToken);
       }
     } catch { /* ignore corrupt localStorage */ }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setWalletAddress(localStorage.getItem("databard:initiaAddress"));
+    } catch {
+      setWalletAddress(null);
+    }
   }, []);
 
   // Persist connection config to localStorage (excluding sensitive tokens from localStorage for security)
@@ -448,7 +454,6 @@ export default function Home() {
 
   // ─── Landing page ───
   return (
-    <InitiaProvider>
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
       {/* Persona Toggle */}
       <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] mb-8 animate-fade-in">
@@ -612,14 +617,12 @@ export default function Home() {
         {/* Provider Status */}
         <ProviderStatus />
 
-        {/* Web3 persona: wallet connect option */}
         {persona === "web3" && (
           <div className="flex flex-col gap-2">
-            <p className="text-xs text-[var(--text-muted)] text-center">Connect your Initia wallet to authenticate</p>
-            <WalletConnect onAddressChange={setWalletAddress} />
-            {walletAddress && (
-              <p className="text-xs text-[var(--success)] text-center">✓ Wallet connected — you can now generate and mint episodes</p>
-            )}
+            <p className="text-xs text-[var(--text-muted)] text-center">Wallet authentication is available on Pro settings.</p>
+            <a href="/pro" className="text-xs text-center text-[var(--accent)] hover:underline">
+              Open /pro wallet settings →
+            </a>
             <div className="flex items-center gap-3 my-1">
               <div className="flex-1 h-px bg-[var(--border)]" />
               <span className="text-xs text-[var(--text-muted)]">or connect a data source</span>
@@ -815,6 +818,5 @@ export default function Home() {
         <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
       </footer>
     </main>
-    </InitiaProvider>
   );
 }
