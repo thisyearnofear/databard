@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
     name: 'databard',
-    script: 'node_modules/.bin/next',
-    args: 'start',
+    script: '.next/standalone/server.js',
+    interpreter: 'node',
     cwd: '/opt/databard',
     env: {
       NODE_ENV: 'production',

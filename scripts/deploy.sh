@@ -45,18 +45,21 @@ npm ci --production=false
 echo "→ Building..."
 npm run build
 
+echo "→ Cleaning runtime footprint..."
+npm run cleanup:deploy
+
 # ── Cache dir ──────────────────────────────────────────────────
 mkdir -p "$DEPLOY_DIR/.databard/cache"
 
 # ── PM2 ────────────────────────────────────────────────────────
 if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
   echo "→ Reloading pm2 process..."
-  pm2 reload "$APP_NAME"
+  pm2 startOrReload "$DEPLOY_DIR/ecosystem.config.cjs" --only "$APP_NAME" --update-env
 else
   echo "→ Starting pm2 process..."
   pm2 start "$DEPLOY_DIR/ecosystem.config.cjs"
-  pm2 save
 fi
+pm2 save
 
 echo ""
 echo "✓ Deploy complete. App running on port $PORT."

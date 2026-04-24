@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/prepare-standalone.mjs",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "cleanup:deploy": "node scripts/cleanup-deploy.mjs"
   },
   "dependencies": {
     "@initia/interwovenkit-react": "^2.8.0",
