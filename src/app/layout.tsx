@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppProviders } from "@/components/AppProviders";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
 
@@ -28,8 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="alternate" type="application/rss+xml" title="DataBard Podcast Feed" href="/api/feed" />
       </head>
       <body>
-        <ThemeToggle />
-        {children}
+        <AppProviders>
+          <ThemeToggle />
+          {children}
+        </AppProviders>
       </body>
     </html>
   );
