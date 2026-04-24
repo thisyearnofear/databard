@@ -5,6 +5,7 @@
  * This avoids SSR/build-time side effects from the wallet connector.
  */
 import { createContext, useContext, useEffect, useMemo, useState, type ComponentType, type PropsWithChildren } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { mainnet } from "wagmi/chains";
 
@@ -17,6 +18,7 @@ type InitiaModule = {
 };
 
 const DATABARD_CHAIN_ID = process.env.NEXT_PUBLIC_INITIA_CHAIN_ID ?? "initiation-2";
+const queryClient = new QueryClient();
 
 const InitiaWalletReadyContext = createContext(false);
 
@@ -70,7 +72,9 @@ export function InitiaProvider({ children }: PropsWithChildren) {
     <InitiaWalletReadyContext.Provider value={walletReady}>
       {walletReady && InterwovenKitProvider && wagmiConfig ? (
         <WagmiProvider config={wagmiConfig}>
-          <InterwovenKitProvider defaultChainId={DATABARD_CHAIN_ID}>{children}</InterwovenKitProvider>
+          <QueryClientProvider client={queryClient}>
+            <InterwovenKitProvider defaultChainId={DATABARD_CHAIN_ID}>{children}</InterwovenKitProvider>
+          </QueryClientProvider>
         </WagmiProvider>
       ) : (
         children
