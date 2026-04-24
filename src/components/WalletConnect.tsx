@@ -13,19 +13,12 @@ type InterwovenKitHook = {
   openConnect: () => void;
 };
 
-let useInterwovenKit: (() => InterwovenKitHook) | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require("@initia/interwovenkit-react");
-  useInterwovenKit = mod.useInterwovenKit ?? null;
-} catch { /* package not installed */ }
-
 interface WalletConnectProps {
   onAddressChange?: (address: string | null) => void;
 }
 
-function WalletConnectInner({ onAddressChange }: WalletConnectProps) {
-  const { initiaAddress, openConnect } = useInterwovenKit!();
+function WalletConnectInner({ onAddressChange, useInterwovenKit }: WalletConnectProps & { useInterwovenKit: () => InterwovenKitHook }) {
+  const { initiaAddress, openConnect } = useInterwovenKit();
 
   useEffect(() => {
     onAddressChange?.(initiaAddress ?? null);
@@ -61,8 +54,21 @@ function WalletConnectInner({ onAddressChange }: WalletConnectProps) {
 
 export function WalletConnect({ onAddressChange }: WalletConnectProps) {
   const [mounted, setMounted] = useState(false);
+  const [useInterwovenKit, setUseInterwovenKit] = useState<(() => InterwovenKitHook) | null>(null);
   const walletReady = useInitiaWalletReady();
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!mounted || !walletReady) return;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require("@initia/interwovenkit-react");
+      setUseInterwovenKit(() => mod.useInterwovenKit ?? null);
+    } catch {
+      setUseInterwovenKit(null);
+    }
+  }, [mounted, walletReady]);
 
   if (!mounted || !walletReady || !useInterwovenKit) {
     return (
@@ -72,5 +78,5 @@ export function WalletConnect({ onAddressChange }: WalletConnectProps) {
     );
   }
 
-  return <WalletConnectInner onAddressChange={onAddressChange} />;
+  return <WalletConnectInner onAddressChange={onAddressChange} useInterwovenKit={useInterwovenKit} />;
 }
