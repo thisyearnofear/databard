@@ -298,18 +298,30 @@ export function EpisodePlayer({
     }
   }
 
-  // Web Audio API setup for waveform
+  // Web Audio API setup for waveform — create once, resume on play
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentAudioUrl) return;
-    const ctx = new AudioContext();
-    const source = ctx.createMediaElementSource(audio);
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    analyser.connect(ctx.destination);
-    analyserRef.current = analyser;
-    return () => { ctx.close(); };
+
+    // Only create the AudioContext + source node once per audio element
+    if (!audioCtxRef.current) {
+      const ctx = new AudioContext();
+      const source = ctx.createMediaElementSource(audio);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      analyserRef.current = analyser;
+      audioCtxRef.current = ctx;
+      sourceNodeRef.current = source;
+    }
+
+    return () => {
+      // Don't close — reuse across URL changes to avoid InvalidStateError
+    };
   }, [currentAudioUrl]);
 
   // Responsive canvas sizing
@@ -444,6 +456,7 @@ export function EpisodePlayer({
       switch (e.key) {
         case " ":
           e.preventDefault();
+          if (audioCtxRef.current?.state === "suspended") audioCtxRef.current.resume();
           if (playing) audio.pause(); else audio.play();
           setPlaying(!playing);
           break;
@@ -465,6 +478,10 @@ export function EpisodePlayer({
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
+    // Resume AudioContext on user gesture (browser autoplay policy)
+    if (audioCtxRef.current?.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
     if (playing) audio.pause(); else audio.play();
     setPlaying(!playing);
   }

@@ -427,7 +427,6 @@ export default function Home() {
 
       const decoder = new TextDecoder();
       const audioChunks: ArrayBuffer[] = [];
-      const chunkSizes: number[] = [];
       let metadata: Episode | null = null;
       let sseBuffer = "";
 
@@ -474,8 +473,7 @@ export default function Home() {
           } else if (data.type === "audio") {
             setGenStep(2);
             const audioData = Uint8Array.from(atob(data.data as string), (c) => c.charCodeAt(0));
-            audioChunks.push(audioData.buffer as ArrayBuffer);
-            chunkSizes.push(audioData.byteLength);
+             audioChunks.push(audioData.buffer as ArrayBuffer);
             if (data.segment !== undefined) setGenSegments((n) => n + 1);
             setStatus(`Synthesizing… ${audioChunks.length} segments`);
           } else if (data.type === "done" && metadata) {
@@ -492,24 +490,20 @@ export default function Home() {
             setEpisode({ ...metadata, audioUrl: url });
             setAudioUrl(url);
 
-            const totalBytes = chunkSizes.reduce((a, b) => a + b, 0);
-            if (totalBytes > 0 && metadata.script.length > 0) {
-              let chunkIdx = 1;
-              const segByteStarts: number[] = [];
-              let byteOffset = chunkSizes[0] ?? 0;
-
-              for (let s = 0; s < metadata.script.length; s++) {
-                segByteStarts.push(byteOffset);
-                if (s > 0 && metadata.script[s].topic !== metadata.script[s - 1].topic) {
-                  byteOffset += chunkSizes[chunkIdx] ?? 0;
-                  chunkIdx++;
-                }
-                byteOffset += chunkSizes[chunkIdx] ?? 0;
-                chunkIdx++;
+            // Estimate segment time offsets from text length (proportional to speech duration)
+            // Byte-based offsets don't map linearly to time in MP3
+            if (metadata.script.length > 0) {
+              const textLengths = metadata.script.map((seg: { text: string }) => seg.text.length);
+              const totalTextLen = textLengths.reduce((a: number, b: number) => a + b, 0);
+              if (totalTextLen > 0) {
+                let cumulative = 0;
+                const offsets = textLengths.map((len: number) => {
+                  const offset = cumulative / totalTextLen;
+                  cumulative += len;
+                  return offset;
+                });
+                setSegmentOffsets(offsets);
               }
-
-              const offsets = segByteStarts.map((b) => b / totalBytes);
-              setSegmentOffsets(offsets);
             }
 
             setStatus("");
@@ -761,61 +755,45 @@ export default function Home() {
                     className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg pl-9 pr-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors" />
                 </div>
               )}
-              <div className="flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 scrollbar-thin">
+              <div className="flex flex-col gap-0.5 max-h-[60vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 scrollbar-thin">
                 {filteredSchemas.length === 0
                   ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas match your search</p>
                   : hasMultipleGroups
-                    ? sortedGroupKeys.map((group) => {
+                    ? sortedGroupKeys.flatMap((group) => {
                         const items = groupedSchemas[group];
-                        const isExpanded = expandedGroups.has(group);
                         const hasRecommended = items.includes(recommendedSchema ?? "");
                         const groupLeaf = group.split(".").slice(-1)[0] ?? group;
-                        const groupPrefix = group.split(".").slice(0, -1).join(".");
-                        return (
-                          <div key={group} className={`rounded-lg overflow-hidden ${hasRecommended ? "ring-1 ring-[var(--accent)]/30" : ""}`}>
-                            <button
-                              type="button"
-                              onClick={() => toggleGroup(group)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--bg)] text-left cursor-pointer transition-colors rounded-lg"
-                            >
-                              <span className={`text-xs text-[var(--text-muted)] transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>▶</span>
-                              <span className="text-base">📁</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold truncate">{groupLeaf}</span>
-                                  <span className="text-xs text-[var(--text-muted)] tabular-nums">{items.length}</span>
-                                  {hasRecommended && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full font-medium">⭐ Best</span>}
-                                </div>
-                                {groupPrefix && <p className="text-[11px] text-[var(--text-muted)] truncate">{groupPrefix}</p>}
-                              </div>
-                            </button>
-                            {isExpanded && (
-                              <div className="flex flex-col gap-0.5 pl-10 pr-2 pb-2">
-                                {items.map((s) => {
-                                  const leaf = s.split(".").slice(-1)[0] ?? s;
-                                  const isSelected = selectedSchema === s;
-                                  const isRecommended = s === recommendedSchema;
-                                  return (
-                                    <button
-                                      key={s}
-                                      type="button"
-                                      onClick={() => setSelectedSchema(s)}
-                                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-all cursor-pointer ${
-                                        isSelected
-                                          ? "bg-[var(--accent)] text-white shadow-sm"
-                                          : "hover:bg-[var(--bg)]"
-                                      }`}
-                                    >
-                                      <span className="text-sm">{isSelected ? "✓" : "○"}</span>
-                                      <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
-                                      {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐</span>}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
+                        return [
+                          <div key={`hdr-${group}`} className="flex items-center gap-2 px-3 py-1.5 mt-1 first:mt-0">
+                            <span className={`text-[11px] font-semibold uppercase tracking-wider ${hasRecommended ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
+                              {groupLeaf}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-muted)] tabular-nums">({items.length})</span>
+                            {hasRecommended && <span className="text-[10px] text-[var(--accent)]">⭐</span>}
+                            <div className="flex-1 h-px bg-[var(--border)]" />
+                          </div>,
+                          ...items.map((s) => {
+                            const leaf = s.split(".").slice(-1)[0] ?? s;
+                            const isSelected = selectedSchema === s;
+                            const isRecommended = s === recommendedSchema;
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => setSelectedSchema(s)}
+                                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-all cursor-pointer ${
+                                  isSelected
+                                    ? "bg-[var(--accent)] text-white shadow-sm"
+                                    : "hover:bg-[var(--bg)]"
+                                }`}
+                              >
+                                <span className="text-sm">{isSelected ? "✓" : "○"}</span>
+                                <span className={`text-sm flex-1 min-w-0 truncate ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
+                                {isRecommended && !isSelected && <span className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full shrink-0">⭐</span>}
+                              </button>
+                            );
+                          }),
+                        ];
                       })
                     : paginatedSchemas.map((s) => {
                         const leaf = s.split(".").slice(-1)[0] ?? s;
