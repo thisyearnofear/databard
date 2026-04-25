@@ -85,11 +85,10 @@ export async function synthesizeSpeech(
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
 
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${VOICES[segment.speaker]}`;
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${VOICES[segment.speaker]}?output_format=mp3_44100_128`;
   const body = {
     text: segment.text,
     model_id: MODEL,
-    output_format: "mp3_44100_128",
     ...(prevText && { previous_text: prevText }),
     ...(nextText && { next_text: nextText }),
   };

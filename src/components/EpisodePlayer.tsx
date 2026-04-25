@@ -204,7 +204,7 @@ export function EpisodePlayer({
   const [nudge, setNudge] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<PlayerTab>("insights");
+  const [activeTab, setActiveTab] = useState<PlayerTab>("segments");
   const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -1242,6 +1242,9 @@ export function EpisodePlayer({
           onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
           onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
           onEnded={() => setPlaying(false)}
+          onError={(e) => {
+            console.error("Audio playback error:", (e.target as HTMLAudioElement).error);
+          }}
           preload="auto"
         />
       )}

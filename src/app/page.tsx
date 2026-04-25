@@ -25,6 +25,7 @@ type WizardAction =
   | { type: "SHOW_CONNECT" }
   | { type: "CONNECTED"; schemas: string[] }
   | { type: "START_GENERATING" }
+  | { type: "BACK_TO_SCHEMA" }
   | { type: "EPISODE_READY" }
   | { type: "RESET" };
 
@@ -33,6 +34,7 @@ function wizardReducer(state: WizardStep, action: WizardAction): WizardStep {
     case "SHOW_CONNECT": return "connect";
     case "CONNECTED": return action.schemas.length > 0 ? "pick-schema" : "connect";
     case "START_GENERATING": return "generating";
+    case "BACK_TO_SCHEMA": return "pick-schema";
     case "EPISODE_READY": return "episode";
     case "RESET": return "landing";
     default: return state;
@@ -208,6 +210,15 @@ export default function Home() {
     ? schemas.reduce((best, s) => (s.split(".").length > best.split(".").length || s.length > best.length ? s : best), schemas[0])
     : schemas[0] ?? null;
 
+  // Auto-expand the group containing the recommended schema on first load
+  useEffect(() => {
+    if (wizardStep === "pick-schema" && recommendedSchema && expandedGroups.size === 0) {
+      const parts = recommendedSchema.split(".");
+      const prefix = parts.length > 1 ? parts.slice(0, -1).join(".") : "default";
+      setExpandedGroups(new Set([prefix]));
+    }
+  }, [wizardStep, recommendedSchema]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleDemo() {
     dispatch({ type: "START_GENERATING" });
     setGenStep(0);
@@ -363,7 +374,7 @@ export default function Home() {
     setGenTotal(0);
     setGenStartedAt(0);
     setGenFindings([]);
-    setStatus(`Generating episode for ${schemaFqn}…`);
+    setStatus(`Checking schema quality…`);
 
     try {
       const body: Record<string, unknown> = { schemaFqn, source };
@@ -377,6 +388,23 @@ export default function Home() {
         body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
       } else if (source === "dune") {
         body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
+      }
+
+      // Pre-validate schema before committing to full generation
+      const validateRes = await fetch("/api/validate-schema", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schemaFqn, source }) });
+      if (validateRes.ok) {
+        const validation = await validateRes.json();
+        if (validation.quality === "empty") {
+          setStatus(`❌ ${validation.message}`);
+          dispatch({ type: "BACK_TO_SCHEMA" });
+          return;
+        }
+        if (validation.quality === "thin") {
+          setStatus(`⚠️ ${validation.message} — generating anyway…`);
+        } else {
+          const s = validation.stats;
+          setStatus(`✓ Schema looks good (${s.tableCount} tables, ${s.totalTests} tests) — generating…`);
+        }
       }
 
       const res = await fetch("/api/synthesize-stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -433,6 +461,10 @@ export default function Home() {
             if (data.testsTotal === 0) findings.push(`🔍 No quality tests configured`);
             if (data.schemaMeta?.lineage?.length > 0) findings.push(`🔗 Analyzing lineage for ${data.schemaMeta.lineage.length} edges`);
             if (findings.length > 0) setGenFindings(findings);
+          } else if (data.type === "schema_rejected") {
+            setStatus(`❌ ${data.message}`);
+            dispatch({ type: "BACK_TO_SCHEMA" });
+            break;
           } else if (data.type === "quality_warning") {
             setStatus(`⚠️ ${data.message}`);
           } else if (data.type === "estimate") {
@@ -689,135 +721,205 @@ export default function Home() {
     const hasMultipleGroups = groupKeys.length > 1;
     const totalPages = Math.ceil(filteredSchemas.length / SCHEMAS_PER_PAGE);
     const paginatedSchemas = filteredSchemas.slice(schemaPage * SCHEMAS_PER_PAGE, (schemaPage + 1) * SCHEMAS_PER_PAGE);
-    const generating = false; // schema picker is never in generating state
+
+    // Sort groups: recommended group first, then alphabetically
+    const recommendedGroup = recommendedSchema
+      ? (() => { const p = recommendedSchema.split("."); return p.length > 1 ? p.slice(0, -1).join(".") : "default"; })()
+      : null;
+    const sortedGroupKeys = [...groupKeys].sort((a, b) => {
+      if (a === recommendedGroup) return -1;
+      if (b === recommendedGroup) return 1;
+      return a.localeCompare(b);
+    });
 
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
         <StepIndicator current="pick-schema" />
-        <div className="w-full max-w-2xl flex flex-col gap-4">
+        <div className="w-full max-w-2xl flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Select a schema</h2>
             <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</button>
           </div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active data context</p>
-            <p className="text-sm mt-1">{sourceLabel[source]} · {activeContext}</p>
-            <p className="text-xs text-[var(--text-muted)] mt-2">{filteredSchemas.length} schema{filteredSchemas.length !== 1 ? "s" : ""} available · Your question applies only to the schema you choose below.</p>
-          </div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
-            <label className="text-sm text-[var(--text-muted)]">Research question</label>
-            <textarea
-              className="mt-2 w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm min-h-24 resize-y"
-              value={researchQuestion}
-              onChange={(e) => setResearchQuestion(e.target.value)}
-              placeholder={persona === "enterprise"
-                ? "What is the biggest risk in this schema?"
-                : "Which protocol health issue should we investigate first?"}
-            />
-            <div className="flex flex-wrap gap-2 mt-3">
-              {questionPresets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setResearchQuestion(preset)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
-                    researchQuestion === preset
-                      ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
-                      : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
-                  }`}
-                >
-                  {preset}
-                </button>
-              ))}
+
+          {/* Context bar — compact */}
+          <div className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <span className="text-lg">🔌</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{sourceLabel[source]} · {activeContext}</p>
+              <p className="text-xs text-[var(--text-muted)]">{filteredSchemas.length} schema{filteredSchemas.length !== 1 ? "s" : ""} available</p>
             </div>
           </div>
-          {schemas.length > 5 && (
-            <input type="text" placeholder="Search schemas…" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setSchemaPage(0); }}
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" />
-          )}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Selected schema</p>
-            <p className="text-sm font-medium mt-1">{selectedSchema ?? "Choose a schema from the list below"}</p>
-            <button
-              type="button"
-              onClick={() => selectedSchema && handleGenerate(selectedSchema)}
-              disabled={!selectedSchema || generating}
-              className="mt-3 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Generate episode for selected schema
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 max-h-[28rem] overflow-y-auto">
-            {filteredSchemas.length === 0
-              ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas found</p>
-              : hasMultipleGroups
-                ? groupKeys.map((group) => {
-                    const items = groupedSchemas[group];
-                    const isExpanded = expandedGroups.has(group);
-                    return (
-                      <div key={group} className="border border-[var(--border)] rounded-xl overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => toggleGroup(group)}
-                          className="w-full flex items-center justify-between px-4 py-3 bg-[var(--surface)] hover:bg-[var(--bg)] text-left cursor-pointer transition-colors"
-                        >
-                          <span className="text-sm font-medium">{group} <span className="text-xs text-[var(--text-muted)] font-normal">({items.length})</span></span>
-                          <span className={`text-[var(--text-muted)] transition-transform ${isExpanded ? "rotate-90" : ""}`}>›</span>
-                        </button>
-                        {isExpanded && (
-                          <div className="flex flex-col gap-1 p-2">
-                            {items.map((s) => (
-                              <button
-                                key={s}
-                                type="button"
-                                onClick={() => setSelectedSchema(s)}
-                                className={`border rounded-lg px-4 py-2 text-left transition-colors cursor-pointer ${selectedSchema === s ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-transparent hover:border-[var(--accent)]"}`}
-                              >
+
+          {/* Two-column layout: left = schema list, right = question + action */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* Schema list — left 3 cols */}
+            <div className="md:col-span-3 flex flex-col gap-3">
+              {schemas.length > 5 && (
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">🔍</span>
+                  <input type="text" placeholder="Search schemas…" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setSchemaPage(0); }}
+                    className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg pl-9 pr-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors" />
+                </div>
+              )}
+              <div className="flex flex-col gap-1.5 max-h-[32rem] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+                {filteredSchemas.length === 0
+                  ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas match your search</p>
+                  : hasMultipleGroups
+                    ? sortedGroupKeys.map((group) => {
+                        const items = groupedSchemas[group];
+                        const isExpanded = expandedGroups.has(group);
+                        const hasRecommended = items.includes(recommendedSchema ?? "");
+                        const groupLeaf = group.split(".").slice(-1)[0] ?? group;
+                        const groupPrefix = group.split(".").slice(0, -1).join(".");
+                        return (
+                          <div key={group} className={`rounded-lg overflow-hidden ${hasRecommended ? "ring-1 ring-[var(--accent)]/30" : ""}`}>
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(group)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--bg)] text-left cursor-pointer transition-colors rounded-lg"
+                            >
+                              <span className={`text-xs text-[var(--text-muted)] transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}>▶</span>
+                              <span className="text-base">📁</span>
+                              <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium">{s.split(".").slice(-1)[0] ?? s}</p>
-                                  {s === recommendedSchema && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐ Recommended</span>}
+                                  <span className="text-sm font-semibold truncate">{groupLeaf}</span>
+                                  <span className="text-xs text-[var(--text-muted)] tabular-nums">{items.length}</span>
+                                  {hasRecommended && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full font-medium">⭐ Best</span>}
                                 </div>
-                                <p className="text-xs text-[var(--text-muted)] mt-0.5">{s}</p>
-                              </button>
-                            ))}
+                                {groupPrefix && <p className="text-[11px] text-[var(--text-muted)] truncate">{groupPrefix}</p>}
+                              </div>
+                            </button>
+                            {isExpanded && (
+                              <div className="flex flex-col gap-0.5 pl-10 pr-2 pb-2">
+                                {items.map((s) => {
+                                  const leaf = s.split(".").slice(-1)[0] ?? s;
+                                  const isSelected = selectedSchema === s;
+                                  const isRecommended = s === recommendedSchema;
+                                  return (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={() => setSelectedSchema(s)}
+                                      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-all cursor-pointer ${
+                                        isSelected
+                                          ? "bg-[var(--accent)] text-white shadow-sm"
+                                          : "hover:bg-[var(--bg)]"
+                                      }`}
+                                    >
+                                      <span className="text-sm">{isSelected ? "✓" : "○"}</span>
+                                      <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
+                                      {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })
-                : paginatedSchemas.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSelectedSchema(s)}
-                      className={`bg-[var(--surface)] border rounded-lg px-4 py-3 text-left transition-colors cursor-pointer ${selectedSchema === s ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{s.split(".").slice(-1)[0] ?? s}</p>
-                        {s === recommendedSchema && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐ Recommended</span>}
-                      </div>
-                      <p className="text-xs text-[var(--text-muted)] mt-0.5">{s}</p>
-                    </button>
-                  ))
-            }
-          </div>
-          {!hasMultipleGroups && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSchemaPage((p) => Math.max(0, p - 1))}
-                disabled={schemaPage === 0}
-                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-              >← Prev</button>
-              <span className="text-xs text-[var(--text-muted)]">{schemaPage + 1} / {totalPages}</span>
-              <button
-                type="button"
-                onClick={() => setSchemaPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={schemaPage >= totalPages - 1}
-                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-              >Next →</button>
+                        );
+                      })
+                    : paginatedSchemas.map((s) => {
+                        const leaf = s.split(".").slice(-1)[0] ?? s;
+                        const isSelected = selectedSchema === s;
+                        const isRecommended = s === recommendedSchema;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setSelectedSchema(s)}
+                            className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-[var(--accent)] text-white shadow-sm"
+                                : "hover:bg-[var(--bg)]"
+                            }`}
+                          >
+                            <span className="text-sm">{isSelected ? "✓" : "○"}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
+                                {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐</span>}
+                              </div>
+                              <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-white/70" : "text-[var(--text-muted)]"}`}>{s}</p>
+                            </div>
+                          </button>
+                        );
+                      })
+                }
+              </div>
+              {!hasMultipleGroups && totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSchemaPage((p) => Math.max(0, p - 1))}
+                    disabled={schemaPage === 0}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                  >← Prev</button>
+                  <span className="text-xs text-[var(--text-muted)]">{schemaPage + 1} / {totalPages}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSchemaPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={schemaPage >= totalPages - 1}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                  >Next →</button>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Right panel — question + generate */}
+            <div className="md:col-span-2 flex flex-col gap-4">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col gap-3">
+                <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Research question</label>
+                <textarea
+                  className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm min-h-20 resize-y focus:border-[var(--accent)] focus:outline-none transition-colors"
+                  value={researchQuestion}
+                  onChange={(e) => setResearchQuestion(e.target.value)}
+                  placeholder={persona === "enterprise"
+                    ? "What is the biggest risk in this schema?"
+                    : "Which protocol health issue should we investigate first?"}
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {questionPresets.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setResearchQuestion(preset)}
+                      className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                        researchQuestion === preset
+                          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
+                          : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected schema + generate CTA */}
+              <div className={`border rounded-xl p-4 flex flex-col gap-3 transition-all ${
+                selectedSchema
+                  ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                  : "border-[var(--border)] bg-[var(--surface)]"
+              }`}>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Selected schema</p>
+                {selectedSchema ? (
+                  <div>
+                    <p className="text-base font-semibold">{selectedSchema.split(".").slice(-1)[0]}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{selectedSchema}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--text-muted)] italic">← Pick a schema from the list</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => selectedSchema && handleGenerate(selectedSchema)}
+                  disabled={!selectedSchema}
+                  className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                >
+                  {selectedSchema ? "⚡ Generate episode" : "Select a schema first"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
       </main>

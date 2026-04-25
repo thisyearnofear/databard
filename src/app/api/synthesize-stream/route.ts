@@ -95,14 +95,25 @@ export async function POST(req: NextRequest) {
             researchSessionId: researchSession?.id,
           });
 
-          // Quality gate: check if schema has enough substance for audio
-          const isThinSchema = meta.tables.length <= 1 && totalTests === 0 && totalColumns <= 3 && meta.lineage.length === 0;
+          // Quality gate: block empty schemas, warn on thin ones, save tokens
           const hasElevenLabsKey = !!process.env.ELEVENLABS_API_KEY;
+          const isEmpty = meta.tables.length === 0;
+          const isThinSchema = meta.tables.length <= 1 && totalTests === 0 && totalColumns <= 3 && meta.lineage.length === 0;
+
+          if (isEmpty) {
+            send(controller, {
+              type: "schema_rejected",
+              message: "This schema is empty — it has no tables. Choose a schema with data to generate a meaningful episode.",
+            });
+            send(controller, { type: "done" });
+            controller.close();
+            return;
+          }
 
           if (isThinSchema) {
             send(controller, {
               type: "quality_warning",
-              message: `This schema has minimal data (${meta.tables.length} table${meta.tables.length !== 1 ? "s" : ""}, ${totalTests} tests, ${totalColumns} columns). The generated episode may not be very informative.`,
+              message: `This schema has minimal data (${meta.tables.length} table${meta.tables.length !== 1 ? "s" : ""}, ${totalTests} tests, ${totalColumns} columns). The generated episode may be brief.`,
             });
           }
 
@@ -110,7 +121,7 @@ export async function POST(req: NextRequest) {
           if (!hasElevenLabsKey) {
             send(controller, {
               type: "quality_warning",
-              message: "ElevenLabs API key not configured. Delivering transcript only — set ELEVENLABS_API_KEY for audio.",
+              message: "Audio synthesis unavailable — delivering transcript only.",
             });
             send(controller, { type: "done" });
             controller.close();
