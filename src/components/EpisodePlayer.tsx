@@ -419,7 +419,7 @@ export function EpisodePlayer({
     if (!playing) return;
     const list = segListRef.current;
     if (!list) return;
-    const activeEl = list.children[activeIdx + 1] as HTMLElement; // +1 for the h3 header
+    const activeEl = list.children[activeIdx] as HTMLElement;
     if (activeEl) {
       activeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
@@ -1199,7 +1199,7 @@ export function EpisodePlayer({
 
         {/* Segments tab (transcript) */}
         {activeTab === "segments" && (
-          <div ref={segListRef} className="p-4 max-h-96 overflow-y-auto scroll-smooth">
+          <div ref={segListRef} className="p-4 max-h-[60vh] overflow-y-auto scroll-smooth">
             {currentEpisode.script.map((seg: ScriptSegment, i: number) => {
               const isExpanded = expandedSeg === i;
               const table = isExpanded && currentEpisode.schemaMeta
@@ -1220,7 +1220,7 @@ export function EpisodePlayer({
                     <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
                       {seg.speaker}
                     </span>
-                    <span className={`text-[var(--text-muted)] ${isExpanded ? "whitespace-normal" : "truncate"}`}>
+                    <span className="text-[var(--text-muted)] whitespace-normal">
                       {seg.text}
                     </span>
                     {table && <span className="text-[var(--accent)] shrink-0 text-xs">📊</span>}

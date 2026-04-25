@@ -733,9 +733,9 @@ export default function Home() {
     });
 
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
+      <main className="min-h-screen flex flex-col items-center justify-start pt-12 p-4 sm:p-8 gap-6">
         <StepIndicator current="pick-schema" />
-        <div className="w-full max-w-2xl flex flex-col gap-5">
+        <div className="w-full max-w-3xl flex flex-col gap-5">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Select a schema</h2>
             <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</button>
@@ -761,7 +761,7 @@ export default function Home() {
                     className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg pl-9 pr-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors" />
                 </div>
               )}
-              <div className="flex flex-col gap-1.5 max-h-[32rem] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+              <div className="flex flex-col gap-1.5 max-h-[60vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 scrollbar-thin">
                 {filteredSchemas.length === 0
                   ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas match your search</p>
                   : hasMultipleGroups
@@ -895,16 +895,16 @@ export default function Home() {
               </div>
 
               {/* Selected schema + generate CTA */}
-              <div className={`border rounded-xl p-4 flex flex-col gap-3 transition-all ${
+              <div className={`border rounded-xl p-4 flex flex-col gap-3 transition-all overflow-hidden ${
                 selectedSchema
                   ? "border-[var(--accent)] bg-[var(--accent)]/5"
                   : "border-[var(--border)] bg-[var(--surface)]"
               }`}>
                 <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Selected schema</p>
                 {selectedSchema ? (
-                  <div>
-                    <p className="text-base font-semibold">{selectedSchema.split(".").slice(-1)[0]}</p>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">{selectedSchema}</p>
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold truncate">{selectedSchema.split(".").slice(-1)[0]}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5 break-all">{selectedSchema}</p>
                   </div>
                 ) : (
                   <p className="text-sm text-[var(--text-muted)] italic">← Pick a schema from the list</p>
@@ -913,7 +913,7 @@ export default function Home() {
                   type="button"
                   onClick={() => selectedSchema && handleGenerate(selectedSchema)}
                   disabled={!selectedSchema}
-                  className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                  className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] shrink-0"
                 >
                   {selectedSchema ? "⚡ Generate episode" : "Select a schema first"}
                 </button>
