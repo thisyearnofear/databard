@@ -13,9 +13,9 @@ export async function POST(req: NextRequest) {
   let resolvedOmToken: string | undefined;
 
   try {
-    // Connect must be callable from the browser without private server headers.
-    // Apply rate limiting only; keep stricter secret checks on generation/mutation routes.
-    rateLimit(req, { maxRequests: 20, windowMs: 3600000 });
+    // Apply rate limiting — stricter for sandbox (shared token) to prevent abuse
+    const isSandbox = source === "openmetadata" && omMode === "sandbox";
+    rateLimit(req, isSandbox ? { maxRequests: 10, windowMs: 60000 } : { maxRequests: 20, windowMs: 3600000 });
     // Validate input based on source
     if (source === "openmetadata") {
       if (omMode === "sandbox") {

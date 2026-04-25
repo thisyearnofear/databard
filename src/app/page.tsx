@@ -120,6 +120,8 @@ export default function Home() {
 
   const [connecting, setConnecting] = useState(false);
   const [connectionTested, setConnectionTested] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [showEmailGate, setShowEmailGate] = useState(false);
+  const [leadEmail, setLeadEmail] = useState("");
   const [schemaPage, setSchemaPage] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [manifestFile, setManifestFile] = useState<File | null>(null);
@@ -313,6 +315,16 @@ export default function Home() {
 
   // One-click sandbox: auto-connect without requiring token input
   async function handleQuickSandbox() {
+    // Submit lead email if provided (fire-and-forget)
+    if (leadEmail.trim()) {
+      fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: leadEmail.trim(), source: "sandbox" }),
+      }).catch(() => {});
+    }
+
+    setShowEmailGate(false);
     setSource("openmetadata");
     setOmMode("sandbox");
     dispatch({ type: "SHOW_CONNECT" });
@@ -896,10 +908,31 @@ export default function Home() {
 
         {wizardStep === "landing" && !connecting ? (
           <div className="flex flex-col gap-3">
-            <button onClick={handleQuickSandbox}
-              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-6 py-4 text-base font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg shadow-[var(--accent)]/20">
-              ⚡ Try with sample data
-            </button>
+            {showEmailGate ? (
+              <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-xl p-4 flex flex-col gap-3 animate-slide-up">
+                <p className="text-sm text-[var(--text)]">Enter your email for updates <span className="text-[var(--text-muted)]">(optional)</span></p>
+                <input
+                  type="email"
+                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
+                  placeholder="you@company.com"
+                  value={leadEmail}
+                  onChange={(e) => setLeadEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleQuickSandbox()}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button onClick={handleQuickSandbox}
+                    className="flex-1 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-medium cursor-pointer transition-all">
+                    {leadEmail.trim() ? "Continue →" : "Skip & Continue →"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setShowEmailGate(true)}
+                className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-6 py-4 text-base font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg shadow-[var(--accent)]/20">
+                ⚡ Try with sample data
+              </button>
+            )}
             <button onClick={() => dispatch({ type: "SHOW_CONNECT" })}
               className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-3 text-sm font-medium cursor-pointer transition-colors">
               {persona === "enterprise" ? "🔌 Connect your own data catalog" : "🔌 Connect your own protocol"}
