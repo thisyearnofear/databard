@@ -358,6 +358,33 @@ export default function Home() {
     "dune": "Enter your Dune API key and a namespace (username or team) to fetch query metadata.",
   };
 
+  const sourceLabel: Record<DataSource, string> = {
+    openmetadata: "OpenMetadata",
+    "dbt-cloud": "dbt Cloud",
+    "dbt-local": "dbt Local",
+    "the-graph": "The Graph",
+    dune: "Dune",
+  };
+
+  const activeContext =
+    source === "openmetadata"
+      ? omMode === "sandbox"
+        ? `Sandbox · ${DEFAULT_OM_SANDBOX_URL}`
+        : `Custom · ${omUrl || "Not set"}`
+      : source === "dbt-cloud"
+        ? `Account ${dbtAccountId || "?"} · Project ${dbtProjectId || "?"}`
+        : source === "dbt-local"
+          ? manifestFile?.name || "No manifest uploaded"
+          : source === "the-graph"
+            ? graphUrl || "No subgraph endpoint set"
+            : duneNamespace
+              ? `Namespace ${duneNamespace}`
+              : "Namespace optional";
+
+  const questionPresets = persona === "enterprise"
+    ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
+    : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
+
   // ─── Episode player ───
   if (episode && audioUrl !== null) {
     return (
@@ -443,6 +470,34 @@ export default function Home() {
             <h2 className="text-xl font-semibold">Select a schema</h2>
             <button onClick={reset} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</button>
           </div>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active data context</p>
+            <p className="text-sm mt-1">{sourceLabel[source]} · {activeContext}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-2">Your question applies only to the schema you choose below.</p>
+          </div>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+            <label className="text-sm text-[var(--text-muted)]">Research question (optional)</label>
+            <textarea
+              className="mt-2 w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm min-h-24 resize-y"
+              value={researchQuestion}
+              onChange={(e) => setResearchQuestion(e.target.value)}
+              placeholder={persona === "enterprise"
+                ? "What is the biggest risk in this schema?"
+                : "Which protocol health issue should we investigate first?"}
+            />
+            <div className="flex flex-wrap gap-2 mt-3">
+              {questionPresets.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setResearchQuestion(preset)}
+                  className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)] transition-colors cursor-pointer"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
           {schemas.length > 5 && (
             <input type="text" placeholder="Search schemas…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" />
@@ -513,35 +568,6 @@ export default function Home() {
           </Link>
         </div>
         <p className="text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
-      </section>
-
-      <section className="w-full max-w-2xl pb-12 sm:pb-16">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 sm:p-6">
-          <label className="text-sm text-[var(--text-muted)]">Research question</label>
-          <textarea
-            className="mt-2 w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm min-h-24 resize-y"
-            value={researchQuestion}
-            onChange={(e) => setResearchQuestion(e.target.value)}
-            placeholder={persona === "enterprise"
-              ? "What is the biggest risk hiding in this catalog?"
-              : "Which protocol health issue should we investigate first?"}
-          />
-          <div className="flex flex-wrap gap-2 mt-3">
-            {(persona === "enterprise"
-              ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
-              : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"]
-            ).map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setResearchQuestion(preset)}
-                className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)] transition-colors cursor-pointer"
-              >
-                {preset}
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* Social proof */}
@@ -650,15 +676,7 @@ export default function Home() {
           </button>
         ) : (
           <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border border-[var(--border)] animate-slide-up">
-            <label className="text-sm text-[var(--text-muted)]">Research question</label>
-            <textarea
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm min-h-24 resize-y"
-              value={researchQuestion}
-              onChange={(e) => setResearchQuestion(e.target.value)}
-              placeholder={persona === "enterprise"
-                ? "What do you want to learn from this catalog?"
-                : "What should we investigate about this protocol?"}
-            />
+            <h3 className="text-sm font-semibold">Step 1 · Connect data source</h3>
             <label className="text-sm text-[var(--text-muted)]">Data Source</label>
             <select className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
               value={source} onChange={(e) => setSource(e.target.value as DataSource)}>
@@ -764,9 +782,15 @@ export default function Home() {
               </p>
             )}
 
+            <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3">
+              <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active data context</p>
+              <p className="text-sm mt-1">{sourceLabel[source]} · {activeContext}</p>
+              <p className="text-xs text-[var(--text-muted)] mt-2">Step 2 appears after connect: pick a schema, then ask your question.</p>
+            </div>
+
             <button onClick={handleConnect} disabled={connecting} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {connecting ? "Connecting…" : "Connect"}
+              {connecting ? "Connecting…" : "Connect Data Source"}
             </button>
           </div>
         )}

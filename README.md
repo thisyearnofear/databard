@@ -110,6 +110,20 @@ docker compose -f docker-compose-postgres.yml up --detach
 
 Open [localhost:3000](http://localhost:3000) → Connect → Select a schema → Listen.
 
+### OpenMetadata sandbox mode (no user token required)
+
+If you want users to connect instantly from the frontend using **Use Sandbox**, configure these env vars on the server:
+
+```env
+OM_SANDBOX_URL=https://sandbox.open-metadata.org
+OM_SANDBOX_TOKEN=your_server_side_sandbox_bot_jwt
+NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
+```
+
+- `OM_SANDBOX_URL` and `OM_SANDBOX_TOKEN` are used server-side by `/api/connect` when sandbox mode is selected.
+- `NEXT_PUBLIC_OM_SANDBOX_URL` is display-only in the UI.
+- Users can still switch to **Connect Your Instance** and provide their own URL/token.
+
 ## Tech Stack
 
 | Layer | Technology |
