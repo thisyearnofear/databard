@@ -4,9 +4,11 @@
 
 Start with a question, connect OpenMetadata, dbt, The Graph, or Dune, and let the agent turn the analysis into a podcast-style answer your team can actually consume.
 
-> **[▶ Listen to a demo episode](https://databard.vercel.app)** — no signup required
+> **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required
 
-If you're reviewing this for a hackathon, see [`docs/ZERVEHACK_PITCH.md`](docs/ZERVEHACK_PITCH.md) for the submission-ready summary and demo flow.
+**Hackathon reviewers:**
+- **OpenMetadata Hackathon** → [`docs/OPENMETADATA_HACKATHON.md`](docs/OPENMETADATA_HACKATHON.md) — paradoxes [#26608](https://github.com/open-metadata/OpenMetadata/issues/26608) + [#26658](https://github.com/open-metadata/OpenMetadata/issues/26658)
+- **ZerveHack** → [`docs/ZERVEHACK_PITCH.md`](docs/ZERVEHACK_PITCH.md)
 
 ---
 

@@ -28,6 +28,7 @@ export default function ProSettings() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [sessionChecking, setSessionChecking] = useState(true);
 
   // Form state
   const [schemaFqn, setSchemaFqn] = useState("");
@@ -49,7 +50,8 @@ export default function ProSettings() {
           loadSchedules();
         }
       })
-      .catch(() => {});
+      .catch(() => setStatus("Couldn’t verify your session yet. You can still sign in below."))
+      .finally(() => setSessionChecking(false));
   }, []);
 
   async function loadSchedules() {
@@ -153,6 +155,22 @@ export default function ProSettings() {
   }, []);
 
   const feedUrl = feedToken ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/feed?token=${feedToken}` : "";
+  const identityStatus = session?.identity.walletAddress
+    ? `Wallet (${session.identity.walletAddress.slice(0, 6)}…${session.identity.walletAddress.slice(-4)})`
+    : session?.identity.email
+      ? `Email (${session.identity.email})`
+      : session?.identity.stripeCustomerId
+        ? `Stripe (${session.identity.stripeCustomerId})`
+        : "Not signed in";
+  const hasProAccess = Boolean(session && (session.entitlements.stripe || session.entitlements.onchain));
+  const proAccessStatus = !session
+    ? "Not granted"
+    : session.entitlements.onchain
+      ? "Granted via Onchain"
+      : session.entitlements.stripe
+        ? "Granted via Stripe"
+        : "Not granted";
+  const showCreateFirstScheduleCta = hasProAccess && schedules.length === 0;
 
   return (
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6 max-w-2xl mx-auto">
@@ -165,36 +183,82 @@ export default function ProSettings() {
         <p className="text-sm text-[var(--text-muted)]">Manage your scheduled episodes and private RSS feed.</p>
       </div>
 
-      <ProWalletIsland initiaAddress={walletAddress} onAddressChange={handleAddressChange} onSessionChange={handleSessionChange} />
-
-      {/* Stripe / Email identity (first-class, parallel to wallet) */}
-      {!schedules.length && (
-        <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
-          <label className="text-sm font-medium">Stripe / Email Sign-in</label>
-          <p className="text-xs text-[var(--text-muted)]">Link Stripe customer ID and/or email to unlock Pro independent of wallet auth.</p>
-          <div className="flex gap-2">
-            <input
-              className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              placeholder="cus_..."
-            />
-            <input
-              className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-            />
-            <button
-              onClick={handleStripeIdentitySubmit}
-              disabled={loading || (!customerId && !email)}
-              className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
-            >
-              {loading ? "Saving…" : "Link"}
-            </button>
+      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-2">
+        <h2 className="text-sm font-semibold">Sign in to DataBard Pro</h2>
+        <p className="text-xs text-[var(--text-muted)]">Choose one method. Wallet and Email/Stripe are independent sign-in options, and either one can unlock Pro.</p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <span className="text-xs rounded-full border border-[var(--border)] px-2 py-1">Identity: {identityStatus}</span>
+          <span className="text-xs rounded-full border border-[var(--border)] px-2 py-1">Pro Access: {proAccessStatus}</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+          <div className="text-xs bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
+            <span className="font-medium">1) Sign in</span>
+            <p className="text-[var(--text-muted)]">Use Wallet or Email/Stripe.</p>
+          </div>
+          <div className="text-xs bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
+            <span className="font-medium">2) Verify access</span>
+            <p className="text-[var(--text-muted)]">Onchain or Stripe entitlement unlocks Pro.</p>
+          </div>
+          <div className="text-xs bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
+            <span className="font-medium">3) Create schedule</span>
+            <p className="text-[var(--text-muted)]">Publish new episodes automatically.</p>
           </div>
         </div>
-      )}
+        <div className="pt-2">
+          {sessionChecking ? (
+            <p className="text-xs text-[var(--text-muted)]">Checking session…</p>
+          ) : !session ? (
+            <p className="text-xs text-[var(--text-muted)]">Next step: choose a sign-in method below.</p>
+          ) : !hasProAccess ? (
+            <p className="text-xs text-[var(--text-muted)]">Next step: unlock Pro using a valid onchain or Stripe entitlement.</p>
+          ) : showCreateFirstScheduleCta ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="text-xs bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-1.5 cursor-pointer"
+            >
+              Create first schedule
+            </button>
+          ) : (
+            <p className="text-xs text-[var(--success)]">You’re ready — manage schedules below.</p>
+          )}
+        </div>
+      </div>
+
+      <ProWalletIsland initiaAddress={walletAddress} onAddressChange={handleAddressChange} onSessionChange={handleSessionChange} />
+
+      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">Email / Stripe Sign-in</label>
+          {(session?.identity.email || session?.identity.stripeCustomerId) ? (
+            <span className="text-xs text-[var(--success)]">Signed in</span>
+          ) : (
+            <span className="text-xs text-[var(--text-muted)]">Not connected</span>
+          )}
+        </div>
+        <p className="text-xs text-[var(--text-muted)]">Use your account email or Stripe customer ID to sign in and unlock billing entitlements.</p>
+        <p className="text-xs text-[var(--text-muted)]">Data used: Email/Customer ID for account lookup + entitlement checks only.</p>
+        <div className="flex gap-2">
+          <input
+            className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+            value={customerId}
+            onChange={(e) => setCustomerId(e.target.value)}
+            placeholder="Stripe customer ID (cus_...)"
+          />
+          <input
+            className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email (you@company.com)"
+          />
+          <button
+            onClick={handleStripeIdentitySubmit}
+            disabled={loading || (!customerId && !email)}
+            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+          >
+            {loading ? "Signing in…" : "Sign in with Email/Stripe"}
+          </button>
+        </div>
+      </div>
 
       {session && (
         <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-xs text-[var(--text-muted)]">

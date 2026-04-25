@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
       openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
       dbtCloud: body.dbtCloud,
       dbtLocal: body.dbtLocal,
+      theGraph: body.theGraph,
+      dune: body.dune,
     };
 
     // Full pipeline: fetch → analyze → diff → script → synthesize

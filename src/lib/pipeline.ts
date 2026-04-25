@@ -20,5 +20,7 @@ export async function buildConfig(body: Record<string, unknown>): Promise<Connec
       : undefined,
     dbtCloud: body.dbtCloud as ConnectionConfig["dbtCloud"],
     dbtLocal: body.dbtLocal as ConnectionConfig["dbtLocal"],
+    theGraph: body.theGraph as ConnectionConfig["theGraph"],
+    dune: body.dune as ConnectionConfig["dune"],
   };
 }

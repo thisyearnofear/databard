@@ -5,21 +5,61 @@
  */
 import type { OMConnection, SchemaMeta, TableMeta, ColumnMeta, QualityTest, LineageEdge } from "./types";
 import { metaCache } from "./store";
+import { createHash } from "crypto";
 
-async function omFetch<T>(conn: OMConnection, path: string, retries = 3): Promise<T | null> {
+interface OMFetchOptions {
+  retries?: number;
+  optional404?: boolean;
+}
+
+function normalizeOmBaseUrl(rawUrl: string): string {
+  const parsed = new URL(rawUrl);
+  parsed.search = "";
+  parsed.hash = "";
+  parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+  if (/\/api(?:\/v1)?$/i.test(parsed.pathname)) {
+    parsed.pathname = parsed.pathname.replace(/\/api(?:\/v1)?$/i, "");
+  }
+  if (!parsed.pathname) parsed.pathname = "/";
+  return parsed.toString().replace(/\/+$/, "");
+}
+
+function buildOmUrl(conn: OMConnection, path: string, query?: Record<string, string | number | undefined>): string {
+  const normalizedBase = normalizeOmBaseUrl(conn.url);
+  const url = new URL(path, `${normalizedBase}/`);
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value === undefined) continue;
+      url.searchParams.set(key, String(value));
+    }
+  }
+  return url.toString();
+}
+
+function connectionScopeKey(conn: OMConnection): string {
+  const normalizedBase = normalizeOmBaseUrl(conn.url);
+  const tokenHash = createHash("sha256").update(conn.token).digest("hex").slice(0, 16);
+  return `${normalizedBase}:${tokenHash}`;
+}
+
+async function omFetch<T>(conn: OMConnection, path: string, options: OMFetchOptions = {}): Promise<T | null> {
+  const { retries = 3, optional404 = false } = options;
   let lastError: Error | null = null;
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(`${conn.url}${path}`, {
+      const res = await fetch(buildOmUrl(conn, path), {
         headers: { Authorization: `Bearer ${conn.token}` },
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) {
+        if ((res.status === 401 || res.status === 403) && i === retries - 1) {
+          throw new Error(`OpenMetadata auth failed (${res.status}). Check your token and permissions.`);
+        }
         if (res.status >= 500 && i < retries - 1) {
           await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
           continue;
         }
-        if (res.status === 404) return null;
+        if (res.status === 404 && optional404) return null;
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
       return res.json() as Promise<T>;
@@ -33,7 +73,10 @@ async function omFetch<T>(conn: OMConnection, path: string, retries = 3): Promis
 
 // ── OM API response types ──
 
-interface OMList<T> { data: T[] }
+interface OMList<T> {
+  data: T[];
+  paging?: { after?: string | null };
+}
 
 interface OMDatabase { fullyQualifiedName: string; name: string }
 interface OMSchema { fullyQualifiedName: string; name: string; description?: string }
@@ -56,6 +99,7 @@ interface OMTable {
   tags?: { tagFQN: string; labelType?: string }[];
   glossaryTerms?: { name: string; fullyQualifiedName: string }[];
   profile?: { rowCount?: number; timestamp?: number };
+  testSuite?: { id: string };
 }
 
 interface OMTestCase {
@@ -65,26 +109,66 @@ interface OMTestCase {
 }
 
 interface OMLineageResponse {
-  downstreamEdges?: { toEntity: { fqn: string } }[];
-  upstreamEdges?: { fromEntity: { fqn: string } }[];
+  entity?: { id: string; type: string; fullyQualifiedName: string };
+  nodes?: { id: string; type: string; fullyQualifiedName: string }[];
+  downstreamEdges?: { fromEntity: string | { fqn?: string }; toEntity: string | { fqn?: string } }[];
+  upstreamEdges?: { fromEntity: string | { fqn?: string }; toEntity: string | { fqn?: string } }[];
+}
+
+async function omFetchAllPages<T>(
+  conn: OMConnection,
+  path: string,
+  query: Record<string, string | number | undefined>,
+  options: OMFetchOptions = {}
+): Promise<T[]> {
+  const results: T[] = [];
+  const baseQuery = { ...query };
+  let after: string | undefined;
+  do {
+    const pageQuery = { ...baseQuery, after };
+    const page = await omFetch<OMList<T>>(
+      conn,
+      `${path}?${new URLSearchParams(Object.entries(pageQuery).filter(([, value]) => value !== undefined) as [string, string][])}`,
+      options
+    );
+    if (!page) break;
+    results.push(...(page.data ?? []));
+    after = page.paging?.after ? String(page.paging.after) : undefined;
+  } while (after);
+
+  return results;
+}
+
+function resolveLineageEntityFqn(
+  value: string | { fqn?: string },
+  nodeById: Map<string, { fqn: string; type: string }>
+): { fqn?: string; type?: string } {
+  if (typeof value === "string") {
+    const node = nodeById.get(value);
+    return { fqn: node?.fqn, type: node?.type };
+  }
+  return { fqn: value?.fqn };
 }
 
 // ── Public API ──
 
 export async function listSchemas(conn: OMConnection): Promise<string[]> {
-  const cacheKey = `om:schemas:${conn.url}`;
+  const scope = connectionScopeKey(conn);
+  const cacheKey = `om:schemas:${scope}`;
   const cached = metaCache.get<string[]>(cacheKey);
   if (cached) return cached;
 
-  const dbs = await omFetch<OMList<OMDatabase>>(conn, "/api/v1/databases?limit=100");
-  if (!dbs) return [];
+  const dbs = await omFetchAllPages<OMDatabase>(conn, "/api/v1/databases", { limit: 100 });
+  if (!dbs.length) return [];
 
   const schemas: string[] = [];
-  for (const db of dbs.data ?? []) {
-    const s = await omFetch<OMList<OMSchema>>(
-      conn, `/api/v1/databaseSchemas?database=${db.fullyQualifiedName}&limit=100`
+  for (const db of dbs) {
+    const dbSchemas = await omFetchAllPages<OMSchema>(
+      conn,
+      "/api/v1/databaseSchemas",
+      { database: db.fullyQualifiedName, limit: 100 }
     );
-    for (const schema of s?.data ?? []) {
+    for (const schema of dbSchemas) {
       schemas.push(schema.fullyQualifiedName);
     }
   }
@@ -98,40 +182,60 @@ export async function listSchemas(conn: OMConnection): Promise<string[]> {
  * tags, owners, glossary terms, profiler data, PII classification.
  */
 export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Promise<SchemaMeta> {
-  const cacheKey = `om:schema:${conn.url}:${schemaFqn}`;
+  const scope = connectionScopeKey(conn);
+  const cacheKey = `om:schema:${scope}:${schemaFqn}`;
   const cached = metaCache.get<SchemaMeta>(cacheKey);
   if (cached) return cached;
 
   const schemaName = schemaFqn.split(".").pop() ?? schemaFqn;
 
   // Fetch tables with columns, tags, owners, profile
-  const tablesRes = await omFetch<OMList<OMTable>>(
+  const tablesData = await omFetchAllPages<OMTable>(
     conn,
-    `/api/v1/tables?databaseSchema=${schemaFqn}&limit=100&fields=columns,tags,owners,profile,glossaryTerms`
+    "/api/v1/tables",
+    {
+      databaseSchema: schemaFqn,
+      limit: 100,
+      fields: "columns,tags,owners,profile,testSuite",
+    }
   );
 
-  if (!tablesRes?.data?.length) {
-    throw new Error(`Schema not found or empty: ${schemaFqn}`);
-  }
-
   // Fetch schema description
-  const schemaInfo = await omFetch<OMSchema>(conn, `/api/v1/databaseSchemas/name/${schemaFqn}`);
+  const schemaInfo = await omFetch<OMSchema>(conn, `/api/v1/databaseSchemas/name/${encodeURIComponent(schemaFqn)}`);
 
   const tables: TableMeta[] = [];
   const allLineage: LineageEdge[] = [];
+  const lineageEdgeKeys = new Set<string>();
 
-  for (const t of tablesRes.data) {
+  for (const t of tablesData) {
     // Quality tests
-    const tests = await omFetch<OMList<OMTestCase>>(
-      conn,
-      `/api/v1/dataQuality/testCases?entityLink=<#E::table::${t.fullyQualifiedName}>&limit=100`
-    );
+    const tests = t.testSuite?.id
+      ? await omFetchAllPages<OMTestCase>(
+        conn,
+        "/api/v1/dataQuality/testCases",
+        { testSuiteId: t.testSuite.id, fields: "testCaseResult", limit: 100 },
+        { optional404: true }
+      )
+      : await omFetchAllPages<OMTestCase>(
+        conn,
+        "/api/v1/dataQuality/testCases",
+        { entityLink: `<#E::table::${t.fullyQualifiedName}>`, fields: "testCaseResult", limit: 100 },
+        { optional404: true }
+      );
 
-    const qualityTests: QualityTest[] = (tests?.data ?? []).map((tc) => ({
-      name: tc.name,
-      status: (tc.testCaseResult?.testCaseStatus as QualityTest["status"]) ?? "Queued",
-      column: tc.entityLink?.match(/<#E::table::.*::(.+)>/)?.[1],
-    }));
+    const qualityTests: QualityTest[] = tests.map((tc) => {
+      const rawStatus = tc.testCaseResult?.testCaseStatus;
+      const status: QualityTest["status"] =
+        rawStatus === "Success" || rawStatus === "Failed" || rawStatus === "Aborted" || rawStatus === "Queued"
+          ? rawStatus
+          : "Queued";
+      const column = tc.entityLink?.match(/::columns::([^>]+)>/)?.[1];
+      return {
+        name: tc.name,
+        status,
+        column,
+      };
+    });
 
     // Columns with PII detection
     const piiColumns: string[] = [];
@@ -178,13 +282,40 @@ export async function fetchSchemaMeta(conn: OMConnection, schemaFqn: string): Pr
 
     // Lineage
     const lineage = await omFetch<OMLineageResponse>(
-      conn, `/api/v1/lineage/table/name/${t.fullyQualifiedName}`
+      conn,
+      `/api/v1/lineage/table/name/${encodeURIComponent(t.fullyQualifiedName)}`,
+      { optional404: true }
     );
+
+    const nodeById = new Map<string, { fqn: string; type: string }>();
+    if (lineage?.entity?.id && lineage.entity.fullyQualifiedName) {
+      nodeById.set(lineage.entity.id, { fqn: lineage.entity.fullyQualifiedName, type: lineage.entity.type });
+    }
+    for (const node of lineage?.nodes ?? []) {
+      if (node.id && node.fullyQualifiedName) {
+        nodeById.set(node.id, { fqn: node.fullyQualifiedName, type: node.type });
+      }
+    }
+
     for (const edge of lineage?.downstreamEdges ?? []) {
-      allLineage.push({ fromTable: t.fullyQualifiedName, toTable: edge.toEntity.fqn });
+      const from = resolveLineageEntityFqn(edge.fromEntity, nodeById);
+      const to = resolveLineageEntityFqn(edge.toEntity, nodeById);
+      if (!from.fqn || !to.fqn) continue;
+      if ((from.type && from.type !== "table") || (to.type && to.type !== "table")) continue;
+      const key = `${from.fqn}->${to.fqn}`;
+      if (lineageEdgeKeys.has(key)) continue;
+      lineageEdgeKeys.add(key);
+      allLineage.push({ fromTable: from.fqn, toTable: to.fqn });
     }
     for (const edge of lineage?.upstreamEdges ?? []) {
-      allLineage.push({ fromTable: edge.fromEntity.fqn, toTable: t.fullyQualifiedName });
+      const from = resolveLineageEntityFqn(edge.fromEntity, nodeById);
+      const to = resolveLineageEntityFqn(edge.toEntity, nodeById);
+      if (!from.fqn || !to.fqn) continue;
+      if ((from.type && from.type !== "table") || (to.type && to.type !== "table")) continue;
+      const key = `${from.fqn}->${to.fqn}`;
+      if (lineageEdgeKeys.has(key)) continue;
+      lineageEdgeKeys.add(key);
+      allLineage.push({ fromTable: from.fqn, toTable: to.fqn });
     }
   }
 
