@@ -7,7 +7,7 @@ import { buildResearchTrail } from "@/lib/research";
 import { createResearchSession } from "@/lib/research-session";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
-import { validateSchemaFqn, ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
+import { validateSchemaFqn, ValidationError, rateLimit, validateResearchQuestion } from "@/lib/validation";
 import { getSessionConfig } from "@/lib/session";
 
 /**
@@ -17,7 +17,9 @@ import { getSessionConfig } from "@/lib/session";
  */
 export async function POST(req: NextRequest) {
   try {
-    guardMutation(req);
+    // Stream synthesis must be callable from the browser after a successful
+    // `/api/connect` session handshake; enforce abuse protection via rate limit.
+    rateLimit(req);
 
     const body = await req.json();
     const { schemaFqn, source = "openmetadata", researchQuestion } = body;

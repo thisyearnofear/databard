@@ -23,6 +23,7 @@ export default function Home() {
 
   const [connected, setConnected] = useState(false);
   const [schemas, setSchemas] = useState<string[]>([]);
+  const [selectedSchema, setSelectedSchema] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [status, setStatus] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -165,9 +166,11 @@ export default function Home() {
       const res = await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) {
+        const nextSchemas = data.schemas ?? [];
         setConnected(true);
-        setSchemas(data.schemas ?? []);
-        setStatus(`Connected — ${data.schemas?.length ?? 0} schemas found`);
+        setSchemas(nextSchemas);
+        setSelectedSchema(nextSchemas[0] ?? null);
+        setStatus(`Connected — ${nextSchemas.length} schemas found`);
       } else {
         setStatus(`Error: ${data.error}`);
       }
@@ -201,7 +204,19 @@ export default function Home() {
       }
 
       const res = await fetch("/api/synthesize-stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) { setStatus(`Error: ${res.statusText}`); return; }
+      if (!res.ok) {
+        let message = `Request failed (${res.status})`;
+        try {
+          const data = await res.json();
+          if (typeof data?.error === "string" && data.error) {
+            message = data.error;
+          }
+        } catch {
+          // Keep fallback message for non-JSON responses
+        }
+        setStatus(`Error: ${message}`);
+        return;
+      }
 
       const reader = res.body?.getReader();
       if (!reader) { setStatus("Error: No response stream"); return; }
@@ -347,7 +362,7 @@ export default function Home() {
   }
 
   function reset() {
-    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setConnected(false); setShowConnect(false); setStatus("");
+    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setConnected(false); setShowConnect(false); setSelectedSchema(null); setStatus("");
   }
 
   const sourceHelp: Record<DataSource, string> = {
@@ -502,13 +517,31 @@ export default function Home() {
             <input type="text" placeholder="Search schemas…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" />
           )}
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Selected schema</p>
+            <p className="text-sm font-medium mt-1">{selectedSchema ?? "Choose a schema from the list below"}</p>
+            <button
+              type="button"
+              onClick={() => selectedSchema && handleGenerate(selectedSchema)}
+              disabled={!selectedSchema || generating}
+              className="mt-3 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Generate episode for selected schema
+            </button>
+          </div>
           <div className="grid gap-2 max-h-96 overflow-y-auto">
             {filteredSchemas.length === 0
               ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas found</p>
               : filteredSchemas.map((s) => (
-                <button key={s} onClick={() => handleGenerate(s)} disabled={generating}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-left hover:border-[var(--accent)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                  {s}
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSelectedSchema(s)}
+                  disabled={generating}
+                  className={`bg-[var(--surface)] border rounded-lg px-4 py-3 text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedSchema === s ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
+                >
+                  <p className="text-sm font-medium">{s.split(".").slice(-1)[0] ?? s}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{s}</p>
                 </button>
               ))
             }
