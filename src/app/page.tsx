@@ -7,8 +7,13 @@ import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
 import type { Episode, DataSource } from "@/lib/types";
 
+type OMMode = "sandbox" | "custom";
+
+const DEFAULT_OM_SANDBOX_URL = process.env.NEXT_PUBLIC_OM_SANDBOX_URL || "https://sandbox.open-metadata.org";
+
 export default function Home() {
   const [source, setSource] = useState<DataSource>("openmetadata");
+  const [omMode, setOmMode] = useState<OMMode>("sandbox");
   const [researchQuestion, setResearchQuestion] = useState("");
   const [omUrl, setOmUrl] = useState("http://localhost:8585");
   const [token, setToken] = useState("");
@@ -57,6 +62,7 @@ export default function Home() {
       if (saved) {
         const cfg = JSON.parse(saved);
         if (cfg.source) setSource(cfg.source);
+        if (cfg.omMode === "sandbox" || cfg.omMode === "custom") setOmMode(cfg.omMode);
         if (cfg.researchQuestion) setResearchQuestion(cfg.researchQuestion);
         if (cfg.omUrl) setOmUrl(cfg.omUrl);
         if (cfg.token) setToken(cfg.token);
@@ -79,10 +85,10 @@ export default function Home() {
   useEffect(() => {
     try {
       localStorage.setItem("databard:connection", JSON.stringify({
-        source, researchQuestion, omUrl, dbtAccountId, dbtProjectId,
+        source, omMode, researchQuestion, omUrl, dbtAccountId, dbtProjectId,
       }));
     } catch { /* quota exceeded or private mode */ }
-  }, [source, researchQuestion, omUrl, dbtAccountId, dbtProjectId]);
+  }, [source, omMode, researchQuestion, omUrl, dbtAccountId, dbtProjectId]);
 
   // Handle checkout cancellation return
   useEffect(() => {
@@ -132,8 +138,14 @@ export default function Home() {
       const body: Record<string, unknown> = { source };
 
       if (source === "openmetadata") {
-        if (!omUrl || !token) { setStatus("Error: URL and token required"); setConnecting(false); return; }
-        body.url = omUrl; body.token = token;
+        body.omMode = omMode;
+        if (omMode === "sandbox") {
+          if (token) body.token = token;
+        } else {
+          if (!omUrl || !token) { setStatus("Error: URL and token required for custom instance"); setConnecting(false); return; }
+          body.url = omUrl;
+          body.token = token;
+        }
       } else if (source === "dbt-cloud") {
         if (!dbtAccountId || !dbtProjectId || !dbtToken) { setStatus("Error: All fields required"); setConnecting(false); return; }
         body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken };
@@ -339,7 +351,7 @@ export default function Home() {
   }
 
   const sourceHelp: Record<DataSource, string> = {
-    openmetadata: "Run OpenMetadata locally with Docker, or connect to a hosted instance.",
+    openmetadata: "Choose the OpenMetadata sandbox for a one-click demo, or connect your own instance.",
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
@@ -663,10 +675,53 @@ export default function Home() {
             <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
 
             {source === "openmetadata" && (<>
-              <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={omUrl} onChange={(e) => setOmUrl(e.target.value)} placeholder="http://localhost:8585" title="The base URL of your OpenMetadata instance. Default is http://localhost:8585 for local Docker installs." />
-              <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from Settings → Bots" title="Find this in OpenMetadata: Settings → Bots → Ingestion Bot → Copy Token. It's a long JWT string." />
+              <label className="text-sm text-[var(--text-muted)]">OpenMetadata Mode</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOmMode("sandbox")}
+                  className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer ${omMode === "sandbox" ? "border-[var(--accent)] bg-[var(--bg)]" : "border-[var(--border)]"}`}
+                >
+                  <p className="font-medium text-[var(--text)]">Use Sandbox</p>
+                  <p className="text-[var(--text-muted)]">Fastest way to try DataBard with sample metadata.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOmMode("custom")}
+                  className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer ${omMode === "custom" ? "border-[var(--accent)] bg-[var(--bg)]" : "border-[var(--border)]"}`}
+                >
+                  <p className="font-medium text-[var(--text)]">Connect Your Instance</p>
+                  <p className="text-[var(--text-muted)]">Use your own OpenMetadata URL and bot token.</p>
+                </button>
+              </div>
+
+              {omMode === "sandbox" ? (
+                <>
+                  <label className="text-sm text-[var(--text-muted)]">Sandbox Endpoint</label>
+                  <input
+                    className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm text-[var(--text-muted)]"
+                    value={DEFAULT_OM_SANDBOX_URL}
+                    readOnly
+                  />
+                  <label className="text-sm text-[var(--text-muted)]">Sandbox Token (optional)</label>
+                  <input
+                    className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
+                    type="password"
+                    autoComplete="off"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="Paste your OpenMetadata PAT/JWT if sandbox is not preconfigured"
+                  />
+                  <p className="text-xs text-[var(--text-muted)] -mt-2">Leave blank if admin configured shared sandbox credentials.</p>
+                </>
+              ) : (
+                <>
+                  <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
+                  <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={omUrl} onChange={(e) => setOmUrl(e.target.value)} placeholder="http://localhost:8585" title="The base URL of your OpenMetadata instance. Default is http://localhost:8585 for local Docker installs." />
+                  <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
+                  <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder="JWT from Settings → Bots" title="Find this in OpenMetadata: Settings → Bots → Ingestion Bot → Copy Token. It's a long JWT string." />
+                </>
+              )}
             </>)}
             {source === "dbt-cloud" && (<>
               <label className="text-sm text-[var(--text-muted)]">Account ID</label>

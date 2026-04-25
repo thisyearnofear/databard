@@ -7,13 +7,37 @@ import { createSession } from "@/lib/session";
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { source = "openmetadata" } = body;
+  const omMode = body.omMode === "sandbox" ? "sandbox" : "custom";
+
+  let resolvedOmUrl: string | undefined;
+  let resolvedOmToken: string | undefined;
 
   try {
     guardMutation(req, { maxRequests: 20, windowMs: 3600000 });
     // Validate input based on source
     if (source === "openmetadata") {
-      validateUrl(body.url);
-      validateToken(body.token);
+      if (omMode === "sandbox") {
+        resolvedOmUrl = process.env.OM_SANDBOX_URL || process.env.NEXT_PUBLIC_OM_SANDBOX_URL;
+        const sandboxTokenFromEnv = process.env.OM_SANDBOX_TOKEN;
+        const sandboxTokenFromBody = typeof body.token === "string" ? body.token : "";
+        resolvedOmToken = sandboxTokenFromEnv || sandboxTokenFromBody;
+
+        if (!resolvedOmUrl || !resolvedOmToken) {
+          throw new ValidationError(
+            "Sandbox token required. Ask admin to set OM_SANDBOX_TOKEN or paste your OpenMetadata token in Sandbox mode."
+          );
+        }
+
+        validateUrl(resolvedOmUrl);
+        validateToken(resolvedOmToken);
+      } else {
+        const customUrl = typeof body.url === "string" ? body.url : "";
+        const customToken = typeof body.token === "string" ? body.token : "";
+        validateUrl(customUrl);
+        validateToken(customToken);
+        resolvedOmUrl = customUrl;
+        resolvedOmToken = customToken;
+      }
     } else if (source === "dbt-cloud") {
       validateDbtConfig(body.dbtCloud);
     } else if (source === "dbt-local") {
@@ -35,7 +59,7 @@ export async function POST(req: NextRequest) {
     // Build connection config
     const config: ConnectionConfig = {
       source: source as ConnectionConfig["source"],
-      openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
+      openmetadata: resolvedOmUrl && resolvedOmToken ? { url: resolvedOmUrl, token: resolvedOmToken } : undefined,
       dbtCloud: body.dbtCloud,
       dbtLocal: body.dbtLocal,
       theGraph: body.theGraph,
@@ -54,7 +78,7 @@ export async function POST(req: NextRequest) {
     // Create server-side session — credentials stored server-side only
     await createSession(config, schemas);
     
-    return NextResponse.json({ ok: true, schemas, source });
+    return NextResponse.json({ ok: true, schemas, source, omMode });
   } catch (e: unknown) {
     if (e instanceof ValidationError) {
       return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
