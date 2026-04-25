@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
           // Send metadata
           const totalTests = meta.tables.reduce((n, t) => n + t.qualityTests.length, 0);
           const failedTests = meta.tables.reduce((n, t) => n + t.qualityTests.filter((q) => q.status === "Failed").length, 0);
+          const totalColumns = meta.tables.reduce((n, t) => n + t.columns.length, 0);
 
           send(controller, {
             type: "metadata",
@@ -94,6 +95,28 @@ export async function POST(req: NextRequest) {
             researchSessionId: researchSession?.id,
           });
 
+          // Quality gate: check if schema has enough substance for audio
+          const isThinSchema = meta.tables.length <= 1 && totalTests === 0 && totalColumns <= 3 && meta.lineage.length === 0;
+          const hasElevenLabsKey = !!process.env.ELEVENLABS_API_KEY;
+
+          if (isThinSchema) {
+            send(controller, {
+              type: "quality_warning",
+              message: `This schema has minimal data (${meta.tables.length} table${meta.tables.length !== 1 ? "s" : ""}, ${totalTests} tests, ${totalColumns} columns). The generated episode may not be very informative.`,
+            });
+          }
+
+          // Skip audio synthesis if ElevenLabs is not configured — deliver transcript only
+          if (!hasElevenLabsKey) {
+            send(controller, {
+              type: "quality_warning",
+              message: "ElevenLabs API key not configured. Delivering transcript only — set ELEVENLABS_API_KEY for audio.",
+            });
+            send(controller, { type: "done" });
+            controller.close();
+            return;
+          }
+
           // Send cost estimate before synthesizing
           const estimate = estimateCost(script);
           send(controller, {
@@ -106,7 +129,7 @@ export async function POST(req: NextRequest) {
           // Intro jingle
           const intro = await synthesizeSfx("podcast intro jingle, upbeat tech vibes, short", 3);
           if (signal.aborted) { controller.close(); return; }
-          send(controller, { type: "audio", data: intro.toString("base64") });
+          if (intro.length > 0) send(controller, { type: "audio", data: intro.toString("base64") });
 
           // Synthesize segments
           for (let i = 0; i < script.length; i++) {
@@ -118,7 +141,7 @@ export async function POST(req: NextRequest) {
             if (i > 0 && script[i].topic !== script[i - 1].topic) {
               const transition = await synthesizeSfx("short subtle whoosh transition sound", 1);
               if (signal.aborted) { controller.close(); return; }
-              send(controller, { type: "audio", data: transition.toString("base64") });
+              if (transition.length > 0) send(controller, { type: "audio", data: transition.toString("base64") });
             }
 
             const audio = await synthesizeSpeech(script[i], prev, next);
@@ -129,7 +152,7 @@ export async function POST(req: NextRequest) {
           // Outro
           const outro = await synthesizeSfx("podcast outro jingle, mellow fade out, short", 3);
           if (signal.aborted) { controller.close(); return; }
-          send(controller, { type: "audio", data: outro.toString("base64") });
+          if (outro.length > 0) send(controller, { type: "audio", data: outro.toString("base64") });
 
           send(controller, { type: "done" });
           controller.close();

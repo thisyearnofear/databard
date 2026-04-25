@@ -173,13 +173,13 @@ export function EpisodePlayer({
   minting = false,
 }: { 
   episode: Episode; 
-  audioUrl: string; 
+  audioUrl: string | null; 
   segmentOffsets?: number[];
   onMint?: () => void;
   minting?: boolean;
 }) {
   const [currentEpisode, setCurrentEpisode] = useState<Episode>(episode);
-  const [currentAudioUrl, setCurrentAudioUrl] = useState(audioUrl);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(audioUrl);
   const [researchSession, setResearchSession] = useState<ResearchSession | null>(null);
   const [researchSessionLoading, setResearchSessionLoading] = useState(false);
   const [followUpQuestion, setFollowUpQuestion] = useState(episode.researchQuestion ?? "");
@@ -692,14 +692,16 @@ export function EpisodePlayer({
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 relative">
-            <button
-              onClick={handleDownload}
-              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
-              title="Download MP3"
-              aria-label="Download episode as MP3"
-            >
-              ↓
-            </button>
+            {currentAudioUrl && (
+              <button
+                onClick={handleDownload}
+                className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
+                title="Download MP3"
+                aria-label="Download episode as MP3"
+              >
+                ↓
+              </button>
+            )}
             <button
               onClick={handleClip}
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
@@ -759,47 +761,55 @@ export function EpisodePlayer({
           </div>
         </div>
 
-        {/* Waveform */}
-        <canvas
-          ref={canvasRef}
-          className="w-full rounded-lg bg-[var(--bg)] mb-4"
-          style={{ height: "80px" }}
-        />
+        {/* Waveform & Controls — only when audio is available */}
+        {currentAudioUrl ? (
+          <>
+            <canvas
+              ref={canvasRef}
+              className="w-full rounded-lg bg-[var(--bg)] mb-4"
+              style={{ height: "80px" }}
+            />
 
-        {/* Controls */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          <button
-            onClick={togglePlay}
-            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
-            aria-label={playing ? "Pause" : "Play"}
-          >
-            {playing ? "⏸" : "▶"}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={duration || 0}
-            step={0.1}
-            value={currentTime}
-            onChange={seek}
-            className="flex-1 accent-[var(--accent)]"
-            aria-label="Seek"
-          />
-          <button
-            onClick={cycleSpeed}
-            className="text-[10px] font-mono bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded px-1.5 py-0.5 cursor-pointer shrink-0 tabular-nums"
-            title="Playback speed"
-          >
-            {speed}×
-          </button>
-          <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0">
-            {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "—"}
-          </span>
-        </div>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <button
+                onClick={togglePlay}
+                className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
+                aria-label={playing ? "Pause" : "Play"}
+              >
+                {playing ? "⏸" : "▶"}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={duration || 0}
+                step={0.1}
+                value={currentTime}
+                onChange={seek}
+                className="flex-1 accent-[var(--accent)]"
+                aria-label="Seek"
+              />
+              <button
+                onClick={cycleSpeed}
+                className="text-[10px] font-mono bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded px-1.5 py-0.5 cursor-pointer shrink-0 tabular-nums"
+                title="Playback speed"
+              >
+                {speed}×
+              </button>
+              <span className="text-xs text-[var(--text-muted)] tabular-nums shrink-0">
+                {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "—"}
+              </span>
+            </div>
 
-        <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
-          Space to play/pause · ← → to seek 10s · Click a segment to jump
-        </p>
+            <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
+              Space to play/pause · ← → to seek 10s · Click a segment to jump
+            </p>
+          </>
+        ) : (
+          <div className="bg-[var(--bg)] rounded-lg p-4 mb-4 text-center">
+            <p className="text-sm text-[var(--text-muted)]">📝 Transcript only — no audio generated</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Set <code className="text-[var(--accent)]">ELEVENLABS_API_KEY</code> to enable audio synthesis</p>
+          </div>
+        )}
 
         {/* Report error */}
         {reportError && (
@@ -1225,14 +1235,16 @@ export function EpisodePlayer({
         )}
       </div>
 
-      <audio
-        ref={audioRef}
-        src={currentAudioUrl}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
-        onEnded={() => setPlaying(false)}
-        preload="auto"
-      />
+      {currentAudioUrl && (
+        <audio
+          ref={audioRef}
+          src={currentAudioUrl}
+          onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+          onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+          onEnded={() => setPlaying(false)}
+          preload="auto"
+        />
+      )}
     </div>
   );
 }

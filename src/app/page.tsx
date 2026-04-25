@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useReducer, useCallback } from "react";
 import Link from "next/link";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
@@ -11,7 +11,88 @@ type OMMode = "sandbox" | "custom";
 
 const DEFAULT_OM_SANDBOX_URL = process.env.NEXT_PUBLIC_OM_SANDBOX_URL || "https://sandbox.open-metadata.org";
 
+// ─── State machine ───
+type WizardStep = "landing" | "connect" | "pick-schema" | "generating" | "episode";
+
+const WIZARD_STEPS: { key: WizardStep; label: string; icon: string }[] = [
+  { key: "connect", label: "Connect", icon: "🔌" },
+  { key: "pick-schema", label: "Pick Schema", icon: "📋" },
+  { key: "generating", label: "Generate", icon: "⚡" },
+  { key: "episode", label: "Listen", icon: "🎧" },
+];
+
+type WizardAction =
+  | { type: "SHOW_CONNECT" }
+  | { type: "CONNECTED"; schemas: string[] }
+  | { type: "START_GENERATING" }
+  | { type: "EPISODE_READY" }
+  | { type: "RESET" };
+
+function wizardReducer(state: WizardStep, action: WizardAction): WizardStep {
+  switch (action.type) {
+    case "SHOW_CONNECT": return "connect";
+    case "CONNECTED": return action.schemas.length > 0 ? "pick-schema" : "connect";
+    case "START_GENERATING": return "generating";
+    case "EPISODE_READY": return "episode";
+    case "RESET": return "landing";
+    default: return state;
+  }
+}
+
+// ─── Wizard step indicator ───
+function StepIndicator({ current }: { current: WizardStep }) {
+  if (current === "landing") return null;
+  const currentIdx = WIZARD_STEPS.findIndex((s) => s.key === current);
+  return (
+    <nav className="w-full max-w-lg mx-auto mb-6 animate-fade-in" aria-label="Progress">
+      <ol className="flex items-center justify-between">
+        {WIZARD_STEPS.map((step, i) => {
+          const isComplete = i < currentIdx;
+          const isActive = i === currentIdx;
+          return (
+            <li key={step.key} className="flex-1 flex flex-col items-center relative">
+              {i > 0 && (
+                <div className={`absolute top-4 -left-1/2 w-full h-0.5 ${isComplete ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`} />
+              )}
+              <div
+                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${
+                  isComplete ? "bg-[var(--accent)] text-white" : isActive ? "bg-[var(--accent)] text-white ring-4 ring-[var(--accent)]/20 scale-110" : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]"
+                }`}
+              >
+                {isComplete ? "✓" : step.icon}
+              </div>
+              <span className={`text-xs mt-1.5 ${isActive ? "text-[var(--text)] font-medium" : "text-[var(--text-muted)]"}`}>
+                {step.label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+// ─── Skeleton loader ───
+function ConnectingSkeleton() {
+  return (
+    <div className="w-full max-w-md flex flex-col gap-3 animate-pulse">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[var(--border)]" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 bg-[var(--border)] rounded w-3/4" />
+            <div className="h-2 bg-[var(--border)] rounded w-1/2" />
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-[var(--text-muted)] text-center">Discovering schemas…</p>
+    </div>
+  );
+}
+
 export default function Home() {
+  const [wizardStep, dispatch] = useReducer(wizardReducer, "landing");
+
   const [source, setSource] = useState<DataSource>("openmetadata");
   const [omMode, setOmMode] = useState<OMMode>("sandbox");
   const [researchQuestion, setResearchQuestion] = useState("");
@@ -21,25 +102,26 @@ export default function Home() {
   const [dbtProjectId, setDbtProjectId] = useState("");
   const [dbtToken, setDbtToken] = useState("");
 
-  const [connected, setConnected] = useState(false);
   const [schemas, setSchemas] = useState<string[]>([]);
   const [selectedSchema, setSelectedSchema] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [status, setStatus] = useState("");
-  const [generating, setGenerating] = useState(false);
   const [genStep, setGenStep] = useState(-1);
   const [genSegments, setGenSegments] = useState(0);
   const [genTotal, setGenTotal] = useState(0);
   const [genStartedAt, setGenStartedAt] = useState(0);
+  const [genFindings, setGenFindings] = useState<string[]>([]);
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
-  const [showConnect, setShowConnect] = useState(false);
   const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
 
   const [connecting, setConnecting] = useState(false);
+  const [connectionTested, setConnectionTested] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [schemaPage, setSchemaPage] = useState(0);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [manifestFile, setManifestFile] = useState<File | null>(null);
   const [graphUrl, setGraphUrl] = useState("");
   const [graphApiKey, setGraphApiKey] = useState("");
@@ -99,12 +181,33 @@ export default function Home() {
     }
   }, []);
 
+  // Pre-fill first question preset when entering schema picker with empty question
+  useEffect(() => {
+    if (wizardStep === "pick-schema" && !researchQuestion) {
+      const presets = persona === "enterprise"
+        ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
+        : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
+      setResearchQuestion(presets[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep]);
+
+  // Reset connection test state when credentials change
+  useEffect(() => {
+    setConnectionTested("idle");
+  }, [source, omMode, token, omUrl, dbtAccountId, dbtProjectId, dbtToken, graphUrl, graphApiKey, duneApiKey, manifestFile]);
+
   const filteredSchemas = schemas.filter((s) =>
     s.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Smart schema recommendation: schemas with more dots (deeper hierarchy) tend to be richer
+  const recommendedSchema = schemas.length > 1
+    ? schemas.reduce((best, s) => (s.split(".").length > best.split(".").length || s.length > best.length ? s : best), schemas[0])
+    : schemas[0] ?? null;
+
   async function handleDemo() {
-    setGenerating(true);
+    dispatch({ type: "START_GENERATING" });
     setGenStep(0);
     setStatus("Loading demo…");
 
@@ -114,7 +217,6 @@ export default function Home() {
       setGenStep(2);
       setEpisode(demo);
       
-      // Check if demo audio exists
       const audioCheck = await fetch("/demo-episode.mp3", { method: "HEAD" });
       if (audioCheck.ok) {
         setAudioUrl("/demo-episode.mp3");
@@ -123,11 +225,63 @@ export default function Home() {
       }
       
       setStatus("");
+      dispatch({ type: "EPISODE_READY" });
     } catch (e: unknown) {
       setStatus(`Error: ${e instanceof Error ? e.message : "Failed to load demo"}`);
+      dispatch({ type: "RESET" });
     } finally {
-      setGenerating(false);
       setGenStep(-1);
+    }
+  }
+
+  // Build connect request body (shared between test & connect)
+  const buildConnectBody = useCallback(async (): Promise<Record<string, unknown> | null> => {
+    const body: Record<string, unknown> = { source };
+    if (source === "openmetadata") {
+      body.omMode = omMode;
+      if (omMode === "sandbox") {
+        if (token) body.token = token;
+      } else {
+        if (!omUrl || !token) { setStatus("Error: URL and token required for custom instance"); return null; }
+        body.url = omUrl;
+        body.token = token;
+      }
+    } else if (source === "dbt-cloud") {
+      if (!dbtAccountId || !dbtProjectId || !dbtToken) { setStatus("Error: All fields required"); return null; }
+      body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken };
+    } else if (source === "dbt-local") {
+      if (!manifestFile) { setStatus("Error: Please upload a manifest.json file"); return null; }
+      const text = await manifestFile.text();
+      try { JSON.parse(text); } catch { setStatus("Error: Invalid JSON in manifest file"); return null; }
+      body.dbtLocal = { manifestContent: text };
+    } else if (source === "the-graph") {
+      if (!graphUrl) { setStatus("Error: Subgraph URL required"); return null; }
+      body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
+    } else if (source === "dune") {
+      if (!duneApiKey) { setStatus("Error: Dune API key required"); return null; }
+      body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
+    }
+    return body;
+  }, [source, omMode, token, omUrl, dbtAccountId, dbtProjectId, dbtToken, manifestFile, graphUrl, graphApiKey, duneApiKey, duneNamespace]);
+
+  async function handleTestConnection() {
+    setConnectionTested("testing");
+    setStatus("");
+    const body = await buildConnectBody();
+    if (!body) { setConnectionTested("error"); return; }
+    try {
+      const res = await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (data.ok) {
+        setConnectionTested("success");
+        setStatus(`✓ Connection valid — ${(data.schemas ?? []).length} schemas available`);
+      } else {
+        setConnectionTested("error");
+        setStatus(`✗ ${data.error}`);
+      }
+    } catch (e: unknown) {
+      setConnectionTested("error");
+      setStatus(`✗ ${e instanceof Error ? e.message : "Connection failed"}`);
     }
   }
 
@@ -135,42 +289,18 @@ export default function Home() {
     setConnecting(true);
     setStatus("Connecting…");
 
+    const body = await buildConnectBody();
+    if (!body) { setConnecting(false); return; }
+
     try {
-      const body: Record<string, unknown> = { source };
-
-      if (source === "openmetadata") {
-        body.omMode = omMode;
-        if (omMode === "sandbox") {
-          if (token) body.token = token;
-        } else {
-          if (!omUrl || !token) { setStatus("Error: URL and token required for custom instance"); setConnecting(false); return; }
-          body.url = omUrl;
-          body.token = token;
-        }
-      } else if (source === "dbt-cloud") {
-        if (!dbtAccountId || !dbtProjectId || !dbtToken) { setStatus("Error: All fields required"); setConnecting(false); return; }
-        body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken };
-      } else if (source === "dbt-local") {
-        if (!manifestFile) { setStatus("Error: Please upload a manifest.json file"); setConnecting(false); return; }
-        const text = await manifestFile.text();
-        try { JSON.parse(text); } catch { setStatus("Error: Invalid JSON in manifest file"); setConnecting(false); return; }
-        body.dbtLocal = { manifestContent: text };
-      } else if (source === "the-graph") {
-        if (!graphUrl) { setStatus("Error: Subgraph URL required"); setConnecting(false); return; }
-        body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
-      } else if (source === "dune") {
-        if (!duneApiKey) { setStatus("Error: Dune API key required"); setConnecting(false); return; }
-        body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
-      }
-
       const res = await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (data.ok) {
         const nextSchemas = data.schemas ?? [];
-        setConnected(true);
         setSchemas(nextSchemas);
         setSelectedSchema(nextSchemas[0] ?? null);
         setStatus(`Connected — ${nextSchemas.length} schemas found`);
+        dispatch({ type: "CONNECTED", schemas: nextSchemas });
       } else {
         setStatus(`Error: ${data.error}`);
       }
@@ -181,12 +311,46 @@ export default function Home() {
     }
   }
 
+  // One-click sandbox: auto-connect without requiring token input
+  async function handleQuickSandbox() {
+    setSource("openmetadata");
+    setOmMode("sandbox");
+    dispatch({ type: "SHOW_CONNECT" });
+    setConnecting(true);
+    setStatus("Connecting to sandbox…");
+
+    try {
+      const res = await fetch("/api/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "openmetadata", omMode: "sandbox" }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        const nextSchemas = data.schemas ?? [];
+        setSchemas(nextSchemas);
+        setSelectedSchema(nextSchemas[0] ?? null);
+        setStatus(`Connected — ${nextSchemas.length} schemas found`);
+        dispatch({ type: "CONNECTED", schemas: nextSchemas });
+      } else {
+        setStatus(`Sandbox requires a token — ${data.error}`);
+        setConnecting(false);
+      }
+    } catch (e: unknown) {
+      setStatus(`Error: ${e instanceof Error ? e.message : "Connection failed"}`);
+      setConnecting(false);
+    } finally {
+      setConnecting(false);
+    }
+  }
+
   async function handleGenerate(schemaFqn: string) {
-    setGenerating(true);
+    dispatch({ type: "START_GENERATING" });
     setGenStep(0);
     setGenSegments(0);
     setGenTotal(0);
     setGenStartedAt(0);
+    setGenFindings([]);
     setStatus(`Generating episode for ${schemaFqn}…`);
 
     try {
@@ -250,6 +414,15 @@ export default function Home() {
               researchTrail: data.researchTrail,
               researchSessionId: data.researchSessionId,
             };
+            // Extract findings for generation storytelling
+            const findings: string[] = [];
+            if (data.tableCount) findings.push(`📊 Found ${data.tableCount} tables`);
+            if (data.testsFailed > 0) findings.push(`⚠️ ${data.testsFailed} failing test${data.testsFailed > 1 ? "s" : ""} detected`);
+            if (data.testsTotal === 0) findings.push(`🔍 No quality tests configured`);
+            if (data.schemaMeta?.lineage?.length > 0) findings.push(`🔗 Analyzing lineage for ${data.schemaMeta.lineage.length} edges`);
+            if (findings.length > 0) setGenFindings(findings);
+          } else if (data.type === "quality_warning") {
+            setStatus(`⚠️ ${data.message}`);
           } else if (data.type === "estimate") {
             setGenTotal(data.segments);
             setGenStartedAt(Date.now());
@@ -262,41 +435,41 @@ export default function Home() {
             if (data.segment !== undefined) setGenSegments((n) => n + 1);
             setStatus(`Synthesizing… ${audioChunks.length} segments`);
           } else if (data.type === "done" && metadata) {
+            // Handle transcript-only episodes (no audio chunks received)
+            if (audioChunks.length === 0) {
+              setEpisode(metadata);
+              setAudioUrl(null);
+              setStatus("Transcript ready (no audio generated)");
+              dispatch({ type: "EPISODE_READY" });
+              break;
+            }
             const blob = new Blob(audioChunks, { type: "audio/mpeg" });
             const url = URL.createObjectURL(blob);
             setEpisode({ ...metadata, audioUrl: url });
             setAudioUrl(url);
 
-            // Compute proportional segment offsets from byte sizes
-            // Audio chunks include: intro jingle, then for each segment optionally a transition + speech, then outro
-            // We approximate time offsets proportional to byte sizes
             const totalBytes = chunkSizes.reduce((a, b) => a + b, 0);
             if (totalBytes > 0 && metadata.script.length > 0) {
-              // Build a mapping: each script segment maps to one or more audio chunks
-              // Chunk 0 = intro jingle. Then segments interleaved with optional transitions. Last = outro.
-              let chunkIdx = 1; // skip intro
+              let chunkIdx = 1;
               const segByteStarts: number[] = [];
-              let byteOffset = chunkSizes[0] ?? 0; // after intro
+              let byteOffset = chunkSizes[0] ?? 0;
 
               for (let s = 0; s < metadata.script.length; s++) {
                 segByteStarts.push(byteOffset);
-                // Check if there was a transition before this segment (topic change)
                 if (s > 0 && metadata.script[s].topic !== metadata.script[s - 1].topic) {
-                  byteOffset += chunkSizes[chunkIdx] ?? 0; // transition
+                  byteOffset += chunkSizes[chunkIdx] ?? 0;
                   chunkIdx++;
                 }
-                byteOffset += chunkSizes[chunkIdx] ?? 0; // speech
+                byteOffset += chunkSizes[chunkIdx] ?? 0;
                 chunkIdx++;
               }
 
-              // Convert byte offsets to time offsets (we don't know total duration yet, so use ratio)
-              // We'll store byte-proportional ratios and multiply by duration in the player
-              // Actually, store as fractions — the player will multiply by duration
               const offsets = segByteStarts.map((b) => b / totalBytes);
               setSegmentOffsets(offsets);
             }
 
             setStatus("");
+            dispatch({ type: "EPISODE_READY" });
           } else if (data.type === "error") {
             setStatus(`Error: ${data.error}`);
           }
@@ -305,7 +478,6 @@ export default function Home() {
     } catch (e: unknown) {
       setStatus(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
-      setGenerating(false);
       setGenStep(-1);
     }
   }
@@ -362,7 +534,8 @@ export default function Home() {
   }
 
   function reset() {
-    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setConnected(false); setShowConnect(false); setSelectedSchema(null); setStatus("");
+    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setSelectedSchema(null); setStatus(""); setGenFindings([]);
+    dispatch({ type: "RESET" });
   }
 
   const sourceHelp: Record<DataSource, string> = {
@@ -401,9 +574,10 @@ export default function Home() {
     : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
 
   // ─── Episode player ───
-  if (episode && audioUrl !== null) {
+  if (wizardStep === "episode" && episode) {
     return (
       <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6">
+        <StepIndicator current="episode" />
         {/* Demo context banner */}
         {episode.schemaFqn === "analytics.ecommerce" && (
           <div className="w-full max-w-2xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-3 text-center animate-slide-up">
@@ -467,19 +641,47 @@ export default function Home() {
   }
 
   // ─── Generating ───
-  if (generating) {
+  if (wizardStep === "generating") {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
-        <GenerationProgress currentStep={genStep} segmentsComplete={genSegments} segmentsTotal={genTotal} startedAt={genStartedAt} />
+        <StepIndicator current="generating" />
+        <GenerationProgress currentStep={genStep} segmentsComplete={genSegments} segmentsTotal={genTotal} startedAt={genStartedAt} findings={genFindings} />
         {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
       </main>
     );
   }
 
   // ─── Schema picker ───
-  if (connected) {
+  const SCHEMAS_PER_PAGE = 10;
+  const groupedSchemas = (() => {
+    const groups: Record<string, string[]> = {};
+    for (const s of filteredSchemas) {
+      const parts = s.split(".");
+      const prefix = parts.length > 1 ? parts.slice(0, -1).join(".") : "default";
+      if (!groups[prefix]) groups[prefix] = [];
+      groups[prefix].push(s);
+    }
+    return groups;
+  })();
+
+  function toggleGroup(group: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group); else next.add(group);
+      return next;
+    });
+  }
+
+  if (wizardStep === "pick-schema") {
+    const groupKeys = Object.keys(groupedSchemas);
+    const hasMultipleGroups = groupKeys.length > 1;
+    const totalPages = Math.ceil(filteredSchemas.length / SCHEMAS_PER_PAGE);
+    const paginatedSchemas = filteredSchemas.slice(schemaPage * SCHEMAS_PER_PAGE, (schemaPage + 1) * SCHEMAS_PER_PAGE);
+    const generating = false; // schema picker is never in generating state
+
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
+        <StepIndicator current="pick-schema" />
         <div className="w-full max-w-2xl flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Select a schema</h2>
@@ -488,10 +690,10 @@ export default function Home() {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
             <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active data context</p>
             <p className="text-sm mt-1">{sourceLabel[source]} · {activeContext}</p>
-            <p className="text-xs text-[var(--text-muted)] mt-2">Your question applies only to the schema you choose below.</p>
+            <p className="text-xs text-[var(--text-muted)] mt-2">{filteredSchemas.length} schema{filteredSchemas.length !== 1 ? "s" : ""} available · Your question applies only to the schema you choose below.</p>
           </div>
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
-            <label className="text-sm text-[var(--text-muted)]">Research question (optional)</label>
+            <label className="text-sm text-[var(--text-muted)]">Research question</label>
             <textarea
               className="mt-2 w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm min-h-24 resize-y"
               value={researchQuestion}
@@ -506,7 +708,11 @@ export default function Home() {
                   key={preset}
                   type="button"
                   onClick={() => setResearchQuestion(preset)}
-                  className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)] transition-colors cursor-pointer"
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
+                    researchQuestion === preset
+                      ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
+                      : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
+                  }`}
                 >
                   {preset}
                 </button>
@@ -514,7 +720,7 @@ export default function Home() {
             </div>
           </div>
           {schemas.length > 5 && (
-            <input type="text" placeholder="Search schemas…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            <input type="text" placeholder="Search schemas…" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setSchemaPage(0); }}
               className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" />
           )}
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
@@ -529,23 +735,77 @@ export default function Home() {
               Generate episode for selected schema
             </button>
           </div>
-          <div className="grid gap-2 max-h-96 overflow-y-auto">
+          <div className="flex flex-col gap-2 max-h-[28rem] overflow-y-auto">
             {filteredSchemas.length === 0
               ? <p className="text-sm text-[var(--text-muted)] text-center py-8">No schemas found</p>
-              : filteredSchemas.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSelectedSchema(s)}
-                  disabled={generating}
-                  className={`bg-[var(--surface)] border rounded-lg px-4 py-3 text-left transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedSchema === s ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
-                >
-                  <p className="text-sm font-medium">{s.split(".").slice(-1)[0] ?? s}</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{s}</p>
-                </button>
-              ))
+              : hasMultipleGroups
+                ? groupKeys.map((group) => {
+                    const items = groupedSchemas[group];
+                    const isExpanded = expandedGroups.has(group);
+                    return (
+                      <div key={group} className="border border-[var(--border)] rounded-xl overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group)}
+                          className="w-full flex items-center justify-between px-4 py-3 bg-[var(--surface)] hover:bg-[var(--bg)] text-left cursor-pointer transition-colors"
+                        >
+                          <span className="text-sm font-medium">{group} <span className="text-xs text-[var(--text-muted)] font-normal">({items.length})</span></span>
+                          <span className={`text-[var(--text-muted)] transition-transform ${isExpanded ? "rotate-90" : ""}`}>›</span>
+                        </button>
+                        {isExpanded && (
+                          <div className="flex flex-col gap-1 p-2">
+                            {items.map((s) => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => setSelectedSchema(s)}
+                                className={`border rounded-lg px-4 py-2 text-left transition-colors cursor-pointer ${selectedSchema === s ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-transparent hover:border-[var(--accent)]"}`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">{s.split(".").slice(-1)[0] ?? s}</p>
+                                  {s === recommendedSchema && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐ Recommended</span>}
+                                </div>
+                                <p className="text-xs text-[var(--text-muted)] mt-0.5">{s}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                : paginatedSchemas.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSelectedSchema(s)}
+                      className={`bg-[var(--surface)] border rounded-lg px-4 py-3 text-left transition-colors cursor-pointer ${selectedSchema === s ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{s.split(".").slice(-1)[0] ?? s}</p>
+                        {s === recommendedSchema && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐ Recommended</span>}
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)] mt-0.5">{s}</p>
+                    </button>
+                  ))
             }
           </div>
+          {!hasMultipleGroups && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSchemaPage((p) => Math.max(0, p - 1))}
+                disabled={schemaPage === 0}
+                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+              >← Prev</button>
+              <span className="text-xs text-[var(--text-muted)]">{schemaPage + 1} / {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setSchemaPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={schemaPage >= totalPages - 1}
+                className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+              >Next →</button>
+            </div>
+          )}
         </div>
         {status && <p className="text-sm text-[var(--text-muted)]">{status}</p>}
       </main>
@@ -604,7 +864,7 @@ export default function Home() {
       </section>
 
       {/* Social proof */}
-      <section className="flex flex-wrap justify-center gap-6 text-xs text-[var(--text-muted)] pb-12 sm:pb-16 max-w-2xl">
+      <section className="flex flex-wrap justify-center gap-6 text-xs text-[var(--text-muted)] pb-8 sm:pb-10 max-w-2xl">
         <span>Built on <span className="text-[var(--text)]">OpenMetadata & Initia</span></span>
         <span>·</span>
         <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
@@ -612,79 +872,8 @@ export default function Home() {
         <span>Works with <span className="text-[var(--text)]">The Graph, dbt & Dune</span></span>
       </section>
 
-      {/* Why audio */}
-      <section className="w-full max-w-3xl pb-12 sm:pb-16">
-        <h2 className="text-xl sm:text-2xl font-bold text-center mb-2">Why a podcast?</h2>
-        <p className="text-sm text-[var(--text-muted)] text-center mb-8 max-w-lg mx-auto">
-          {persona === "enterprise" 
-            ? "Your warehouse has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
-            : "Your protocol has thousands of entities. Dashboards get ignored. But health reports on Initia build trust."
-          }
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { 
-              icon: persona === "enterprise" ? "🎧" : "⛓️", 
-              title: persona === "enterprise" ? "Passive consumption" : "On-chain Proof", 
-              desc: persona === "enterprise" 
-                ? "Listen while commuting, coding, or doing dishes. No screen required." 
-                : "Mint every health report to Initia. Create a verifiable history of indexer reliability."
-            },
-            { 
-              icon: "⚠️", 
-              title: persona === "enterprise" ? "Issues you'd miss" : "Protocol Health", 
-              desc: persona === "enterprise"
-                ? "AI hosts flag failing tests, stale tables, PII columns, and missing owners."
-                : "Identify indexer lag, broken entity relationships, and sync gaps before they affect users."
-            },
-            { 
-              icon: "📊", 
-              title: "Click to explore", 
-              desc: "Hear something interesting? Click the segment to see columns, tests, and lineage in real-time." 
-            },
-          ].map((item) => (
-            <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center transition-all hover:border-[var(--accent)]/50">
-              <div className="text-2xl mb-2">{item.icon}</div>
-              <h3 className="font-semibold mb-1">{item.title}</h3>
-              <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="w-full max-w-3xl pb-12 sm:pb-16">
-        <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">How it works</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Point at OpenMetadata or dbt" : "Connect The Graph, Dune, or Initia" },
-            { step: "2", title: "Analyze", desc: "AI scans schemas for health, lineage risks, and indexer lag" },
-            { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & Verify", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Initia and share with your DAO" },
-          ].map((item) => (
-            <div key={item.step} className="flex flex-col items-center text-center">
-              <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-sm font-bold mb-3">{item.step}</div>
-              <h3 className="font-semibold mb-1">{item.title}</h3>
-              <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Connect CTA */}
-      <section className="w-full max-w-md pb-12 sm:pb-16 flex flex-col gap-4">
-        {/* What you'll get */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-3">What you get per episode</h3>
-          <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Health score & coverage</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Lineage risk analysis</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "PII & governance flags" : "On-chain verification"}</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Prioritized action items</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Shareable MP3 + link</div>
-          </div>
-        </div>
-
+      {/* Connect CTA — prominent, right after hero */}
+      <section className="w-full max-w-md pb-10 sm:pb-14 flex flex-col gap-4" id="connect">
         {/* Provider Status */}
         <ProviderStatus />
 
@@ -702,14 +891,24 @@ export default function Home() {
           </div>
         )}
 
-        {!showConnect ? (
-          <button onClick={() => setShowConnect(true)}
-            className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-4 text-sm font-medium cursor-pointer transition-colors text-center">
-            {persona === "enterprise" ? "Connect your data catalog →" : "Monitor your protocol →"}
-          </button>
-        ) : (
-          <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border border-[var(--border)] animate-slide-up">
-            <h3 className="text-sm font-semibold">Step 1 · Connect data source</h3>
+        {/* Skeleton loader while connecting */}
+        {connecting && <ConnectingSkeleton />}
+
+        {wizardStep === "landing" && !connecting ? (
+          <div className="flex flex-col gap-3">
+            <button onClick={handleQuickSandbox}
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-6 py-4 text-base font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg shadow-[var(--accent)]/20">
+              ⚡ Try with sample data
+            </button>
+            <button onClick={() => dispatch({ type: "SHOW_CONNECT" })}
+              className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-3 text-sm font-medium cursor-pointer transition-colors">
+              {persona === "enterprise" ? "🔌 Connect your own data catalog" : "🔌 Connect your own protocol"}
+            </button>
+          </div>
+        ) : wizardStep === "connect" && !connecting ? (
+          <div className="flex flex-col gap-4 bg-[var(--surface)] p-6 rounded-xl border-2 border-[var(--accent)] animate-slide-up shadow-lg">
+            <StepIndicator current="connect" />
+            <h3 className="text-sm font-semibold">Connect data source</h3>
             <label className="text-sm text-[var(--text-muted)]">Data Source</label>
             <select className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
               value={source} onChange={(e) => setSource(e.target.value as DataSource)}>
@@ -818,16 +1017,103 @@ export default function Home() {
             <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3">
               <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active data context</p>
               <p className="text-sm mt-1">{sourceLabel[source]} · {activeContext}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-2">Step 2 appears after connect: pick a schema, then ask your question.</p>
             </div>
 
-            <button onClick={handleConnect} disabled={connecting} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-              {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {connecting ? "Connecting…" : "Connect Data Source"}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleTestConnection} disabled={connectionTested === "testing"} className="flex-1 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
+                {connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
+                {connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
+                {connectionTested === "error" && <span className="text-red-500">✗</span>}
+                Test Connection
+              </button>
+              <button onClick={handleConnect} disabled={connecting} className="flex-1 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {connecting ? "Connecting…" : "Connect & Continue →"}
+              </button>
+            </div>
+            <button onClick={() => dispatch({ type: "RESET" })} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer text-center">← Back</button>
           </div>
-        )}
+        ) : null}
         {status && <p className="text-sm text-[var(--text-muted)] text-center mt-4">{status}</p>}
+      </section>
+
+      {/* Why audio */}
+      <section className="w-full max-w-3xl pb-12 sm:pb-16">
+        <h2 className="text-xl sm:text-2xl font-bold text-center mb-2">Why a podcast?</h2>
+        <p className="text-sm text-[var(--text-muted)] text-center mb-8 max-w-lg mx-auto">
+          {persona === "enterprise" 
+            ? "Your warehouse has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
+            : "Your protocol has thousands of entities. Dashboards get ignored. But health reports on Initia build trust."
+          }
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { 
+              icon: persona === "enterprise" ? "🎧" : "⛓️", 
+              title: persona === "enterprise" ? "Passive consumption" : "On-chain Proof", 
+              desc: persona === "enterprise" 
+                ? "Listen while commuting, coding, or doing dishes. No screen required." 
+                : "Mint every health report to Initia. Create a verifiable history of indexer reliability."
+            },
+            { 
+              icon: "⚠️", 
+              title: persona === "enterprise" ? "Issues you'd miss" : "Protocol Health", 
+              desc: persona === "enterprise"
+                ? "AI hosts flag failing tests, stale tables, PII columns, and missing owners."
+                : "Identify indexer lag, broken entity relationships, and sync gaps before they affect users."
+            },
+            { 
+              icon: "📊", 
+              title: "Click to explore", 
+              desc: "Hear something interesting? Click the segment to see columns, tests, and lineage in real-time." 
+            },
+          ].map((item) => (
+            <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center transition-all hover:border-[var(--accent)]/50">
+              <div className="text-2xl mb-2">{item.icon}</div>
+              <h3 className="font-semibold mb-1">{item.title}</h3>
+              <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="w-full max-w-3xl pb-12 sm:pb-16">
+        <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">How it works</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Point at OpenMetadata or dbt" : "Connect The Graph, Dune, or Initia" },
+            { step: "2", title: "Analyze", desc: "AI scans schemas for health, lineage risks, and indexer lag" },
+            { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & Verify", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Initia and share with your DAO" },
+          ].map((item) => (
+            <div key={item.step} className="flex flex-col items-center text-center">
+              <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-sm font-bold mb-3">{item.step}</div>
+              <h3 className="font-semibold mb-1">{item.title}</h3>
+              <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* What you get */}
+      <section className="w-full max-w-md pb-12 sm:pb-16 flex flex-col gap-4">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
+          <h3 className="text-sm font-semibold mb-3">What you get per episode</h3>
+          <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Health score & coverage</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Lineage risk analysis</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "PII & governance flags" : "On-chain verification"}</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Prioritized action items</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Shareable MP3 + link</div>
+          </div>
+        </div>
+        {wizardStep === "landing" && (
+          <button onClick={() => { dispatch({ type: "SHOW_CONNECT" }); document.getElementById("connect")?.scrollIntoView({ behavior: "smooth" }); }}
+            className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-3 text-sm font-medium cursor-pointer transition-colors text-center">
+            ↑ Connect your data source above
+          </button>
+        )}
       </section>
 
       {/* Pricing — after they've seen the product */}
