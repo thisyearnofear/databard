@@ -427,6 +427,8 @@ export default function Home() {
 
       const decoder = new TextDecoder();
       const audioChunks: ArrayBuffer[] = [];
+      const segmentByteSizes: Record<number, number> = {};
+      let sfxBytes = 0;
       let metadata: Episode | null = null;
       let sseBuffer = "";
 
@@ -474,8 +476,13 @@ export default function Home() {
             setGenStep(2);
             const audioData = Uint8Array.from(atob(data.data as string), (c) => c.charCodeAt(0));
              audioChunks.push(audioData.buffer as ArrayBuffer);
-            if (data.segment !== undefined) setGenSegments((n) => n + 1);
-            setStatus(`Synthesizing… ${audioChunks.length} segments`);
+            if (data.segment !== undefined) {
+              segmentByteSizes[data.segment] = (segmentByteSizes[data.segment] || 0) + audioData.byteLength;
+              setGenSegments((n) => n + 1);
+            } else {
+              sfxBytes += audioData.byteLength;
+            }
+            setStatus(`Synthesizing… ${audioChunks.length} chunks`);
           } else if (data.type === "done" && metadata) {
             // Handle transcript-only episodes (no audio chunks received)
             if (audioChunks.length === 0) {
@@ -490,16 +497,16 @@ export default function Home() {
             setEpisode({ ...metadata, audioUrl: url });
             setAudioUrl(url);
 
-            // Estimate segment time offsets from text length (proportional to speech duration)
-            // Byte-based offsets don't map linearly to time in MP3
+            // Compute segment time offsets from actual audio byte sizes (CBR MP3 → bytes ∝ duration)
             if (metadata.script.length > 0) {
-              const textLengths = metadata.script.map((seg: { text: string }) => seg.text.length);
-              const totalTextLen = textLengths.reduce((a: number, b: number) => a + b, 0);
-              if (totalTextLen > 0) {
+              const totalSegmentBytes = Object.values(segmentByteSizes).reduce((a, b) => a + b, 0);
+              if (totalSegmentBytes > 0) {
+                // SFX bytes are distributed proportionally as gaps between segments
+                const totalBytes = totalSegmentBytes + sfxBytes;
                 let cumulative = 0;
-                const offsets = textLengths.map((len: number) => {
-                  const offset = cumulative / totalTextLen;
-                  cumulative += len;
+                const offsets = metadata.script.map((_: unknown, i: number) => {
+                  const offset = cumulative / totalBytes;
+                  cumulative += segmentByteSizes[i] || 0;
                   return offset;
                 });
                 setSegmentOffsets(offsets);
