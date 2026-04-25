@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listSchemas } from "@/lib/metadata-adapter";
 import type { ConnectionConfig } from "@/lib/types";
-import { validateUrl, validateToken, validateDbtConfig, validateManifestPath, ValidationError, guardMutation } from "@/lib/validation";
+import { validateUrl, validateToken, validateDbtConfig, validateManifestPath, ValidationError, rateLimit } from "@/lib/validation";
 import { createSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
   let resolvedOmToken: string | undefined;
 
   try {
-    guardMutation(req, { maxRequests: 20, windowMs: 3600000 });
+    // Connect must be callable from the browser without private server headers.
+    // Apply rate limiting only; keep stricter secret checks on generation/mutation routes.
+    rateLimit(req, { maxRequests: 20, windowMs: 3600000 });
     // Validate input based on source
     if (source === "openmetadata") {
       if (omMode === "sandbox") {
