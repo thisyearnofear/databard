@@ -7,3 +7,12 @@ dist/
 .DS_Store
 *.tgz
 .databard/
+.blackboxcli/
+
+# AI directories
+.junie/
+.initia/
+.kiro/
+
+# Editor settings
+.vscode/
