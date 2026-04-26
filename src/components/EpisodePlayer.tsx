@@ -166,15 +166,17 @@ function PriorityBadge({ priority }: { priority: ActionPriority }) {
 }
 
 export function EpisodePlayer({ 
-  episode, 
-  audioUrl, 
-  segmentOffsets,
-  onMint,
-  minting = false,
-}: { 
-  episode: Episode; 
-  audioUrl: string | null; 
-  segmentOffsets?: number[];
+   episode, 
+   audioUrl, 
+   segmentOffsets,
+   audioDuration: audioDurationProp,
+   onMint,
+   minting = false,
+}: {
+   episode: Episode; 
+   audioUrl: string | null; 
+   segmentOffsets?: number[];
+   audioDuration?: number;
   onMint?: () => void;
   minting?: boolean;
 }) {
@@ -194,7 +196,9 @@ export function EpisodePlayer({
 
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [browserDuration, setBrowserDuration] = useState(0);
+  // Prefer computed duration from byte sizes (accurate for CBR MP3 blobs) over browser-reported duration
+  const duration = (audioDurationProp && audioDurationProp > 0) ? audioDurationProp : browserDuration;
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [expandedSeg, setExpandedSeg] = useState<number | null>(null);
@@ -1257,7 +1261,8 @@ export function EpisodePlayer({
           ref={audioRef}
           src={currentAudioUrl}
           onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
-          onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
+          onLoadedMetadata={() => setBrowserDuration(audioRef.current?.duration ?? 0)}
+          onDurationChange={() => setBrowserDuration(audioRef.current?.duration ?? 0)}
           onEnded={() => setPlaying(false)}
           onError={(e) => {
             console.error("Audio playback error:", (e.target as HTMLAudioElement).error);

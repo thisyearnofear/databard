@@ -116,6 +116,7 @@ export default function Home() {
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
   const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
@@ -497,12 +498,15 @@ export default function Home() {
             setEpisode({ ...metadata, audioUrl: url });
             setAudioUrl(url);
 
-            // Compute segment time offsets from actual audio byte sizes (CBR MP3 → bytes ∝ duration)
-            if (metadata.script.length > 0) {
-              const totalSegmentBytes = Object.values(segmentByteSizes).reduce((a, b) => a + b, 0);
-              if (totalSegmentBytes > 0) {
-                // SFX bytes are distributed proportionally as gaps between segments
-                const totalBytes = totalSegmentBytes + sfxBytes;
+            // Compute segment time offsets and duration from actual audio byte sizes
+            // CBR MP3 at 128kbps = 16,000 bytes/sec
+            const totalSegmentBytes = Object.values(segmentByteSizes).reduce((a, b) => a + b, 0);
+            const totalBytes = totalSegmentBytes + sfxBytes;
+            if (totalBytes > 0) {
+              const computedDuration = totalBytes / 16000; // 128kbps CBR
+              setAudioDuration(computedDuration);
+
+              if (metadata.script.length > 0 && totalSegmentBytes > 0) {
                 let cumulative = 0;
                 const offsets = metadata.script.map((_: unknown, i: number) => {
                   const offset = cumulative / totalBytes;
@@ -579,7 +583,7 @@ export default function Home() {
   }
 
   function reset() {
-    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setSelectedSchema(null); setStatus(""); setGenFindings([]);
+    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setAudioDuration(0); setSelectedSchema(null); setStatus(""); setGenFindings([]);
     dispatch({ type: "RESET" });
   }
 
@@ -634,7 +638,8 @@ export default function Home() {
         <EpisodePlayer 
           episode={episode} 
           audioUrl={audioUrl} 
-          segmentOffsets={segmentOffsets} 
+          segmentOffsets={segmentOffsets}
+          audioDuration={audioDuration}
           onMint={persona === "web3" && walletAddress ? handleMint : undefined}
           minting={minting}
         />
