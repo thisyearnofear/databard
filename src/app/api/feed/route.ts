@@ -23,8 +23,10 @@ export async function GET(req: NextRequest) {
 
   const baseUrl = req.nextUrl.origin;
 
-  // Use feed store (populated by /api/regenerate) with fallback to share keys
-  let episodes = feedStore.list().map((entry) => {
+  // feedStore.list() can return null on filesystem errors — guard before .map()
+  const rawEntries = feedStore.list();
+  const entries: { id: string; schemaName: string; generatedAt: string; tableCount: number; testsFailed: number; testsTotal: number }[] = Array.isArray(rawEntries) ? rawEntries : [];
+  let episodes = entries.map((entry) => {
     const ep = shares.get<Episode>(entry.id);
     return ep ? { id: entry.id, episode: ep, generatedAt: entry.generatedAt } : null;
   }).filter(Boolean) as { id: string; episode: Episode; generatedAt: string }[];
