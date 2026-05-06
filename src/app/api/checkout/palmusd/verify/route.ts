@@ -11,7 +11,6 @@ import { proAccounts } from "@/lib/store";
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
 const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? `https://api.${NETWORK}.solana.com`;
-const RECIPIENT_WALLET = process.env.PALM_USD_RECIPIENT ?? "DATABARDtreasury11111111111111111111111111111";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +36,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the transaction involved our recipient wallet
-    const recipientKey = new PublicKey(RECIPIENT_WALLET);
+    const recipientKey = new PublicKey(
+      process.env.PALM_USD_RECIPIENT ?? "11111111111111111111111111111111",
+    );
     const accountKeys = tx.transaction.message.getAccountKeys().keySegments().flat();
     const involved = accountKeys.some((key) => key.equals(recipientKey));
 

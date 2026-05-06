@@ -26,15 +26,17 @@ import {
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
 const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? `https://api.${NETWORK}.solana.com`;
-
-// Palm USD token mint — replace with actual mainnet/devnet mint address
-const PALM_USD_MINT = new PublicKey(
-  process.env.NEXT_PUBLIC_PALM_USD_MINT ?? "PUSDxMnNvSoANp7B7A3DJ1Ao23DRvuxxu7KF7uN2oNrh",
-);
-const RECIPIENT_WALLET = new PublicKey(
-  process.env.PALM_USD_RECIPIENT ?? "DATABARDtreasury11111111111111111111111111111",
-);
 const PRO_PRICE_PUSD = 29; // $29/mo
+
+function getConfig() {
+  const mint = new PublicKey(
+    process.env.NEXT_PUBLIC_PALM_USD_MINT ?? "PUSDxMnNvSoANp7B7A3DJ1Ao23DRvuxxu7KF7uN2oNrh",
+  );
+  const recipient = new PublicKey(
+    process.env.PALM_USD_RECIPIENT ?? "11111111111111111111111111111111",
+  );
+  return { mint, recipient };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "walletAddress required" }, { status: 400 });
     }
 
+    const { mint: PALM_USD_MINT, recipient: RECIPIENT_WALLET } = getConfig();
     const connection = new Connection(RPC_URL, "confirmed");
     const payer = new PublicKey(walletAddress);
 
