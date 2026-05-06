@@ -1273,108 +1273,33 @@ export default function Home() {
         {status && <p className="text-sm text-[var(--text-muted)] text-center mt-4">{status}</p>}
       </section>
 
-      {/* Why audio */}
-      <section className="w-full max-w-3xl pb-12 sm:pb-16">
-        <h2 className="text-xl sm:text-2xl font-bold text-center mb-2">Why a podcast?</h2>
-        <p className="text-sm text-[var(--text-muted)] text-center mb-8 max-w-lg mx-auto">
-          {persona === "enterprise" 
-            ? "Your data catalog has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
-            : "Your onchain data has thousands of entities. Dashboards get ignored. But audio reports build trust."
-          }
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { 
-              icon: persona === "enterprise" ? "🎧" : "⛓️", 
-              title: persona === "enterprise" ? "Passive consumption" : "On-chain proof", 
-              desc: persona === "enterprise" 
-                ? "Listen while commuting, coding, or doing dishes. No screen required." 
-                : "Record each health report on Solana. Build a verifiable history of data quality."
-            },
-            { 
-              icon: "⚠️", 
-              title: persona === "enterprise" ? "Issues you'd miss" : "Data health", 
-              desc: persona === "enterprise"
-                ? "AI hosts flag failing tests, stale tables, sensitive columns, and missing owners."
-                : "Spot indexer lag, broken entity relationships, and sync gaps before they affect users."
-            },
-            { 
-              icon: "📊", 
-              title: "Click to explore", 
-              desc: "Hear something interesting? Click the segment to see columns, tests, and data flow in real-time." 
-            },
-          ].map((item) => (
-            <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center transition-all hover:border-[var(--accent)]/50">
-              <div className="text-2xl mb-2">{item.icon}</div>
-              <h3 className="font-semibold mb-1">{item.title}</h3>
-              <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="w-full max-w-3xl pb-12 sm:pb-16">
-        <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">How it works</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or another data source" : "Paste your Dune API key or subgraph URL" },
-            { step: "2", title: "Analyze", desc: "AI examines your tables for quality issues, data flow problems, and missing tests" },
-            { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & share", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Solana and share with your community" },
-          ].map((item) => (
-            <div key={item.step} className="flex flex-col items-center text-center">
-              <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-sm font-bold mb-3">{item.step}</div>
-              <h3 className="font-semibold mb-1">{item.title}</h3>
-              <p className="text-sm text-[var(--text-muted)]">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* What you get */}
-      <section className="w-full max-w-md pb-12 sm:pb-16 flex flex-col gap-4">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
-          <h3 className="text-sm font-semibold mb-3">What you get per episode</h3>
-          <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Health score & coverage</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Data flow risk analysis</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Sensitive data & governance flags" : "On-chain verification"}</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Prioritized action items</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Shareable MP3 + link</div>
-          </div>
-        </div>
-        {wizardStep === "landing" && (
-          <button onClick={() => { dispatch({ type: "SHOW_CONNECT" }); document.getElementById("connect")?.scrollIntoView({ behavior: "smooth" }); }}
-            className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-3 text-sm font-medium cursor-pointer transition-colors text-center">
-            ↑ Connect your data source above
-          </button>
-        )}
-      </section>
-
-      {/* Pricing — after they've seen the product */}
-      <section className="w-full max-w-3xl pb-12 sm:pb-16" id="pricing">
+      {/* Plans — includes "what you get" features */}
+      <section className="w-full max-w-3xl pb-8 sm:pb-12" id="pricing">
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-2">Plans</h2>
-        <p className="text-sm text-[var(--text-muted)] text-center mb-8">Start free. Upgrade when your team needs scheduled episodes.</p>
+        <p className="text-sm text-[var(--text-muted)] text-center mb-6">Start free. Upgrade when your team needs scheduled episodes.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
             <h3 className="font-semibold text-lg mb-1">Free</h3>
-            <p className="text-3xl font-bold mb-4">$0</p>
-            <ul className="text-sm text-[var(--text-muted)] space-y-2 mb-6">
+            <p className="text-3xl font-bold mb-3">$0</p>
+            <ul className="text-sm text-[var(--text-muted)] space-y-1.5 mb-4">
               <li>✓ Unlimited one-off episodes</li>
               <li>✓ All data sources</li>
+              <li>✓ Health score & coverage analysis</li>
+              <li>✓ {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</li>
+              <li>✓ Data flow risk analysis</li>
+              <li>✓ {persona === "enterprise" ? "Sensitive data & governance flags" : "On-chain verification"}</li>
+              <li>✓ Prioritized action items</li>
               <li>✓ MP3 download & sharing</li>
-              <li>✓ Interactive drill-down</li>
             </ul>
             <button onClick={handleDemo} className="w-full bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
               Try demo
             </button>
           </div>
-          <div className="bg-[var(--surface)] border-2 border-[var(--accent)] rounded-xl p-6 relative">
+          <div className="bg-[var(--surface)] border-2 border-[var(--accent)] rounded-xl p-5 relative">
             <span className="absolute -top-3 left-4 bg-[var(--accent)] text-white text-xs px-2 py-0.5 rounded-full">Pro</span>
             <h3 className="font-semibold text-lg mb-1">Team</h3>
-            <p className="text-3xl font-bold mb-4">$29<span className="text-sm font-normal text-[var(--text-muted)]">/mo</span></p>
-            <ul className="text-sm text-[var(--text-muted)] space-y-2 mb-6">
+            <p className="text-3xl font-bold mb-3">$29<span className="text-sm font-normal text-[var(--text-muted)]">/mo</span></p>
+            <ul className="text-sm text-[var(--text-muted)] space-y-1.5 mb-4">
               <li>✓ Everything in Free</li>
               <li>✓ Scheduled daily/weekly episodes</li>
               <li>✓ <b>On-chain health minting (Solana)</b></li>
@@ -1392,9 +1317,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="w-full max-w-3xl pb-12 sm:pb-16" id="faq">
-        <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">Questions</h2>
+      {/* FAQ — accordion */}
+      <section className="w-full max-w-3xl pb-8 sm:pb-12" id="faq">
+        <h2 className="text-xl sm:text-2xl font-bold text-center mb-6">Questions</h2>
         <div className="flex flex-col gap-2">
           {[
             {
@@ -1418,24 +1343,12 @@ export default function Home() {
               a: "30-60 seconds depending on how many tables you have. The AI writes a two-host script, then records each section as audio. You see real-time progress as it happens.",
             },
             {
-              q: "Can I self-host DataBard?",
-              a: "Yes. Clone the repo, set your API keys, and deploy to any server. No database needed.",
-            },
-            {
               q: "What are the two AI hosts?",
               a: "Alex is the enthusiastic data advocate who highlights what's working well. Morgan is the skeptical quality auditor who flags risks, failing tests, and governance gaps. Together they create a balanced, engaging walkthrough.",
             },
-            {
-              q: "What's the visual report feature?",
-              a: <>Click &lsquo;📊 Report&rsquo; on any episode to download a 3-slide PDF health report — overview, critical tables &amp; action items, and lineage &amp; ownership. Generated server-side using <a href="https://paper.design/" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">Paper</a>-inspired design, no external tools required.</>,
-            },
-            {
-              q: "How does the free tier work?",
-              a: "Unlimited one-off episodes, all data sources, MP3 download, sharing, and interactive drill-down. Pro adds scheduled episodes, private RSS feeds, Slack notifications, and historical comparison.",
-            },
           ].map((item) => (
             <details key={item.q} className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl">
-              <summary className="px-5 py-4 text-sm font-medium cursor-pointer list-none flex items-center justify-between">
+              <summary className="px-5 py-3.5 text-sm font-medium cursor-pointer list-none flex items-center justify-between">
                 {item.q}
                 <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
               </summary>
@@ -1443,6 +1356,75 @@ export default function Home() {
             </details>
           ))}
         </div>
+      </section>
+
+      {/* How it works — collapsible explainer */}
+      <section className="w-full max-w-3xl pb-8 sm:pb-12">
+        <details className="group">
+          <summary className="text-sm font-medium text-[var(--text-muted)] cursor-pointer list-none flex items-center justify-center gap-2 hover:text-[var(--text)] transition-colors">
+            <span>How DataBard works</span>
+            <span className="group-open:rotate-90 transition-transform text-xs">→</span>
+          </summary>
+          <div className="mt-6 space-y-8">
+            {/* Why a podcast */}
+            <div>
+              <h3 className="text-base font-semibold text-center mb-3">Why a podcast?</h3>
+              <p className="text-sm text-[var(--text-muted)] text-center mb-5 max-w-lg mx-auto">
+                {persona === "enterprise" 
+                  ? "Your data catalog has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
+                  : "Your onchain data has thousands of entities. Dashboards get ignored. But audio reports build trust."
+                }
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { 
+                    icon: persona === "enterprise" ? "🎧" : "⛓️", 
+                    title: persona === "enterprise" ? "Passive consumption" : "On-chain proof", 
+                    desc: persona === "enterprise" 
+                      ? "Listen while commuting, coding, or doing dishes. No screen required." 
+                      : "Record each health report on Solana. Build a verifiable history of data quality."
+                  },
+                  { 
+                    icon: "⚠️", 
+                    title: persona === "enterprise" ? "Issues you'd miss" : "Data health", 
+                    desc: persona === "enterprise"
+                      ? "AI hosts flag failing tests, stale tables, sensitive columns, and missing owners."
+                      : "Spot indexer lag, broken entity relationships, and sync gaps before they affect users."
+                  },
+                  { 
+                    icon: "📊", 
+                    title: "Click to explore", 
+                    desc: "Hear something interesting? Click the segment to see columns, tests, and data flow in real-time." 
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+                    <div className="text-xl mb-1.5">{item.icon}</div>
+                    <h4 className="text-sm font-semibold mb-0.5">{item.title}</h4>
+                    <p className="text-xs text-[var(--text-muted)]">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* How it works steps */}
+            <div>
+              <h3 className="text-base font-semibold text-center mb-4">Three steps</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or another data source" : "Paste your Dune API key or subgraph URL" },
+                  { step: "2", title: "Analyze", desc: "AI examines your tables for quality issues, data flow problems, and missing tests" },
+                  { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & share", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Solana and share with your community" },
+                ].map((item) => (
+                  <div key={item.step} className="flex flex-col items-center text-center">
+                    <div className="w-7 h-7 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-xs font-bold mb-2">{item.step}</div>
+                    <h4 className="text-sm font-semibold mb-0.5">{item.title}</h4>
+                    <p className="text-xs text-[var(--text-muted)]">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </details>
       </section>
 
       {/* Footer */}
