@@ -19,8 +19,8 @@ type WizardStep = "landing" | "connect" | "pick-schema" | "generating" | "episod
 
 const WIZARD_STEPS: { key: WizardStep; label: string; icon: string }[] = [
   { key: "connect", label: "Connect", icon: "🔌" },
-  { key: "pick-schema", label: "Pick Schema", icon: "📋" },
-  { key: "generating", label: "Generate", icon: "⚡" },
+  { key: "pick-schema", label: "Pick a dataset", icon: "📋" },
+  { key: "generating", label: "Create episode", icon: "⚡" },
   { key: "episode", label: "Listen", icon: "🎧" },
 ];
 
@@ -388,7 +388,7 @@ export default function Home() {
     setGenTotal(0);
     setGenStartedAt(0);
     setGenFindings([]);
-    setStatus(`Checking schema quality…`);
+    setStatus(`Checking your data…`);
 
     try {
       const body: Record<string, unknown> = { schemaFqn, source };
@@ -485,7 +485,7 @@ export default function Home() {
           } else if (data.type === "estimate") {
             setGenTotal(data.segments);
             setGenStartedAt(Date.now());
-            setStatus(`${data.totalCalls} API calls (${data.segments} speech + ${data.sfxCalls} SFX)`);
+            setStatus(`Generating ${data.segments} speech segments + sound effects`);
           } else if (data.type === "audio") {
             setGenStep(2);
             const audioData = Uint8Array.from(atob(data.data as string), (c) => c.charCodeAt(0));
@@ -496,7 +496,7 @@ export default function Home() {
             } else {
               sfxBytes += audioData.byteLength;
             }
-            setStatus(`Synthesizing… ${audioChunks.length} chunks`);
+            setStatus(`Recording audio… segment ${audioChunks.length}`);
           } else if (data.type === "done" && metadata) {
             // Handle transcript-only episodes (no audio chunks received)
             if (audioChunks.length === 0) {
@@ -672,7 +672,7 @@ export default function Home() {
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
-    "dune": "Enter your Dune API key and a namespace (username or team). DataBard executes queries and analyzes result data — column stats, row counts, and top values — for data-aware episodes.",
+    "dune": "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
   };
 
   const sourceLabel: Record<DataSource, string> = {
@@ -695,8 +695,8 @@ export default function Home() {
           : source === "the-graph"
             ? graphUrl || "No subgraph endpoint set"
             : duneNamespace
-              ? `Namespace ${duneNamespace}`
-              : "Namespace optional";
+              ? `Dune user: ${duneNamespace}`
+              : "Dune username optional";
 
   const questionPresets = persona === "enterprise"
     ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
@@ -732,9 +732,9 @@ export default function Home() {
           {/* Post-experience upsell */}
 {persona === "web3" ? (
              <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
-               <p className="text-sm mb-2">Mint this report on-chain</p>
+               <p className="text-sm mb-2">Save this report to the blockchain</p>
                <p className="text-xs text-[var(--text-muted)] mb-3">
-                 Record a verifiable health attestation on Solana or Initia.
+                 Create a permanent, shareable record of this health report.
                </p>
 
                {/* Solana (primary) */}
@@ -949,15 +949,16 @@ export default function Home() {
             {/* Right panel — question + generate */}
             <div className="md:col-span-2 flex flex-col gap-4">
               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col gap-3">
-                <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Research question</label>
+                <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your question</label>
                 <textarea
                   className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm min-h-20 resize-y focus:border-[var(--accent)] focus:outline-none transition-colors"
                   value={researchQuestion}
                   onChange={(e) => setResearchQuestion(e.target.value)}
                   placeholder={persona === "enterprise"
-                    ? "What is the biggest risk in this schema?"
-                    : "Which protocol health issue should we investigate first?"}
+                    ? "What is the biggest risk in this dataset?"
+                    : "Which data health issue should we investigate first?"}
                 />
+                <p className="text-xs text-[var(--text-muted)] -mt-1">This guides what the AI hosts investigate. Pick a preset or write your own.</p>
                 <div className="flex flex-wrap gap-1.5">
                   {questionPresets.map((preset) => (
                     <button
@@ -982,7 +983,7 @@ export default function Home() {
                   ? "border-[var(--accent)] bg-[var(--accent)]/5"
                   : "border-[var(--border)] bg-[var(--surface)]"
               }`}>
-                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Selected schema</p>
+                <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Selected dataset</p>
                 {selectedSchema ? (
                   <div className="min-w-0">
                     <p className="text-base font-semibold truncate">{selectedSchema.split(".").slice(-1)[0]}</p>
@@ -1017,28 +1018,28 @@ export default function Home() {
           onClick={() => setPersona("enterprise")}
           className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${persona === "enterprise" ? "bg-[var(--accent)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
         >
-          🗄️ Warehouses
+          📊 Data teams
         </button>
         <button 
           onClick={() => setPersona("web3")}
           className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${persona === "web3" ? "bg-[var(--accent)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
         >
-          ⛓️ Protocols
+          ⛓️ Web3 teams
         </button>
       </div>
 
       {/* Hero */}
       <section className="flex flex-col items-center text-center pt-8 sm:pt-12 pb-10 sm:pb-14 max-w-2xl">
         <p className="text-xs text-[var(--accent)] font-medium tracking-wider uppercase mb-4">
-          {persona === "enterprise" ? "Question-first audio for data teams" : "Question-first observability for protocol teams"}
+          {persona === "enterprise" ? "AI podcast episodes for your data catalog" : "AI podcast episodes for your onchain data"}
         </p>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
-          {persona === "enterprise" ? "Your data catalog," : "Your protocol health,"}<br />as a podcast
+          {persona === "enterprise" ? "Your data catalog," : "Your onchain data,"}<br />as a podcast
         </h1>
         <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
           {persona === "enterprise" 
-            ? "Start with a question, connect your catalog, and let two AI hosts turn the answer into something your team will actually hear."
-            : "Start with a question, connect your protocol data, and mint verifiable health reports to Initia without losing the narrative."
+            ? "Ask a question about your data. Connect your catalog. Get a podcast episode where two AI hosts investigate the answer."
+            : "Ask a question about your onchain data. Connect your source. Get a podcast episode with verifiable health reports on Solana."
           }
         </p>
 
@@ -1119,7 +1120,7 @@ export default function Home() {
             )}
             <button onClick={() => dispatch({ type: "SHOW_CONNECT" })}
               className="w-full bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-xl px-6 py-3 text-sm font-medium cursor-pointer transition-colors">
-              {persona === "enterprise" ? "🔌 Connect your own data catalog" : "🔌 Connect your own protocol"}
+              {persona === "enterprise" ? "🔌 Connect your data source" : "🔌 Connect your data source"}
             </button>
           </div>
         ) : wizardStep === "connect" && !connecting ? (
@@ -1129,12 +1130,12 @@ export default function Home() {
             <label className="text-sm text-[var(--text-muted)]">Data Source</label>
             <select className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
               value={source} onChange={(e) => setSource(e.target.value as DataSource)}>
-              <optgroup label="🗄️ Warehouses">
+              <optgroup label="📊 Data stack">
                 <option value="openmetadata">OpenMetadata</option>
                 <option value="dbt-cloud">dbt Cloud</option>
                 <option value="dbt-local">dbt Local (manifest.json)</option>
               </optgroup>
-              <optgroup label="⛓️ Protocols">
+              <optgroup label="⛓️ Onchain">
                 <option value="the-graph">The Graph (subgraph)</option>
                 <option value="dune">Dune Analytics</option>
               </optgroup>
@@ -1259,30 +1260,30 @@ export default function Home() {
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-2">Why a podcast?</h2>
         <p className="text-sm text-[var(--text-muted)] text-center mb-8 max-w-lg mx-auto">
           {persona === "enterprise" 
-            ? "Your warehouse has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
-            : "Your protocol has thousands of entities. Dashboards get ignored. But health reports on Initia build trust."
+            ? "Your data catalog has hundreds of tables. Nobody reads the docs. But everyone listens to podcasts."
+            : "Your onchain data has thousands of entities. Dashboards get ignored. But audio reports build trust."
           }
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { 
               icon: persona === "enterprise" ? "🎧" : "⛓️", 
-              title: persona === "enterprise" ? "Passive consumption" : "On-chain Proof", 
+              title: persona === "enterprise" ? "Passive consumption" : "On-chain proof", 
               desc: persona === "enterprise" 
                 ? "Listen while commuting, coding, or doing dishes. No screen required." 
-                : "Mint every health report to Initia. Create a verifiable history of indexer reliability."
+                : "Record each health report on Solana. Build a verifiable history of data quality."
             },
             { 
               icon: "⚠️", 
-              title: persona === "enterprise" ? "Issues you'd miss" : "Protocol Health", 
+              title: persona === "enterprise" ? "Issues you'd miss" : "Data health", 
               desc: persona === "enterprise"
-                ? "AI hosts flag failing tests, stale tables, PII columns, and missing owners."
-                : "Identify indexer lag, broken entity relationships, and sync gaps before they affect users."
+                ? "AI hosts flag failing tests, stale tables, sensitive columns, and missing owners."
+                : "Spot indexer lag, broken entity relationships, and sync gaps before they affect users."
             },
             { 
               icon: "📊", 
               title: "Click to explore", 
-              desc: "Hear something interesting? Click the segment to see columns, tests, and lineage in real-time." 
+              desc: "Hear something interesting? Click the segment to see columns, tests, and data flow in real-time." 
             },
           ].map((item) => (
             <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 text-center transition-all hover:border-[var(--accent)]/50">
@@ -1299,9 +1300,9 @@ export default function Home() {
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">How it works</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Point at OpenMetadata or dbt" : "Connect The Graph, Dune, or Initia" },
-            { step: "2", title: "Analyze", desc: "AI scans schemas for health, lineage risks, and indexer lag" },
-            { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & Verify", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Initia and share with your DAO" },
+            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or another data source" : "Connect The Graph, Dune, or another onchain source" },
+            { step: "2", title: "Analyze", desc: "AI examines your tables for quality issues, data flow problems, and missing tests" },
+            { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & share", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Solana and share with your community" },
           ].map((item) => (
             <div key={item.step} className="flex flex-col items-center text-center">
               <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-sm font-bold mb-3">{item.step}</div>
@@ -1319,8 +1320,8 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-2 text-xs text-[var(--text-muted)]">
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Health score & coverage</div>
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Lineage risk analysis</div>
-            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "PII & governance flags" : "On-chain verification"}</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Data flow risk analysis</div>
+            <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> {persona === "enterprise" ? "Sensitive data & governance flags" : "On-chain verification"}</div>
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Prioritized action items</div>
             <div className="flex items-center gap-2"><span className="text-[var(--accent)]">●</span> Shareable MP3 + link</div>
           </div>
@@ -1388,19 +1389,19 @@ export default function Home() {
             },
             {
               q: "What data sources are supported?",
-              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), and Dune Analytics. For Dune, we execute queries and analyze result data — computing column statistics, row counts, and top values for data-aware podcast narration. For all sources, we pull metadata, quality tests, lineage, and indexer status to build your health profile.",
+              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), and Dune Analytics. For Dune, we run your queries and analyze the results. For all sources, we examine data quality, table dependencies, and test coverage to build your health profile.",
             },
             {
-              q: "How does the Initia integration work?",
-              a: "For protocol teams, every episode can be minted as a health attestation to the Initia appchain. This creates a verifiable history of data quality that can be shared with your community or DAO.",
+              q: "How does the blockchain integration work?",
+              a: "For Web3 teams, each episode can be recorded on Solana or Initia as a permanent, shareable record of your data quality. You can also pay for Pro with Palm USD, a Solana stablecoin.",
             },
             {
               q: "How long does generation take?",
-              a: "30-60 seconds depending on schema size. The AI analyzes your metadata, generates a two-host script, then synthesizes each segment as audio. You see real-time progress with segment-by-segment updates.",
+              a: "30-60 seconds depending on how many tables you have. The AI writes a two-host script, then records each section as audio. You see real-time progress as it happens.",
             },
             {
               q: "Can I self-host DataBard?",
-              a: "Yes. DataBard is a Next.js app that runs on any Node.js server. Clone the repo, set your API keys, and deploy. The file-backed store works on any persistent server. No database required.",
+              a: "Yes. Clone the repo, set your API keys, and deploy to any server. No database needed.",
             },
             {
               q: "What are the two AI hosts?",
@@ -1428,7 +1429,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="text-xs text-[var(--text-muted)] pb-8 flex gap-3">
-        <span>{persona === "web3" ? "Powered by ElevenLabs & Initia" : "Powered by ElevenLabs & OpenMetadata"}</span>
+        <span>{persona === "web3" ? "Powered by ElevenLabs & Solana" : "Powered by ElevenLabs & OpenMetadata"}</span>
         <span>·</span>
         <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
       </footer>

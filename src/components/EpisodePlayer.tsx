@@ -38,7 +38,7 @@ function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdg
       {/* PII warning */}
       {table.piiColumns && table.piiColumns.length > 0 && (
         <div className="px-2 py-1 rounded bg-[var(--danger)]/10 text-[var(--danger)]">
-          🔒 PII: {table.piiColumns.join(", ")}
+          🔒 Sensitive data: {table.piiColumns.join(", ")}
         </div>
       )}
 
@@ -78,8 +78,8 @@ function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdg
       {/* Lineage */}
       {(upstream.length > 0 || downstream.length > 0) && (
         <div className="flex gap-4">
-          {upstream.length > 0 && <span className="text-[var(--text-muted)]">← {upstream.join(", ")}</span>}
-          {downstream.length > 0 && <span className="text-[var(--text-muted)]">→ {downstream.join(", ")}</span>}
+          {upstream.length > 0 && <span className="text-[var(--text-muted)]">Depends on: {upstream.join(", ")}</span>}
+          {downstream.length > 0 && <span className="text-[var(--text-muted)]">Feeds into: {downstream.join(", ")}</span>}
         </div>
       )}
 
@@ -554,7 +554,7 @@ export function EpisodePlayer({
           try {
             await navigator.share({
               title: `🎙️ DataBard: ${currentEpisode.schemaName}`,
-              text: `Listen to a podcast walkthrough of the ${currentEpisode.schemaName} schema — ${currentEpisode.tableCount} tables, ${currentEpisode.qualitySummary.total} tests`,
+              text: `Listen to a podcast walkthrough of ${currentEpisode.schemaName} — ${currentEpisode.tableCount} tables, ${currentEpisode.qualitySummary.total} tests`,
               url,
             });
             return;
@@ -577,7 +577,7 @@ export function EpisodePlayer({
 
   function shareVia(platform: string) {
     if (!shareUrl) return;
-    const text = `🎙️ Listen to a DataBard episode on the ${currentEpisode.schemaName} schema`;
+    const text = `🎙️ Listen to a DataBard episode on ${currentEpisode.schemaName}`;
     const encoded = encodeURIComponent(text);
     const encodedUrl = encodeURIComponent(shareUrl);
 
@@ -886,7 +886,7 @@ export function EpisodePlayer({
         {activeTab === "research" && researchTrail && (
           <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
             <div className="bg-[var(--bg)] rounded-lg p-4 border border-[var(--border)]">
-              <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Research question</div>
+              <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Your question</div>
               <p className="text-sm font-medium">{researchTrail.question}</p>
               <div className="mt-3 text-xs uppercase tracking-wider text-[var(--text-muted)] mb-1">Answer</div>
               <p className="text-sm text-[var(--text-muted)] leading-relaxed">{researchTrail.summary}</p>
@@ -927,7 +927,7 @@ export function EpisodePlayer({
                 <textarea
                   value={followUpQuestion}
                   onChange={(event) => setFollowUpQuestion(event.target.value)}
-                  placeholder="Ask a follow-up question about this schema"
+                    placeholder="Ask a follow-up question about this data"
                   rows={3}
                   className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm resize-none"
                   disabled={!currentEpisode.researchSessionId || branching}
@@ -941,7 +941,7 @@ export function EpisodePlayer({
                     disabled={!currentEpisode.researchSessionId || branching || !followUpQuestion.trim()}
                     className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {branching ? "Branching…" : "Create branch"}
+                    {branching ? "Asking…" : "Ask follow-up"}
                   </button>
                 </div>
                 {branchError && <p className="text-[10px] text-[var(--danger)]">{branchError}</p>}
@@ -1101,7 +1101,7 @@ export function EpisodePlayer({
                       <span className="text-[var(--text-muted)] ml-auto shrink-0">
                         {ct.failingTests > 0 && `${ct.failingTests} failing`}
                         {ct.failingTests > 0 && ct.downstreamCount > 0 && " · "}
-                        {ct.downstreamCount > 0 && `${ct.downstreamCount} downstream`}
+                        {ct.downstreamCount > 0 && `${ct.downstreamCount} dependents`}
                       </span>
                     </div>
                   ))}
@@ -1112,7 +1112,7 @@ export function EpisodePlayer({
             {/* Lineage hotspots */}
             {insights.lineageHotspots.length > 0 && (
               <div>
-                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Lineage Hotspots</h4>
+                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">High-traffic tables</h4>
                 <div className="flex flex-wrap gap-1.5">
                   {insights.lineageHotspots.map((h) => (
                     <span key={h.name} className="text-xs px-2 py-1 rounded bg-[var(--bg)] text-[var(--text-muted)]">
@@ -1138,7 +1138,7 @@ export function EpisodePlayer({
           <div className="p-4 max-h-96 overflow-y-auto">
             {actionItems.length === 0 ? (
               <div className="text-center text-sm text-[var(--text-muted)] py-6">
-                <p>🎉 No action items — your schema is in great shape!</p>
+                <p>🎉 No action items — your data is in great shape!</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -1181,7 +1181,7 @@ export function EpisodePlayer({
                           <p className="text-[var(--text-muted)] leading-relaxed">{item.description}</p>
                           <div className="flex items-center gap-2 mt-1.5">
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.category}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">~{item.effort}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.effort === "5min" ? "Quick win" : item.effort === "30min" ? "~30 min" : item.effort === "1hr" ? "~1 hour" : "Half day"}</span>
                             {!checked && !inv?.result && (
                               <button
                                 onClick={() => handleInvestigate(item)}

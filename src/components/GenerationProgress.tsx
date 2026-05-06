@@ -16,9 +16,9 @@ interface Props {
 
 export function GenerationProgress({ currentStep, segmentsComplete = 0, segmentsTotal = 0, startedAt, findings = [] }: Props) {
   const steps: Step[] = [
-    { label: "Fetching metadata", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "📊" },
-    { label: "Generating script", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "✍️" },
-    { label: "Synthesizing audio", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "🎵" },
+    { label: "Reading your data", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "📊" },
+    { label: "Writing the episode script", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "✍️" },
+    { label: "Recording audio", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "🎵" },
   ];
 
   // ETA calculation based on segments synthesized
@@ -35,7 +35,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
   return (
     <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-6 animate-slide-up animate-pulse-glow">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">Generating your podcast...</h3>
+        <h3 className="text-lg font-semibold">Creating your episode</h3>
         <div className="flex gap-1">
           <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-ping"></div>
           <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-ping" style={{ animationDelay: "0.2s" }}></div>
@@ -74,7 +74,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
                     />
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="text-xs text-[var(--text-muted)]">{segmentsComplete}/{segmentsTotal} segments</span>
+                    <span className="text-xs text-[var(--text-muted)]">{segmentsComplete}/{segmentsTotal} sections</span>
                     {eta && <span className="text-xs text-[var(--text-muted)]">{eta}</span>}
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
 
       {findings.length > 0 && (
         <div className="mt-4 border-t border-[var(--border)] pt-4">
-          <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-2">Discoveries</p>
+          <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-2">Key findings</p>
           <div className="flex flex-col gap-1.5">
             {findings.map((f, i) => (
               <p key={i} className="text-xs text-[var(--text-muted)] animate-slide-up" style={{ animationDelay: `${i * 0.15}s` }}>
@@ -103,7 +103,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
       )}
 
       <p className="text-xs text-[var(--text-muted)] text-center mt-6">
-        {eta || "This usually takes 30-60 seconds depending on schema size"}
+        {eta || "This usually takes 30-60 seconds depending on how many tables you have"}
       </p>
     </div>
   );
