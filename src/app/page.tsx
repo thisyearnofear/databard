@@ -239,7 +239,7 @@ export default function Home() {
     setStatus("Loading demo…");
 
     try {
-      const res = await fetch(persona === "web3" ? "/sample-episode-web3.json" : "/sample-episode.json");
+      const res = await fetch(persona === "web3" ? "/sample-episode-dune.json" : "/sample-episode.json");
       const demo: Episode = await res.json();
       setGenStep(2);
       setEpisode(demo);
@@ -715,6 +715,13 @@ export default function Home() {
             </p>
           </div>
         )}
+        {episode.schemaFqn === "dune.uniswap" && (
+          <div className="w-full max-w-2xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-3 text-center animate-slide-up">
+            <p className="text-xs text-[var(--text-muted)]">
+              📊 Demo episode analyzing <span className="text-[var(--text)]">Uniswap onchain data</span> via Dune — 6 queries with real column stats, broken whale tracking, and missing documentation
+            </p>
+          </div>
+        )}
         <EpisodePlayer 
           episode={episode} 
           audioUrl={audioUrl} 
@@ -1123,9 +1130,9 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <button onClick={() => setShowEmailGate(true)}
+              <button onClick={() => persona === "web3" ? handleDemo() : setShowEmailGate(true)}
                 className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-6 py-4 text-base font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg shadow-[var(--accent)]/20">
-                ⚡ Try with sample data
+                ⚡ {persona === "web3" ? "Try Dune demo" : "Try with sample data"}
               </button>
             )}
             <button onClick={() => dispatch({ type: "SHOW_CONNECT" })}

@@ -1,0 +1,144 @@
+{
+  "schemaFqn": "dune.uniswap",
+  "schemaName": "Uniswap Analytics",
+  "researchQuestion": "What are the biggest risks hiding in Uniswap's onchain data?",
+  "tableCount": 6,
+  "qualitySummary": { "passed": 8, "failed": 3, "total": 11 },
+  "generatedAt": "2026-05-06T10:00:00Z",
+  "schemaMeta": {
+    "fqn": "dune.uniswap",
+    "name": "uniswap",
+    "description": "Dune Analytics queries for uniswap",
+    "tables": [
+      {
+        "fqn": "dune.uniswap.1234567",
+        "name": "Daily Volume by Chain",
+        "description": "Tracks daily trading volume across all Uniswap deployments by blockchain network.",
+        "columns": [
+          { "name": "date", "dataType": "date", "tags": [] },
+          { "name": "blockchain", "dataType": "varchar", "tags": [] },
+          { "name": "volume_usd", "dataType": "double", "tags": [] },
+          { "name": "num_swaps", "dataType": "bigint", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "query_has_description", "status": "Success" },
+          { "name": "query_has_results", "status": "Success" },
+          { "name": "query_has_data", "status": "Success" }
+        ],
+        "tags": ["dune", "analytics", "defi", "volume"],
+        "rowCount": 2190,
+        "freshness": "2026-05-06T09:30:00Z"
+      },
+      {
+        "fqn": "dune.uniswap.1234568",
+        "name": "TVL Breakdown by Pool",
+        "description": "Total value locked in top Uniswap V3 pools, updated daily.",
+        "columns": [
+          { "name": "pool", "dataType": "varchar", "tags": [] },
+          { "name": "tvl_usd", "dataType": "double", "tags": [] },
+          { "name": "fee_tier", "dataType": "double", "tags": [] },
+          { "name": "token0", "dataType": "varchar", "tags": [] },
+          { "name": "token1", "dataType": "varchar", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "query_has_description", "status": "Success" },
+          { "name": "query_has_results", "status": "Success" },
+          { "name": "query_has_data", "status": "Success" }
+        ],
+        "tags": ["dune", "analytics", "tvl"],
+        "rowCount": 500,
+        "freshness": "2026-05-06T09:30:00Z"
+      },
+      {
+        "fqn": "dune.uniswap.1234569",
+        "name": "Whale Movements",
+        "description": "Tracks swaps above $1M USD value in the last 30 days.",
+        "columns": [
+          { "name": "tx_hash", "dataType": "varchar", "tags": [] },
+          { "name": "amount_usd", "dataType": "double", "tags": [] },
+          { "name": "token_in", "dataType": "varchar", "tags": [] },
+          { "name": "token_out", "dataType": "varchar", "tags": [] },
+          { "name": "block_time", "dataType": "timestamp", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "query_has_description", "status": "Success" },
+          { "name": "query_has_results", "status": "Success" },
+          { "name": "query_has_data", "status": "Failed" }
+        ],
+        "tags": ["dune", "analytics", "whale-alert"],
+        "rowCount": 0,
+        "freshness": "2026-05-04T12:00:00Z"
+      },
+      {
+        "fqn": "dune.uniswap.1234570",
+        "name": "Gas Cost Analysis",
+        "description": "",
+        "columns": [
+          { "name": "date", "dataType": "date", "tags": [] },
+          { "name": "avg_gas_eth", "dataType": "double", "tags": [] },
+          { "name": "median_swap_gas", "dataType": "bigint", "tags": [] },
+          { "name": "pct_failed_swaps", "dataType": "double", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "query_has_description", "status": "Failed" },
+          { "name": "query_has_results", "status": "Success" },
+          { "name": "query_has_data", "status": "Success" }
+        ],
+        "tags": ["dune", "analytics", "gas"],
+        "rowCount": 365,
+        "freshness": "2026-05-06T09:30:00Z"
+      },
+      {
+        "fqn": "dune.uniswap.1234571",
+        "name": "LP Fee Revenue",
+        "description": "Daily fee revenue earned by liquidity providers across all chains.",
+        "columns": [
+          { "name": "date", "dataType": "date", "tags": [] },
+          { "name": "fees_usd", "dataType": "double", "tags": [] },
+          { "name": "chain", "dataType": "varchar", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "query_has_description", "status": "Success" },
+          { "name": "query_has_results", "status": "Queued" }
+        ],
+        "tags": ["dune", "analytics", "fees"],
+        "freshness": "2026-05-06T09:30:00Z"
+      },
+      {
+        "fqn": "dune.uniswap.1234572",
+        "name": "New Pool Deployments",
+        "description": "Tracks new V3 pool creation events with initial liquidity.",
+        "columns": [
+          { "name": "block_time", "dataType": "timestamp", "tags": [] },
+          { "name": "pool", "dataType": "varchar", "tags": [] },
+          { "name": "token0", "dataType": "varchar", "tags": [] },
+          { "name": "token1", "dataType": "varchar", "tags": [] },
+          { "name": "initial_liquidity_usd", "dataType": "double", "tags": [] }
+        ],
+        "qualityTests": [
+          { "name": "query_has_description", "status": "Success" },
+          { "name": "query_has_results", "status": "Success" },
+          { "name": "query_has_data", "status": "Success" }
+        ],
+        "tags": ["dune", "analytics", "deployments"],
+        "rowCount": 8200,
+        "freshness": "2026-05-06T09:30:00Z"
+      }
+    ],
+    "lineage": []
+  },
+  "script": [
+    { "speaker": "Alex", "topic": "intro", "text": "Welcome to DataBard! Today we're diving into Uniswap's onchain analytics — 6 Dune queries, health score 61 out of 100. There's a real story in this data." },
+    { "speaker": "Morgan", "topic": "intro", "text": "Right away I see problems. One query has zero results, another is missing a description entirely. And the data freshness is concerning — let's dig in." },
+    { "speaker": "Alex", "topic": "Daily Volume by Chain", "text": "Let's start with the good news. Daily Volume by Chain tracks 2,190 data points across all Uniswap deployments. The data ranges from $150 million to $5.2 billion per day — with Ethereum leading at roughly 78% of total volume." },
+    { "speaker": "Morgan", "topic": "Daily Volume by Chain", "text": "The volume column shows an average of $2.3 billion daily. But that range — $150M to $5.2B — is extremely volatile. Any dashboard relying on this needs to account for that variance." },
+    { "speaker": "Alex", "topic": "TVL Breakdown by Pool", "text": "TVL Breakdown is solid — 500 pools tracked with fee tiers and token pairs. The top values show USDC-ETH and WBTC-ETH dominating. This is the kind of data LPs actually care about." },
+    { "speaker": "Morgan", "topic": "Whale Movements", "text": "Now here's a red flag. Whale Movements — tracking swaps above $1 million — has zero results. The query ran, but there's no data. Either the threshold is wrong or the query logic is broken." },
+    { "speaker": "Alex", "topic": "Whale Movements", "text": "And the freshness shows May 4th — two days stale. For a whale alert query, that's a serious gap. Big trades could be happening unnoticed." },
+    { "speaker": "Morgan", "topic": "Gas Cost Analysis", "text": "Gas Cost Analysis has results — 365 days of data — but it's missing a description. Nobody knows what this query measures unless they read the SQL. Average gas is showing 0.003 ETH per swap, with about 2.1% failed swaps." },
+    { "speaker": "Alex", "topic": "LP Fee Revenue", "text": "LP Fee Revenue is queued but hasn't executed yet. We can't tell what the fee trends look like. That's a blind spot for anyone evaluating LP returns." },
+    { "speaker": "Morgan", "topic": "New Pool Deployments", "text": "New Pool Deployments is healthy — 8,200 pools created with initial liquidity tracked. The top tokens show a long tail of memecoins getting pools deployed. Good data, well-documented." },
+    { "speaker": "Alex", "topic": "outro", "text": "Bottom line: Uniswap's volume and TVL data is strong, but whale tracking is broken and gas analysis needs documentation. Health score 61 — there's work to do." },
+    { "speaker": "Morgan", "topic": "outro", "text": "Priority one: fix the Whale Movements query — it's returning zero results. Priority two: add a description to Gas Cost Analysis. Priority three: execute the LP Fee Revenue query. Until next time." }
+  ]
+}
