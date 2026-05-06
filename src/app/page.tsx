@@ -149,7 +149,7 @@ export default function Home() {
   // When persona switches, pre-select the most relevant source
   useEffect(() => {
     if (persona === "web3" && (source === "openmetadata" || source === "dbt-cloud" || source === "dbt-local")) {
-      setSource("the-graph");
+      setSource("dune");
     } else if (persona === "enterprise" && (source === "the-graph" || source === "dune")) {
       setSource("openmetadata");
     }
@@ -1024,7 +1024,7 @@ export default function Home() {
           onClick={() => setPersona("web3")}
           className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${persona === "web3" ? "bg-[var(--accent)] text-white shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}
         >
-          ⛓️ Web3 teams
+          ⛓️ Onchain teams
         </button>
       </div>
 
@@ -1039,7 +1039,7 @@ export default function Home() {
         <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
           {persona === "enterprise" 
             ? "Ask a question about your data. Connect your catalog. Get a podcast episode where two AI hosts investigate the answer."
-            : "Ask a question about your onchain data. Connect your source. Get a podcast episode with verifiable health reports on Solana."
+            : "Connect your Dune queries or subgraph. Get a podcast episode where two AI hosts analyze the data — then mint it on Solana."
           }
         </p>
 
@@ -1062,11 +1062,23 @@ export default function Home() {
 
       {/* Social proof */}
       <section className="flex flex-wrap justify-center gap-6 text-xs text-[var(--text-muted)] pb-8 sm:pb-10 max-w-2xl">
-        <span>Built on <span className="text-[var(--text)]">OpenMetadata & Initia</span></span>
-        <span>·</span>
-        <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
-        <span>·</span>
-        <span>Works with <span className="text-[var(--text)]">The Graph, dbt & Dune</span></span>
+        {persona === "enterprise" ? (
+          <>
+            <span>Built on <span className="text-[var(--text)]">OpenMetadata</span></span>
+            <span>·</span>
+            <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
+            <span>·</span>
+            <span>Works with <span className="text-[var(--text)]">dbt, OpenMetadata & Dune</span></span>
+          </>
+        ) : (
+          <>
+            <span>Built on <span className="text-[var(--text)]">Solana & ElevenLabs</span></span>
+            <span>·</span>
+            <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
+            <span>·</span>
+            <span>Works with <span className="text-[var(--text)]">Dune, The Graph & Palm USD</span></span>
+          </>
+        )}
       </section>
 
       {/* Connect CTA — prominent, right after hero */}
@@ -1075,14 +1087,12 @@ export default function Home() {
         <ProviderStatus />
 
         {persona === "web3" && (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-[var(--text-muted)] text-center">Wallet authentication is available on Pro settings.</p>
-            <a href="/pro" className="text-xs text-center text-[var(--accent)] hover:underline">
-              Open /pro wallet settings →
-            </a>
-            <div className="flex items-center gap-3 my-1">
+          <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-xl p-4 flex flex-col gap-3">
+            <p className="text-sm font-medium text-center">Connect your Solana wallet to mint episodes on-chain</p>
+            <SolanaWalletConnect onAddressChange={setSolanaAddress} />
+            <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-[var(--border)]" />
-              <span className="text-xs text-[var(--text-muted)]">or connect a data source</span>
+              <span className="text-xs text-[var(--text-muted)]">or connect a data source below</span>
               <div className="flex-1 h-px bg-[var(--border)]" />
             </div>
           </div>
@@ -1220,10 +1230,18 @@ export default function Home() {
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={graphApiKey} onChange={(e) => setGraphApiKey(e.target.value)} placeholder="For The Graph Network endpoints" title="Required for The Graph Network (gateway.thegraph.com). Leave blank for hosted service." />
             </>)}
             {source === "dune" && (<>
+              {persona === "web3" && (
+                <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
+                  <p className="font-medium text-[var(--text)] mb-1">Getting started with Dune</p>
+                  <p>1. Go to <a href="https://dune.com/settings/api" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">dune.com/settings/api</a> and create a free API key</p>
+                  <p>2. Enter your Dune username (the one whose queries you want to analyze)</p>
+                  <p>3. DataBard runs your queries and narrates the results as a podcast</p>
+                </div>
+              )}
               <label className="text-sm text-[var(--text-muted)]">Dune API Key</label>
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="From dune.com/settings/api" title="Generate at dune.com → Settings → API. Free tier available. DataBard uses this to fetch query metadata and execute non-parameterized queries for result analysis." />
-              <label className="text-sm text-[var(--text-muted)]">Namespace (username or team)</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap" title="The Dune username or team name whose queries you want to analyze. DataBard fetches queries, executes them, and computes column statistics from result data." />
+              <label className="text-sm text-[var(--text-muted)]">Your Dune username</label>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
             </>)}
 
             {source !== "dbt-local" && (
@@ -1300,7 +1318,7 @@ export default function Home() {
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-8">How it works</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or another data source" : "Connect The Graph, Dune, or another onchain source" },
+            { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or another data source" : "Paste your Dune API key or subgraph URL" },
             { step: "2", title: "Analyze", desc: "AI examines your tables for quality issues, data flow problems, and missing tests" },
             { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & share", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Solana and share with your community" },
           ].map((item) => (
@@ -1359,7 +1377,7 @@ export default function Home() {
             <ul className="text-sm text-[var(--text-muted)] space-y-2 mb-6">
               <li>✓ Everything in Free</li>
               <li>✓ Scheduled daily/weekly episodes</li>
-              <li>✓ <b>On-chain health minting (Initia)</b></li>
+              <li>✓ <b>On-chain health minting (Solana)</b></li>
               <li>✓ Private team RSS feeds</li>
               <li>✓ Slack/webhook notifications</li>
               <li>✓ Historical comparison</li>
@@ -1393,7 +1411,7 @@ export default function Home() {
             },
             {
               q: "How does the blockchain integration work?",
-              a: "For Web3 teams, each episode can be recorded on Solana or Initia as a permanent, shareable record of your data quality. You can also pay for Pro with Palm USD, a Solana stablecoin.",
+              a: "For onchain teams, each episode can be recorded on Solana as a permanent, shareable record of your data quality. You can also pay for Pro with Palm USD, a Solana stablecoin.",
             },
             {
               q: "How long does generation take?",
