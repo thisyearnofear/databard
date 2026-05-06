@@ -37,6 +37,41 @@ Expected response:
 }
 ```
 
+#### Test Dune Analytics Connection
+```bash
+curl -X POST http://localhost:3000/api/connect \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "dune",
+    "dune": { "apiKey": "your_dune_api_key", "namespace": "uniswap" }
+  }'
+```
+
+Expected response:
+```json
+{
+  "ok": true,
+  "schemas": ["dune.uniswap"],
+  "source": "dune"
+}
+```
+
+DataBard will fetch query metadata, execute non-parameterized queries (top 10 by recency), and compute column statistics. Results are cached for 30 minutes.
+
+#### Test Dune Episode Generation
+```bash
+curl -X POST http://localhost:3000/api/synthesize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "dune",
+    "dune": { "apiKey": "your_dune_api_key", "namespace": "uniswap" },
+    "schemaFqn": "dune.uniswap"
+  }' \
+  --output dune-episode.mp3
+```
+
+The generated episode will include data-aware narration — actual numbers, ranges, and top values from query results.
+
 #### Test Script Generation
 ```bash
 curl -X POST http://localhost:3000/api/generate-script \
@@ -176,6 +211,8 @@ curl -fsSL https://browser-use.com/cli/install.sh | bash
 ## Manual Testing Checklist
 
 - [ ] Connect to OpenMetadata (both sandbox and local)
+- [ ] Connect to Dune Analytics (API key + namespace)
+- [ ] Verify Dune queries are executed and column stats populated
 - [ ] List schemas successfully
 - [ ] Generate script for a small schema (1-3 tables)
 - [ ] Generate script for a large schema (10+ tables)

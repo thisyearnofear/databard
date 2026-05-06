@@ -7,6 +7,7 @@ import { buildResearchTrail } from "@/lib/research";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
+import { getDuneTableStats } from "@/lib/dune-adapter";
 
 /**
  * Full pipeline: metadata → script → audio.
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest) {
         buildResearchTrail(meta, insights, normalizedResearchQuestion),
         buildEvidenceContext(config)
       );
-      script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail });
+      const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
+      script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail, tableStats });
     }
 
     let audioBuffers: Buffer[];

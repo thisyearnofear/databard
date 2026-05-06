@@ -2,7 +2,7 @@
 
 **Your data catalog, as a question-first podcast.**
 
-Start with a question, connect OpenMetadata, dbt, The Graph, or Dune, and let the agent turn the analysis into a podcast-style answer your team can actually consume.
+Start with a question, connect OpenMetadata, dbt, The Graph, or Dune Analytics, and let the agent execute queries, analyze result data, and turn the analysis into a podcast-style answer your team can actually consume.
 
 > **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required
 
@@ -148,7 +148,7 @@ DataBard is being built for the [Initia INITIATE hackathon](https://docs.initia.
 | **InterwovenKit wallet connect** | ✅ Live | `/pro` page — connect `.init` wallet as alternative to Stripe customer ID |
 | **On-chain episode minting** | ✅ Stub (appchain pending) | `POST /api/onchain/mint` — records schema name, health score, episode ID, author address |
 | **The Graph data source** | ✅ Live | Connect any subgraph endpoint — entities become tables, fields become columns |
-| **Dune Analytics data source** | ✅ Live | Connect Dune namespace — queries become tables, result columns become schema |
+| **Dune Analytics data source** | ✅ Live | Connect Dune namespace — queries become tables, result columns become schema, non-parameterized queries are executed to compute column statistics for data-aware narration |
 | **Appchain deployment** | 🔄 In progress | Targeting Initia testnet `initiation-2` |
 
 ### Onchain Data Sources
@@ -166,7 +166,7 @@ API Key: <from dune.com/settings/api>
 Namespace: uniswap
 ```
 
-DataBard introspects the GraphQL schema, maps entity types to tables, and generates an audio episode about your protocol's data health — the same way it does for dbt and OpenMetadata.
+DataBard fetches query metadata via the Dune REST API, executes non-parameterized queries in parallel, and computes column statistics (min/max/avg, top values) from result data. This enables data-aware podcast narration — the episode discusses actual numbers and trends, not just schema structure.
 
 ### Wallet Connect (Pro Page)
 

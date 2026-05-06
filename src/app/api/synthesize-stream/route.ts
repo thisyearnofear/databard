@@ -9,6 +9,7 @@ import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-provid
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { validateSchemaFqn, ValidationError, rateLimit, validateResearchQuestion } from "@/lib/validation";
 import { getSessionConfig } from "@/lib/session";
+import { getDuneTableStats } from "@/lib/dune-adapter";
 
 /**
  * Streaming synthesis — sends audio chunks as they're generated.
@@ -73,7 +74,8 @@ export async function POST(req: NextRequest) {
                 evidenceContext,
               })
             : null;
-          const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail });
+          const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
+          const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail, tableStats });
           if (signal.aborted) { controller.close(); return; }
 
           // Send metadata

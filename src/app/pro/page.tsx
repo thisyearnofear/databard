@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import type { ScheduleConfig } from "@/lib/store";
 import { ProWalletIsland } from "@/components/pro/ProWalletIsland";
+import { SolanaWalletConnect } from "@/components/SolanaWalletConnect";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -37,6 +39,8 @@ export default function ProSettings() {
   const [hour, setHour] = useState(9);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [source, setSource] = useState<"openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune">("openmetadata");
+  const [duneApiKey, setDuneApiKey] = useState("");
+  const [duneNamespace, setDuneNamespace] = useState("");
 
   useEffect(() => {
     fetch("/api/pro/auth/session")
@@ -67,13 +71,15 @@ export default function ProSettings() {
 
   async function handleSaveSchedule() {
     if (!schemaFqn) { setStatus("Schema FQN required"); return; }
+    if (source === "dune" && !duneApiKey) { setStatus("Dune API key required"); return; }
     setLoading(true);
     try {
+      const dune = source === "dune" ? { apiKey: duneApiKey, namespace: duneNamespace || undefined } : undefined;
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schedule: { schemaFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source },
+          schedule: { schemaFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune },
         }),
       });
       const data = await res.json();
@@ -98,6 +104,7 @@ export default function ProSettings() {
           schemaFqn: schedule.schemaFqn,
           source: schedule.source,
           shareId: schedule.shareId,
+          dune: schedule.dune,
         }),
       });
       const data = await res.json();
@@ -122,6 +129,63 @@ export default function ProSettings() {
   async function handleDelete(id: string) {
     await fetch(`/api/schedules?id=${id}`, { method: "DELETE" });
     setSchedules((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  const { publicKey: solanaPublicKey, signTransaction: solanaSignTx } = useWallet();
+  const [payingPalm, setPayingPalm] = useState(false);
+
+  async function handlePalmUsdCheckout() {
+    if (!solanaPublicKey || !solanaSignTx) return;
+    setPayingPalm(true);
+    setStatus("Preparing Palm USD payment…");
+    try {
+      const { Transaction } = await import("@solana/web3.js");
+
+      // 1. Get unsigned transaction
+      const res = await fetch("/api/checkout/palmusd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: solanaPublicKey.toBase58() }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Payment setup failed");
+
+      // 2. Sign with wallet
+      const tx = Transaction.from(Buffer.from(data.unsignedTxBase64, "base64"));
+      const signedTx = await solanaSignTx(tx);
+
+      // 3. Submit signed transaction
+      const submitRes = await fetch("/api/checkout/palmusd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: solanaPublicKey.toBase58(),
+          signedTxBase64: Buffer.from(signedTx.serialize()).toString("base64"),
+        }),
+      });
+      const submitData = await submitRes.json();
+      if (!submitData.ok) throw new Error(submitData.error || "Payment failed");
+
+      // 4. Verify payment and activate Pro
+      const verifyRes = await fetch("/api/checkout/palmusd/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: solanaPublicKey.toBase58(),
+          txSignature: submitData.txSignature,
+        }),
+      });
+      const verifyData = await verifyRes.json();
+      if (verifyData.ok) {
+        setStatus("✓ Pro activated via Palm USD! Reload to see your schedules.");
+      } else {
+        setStatus(`Error: ${verifyData.error}`);
+      }
+    } catch (e) {
+      setStatus(`Error: ${e instanceof Error ? e.message : "Palm USD payment failed"}`);
+    } finally {
+      setPayingPalm(false);
+    }
   }
 
   async function handleStripeIdentitySubmit() {
@@ -260,6 +324,25 @@ export default function ProSettings() {
         </div>
       </div>
 
+      {/* Palm USD payment (Solana) */}
+      <div className="w-full bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-5 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">Pay with Palm USD (Solana)</label>
+          <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full">$29/mo</span>
+        </div>
+        <p className="text-xs text-[var(--text-muted)]">Pay for DataBard Pro using Palm USD, a Solana stablecoin. Connect your Solana wallet and approve the payment.</p>
+        <SolanaWalletConnect />
+        {solanaPublicKey && (
+          <button
+            onClick={handlePalmUsdCheckout}
+            disabled={payingPalm || loading}
+            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+          >
+            {payingPalm ? "Processing…" : "Pay 29 PUSD for Pro"}
+          </button>
+        )}
+      </div>
+
       {session && (
         <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-xs text-[var(--text-muted)]">
           <p>Wallet: {session.identity.walletAddress ?? "—"}</p>
@@ -368,13 +451,34 @@ export default function ProSettings() {
             </select>
           </div>
 
+          {source === "dune" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-[var(--text-muted)]">Dune API Key</label>
+              <input
+                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+                type="password"
+                autoComplete="off"
+                value={duneApiKey}
+                onChange={(e) => setDuneApiKey(e.target.value)}
+                placeholder="From dune.com/settings/api"
+              />
+              <label className="text-xs text-[var(--text-muted)]">Namespace (username or team)</label>
+              <input
+                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+                value={duneNamespace}
+                onChange={(e) => setDuneNamespace(e.target.value)}
+                placeholder="e.g. uniswap"
+              />
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
             <label className="text-xs text-[var(--text-muted)]">Schema FQN</label>
             <input
               className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
               value={schemaFqn}
               onChange={(e) => setSchemaFqn(e.target.value)}
-              placeholder="database.schema_name"
+              placeholder={source === "dune" ? "dune.namespace" : "database.schema_name"}
             />
           </div>
 

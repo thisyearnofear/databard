@@ -8,10 +8,20 @@ import type { SchemaMeta, ScriptSegment } from "./types";
 import type { ResearchTrail } from "./types";
 import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
 import { scriptCache } from "./store";
+import type { TableStatSummary } from "./dune-adapter";
+
+/** Format a number for narration (e.g., 2300000 → "2.3M") */
+function formatNum(n: number): string {
+  if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n % 1 === 0 ? String(n) : n.toFixed(2);
+}
 
 interface ScriptContext {
   researchQuestion?: string;
   researchTrail?: ResearchTrail;
+  tableStats?: Record<string, TableStatSummary>;
 }
 
 /** Simple hash for cache keys */
@@ -21,8 +31,9 @@ function hashSchema(schema: SchemaMeta, context?: ScriptContext): string {
   ).join(",")}`;
   const questionSig = context?.researchQuestion?.trim() ? `|q:${context.researchQuestion.trim().toLowerCase()}` : "";
   const trailSig = context?.researchTrail?.summary ? `|r:${context.researchTrail.summary.toLowerCase()}` : "";
+  const statsSig = context?.tableStats ? `|s:${Object.keys(context.tableStats).sort().join(",")}` : "";
   let h = 0;
-  const value = `${sig}${questionSig}${trailSig}`;
+  const value = `${sig}${questionSig}${trailSig}${statsSig}`;
   for (let i = 0; i < value.length; i++) h = ((h << 5) - h + value.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
 }
@@ -49,7 +60,8 @@ RULES:
 - Make it sound like two people actually talking. Interruptions, reactions, disagreements are good
 - Total script should be 12-25 segments depending on schema size
 - If a research question is provided, answer it directly and keep it in view throughout the script
-- No markdown, no code blocks — just the JSON array`;
+- No markdown, no code blocks — just the JSON array
+- If dataHighlights are present, narrate actual data findings. Reference specific numbers, ranges, and notable values. For numeric columns mention min/max/avg ranges. For categorical columns mention the most common values. Don't just list column names — tell the story the data reveals.`;
 
 function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): string {
   const tables = schema.tables.map((t) => ({
@@ -106,6 +118,7 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?:
       staleTables: insights.staleTables,
       largestTables: insights.largestTables,
     },
+    dataHighlights: context?.tableStats ?? undefined,
   });
 }
 
@@ -286,6 +299,36 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights, context?
       speaker: "Alex", topic: "scale",
       text: `Scale check: ${top.name} is the largest table at ${fmt} rows.${insights.largestTables.length > 1 ? ` Followed by ${insights.largestTables[1].name}.` : ""}`,
     });
+  }
+
+  // Data highlights (Dune query results)
+  if (context?.tableStats && Object.keys(context.tableStats).length > 0) {
+    const entries = Object.entries(context.tableStats);
+    const [tableName, stats] = entries[0];
+    const fmt = stats.rowCount > 1_000_000 ? `${(stats.rowCount / 1_000_000).toFixed(1)}M` : stats.rowCount > 1000 ? `${(stats.rowCount / 1000).toFixed(0)}K` : `${stats.rowCount}`;
+    const numCol = stats.columnHighlights.find((c) => c.type === "numeric");
+    const catCol = stats.columnHighlights.find((c) => c.type === "categorical" && c.topValues && c.topValues.length > 0);
+
+    let detail = `${tableName} has ${fmt} rows in its result set`;
+    if (numCol) {
+      const fmtMin = numCol.min !== undefined ? formatNum(numCol.min) : "?";
+      const fmtMax = numCol.max !== undefined ? formatNum(numCol.max) : "?";
+      const fmtAvg = numCol.avg !== undefined ? formatNum(numCol.avg) : "?";
+      detail += `. The ${numCol.column} column ranges from ${fmtMin} to ${fmtMax}, averaging ${fmtAvg}`;
+    }
+    if (catCol && catCol.topValues) {
+      detail += numCol ? ". " : ". ";
+      detail += `Top values for ${catCol.column}: ${catCol.topValues.slice(0, 3).join(", ")}`;
+    }
+    detail += ".";
+
+    segments.push({ speaker: "Alex", topic: "data", text: detail });
+    if (entries.length > 1) {
+      segments.push({
+        speaker: "Morgan", topic: "data",
+        text: `${entries.length - 1} other ${entries.length - 1 === 1 ? "query has" : "queries have"} result data too. The numbers tell a richer story than column names alone.`,
+      });
+    }
   }
 
   // Lineage

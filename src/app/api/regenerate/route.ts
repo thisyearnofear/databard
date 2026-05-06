@@ -9,6 +9,7 @@ import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-provid
 import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { analyzeSchema, diffInsights } from "@/lib/schema-analysis";
 import type { ConnectionConfig, Episode } from "@/lib/types";
+import { getDuneTableStats } from "@/lib/dune-adapter";
 
 /**
  * Regeneration endpoint — generates a fresh episode from a saved config.
@@ -78,7 +79,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const script = await generateScript(meta, { researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined, researchTrail });
+    const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
+    const script = await generateScript(meta, { researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined, researchTrail, tableStats });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);
 

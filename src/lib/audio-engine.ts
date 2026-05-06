@@ -119,15 +119,46 @@ export async function synthesizeSpeech(
   return buffer;
 }
 
-/** Generate a short sound effect */
+/** Generate a short sound effect via ElevenLabs Sound Generation API */
 export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promise<Buffer> {
   const cacheKey = `audio:sfx:${hashKey(prompt)}:${durationSeconds}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // SFX requires paid plan — return empty buffer for now
-  console.warn(`[SFX skipped - requires paid plan]: ${prompt}`);
-  return Buffer.alloc(0);
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    console.warn(`[SFX skipped - no API key]: ${prompt}`);
+    return Buffer.alloc(0);
+  }
+
+  try {
+    const response = await withRetry(() => fetch("https://api.elevenlabs.io/v1/sound-generation", {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: prompt,
+        duration_seconds: durationSeconds,
+        prompt_influence: 0.3,
+      }),
+    }));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`[SFX] API error ${response.status}: ${errorText}`);
+      return Buffer.alloc(0);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    console.log(`[SFX] Got ${buffer.length} bytes for "${prompt}"`);
+    setCached(cacheKey, buffer);
+    return buffer;
+  } catch (e) {
+    console.warn(`[SFX] Failed: ${e instanceof Error ? e.message : String(e)}`);
+    return Buffer.alloc(0);
+  }
 }
 
 /** Estimate ElevenLabs API calls for a script */

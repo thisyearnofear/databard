@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useReducer, useCallback } from "react";
 import Link from "next/link";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
+import { SolanaWalletConnect } from "@/components/SolanaWalletConnect";
+import { useToast } from "@/components/Toast";
 import type { Episode, DataSource } from "@/lib/types";
 
 type OMMode = "sandbox" | "custom";
@@ -120,6 +123,8 @@ export default function Home() {
   const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
+  const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
+  const { publicKey: solanaPublicKey, signTransaction: solanaSignTx } = useWallet();
 
   const [connecting, setConnecting] = useState(false);
   const [connectionTested, setConnectionTested] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -132,6 +137,14 @@ export default function Home() {
   const [graphApiKey, setGraphApiKey] = useState("");
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
+
+  const { toast } = useToast();
+
+  /** Show error as both toast and status bar */
+  function showError(message: string) {
+    toast(message, "error");
+    setStatus(`Error: ${message}`);
+  }
 
   // When persona switches, pre-select the most relevant source
   useEffect(() => {
@@ -241,7 +254,7 @@ export default function Home() {
       setStatus("");
       dispatch({ type: "EPISODE_READY" });
     } catch (e: unknown) {
-      setStatus(`Error: ${e instanceof Error ? e.message : "Failed to load demo"}`);
+      showError(e instanceof Error ? e.message : "Failed to load demo");
       dispatch({ type: "RESET" });
     } finally {
       setGenStep(-1);
@@ -256,23 +269,23 @@ export default function Home() {
       if (omMode === "sandbox") {
         if (token) body.token = token;
       } else {
-        if (!omUrl || !token) { setStatus("Error: URL and token required for custom instance"); return null; }
+        if (!omUrl || !token) { showError("URL and token required for custom instance"); return null; }
         body.url = omUrl;
         body.token = token;
       }
     } else if (source === "dbt-cloud") {
-      if (!dbtAccountId || !dbtProjectId || !dbtToken) { setStatus("Error: All fields required"); return null; }
+      if (!dbtAccountId || !dbtProjectId || !dbtToken) { showError("All fields required"); return null; }
       body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken };
     } else if (source === "dbt-local") {
-      if (!manifestFile) { setStatus("Error: Please upload a manifest.json file"); return null; }
+      if (!manifestFile) { showError("Please upload a manifest.json file"); return null; }
       const text = await manifestFile.text();
-      try { JSON.parse(text); } catch { setStatus("Error: Invalid JSON in manifest file"); return null; }
+      try { JSON.parse(text); } catch { showError("Invalid JSON in manifest file"); return null; }
       body.dbtLocal = { manifestContent: text };
     } else if (source === "the-graph") {
-      if (!graphUrl) { setStatus("Error: Subgraph URL required"); return null; }
+      if (!graphUrl) { showError("Subgraph URL required"); return null; }
       body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
     } else if (source === "dune") {
-      if (!duneApiKey) { setStatus("Error: Dune API key required"); return null; }
+      if (!duneApiKey) { showError("Dune API key required"); return null; }
       body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
     }
     return body;
@@ -316,10 +329,10 @@ export default function Home() {
         setStatus(`Connected — ${nextSchemas.length} schemas found`);
         dispatch({ type: "CONNECTED", schemas: nextSchemas });
       } else {
-        setStatus(`Error: ${data.error}`);
+        showError(data.error);
       }
     } catch (e: unknown) {
-      setStatus(`Error: ${e instanceof Error ? e.message : "Connection failed"}`);
+      showError(e instanceof Error ? e.message : "Connection failed");
     } finally {
       setConnecting(false);
     }
@@ -361,7 +374,7 @@ export default function Home() {
         setConnecting(false);
       }
     } catch (e: unknown) {
-      setStatus(`Error: ${e instanceof Error ? e.message : "Connection failed"}`);
+      showError(e instanceof Error ? e.message : "Connection failed");
       setConnecting(false);
     } finally {
       setConnecting(false);
@@ -419,12 +432,12 @@ export default function Home() {
         } catch {
           // Keep fallback message for non-JSON responses
         }
-        setStatus(`Error: ${message}`);
+        showError(message);
         return;
       }
 
       const reader = res.body?.getReader();
-      if (!reader) { setStatus("Error: No response stream"); return; }
+      if (!reader) { showError("No response stream"); return; }
 
       const decoder = new TextDecoder();
       const audioChunks: ArrayBuffer[] = [];
@@ -520,12 +533,12 @@ export default function Home() {
             setStatus("");
             dispatch({ type: "EPISODE_READY" });
           } else if (data.type === "error") {
-            setStatus(`Error: ${data.error}`);
+            showError(data.error);
           }
         }
       }
     } catch (e: unknown) {
-      setStatus(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
+      showError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setGenStep(-1);
     }
@@ -535,7 +548,7 @@ export default function Home() {
     const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: "team" }) });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
-    else setStatus(data.error || "Checkout not available yet");
+    else showError(data.error || "Checkout not available yet");
   }
 
   async function handleMint() {
@@ -573,10 +586,77 @@ export default function Home() {
       if (data.ok) {
         setStatus(`✓ Minted on-chain! ${data.txHash ? `TX: ${data.txHash.slice(0, 8)}…` : "(Stubbed)"}`);
       } else {
-        setStatus(`Error: ${data.error}`);
+        showError(data.error);
       }
     } catch (e: unknown) {
-      setStatus(`Error: ${e instanceof Error ? e.message : "Minting failed"}`);
+      showError(e instanceof Error ? e.message : "Minting failed");
+    } finally {
+      setMinting(false);
+    }
+  }
+
+  async function handleMintSolana() {
+    if (!episode || !solanaPublicKey || !solanaSignTx) return;
+    setMinting(true);
+    setStatus("Minting on Solana…");
+
+    try {
+      // 1. Share episode to get an ID
+      let episodeId = "";
+      const shareRes = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(episode),
+      });
+      const shareData = await shareRes.json();
+      if (shareData.ok) {
+        episodeId = shareData.id;
+      } else {
+        throw new Error(shareData.error || "Failed to prepare episode for minting");
+      }
+
+      // 2. Get unsigned transaction from server
+      const healthScore = episode.qualitySummary.total > 0
+        ? Math.round((episode.qualitySummary.passed / episode.qualitySummary.total) * 100)
+        : 100;
+
+      const mintRes = await fetch("/api/onchain/mint-solana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schemaName: episode.schemaName,
+          healthScore,
+          episodeId,
+          walletAddress: solanaPublicKey.toBase58(),
+        }),
+      });
+      const mintData = await mintRes.json();
+      if (!mintData.ok) throw new Error(mintData.error || "Mint failed");
+
+      // 3. Sign and submit
+      const { Transaction } = await import("@solana/web3.js");
+      const tx = Transaction.from(Buffer.from(mintData.unsignedTxBase64, "base64"));
+      const signedTx = await solanaSignTx(tx);
+      const sig = await fetch("/api/onchain/mint-solana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schemaName: episode.schemaName,
+          healthScore,
+          episodeId,
+          walletAddress: solanaPublicKey.toBase58(),
+          signedTxBase64: Buffer.from(signedTx.serialize()).toString("base64"),
+        }),
+      });
+      const sigData = await sig.json();
+      if (sigData.ok) {
+        toast(`Minted on Solana! ${sigData.txSignature?.slice(0, 8)}…`, "success");
+        setStatus(`✓ Minted on Solana! TX: ${sigData.txSignature?.slice(0, 8)}…`);
+      } else {
+        showError(sigData.error);
+      }
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : "Solana minting failed");
     } finally {
       setMinting(false);
     }
@@ -592,7 +672,7 @@ export default function Home() {
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
-    "dune": "Enter your Dune API key and a namespace (username or team) to fetch query metadata.",
+    "dune": "Enter your Dune API key and a namespace (username or team). DataBard executes queries and analyzes result data — column stats, row counts, and top values — for data-aware episodes.",
   };
 
   const sourceLabel: Record<DataSource, string> = {
@@ -640,7 +720,7 @@ export default function Home() {
           audioUrl={audioUrl} 
           segmentOffsets={segmentOffsets}
           audioDuration={audioDuration}
-          onMint={persona === "web3" && walletAddress ? handleMint : undefined}
+          onMint={persona === "web3" && solanaPublicKey ? handleMintSolana : persona === "web3" && walletAddress ? handleMint : undefined}
           minting={minting}
         />
 
@@ -652,25 +732,37 @@ export default function Home() {
           {/* Post-experience upsell */}
 {persona === "web3" ? (
              <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
-               <p className="text-sm mb-2">Mint this report on-chain with Initia</p>
+               <p className="text-sm mb-2">Mint this report on-chain</p>
                <p className="text-xs text-[var(--text-muted)] mb-3">
-                 {walletAddress 
-                   ? "You're connected! Record this health snapshot on the Initia appchain."
-                   : "Create a verifiable health attestation for your community or DAO — $29/mo"
-                 }
+                 Record a verifiable health attestation on Solana or Initia.
                </p>
-               {walletAddress ? (
-                 <button 
-                   onClick={handleMint} 
-                   disabled={minting}
-                   className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-6 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
-                 >
-                   {minting ? "Minting…" : "Mint Now"}
-                </button>
-               ) : (
-                 <button onClick={handleCheckout} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer">
-                   Start Pro trial
-                 </button>
+
+               {/* Solana (primary) */}
+               <div className="mb-3">
+                 <SolanaWalletConnect onAddressChange={setSolanaAddress} />
+                 {solanaPublicKey && (
+                   <button 
+                     onClick={handleMintSolana} 
+                     disabled={minting}
+                     className="mt-2 w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-6 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+                   >
+                     {minting ? "Minting…" : "Mint on Solana"}
+                   </button>
+                 )}
+               </div>
+
+               {/* Initia (secondary) */}
+               {walletAddress && (
+                 <div className="border-t border-[var(--border)] pt-3">
+                   <p className="text-xs text-[var(--text-muted)] mb-2">Initia: {walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}</p>
+                   <button 
+                     onClick={handleMint} 
+                     disabled={minting}
+                     className="w-full bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-lg px-4 py-1.5 text-xs cursor-pointer disabled:opacity-50"
+                   >
+                     {minting ? "Minting…" : "Mint on Initia"}
+                   </button>
+                 </div>
                )}
              </div>
            ) : (
@@ -1128,9 +1220,9 @@ export default function Home() {
             </>)}
             {source === "dune" && (<>
               <label className="text-sm text-[var(--text-muted)]">Dune API Key</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="From dune.com/settings/api" title="Generate at dune.com → Settings → API. Free tier available." />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="From dune.com/settings/api" title="Generate at dune.com → Settings → API. Free tier available. DataBard uses this to fetch query metadata and execute non-parameterized queries for result analysis." />
               <label className="text-sm text-[var(--text-muted)]">Namespace (username or team)</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap" title="The Dune username or team name whose queries you want to analyze." />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap" title="The Dune username or team name whose queries you want to analyze. DataBard fetches queries, executes them, and computes column statistics from result data." />
             </>)}
 
             {source !== "dbt-local" && (
@@ -1296,7 +1388,7 @@ export default function Home() {
             },
             {
               q: "What data sources are supported?",
-              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), and Dune Analytics. We pull metadata, quality tests, lineage, and indexer status to build your health profile.",
+              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), and Dune Analytics. For Dune, we execute queries and analyze result data — computing column statistics, row counts, and top values for data-aware podcast narration. For all sources, we pull metadata, quality tests, lineage, and indexer status to build your health profile.",
             },
             {
               q: "How does the Initia integration work?",

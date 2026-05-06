@@ -197,6 +197,8 @@ export interface ScheduleConfig {
   lastRunAt?: string;
   nextRunAt?: string;
   shareId?: string; // ID of the last generated episode
+  /** Source-specific credentials (stored server-side for scheduled regeneration) */
+  dune?: { apiKey: string; namespace?: string };
 }
 
 export const proAccounts = {
