@@ -6,7 +6,7 @@ module.exports = {
     cwd: '/opt/databard',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000,
+      PORT: 5100,
     },
     exec_mode: 'fork',
     instances: 1,
