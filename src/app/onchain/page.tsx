@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { MintRecord, MintStats } from "@/lib/mint-stats";
 
-export default function OnChainWall() {
+function OnChainWallContent() {
   const searchParams = useSearchParams();
   const schemaFilter = searchParams.get("schema");
   
@@ -38,17 +38,15 @@ export default function OnChainWall() {
 
   if (loading && !stats) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[var(--text-muted)]">Loading on-chain records…</p>
-        </div>
-      </main>
+      <div className="flex flex-col items-center gap-4 py-20">
+        <div className="w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+        <p className="text-[var(--text-muted)]">Loading on-chain records…</p>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8">
+    <>
       {/* Header */}
       <header className="w-full max-w-4xl text-center space-y-4 animate-fade-in">
         <Link href="/" className="text-xs text-[var(--accent)] hover:underline mb-2 inline-block">
@@ -248,6 +246,21 @@ export default function OnChainWall() {
            </div>
         )}
       </div>
+    </>
+  );
+}
+
+export default function OnChainWall() {
+  return (
+    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8">
+      <Suspense fallback={
+        <div className="flex flex-col items-center gap-4 py-20">
+          <div className="w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[var(--text-muted)]">Loading health wall…</p>
+        </div>
+      }>
+        <OnChainWallContent />
+      </Suspense>
 
       <footer className="text-[10px] text-[var(--text-muted)] pt-8 pb-4">
         Powered by Solana Memo Program · {new Date().getFullYear()} DataBard
