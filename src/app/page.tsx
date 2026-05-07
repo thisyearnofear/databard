@@ -1304,43 +1304,45 @@ export default function Home() {
             </>)}
             {source === "dune" && (<>
               {persona === "web3" && (
-                <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/20 rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
-                  <p className="font-medium text-[var(--text)] mb-1">Getting started with Dune</p>
-                  <p>1. Go to <a href="https://dune.com/settings/api" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--text)]">dune.com/settings/api</a> and create a free API key</p>
-                  <p>2. Enter your Dune username (the one whose queries you want to analyze)</p>
-                  <p>3. DataBard runs your queries and narrates the results as a podcast</p>
+                <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
+                  <p className="flex items-center gap-2 text-[var(--text)] font-medium mb-1">
+                    <span>💡</span>
+                    <span>Getting started with Dune</span>
+                  </p>
+                  <p className="leading-relaxed">
+                    Create a free API key at <a href="https://dune.com/settings/api" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">dune.com/settings/api</a>. 
+                    DataBard will analyze queries in your namespace and narrate the results.
+                  </p>
                 </div>
               )}
               <label className="text-sm text-[var(--text-muted)]">Dune API Key</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="From dune.com/settings/api" title="Generate at dune.com → Settings → API. Free tier available. DataBard uses this to fetch query metadata and execute non-parameterized queries for result analysis." />
-              <label className="text-sm text-[var(--text-muted)]">Your Dune username</label>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="Paste your Dune API key" title="Generate at dune.com → Settings → API. Free tier available. DataBard uses this to fetch query metadata and execute non-parameterized queries for result analysis." />
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-[var(--text-muted)]">Dune Username</label>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Optional</span>
+              </div>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap (defaults to your own)" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
             </>)}
 
             {source !== "dbt-local" && (
-              <p className="text-xs text-[var(--text-muted)] -mt-2 flex items-center gap-1">
-                <span>🔒</span> Credentials are sent over HTTPS and stored only for this session
+              <p className="text-xs text-[var(--text-muted)] -mt-2 flex items-center gap-1 opacity-70">
+                <span>🔒</span> Credentials are sent over HTTPS and never stored on disk
               </p>
             )}
 
-            <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3">
-              <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Active data context</p>
-              <p className="text-sm mt-1">{sourceLabel[source]} · {activeContext}</p>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={handleTestConnection} disabled={connectionTested === "testing"} className="flex-1 bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
+            <div className="flex flex-col gap-2 mt-2">
+              <button onClick={handleConnect} disabled={connecting} className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10">
+                {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {connecting ? "Connecting…" : "Connect & Continue →"}
+              </button>
+              <button onClick={handleTestConnection} disabled={connectionTested === "testing"} className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
                 {connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
                 {connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
                 {connectionTested === "error" && <span className="text-red-500">✗</span>}
                 Test Connection
               </button>
-              <button onClick={handleConnect} disabled={connecting} className="flex-1 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                {connecting ? "Connecting…" : "Connect & Continue →"}
-              </button>
             </div>
-            <button onClick={() => dispatch({ type: "RESET" })} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer text-center">← Back</button>
+            <button onClick={() => dispatch({ type: "RESET" })} className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer text-center mt-2">← Back</button>
           </div>
         ) : null}
         {status && <p className="text-sm text-[var(--text-muted)] text-center mt-4">{status}</p>}
