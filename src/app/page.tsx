@@ -1323,7 +1323,28 @@ export default function Home() {
                 <label className="text-sm text-[var(--text-muted)]">Analyze specific query</label>
                 <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Recommended</span>
               </div>
-              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneQueryUrl} onChange={(e) => setDuneQueryUrl(e.target.value)} placeholder="Paste Dune query URL or ID" title="Analyze a specific query directly. Bypasses the schema selection step." />
+              <div className="flex flex-col gap-1.5">
+                <input 
+                  className={`bg-[var(--bg)] border rounded-lg px-4 py-2 text-sm transition-colors ${
+                    duneQueryUrl && !duneQueryUrl.match(/queries\/(\d+)|^\d+$/) 
+                      ? "border-yellow-500/50 focus:border-yellow-500" 
+                      : "border-[var(--border)] focus:border-[var(--accent)]"
+                  }`} 
+                  value={duneQueryUrl} 
+                  onChange={(e) => setDuneQueryUrl(e.target.value)} 
+                  placeholder="dune.com/queries/123456" 
+                  title="Analyze a specific query directly. Bypasses the schema selection step." 
+                />
+                {duneQueryUrl && !duneQueryUrl.match(/queries\/(\d+)|^\d+$/) && (
+                  <p className="text-[10px] text-yellow-500 flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Please provide a Query URL (e.g. dune.com/queries/...) or ID. Dashboards/Blockchains not yet supported.</span>
+                  </p>
+                )}
+                {!duneQueryUrl && (
+                  <p className="text-[10px] text-[var(--text-muted)] opacity-60">Paste a specific query URL to skip discovery</p>
+                )}
+              </div>
 
               <div className="flex items-center justify-between">
                 <label className="text-sm text-[var(--text-muted)]">Dune Username</label>
