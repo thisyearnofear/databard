@@ -70,10 +70,19 @@ export async function POST(req: NextRequest) {
 
     let schemas: string[] = [];
     if (source === "dune" && body.dune?.queryUrl) {
-      const match = body.dune.queryUrl.match(/queries\/(\d+)/);
-      const queryId = match ? match[1] : body.dune.queryUrl.match(/^\d+$/) ? body.dune.queryUrl : null;
-      if (queryId) {
-        schemas = [`dune.query.${queryId}`];
+      const parts = body.dune.queryUrl.split(",").map((s: string) => s.trim()).filter(Boolean);
+      const ids: string[] = [];
+      
+      for (const p of parts) {
+        const match = p.match(/queries\/(\d+)/);
+        const id = match ? match[1] : p.match(/^\d+$/) ? p : null;
+        if (id) ids.push(id);
+      }
+
+      if (ids.length > 1) {
+        schemas = [`dune.batch.${ids.join("-")}`];
+      } else if (ids.length === 1) {
+        schemas = [`dune.query.${ids[0]}`];
       }
     }
 

@@ -1320,29 +1320,29 @@ export default function Home() {
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="Paste your Dune API key" title="Generate at dune.com → Settings → API. Free tier available. DataBard uses this to fetch query metadata and execute non-parameterized queries for result analysis." />
               
               <div className="flex items-center justify-between">
-                <label className="text-sm text-[var(--text-muted)]">Analyze specific query</label>
+                <label className="text-sm text-[var(--text-muted)]">Analyze specific queries</label>
                 <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Recommended</span>
               </div>
               <div className="flex flex-col gap-1.5">
                 <input 
                   className={`bg-[var(--bg)] border rounded-lg px-4 py-2 text-sm transition-colors ${
-                    duneQueryUrl && !duneQueryUrl.match(/queries\/(\d+)|^\d+$/) 
+                    duneQueryUrl && !duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/))
                       ? "border-yellow-500/50 focus:border-yellow-500" 
                       : "border-[var(--border)] focus:border-[var(--accent)]"
                   }`} 
                   value={duneQueryUrl} 
                   onChange={(e) => setDuneQueryUrl(e.target.value)} 
-                  placeholder="dune.com/queries/123456" 
-                  title="Analyze a specific query directly. Bypasses the schema selection step." 
+                  placeholder="dune.com/queries/123, 456..." 
+                  title="Analyze specific queries directly. Comma-separated URLs or IDs supported." 
                 />
-                {duneQueryUrl && !duneQueryUrl.match(/queries\/(\d+)|^\d+$/) && (
+                {duneQueryUrl && !duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/)) && (
                   <p className="text-[10px] text-yellow-500 flex items-center gap-1">
                     <span>⚠️</span>
-                    <span>Please provide a Query URL (e.g. dune.com/queries/...) or ID. Dashboards/Blockchains not yet supported.</span>
+                    <span>Please provide valid Query URLs or IDs (comma-separated). Dashboards/Blockchains not yet supported.</span>
                   </p>
                 )}
                 {!duneQueryUrl && (
-                  <p className="text-[10px] text-[var(--text-muted)] opacity-60">Paste a specific query URL to skip discovery</p>
+                  <p className="text-[10px] text-[var(--text-muted)] opacity-60">Paste multiple query URLs (comma-separated) for a batch report</p>
                 )}
               </div>
 

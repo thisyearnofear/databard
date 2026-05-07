@@ -320,6 +320,67 @@ async function buildTableMetaFromQuery(q: DuneQuery, apiKey: string, fqnPrefix: 
 
 // ── Enhanced: fetch metadata + execute queries for result data ──
 
+export async function fetchDuneBatch(queryIds: number[], apiKey: string): Promise<SchemaMeta> {
+  const sortedIds = [...new Set(queryIds)].sort((a, b) => a - b);
+  const batchId = sortedIds.join("-");
+  const cacheKey = `dune:batch:${batchId}`;
+  
+  const cached = metaCache.get<SchemaMeta>(cacheKey);
+  if (cached) return cached;
+
+  const fqn = `dune.batch.${batchId}`;
+
+  // Fetch all query metadata in parallel
+  const queries = await Promise.all(
+    sortedIds.map((id) => duneGet<DuneQuery>(`/query/${id}`, apiKey))
+  );
+
+  // Execute non-parameterized queries (limit concurrency to 3)
+  const statsMap = new Map<number, TableStatSummary>();
+  const executable = queries.filter((q) => !q.parameters || q.parameters.length === 0);
+  
+  const executeBatch = async (batch: DuneQuery[]) => {
+    await Promise.all(
+      batch.map(async (q) => {
+        const result = await executeAndFetchResults(q.query_id, apiKey);
+        if (result && result.rows.length > 0) {
+          statsMap.set(q.query_id, computeColumnStats(result.rows, result.meta));
+        }
+      })
+    );
+  };
+
+  for (let i = 0; i < executable.length; i += 3) {
+    await executeBatch(executable.slice(i, i + 3));
+  }
+
+  // Build tables
+  const tables: TableMeta[] = await Promise.all(
+    queries.map((q) => buildTableMetaFromQuery(q, apiKey, "dune.batch", statsMap.get(q.query_id)))
+  );
+
+  // Store stats in sidecar for script generator
+  const tableStats: Record<string, TableStatSummary> = {};
+  for (const [queryId, stats] of statsMap) {
+    const tableName = queries.find((q) => q.query_id === queryId)?.name;
+    if (tableName) tableStats[tableName] = stats;
+  }
+  if (Object.keys(tableStats).length > 0) {
+    duneStatsCache.set(fqn, tableStats);
+  }
+
+  const result: SchemaMeta = {
+    fqn,
+    name: `Dune Batch (${queries.length} queries)`,
+    description: `Custom batch of Dune queries: ${queries.map(q => q.name).join(", ")}`,
+    tables,
+    lineage: [],
+  };
+
+  metaCache.set(cacheKey, result, 600);
+  return result;
+}
+
 export async function fetchSingleDuneQuery(queryId: number, apiKey: string): Promise<SchemaMeta> {
   const cacheKey = `dune:query:${queryId}`;
   const cached = metaCache.get<SchemaMeta>(cacheKey);
