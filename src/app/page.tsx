@@ -597,7 +597,15 @@ export default function Home() {
         throw new Error(shareData.error || "Failed to prepare episode for minting");
       }
 
-      // 2. Mint on-chain
+      // 2. Compute report hash for tamper-evidence
+      const scriptJson = JSON.stringify(episode.script);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(scriptJson);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const reportHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
+      // 3. Mint on-chain
       const res = await fetch("/api/onchain/mint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -605,6 +613,7 @@ export default function Home() {
           schemaName: episode.schemaName,
           healthScore: episode.qualitySummary.total > 0 ? Math.round((episode.qualitySummary.passed / episode.qualitySummary.total) * 100) : 100,
           episodeId: episodeId,
+          reportHash,
           initiaAddress: walletAddress,
         }),
       });
@@ -641,7 +650,15 @@ export default function Home() {
         throw new Error(shareData.error || "Failed to prepare episode for minting");
       }
 
-      // 2. Get unsigned transaction from server
+      // 2. Compute report hash for tamper-evidence
+      const scriptJson = JSON.stringify(episode.script);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(scriptJson);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const reportHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
+      // 3. Get unsigned transaction from server
       const healthScore = episode.qualitySummary.total > 0
         ? Math.round((episode.qualitySummary.passed / episode.qualitySummary.total) * 100)
         : 100;
@@ -653,13 +670,14 @@ export default function Home() {
           schemaName: episode.schemaName,
           healthScore,
           episodeId,
+          reportHash,
           walletAddress: solanaPublicKey.toBase58(),
         }),
       });
       const mintData = await mintRes.json();
       if (!mintData.ok) throw new Error(mintData.error || "Mint failed");
 
-      // 3. Sign and submit
+      // 4. Sign and submit
       const { Transaction } = await import("@solana/web3.js");
       const tx = Transaction.from(Buffer.from(mintData.unsignedTxBase64, "base64"));
       const signedTx = await solanaSignTx(tx);
@@ -670,6 +688,7 @@ export default function Home() {
           schemaName: episode.schemaName,
           healthScore,
           episodeId,
+          reportHash,
           walletAddress: solanaPublicKey.toBase58(),
           signedTxBase64: Buffer.from(signedTx.serialize()).toString("base64"),
         }),
@@ -1096,18 +1115,10 @@ export default function Home() {
 
         {/* On-chain social proof pill — only on web3 persona, only when there's something to show. */}
         {persona === "web3" && mintStats && mintStats.total > 0 && (
-          <a
-            href={
-              mintStats.recent[0]
-                ? (mintStats.recent[0].network === "mainnet-beta"
-                  ? `https://explorer.solana.com/tx/${mintStats.recent[0].txSignature}`
-                  : `https://explorer.solana.com/tx/${mintStats.recent[0].txSignature}?cluster=${mintStats.recent[0].network}`)
-                : "#"
-            }
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/onchain"
             className="mt-4 inline-flex items-center gap-2 text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
-            title="View latest mint on Solana Explorer"
+            title="View the On-Chain Health Wall"
           >
             <span>⛓️</span>
             <span>
@@ -1118,7 +1129,7 @@ export default function Home() {
                 · last by {mintStats.recent[0].walletAddress.slice(0, 4)}…{mintStats.recent[0].walletAddress.slice(-4)}
               </span>
             )}
-          </a>
+          </Link>
         )}
       </section>
 

@@ -18,6 +18,7 @@ interface MintBody {
   healthScore: number;
   episodeId: string;
   walletAddress: string;
+  reportHash?: string;
   /** Base64-encoded signed transaction from the client */
   signedTxBase64?: string;
 }
@@ -25,7 +26,7 @@ interface MintBody {
 export async function POST(req: NextRequest) {
   try {
     const body: MintBody = await req.json();
-    const { schemaName, healthScore, episodeId, walletAddress, signedTxBase64 } = body;
+    const { schemaName, healthScore, episodeId, walletAddress, reportHash, signedTxBase64 } = body;
 
     if (!schemaName || !episodeId || !walletAddress) {
       return NextResponse.json(
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
         healthScore: typeof healthScore === "number" ? healthScore : 0,
         episodeId,
         walletAddress,
+        reportHash: reportHash || "",
         txSignature: signature,
         network: NETWORK,
         createdAt: new Date().toISOString(),
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest) {
       schema_name: schemaName,
       health_score: healthScore,
       episode_id: episodeId,
+      report_hash: reportHash || "",
       author: walletAddress,
       timestamp: new Date().toISOString(),
       network: NETWORK,

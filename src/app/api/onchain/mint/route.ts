@@ -21,6 +21,7 @@ interface MintBody {
   schemaName: string;
   healthScore: number;
   episodeId: string;
+  reportHash?: string;
   initiaAddress: string;
   chainId?: string;
   /** Base64-encoded signed transaction from the client wallet */
@@ -30,7 +31,7 @@ interface MintBody {
 export async function POST(req: NextRequest) {
   try {
     const body: MintBody = await req.json();
-    const { schemaName, healthScore, episodeId, initiaAddress, signedTxBase64 } = body;
+    const { schemaName, healthScore, episodeId, reportHash, initiaAddress, signedTxBase64 } = body;
 
     if (!schemaName || !episodeId || !initiaAddress) {
       return NextResponse.json({ ok: false, error: "schemaName, episodeId, and initiaAddress required" }, { status: 400 });
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       schema_name: schemaName,
       health_score: healthScore,
       episode_id: episodeId,
+      report_hash: reportHash || "",
       author: initiaAddress,
       timestamp: new Date().toISOString(),
       chain_id: CHAIN_ID,

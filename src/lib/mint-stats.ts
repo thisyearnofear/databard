@@ -21,6 +21,8 @@ export interface MintRecord {
   healthScore: number;
   /** Internal episode share id */
   episodeId: string;
+  /** SHA-256 hash of the script JSON */
+  reportHash?: string;
   /** Solana wallet that signed the memo */
   walletAddress: string;
   /** Solana transaction signature */
@@ -76,8 +78,11 @@ export async function recordMint(record: MintRecord): Promise<void> {
   }
 }
 
-export async function getMintStats(limit = 10): Promise<MintStats> {
-  const all = await readAll();
+export async function getMintStats(limit = 10, schemaName?: string): Promise<MintStats> {
+  let all = await readAll();
+  if (schemaName) {
+    all = all.filter((m) => m.schemaName === schemaName);
+  }
   const sorted = [...all].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const bySchema: Record<string, number> = {};
   for (const m of all) {
