@@ -6,7 +6,7 @@ import type { ConnectionConfig, SchemaMeta } from "./types";
 import { fetchSchemaMeta as fetchOM, listSchemas as listOM } from "./openmetadata";
 import { fetchDbtCloudManifest, parseDbtManifest, loadLocalManifest, loadManifestFromContent } from "./dbt-adapter";
 import { fetchTheGraphMeta, listTheGraphSchemas } from "./the-graph-adapter";
-import { fetchDuneMeta, listDuneSchemas } from "./dune-adapter";
+import { fetchDuneMeta, listDuneSchemas, fetchSingleDuneQuery } from "./dune-adapter";
 
 async function getDbtBundle(config: ConnectionConfig) {
   if (config.source === "dbt-cloud") {
@@ -55,7 +55,15 @@ export async function fetchSchemaMeta(config: ConnectionConfig, schemaFqn: strin
   }
   if (config.source === "dune") {
     if (!config.dune) throw new Error("Dune config missing");
-    return fetchDuneMeta(config.dune, schemaFqn.replace("dune.", ""));
+    const subPath = schemaFqn.replace("dune.", "");
+    // Check if it's a direct query (dune.query.123)
+    if (subPath.startsWith("query.")) {
+      const queryId = parseInt(subPath.replace("query.", ""), 10);
+      if (!isNaN(queryId)) {
+        return fetchSingleDuneQuery(queryId, config.dune.apiKey);
+      }
+    }
+    return fetchDuneMeta(config.dune, subPath);
   }
 
   const { manifest, runResults } = await getDbtBundle(config);

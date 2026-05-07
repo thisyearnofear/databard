@@ -266,7 +266,91 @@ function computeColumnStats(
   };
 }
 
+// ── Helpers for building TableMeta from query metadata ──
+
+async function buildTableMetaFromQuery(q: DuneQuery, apiKey: string, fqnPrefix: string, stats?: TableStatSummary): Promise<TableMeta> {
+  const resultCols = await fetchQueryResultMeta(q.query_id, apiKey);
+
+  const columns: ColumnMeta[] = resultCols.length > 0
+    ? resultCols.map((col) => ({
+        name: col.name,
+        dataType: col.type,
+        tags: [],
+      }))
+    : (q.parameters ?? []).map((p) => ({
+        name: p.name,
+        dataType: p.type,
+        description: "Query parameter",
+        tags: ["parameter"],
+      }));
+
+  const hasParameters = q.parameters && q.parameters.length > 0;
+
+  // Quality tests
+  const qualityTests: QualityTest[] = [];
+  if (!q.description) {
+    qualityTests.push({ name: "query_has_description", status: "Failed" });
+  }
+  if (resultCols.length === 0) {
+    qualityTests.push({ name: "query_has_results", status: "Queued" });
+  } else {
+    qualityTests.push({ name: "query_has_results", status: "Success" });
+  }
+  if (hasParameters) {
+    qualityTests.push({ name: "query_has_parameters", status: "Queued" });
+  }
+  if (stats) {
+    qualityTests.push({
+      name: "query_has_data",
+      status: stats.rowCount > 0 ? "Success" : "Failed",
+    });
+  }
+
+  return {
+    fqn: `${fqnPrefix}.${q.query_id}`,
+    name: q.name,
+    description: q.description,
+    columns,
+    qualityTests,
+    tags: [...(q.tags ?? []), "dune", "analytics"],
+    freshness: q.updated_at,
+    rowCount: stats?.rowCount,
+  };
+}
+
 // ── Enhanced: fetch metadata + execute queries for result data ──
+
+export async function fetchSingleDuneQuery(queryId: number, apiKey: string): Promise<SchemaMeta> {
+  const cacheKey = `dune:query:${queryId}`;
+  const cached = metaCache.get<SchemaMeta>(cacheKey);
+  if (cached) return cached;
+
+  const q = await duneGet<DuneQuery>(`/query/${queryId}`, apiKey);
+  const fqn = `dune.query.${queryId}`;
+
+  // Execute if no parameters
+  let stats: TableStatSummary | undefined;
+  if (!q.parameters || q.parameters.length === 0) {
+    const result = await executeAndFetchResults(queryId, apiKey);
+    if (result && result.rows.length > 0) {
+      stats = computeColumnStats(result.rows, result.meta);
+      duneStatsCache.set(fqn, { [q.name]: stats });
+    }
+  }
+
+  const table = await buildTableMetaFromQuery(q, apiKey, "dune.query", stats);
+
+  const result: SchemaMeta = {
+    fqn,
+    name: q.name,
+    description: `Dune Query #${queryId}: ${q.name}`,
+    tables: [table],
+    lineage: [],
+  };
+
+  metaCache.set(cacheKey, result, 600);
+  return result;
+}
 
 export async function fetchDuneMeta(config: DuneConfig, namespaceOverride?: string): Promise<SchemaMeta> {
   const namespace = namespaceOverride ?? config.namespace ?? "my";
@@ -291,8 +375,6 @@ export async function fetchDuneMeta(config: DuneConfig, namespaceOverride?: stri
     .sort((a, b) => new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime())
     .slice(0, maxExecute);
 
-  const executableIds = new Set(executable.map((q) => q.query_id));
-
   // Execute queries in parallel (concurrency limit 3)
   const statsMap = new Map<number, TableStatSummary>();
   const executeBatch = async (batch: DuneQuery[]) => {
@@ -312,56 +394,7 @@ export async function fetchDuneMeta(config: DuneConfig, namespaceOverride?: stri
 
   // Build tables
   const tables: TableMeta[] = await Promise.all(
-    queries.map(async (q): Promise<TableMeta> => {
-      const resultCols = await fetchQueryResultMeta(q.query_id, config.apiKey);
-
-      const columns: ColumnMeta[] = resultCols.length > 0
-        ? resultCols.map((col) => ({
-            name: col.name,
-            dataType: col.type,
-            tags: [],
-          }))
-        : (q.parameters ?? []).map((p) => ({
-            name: p.name,
-            dataType: p.type,
-            description: "Query parameter",
-            tags: ["parameter"],
-          }));
-
-      const stats = statsMap.get(q.query_id);
-      const hasParameters = q.parameters && q.parameters.length > 0;
-
-      // Quality tests
-      const qualityTests: QualityTest[] = [];
-      if (!q.description) {
-        qualityTests.push({ name: "query_has_description", status: "Failed" });
-      }
-      if (resultCols.length === 0) {
-        qualityTests.push({ name: "query_has_results", status: "Queued" });
-      } else {
-        qualityTests.push({ name: "query_has_results", status: "Success" });
-      }
-      if (hasParameters) {
-        qualityTests.push({ name: "query_has_parameters", status: "Queued" });
-      }
-      if (stats) {
-        qualityTests.push({
-          name: "query_has_data",
-          status: stats.rowCount > 0 ? "Success" : "Failed",
-        });
-      }
-
-      return {
-        fqn: `${fqn}.${q.query_id}`,
-        name: q.name,
-        description: q.description,
-        columns,
-        qualityTests,
-        tags: [...(q.tags ?? []), "dune", "analytics"],
-        freshness: q.updated_at,
-        rowCount: stats?.rowCount,
-      };
-    })
+    queries.map((q) => buildTableMetaFromQuery(q, config.apiKey, fqn, statsMap.get(q.query_id)))
   );
 
   // Store stats in sidecar for script generator

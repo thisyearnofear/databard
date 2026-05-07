@@ -68,7 +68,18 @@ export async function POST(req: NextRequest) {
       dune: body.dune,
     };
 
-    const schemas = await listSchemas(config);
+    let schemas: string[] = [];
+    if (source === "dune" && body.dune?.queryUrl) {
+      const match = body.dune.queryUrl.match(/queries\/(\d+)/);
+      const queryId = match ? match[1] : body.dune.queryUrl.match(/^\d+$/) ? body.dune.queryUrl : null;
+      if (queryId) {
+        schemas = [`dune.query.${queryId}`];
+      }
+    }
+
+    if (schemas.length === 0) {
+      schemas = await listSchemas(config);
+    }
     
     if (schemas.length === 0) {
       return NextResponse.json(

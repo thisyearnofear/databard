@@ -138,6 +138,7 @@ export default function Home() {
   const [graphApiKey, setGraphApiKey] = useState("");
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
+  const [duneQueryUrl, setDuneQueryUrl] = useState("");
 
   const { toast } = useToast();
 
@@ -312,7 +313,7 @@ export default function Home() {
       body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
     } else if (source === "dune") {
       if (!duneApiKey) { showError("Dune API key required"); return null; }
-      body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
+      body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined, queryUrl: duneQueryUrl || undefined };
     }
     return body;
   }, [source, omMode, token, omUrl, dbtAccountId, dbtProjectId, dbtToken, manifestFile, graphUrl, graphApiKey, duneApiKey, duneNamespace]);
@@ -427,11 +428,11 @@ export default function Home() {
       } else if (source === "the-graph") {
         body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
       } else if (source === "dune") {
-        body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined };
+        body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined, queryUrl: duneQueryUrl || undefined };
       }
 
       // Pre-validate schema before committing to full generation
-      const validateRes = await fetch("/api/validate-schema", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ schemaFqn, source }) });
+      const validateRes = await fetch("/api/validate-schema", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (validateRes.ok) {
         const validation = await validateRes.json();
         if (validation.quality === "empty") {
@@ -1317,9 +1318,16 @@ export default function Home() {
               )}
               <label className="text-sm text-[var(--text-muted)]">Dune API Key</label>
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" type="password" autoComplete="off" value={duneApiKey} onChange={(e) => setDuneApiKey(e.target.value)} placeholder="Paste your Dune API key" title="Generate at dune.com → Settings → API. Free tier available. DataBard uses this to fetch query metadata and execute non-parameterized queries for result analysis." />
+              
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-[var(--text-muted)]">Analyze specific query</label>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Recommended</span>
+              </div>
+              <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneQueryUrl} onChange={(e) => setDuneQueryUrl(e.target.value)} placeholder="Paste Dune query URL or ID" title="Analyze a specific query directly. Bypasses the schema selection step." />
+
               <div className="flex items-center justify-between">
                 <label className="text-sm text-[var(--text-muted)]">Dune Username</label>
-                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Optional</span>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Browse all</span>
               </div>
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap (defaults to your own)" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
             </>)}
