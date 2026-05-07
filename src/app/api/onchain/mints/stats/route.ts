@@ -33,7 +33,6 @@ export async function GET(req: NextRequest) {
       { headers: { "Cache-Control": "public, max-age=30" } },
     );
   } catch (e: unknown) {
-...
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
