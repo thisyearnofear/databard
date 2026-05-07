@@ -8,6 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { Connection, Transaction, PublicKey, SystemProgram } from "@solana/web3.js";
+import { recordMint } from "@/lib/mint-stats";
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
 const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? `https://api.${NETWORK}.solana.com`;
@@ -48,6 +49,18 @@ export async function POST(req: NextRequest) {
         NETWORK === "mainnet-beta"
           ? `https://explorer.solana.com/tx/${signature}`
           : `https://explorer.solana.com/tx/${signature}?cluster=${NETWORK}`;
+
+      // Record locally for the stats counter & recent feed. Never let this fail
+      // the broadcast — `recordMint` swallows its own errors.
+      await recordMint({
+        schemaName,
+        healthScore: typeof healthScore === "number" ? healthScore : 0,
+        episodeId,
+        walletAddress,
+        txSignature: signature,
+        network: NETWORK,
+        createdAt: new Date().toISOString(),
+      });
 
       return NextResponse.json({ ok: true, txSignature: signature, explorerUrl, network: NETWORK });
     }

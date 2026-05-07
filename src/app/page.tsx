@@ -125,6 +125,7 @@ export default function Home() {
   const [minting, setMinting] = useState(false);
   const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTx } = useWallet();
+  const [mintStats, setMintStats] = useState<{ total: number; recent: Array<{ schemaName: string; healthScore: number; walletAddress: string; txSignature: string; network: string; createdAt: string }> } | null>(null);
 
   const [connecting, setConnecting] = useState(false);
   const [connectionTested, setConnectionTested] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -155,6 +156,23 @@ export default function Home() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [persona]);
+
+  // Load aggregate Solana mint stats whenever the web3 persona is active. Used
+  // for the social-proof pill in the hero. Failures are silent — the pill just
+  // doesn't render.
+  const loadMintStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/onchain/mints/stats?limit=5");
+      const data = await res.json();
+      if (data.ok) {
+        setMintStats({ total: data.total ?? 0, recent: data.recent ?? [] });
+      }
+    } catch { /* swallow — stats are decorative */ }
+  }, []);
+
+  useEffect(() => {
+    if (persona === "web3") loadMintStats();
+  }, [persona, loadMintStats]);
 
   // Restore connection config from localStorage
   useEffect(() => {
@@ -239,18 +257,26 @@ export default function Home() {
     setStatus("Loading demo…");
 
     try {
-      const res = await fetch(persona === "web3" ? "/sample-episode-dune.json" : "/sample-episode.json");
+      const isWeb3 = persona === "web3";
+      const sampleUrl = isWeb3 ? "/sample-episode-dune.json" : "/sample-episode.json";
+      const audioFile = isWeb3 ? "/demo-episode-dune.mp3" : "/demo-episode.mp3";
+
+      const res = await fetch(sampleUrl);
       const demo: Episode = await res.json();
       setGenStep(2);
       setEpisode(demo);
-      
-      const audioCheck = await fetch("/demo-episode.mp3", { method: "HEAD" });
+
+      // Clear any prior demo audio so we never play the wrong persona's track
+      // if the matching mp3 isn't available.
+      setAudioUrl(null);
+
+      const audioCheck = await fetch(audioFile, { method: "HEAD" });
       if (audioCheck.ok) {
-        setAudioUrl("/demo-episode.mp3");
+        setAudioUrl(audioFile);
       } else {
         setStatus("Demo loaded (audio requires ElevenLabs API key to generate)");
       }
-      
+
       setStatus("");
       dispatch({ type: "EPISODE_READY" });
     } catch (e: unknown) {
@@ -652,6 +678,8 @@ export default function Home() {
       if (sigData.ok) {
         toast(`Minted on Solana! ${sigData.txSignature?.slice(0, 8)}…`, "success");
         setStatus(`✓ Minted on Solana! TX: ${sigData.txSignature?.slice(0, 8)}…`);
+        // Refresh the social-proof counter so the user sees their own mint reflected.
+        loadMintStats();
       } else {
         showError(sigData.error);
       }
@@ -1065,6 +1093,33 @@ export default function Home() {
           </Link>
         </div>
         <p className="text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
+
+        {/* On-chain social proof pill — only on web3 persona, only when there's something to show. */}
+        {persona === "web3" && mintStats && mintStats.total > 0 && (
+          <a
+            href={
+              mintStats.recent[0]
+                ? (mintStats.recent[0].network === "mainnet-beta"
+                  ? `https://explorer.solana.com/tx/${mintStats.recent[0].txSignature}`
+                  : `https://explorer.solana.com/tx/${mintStats.recent[0].txSignature}?cluster=${mintStats.recent[0].network}`)
+                : "#"
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-2 text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
+            title="View latest mint on Solana Explorer"
+          >
+            <span>⛓️</span>
+            <span>
+              <b>{mintStats.total.toLocaleString()}</b> health report{mintStats.total === 1 ? "" : "s"} minted on Solana
+            </span>
+            {mintStats.recent[0] && (
+              <span className="text-[var(--text-muted)] font-normal hidden sm:inline">
+                · last by {mintStats.recent[0].walletAddress.slice(0, 4)}…{mintStats.recent[0].walletAddress.slice(-4)}
+              </span>
+            )}
+          </a>
+        )}
       </section>
 
       {/* Social proof */}

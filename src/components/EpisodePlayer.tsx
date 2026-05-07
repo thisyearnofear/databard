@@ -218,12 +218,28 @@ export function EpisodePlayer({
     } catch { return new Set(); }
   });
 
+  // Number of times THIS schema has been minted on Solana — drives the "Nx"
+  // badge on the Mint button. Only meaningful when on-chain minting is enabled
+  // for this episode (i.e. `onMint` is provided), so we only fetch then.
+  const [schemaMintCount, setSchemaMintCount] = useState(0);
+
   useEffect(() => {
     setCurrentEpisode(episode);
     setCurrentAudioUrl(audioUrl);
     setFollowUpQuestion(episode.researchQuestion ?? "");
     setBranchError(null);
   }, [episode, audioUrl]);
+
+  useEffect(() => {
+    if (!onMint || !currentEpisode.schemaName) return;
+    let cancelled = false;
+    fetch(`/api/onchain/mints/stats?schema=${encodeURIComponent(currentEpisode.schemaName)}`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled && d?.ok) setSchemaMintCount(d.count ?? 0); })
+      .catch(() => { /* decorative — silently ignore */ });
+    return () => { cancelled = true; };
+  // Re-run when minting completes (parent flips `minting` from true → false).
+  }, [onMint, currentEpisode.schemaName, minting]);
 
   // Compute insights and action items from schema metadata
   const { insights, actionItems } = useMemo(() => {
@@ -743,9 +759,20 @@ export function EpisodePlayer({
                 onClick={onMint}
                 disabled={minting}
                 className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 flex items-center gap-1 font-medium"
-                title="Mint this health report on Initia"
+                title={schemaMintCount > 0
+                  ? `This schema has been minted ${schemaMintCount}× on Solana — mint your snapshot`
+                  : "Mint this health report on Solana"}
               >
-                {minting ? "…" : "⛓️ Mint"}
+                {minting ? "…" : (
+                  <>
+                    <span>⛓️ Mint</span>
+                    {schemaMintCount > 0 && (
+                      <span className="bg-[var(--accent)]/20 rounded-full px-1.5 py-0.5 text-[10px] leading-none ml-0.5">
+                        {schemaMintCount}×
+                      </span>
+                    )}
+                  </>
+                )}
               </button>
             )}
             {currentEpisode.schemaMeta && (

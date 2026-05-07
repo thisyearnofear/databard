@@ -23,9 +23,35 @@ if (fs.existsSync(envPath)) {
 }
 const { execSync } = require("child_process");
 
-const SAMPLE_PATH = path.join(__dirname, "../public/sample-episode.json");
-const SEGMENTS_DIR = path.join(__dirname, "../public/segments");
-const OUTPUT_PATH = path.join(__dirname, "../public/demo-episode.mp3");
+// CLI args: --input <file> --output <file> --segments-dir <dir>
+// Defaults match the original ecommerce demo.
+function getArg(name, fallback) {
+  const idx = process.argv.indexOf(`--${name}`);
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
+  return fallback;
+}
+
+const SAMPLE_PATH = path.resolve(
+  __dirname,
+  "..",
+  getArg("input", "public/sample-episode.json"),
+);
+const OUTPUT_PATH = path.resolve(
+  __dirname,
+  "..",
+  getArg("output", "public/demo-episode.mp3"),
+);
+// Default segments dir is derived from the output filename so different demos
+// don't clobber each other's per-segment caches.
+const defaultSegmentsDir = (() => {
+  const base = path.basename(OUTPUT_PATH, path.extname(OUTPUT_PATH)); // "demo-episode" or "demo-episode-dune"
+  return path.join("public", "segments", base === "demo-episode" ? "" : base);
+})();
+const SEGMENTS_DIR = path.resolve(
+  __dirname,
+  "..",
+  getArg("segments-dir", defaultSegmentsDir),
+);
 
 // Same voice IDs as audio-engine.ts
 const VOICES = {
@@ -69,7 +95,10 @@ async function synthesize(segment, prevText, nextText) {
 }
 
 async function main() {
-  console.log("🎙️  DataBard Demo Audio Generator\n");
+  console.log("🎙️  DataBard Demo Audio Generator");
+  console.log(`   input:    ${path.relative(process.cwd(), SAMPLE_PATH)}`);
+  console.log(`   output:   ${path.relative(process.cwd(), OUTPUT_PATH)}`);
+  console.log(`   segments: ${path.relative(process.cwd(), SEGMENTS_DIR)}\n`);
 
   // Check ffmpeg
   try {
