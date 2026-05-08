@@ -1,3 +1,5 @@
+Command finished with exit code 0.
+Command output:
 # 🎙️ DataBard
 
 **Turn your onchain data into AI podcasts and music anthems — then mint them on Solana.**
@@ -136,23 +138,22 @@ NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
 | Payments | Stripe Checkout |
-| Onchain | Solana (Memo Program + PDA registry), SNS `.sol` identity, episode minting, health alerts, leaderboard |
+| Onchain | Initia InterwovenKit, episode minting on Initia testnet |
 | Development | Kiro (spec-driven, see `.kiro/` directory) |
 
-## Solana Integration
+## Initia Integration
 
-DataBard uses Solana not just for minting receipts, but as a genuine utility layer for data teams: queryable audit trails, health alerts, team accountability, gated access, and a public leaderboard.
+DataBard is being built for the [Initia INITIATE hackathon](https://docs.initia.xyz/hackathon) (AI track). The integration adds onchain identity and data provenance to audio documentation.
 
-### Solana Utilities
+### What's Integrated
 
-| Feature | API | Description |
+| Feature | Status | Details |
 |---|---|---|
-| **On-chain audit trail** | `POST /api/onchain/mint-solana` | Every episode mint writes a memo + PDA record: `(schema_fqn, health_score, timestamp, episode_id, wallet, .sol domain)` — permanently queryable via RPC |
-| **Health alert subscriptions** | `POST /api/onchain/alerts` | Register a wallet + schema + threshold + webhook; `GET /api/onchain/check-alerts` fires Slack/webhook when health drops below threshold (cron-ready) |
-| **Public leaderboard** | `GET /api/onchain/leaderboard` | Ranked protocols by latest health score, trend (↑↓→), mint count, wallet count — live at [/leaderboard](https://databard.thisyearnofear.com/leaderboard) |
-| **Team history** | `GET /api/onchain/team-history` | Cross-wallet mint history for a schema — shared ground truth for post-mortems and handoffs, surfaced in the EpisodePlayer "👥 Team" tab |
-| **Gated episode access** | `GET /api/onchain/access` | Episode replay checks wallet ownership of the mint record; non-holders see a wallet-connect nudge |
-| **SNS `.sol` identity** | `src/lib/sns.ts` | Wallet address resolved to `.sol` domain on connect; stored in on-chain memo at mint time |
+| **InterwovenKit wallet connect** | ✅ Live | `/pro` page — connect `.init` wallet as alternative to Stripe customer ID |
+| **On-chain episode minting** | ✅ Stub (appchain pending) | `POST /api/onchain/mint` — records schema name, health score, episode ID, author address |
+| **The Graph data source** | ✅ Live | Connect any subgraph endpoint — entities become tables, fields become columns |
+| **Dune Analytics data source** | ✅ Live | Connect Dune namespace — queries become tables, result columns become schema, non-parameterized queries are executed to compute column statistics for data-aware narration |
+| **Appchain deployment** | 🔄 In progress | Targeting Initia testnet `initiation-2` |
 
 ### Onchain Data Sources
 
@@ -171,15 +172,19 @@ Namespace: uniswap
 
 DataBard fetches query metadata via the Dune REST API, executes non-parameterized queries in parallel, and computes column statistics (min/max/avg, top values) from result data. This enables data-aware podcast narration — the episode discusses actual numbers and trends, not just schema structure.
 
-### Wallet Connect
+### Wallet Connect (Pro Page)
 
 ```
-Landing page → Connect Phantom wallet
-             → .sol domain resolved via SNS/Bonfida
-             → Episodes minted on-chain under your .sol identity
-             → Health alerts registered per schema
-             → Team history visible across wallets
+/pro → Connect Initia Wallet (.init)
+     → Authenticate with .init username
+     → Episodes generated while connected are recorded on-chain
 ```
+
+### Submission
+
+See `.initia/submission.json` for full submission metadata.
+
+Demo video: TBD — to be recorded before final submission.
 
 ## What's Next
 
@@ -188,15 +193,8 @@ Landing page → Connect Phantom wallet
 - [x] Visual PDF report export (server-side, no dependencies)
 - [x] Stripe Pro tier + private RSS feeds
 - [x] Onchain data sources (The Graph, Dune Analytics)
-- [x] Data Anthems — ElevenLabs Music API, genre/mood mapped to health score
-- [x] Solana on-chain audit trail (Memo Program + PDA registry)
-- [x] SNS `.sol` identity — resolved on connect, stored in mint memo
-- [x] Health alert subscriptions — webhook/Slack when score drops below threshold
-- [x] Public leaderboard — ranked protocols by health score + trend
-- [x] Team history — cross-wallet mint history per schema
-- [x] Gated episode access — wallet ownership check before replay
 - [ ] Historical diff intros ("since last week, 2 new failures")
-- [ ] Custom Anchor program for richer on-chain PDA queries
+- [ ] Slack integration for episode drops
 - [ ] Custom voice personalities
 
 ## ElevenLabs Integration

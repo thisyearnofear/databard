@@ -1260,6 +1260,8 @@ export default function Home() {
             <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
             <span>·</span>
             <span>Built on <span className="text-[var(--text)]">Solana · Dune · The Graph</span></span>
+            <span>·</span>
+            <a href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Protocol leaderboard</a>
           </>
         )}
       </section>
@@ -1516,9 +1518,10 @@ export default function Home() {
             <ul className="text-sm text-[var(--text-muted)] space-y-1.5 mb-4">
               <li>✓ Everything in Free</li>
               <li>✓ Scheduled daily/weekly episodes</li>
-              <li>✓ <b>On-chain health minting (Solana)</b></li>
+              <li>✓ <b>On-chain audit trail</b> (queryable PDA registry)</li>
+              <li>✓ <b>Health alert webhooks</b> (Slack/webhook on score drop)</li>
+              <li>✓ <b>Team history</b> (cross-wallet shared accountability)</li>
               <li>✓ Private team RSS feeds</li>
-              <li>✓ Slack/webhook notifications</li>
               <li>✓ Historical comparison</li>
             </ul>
             <button onClick={handleCheckout} className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
@@ -1550,7 +1553,7 @@ export default function Home() {
             },
             {
               q: "How does the blockchain integration work?",
-              a: "For onchain teams, each episode can be recorded on Solana as a permanent, shareable record of your data quality. You can also pay for Pro with Palm USD, a Solana stablecoin.",
+              a: "DataBard uses Solana as a genuine utility layer — not just a receipt. Every mint writes an immutable on-chain record (schema, health score, timestamp, .sol identity). You can register health alert webhooks that fire when your score drops below a threshold, view cross-wallet team history for shared accountability, check the public leaderboard of protocol health scores, and gate episode replay behind wallet ownership. Pay for Pro with Palm USD, a Solana stablecoin.",
             },
             {
               q: "How long does generation take?",
@@ -1559,6 +1562,14 @@ export default function Home() {
             {
               q: "What are the two AI hosts?",
               a: "Alex is the enthusiastic data advocate who highlights what's working well. Morgan is the skeptical quality auditor who flags risks, failing tests, and governance gaps. Together they create a balanced, engaging podcast — or a full Data Anthem where your health score, schema name, and issues are turned into genre-matched music with lyrics.",
+            },
+            {
+              q: "Can I get alerted when my data health drops?",
+              a: "Yes. After minting an episode, register a health alert via POST /api/onchain/alerts with your wallet, schema, threshold (0–100), and a Slack or webhook URL. DataBard fires the webhook whenever a new episode for that schema scores below your threshold. The check endpoint is cron-ready — point any scheduler at GET /api/onchain/check-alerts.",
+            },
+            {
+              q: "What is the public leaderboard?",
+              a: "The leaderboard at /leaderboard ranks all protocols that have minted episodes by their latest health score, trend (improving ↑ / declining ↓ / stable →), number of mints, and unique wallets. It's a public, on-chain-backed registry — protocols are incentivised to improve their score because it's permanently visible.",
             },
           ].map((item) => (
             <details key={item.q} className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl">
