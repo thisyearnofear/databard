@@ -298,13 +298,14 @@ export default function Home() {
     try {
       const isWeb3 = persona === "web3";
       const sampleUrl = isWeb3 ? "/sample-anthem-web3.json" : "/sample-anthem-enterprise.json";
+      const audioUrl = isWeb3 ? "/demo-anthem-web3.mp3" : null;
 
       const res = await fetch(sampleUrl);
       const demo: Episode = await res.json();
       setGenStep(2);
       setEpisode(demo);
-      setAudioUrl(null);
-      setStatus("Demo anthem loaded (audio requires ElevenLabs API key to generate)");
+      setAudioUrl(audioUrl);
+      setStatus("");
       dispatch({ type: "EPISODE_READY" });
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : "Failed to load demo anthem");
