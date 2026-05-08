@@ -1,11 +1,11 @@
 /**
  * Audio engine — all ElevenLabs interactions in one place.
- * TTS (two voices), sound effects, and stream-to-buffer helpers.
+ * TTS (two voices), sound effects, music generation, and stream-to-buffer helpers.
  * Uses file-backed cache for audio persistence across restarts.
  */
 import { ElevenLabsClient } from "elevenlabs";
 import type { Readable } from "stream";
-import type { ScriptSegment } from "./types";
+import type { ScriptSegment, MusicPlan } from "./types";
 import { audioCache } from "./store";
 
 // Two fixed podcast host voices (premade, available on all paid tiers)
@@ -71,6 +71,56 @@ function hashKey(s: string): string {
   return (h >>> 0).toString(36);
 }
 
+/** Synthesize a Data Anthem via ElevenLabs Music API */
+export async function synthesizeMusic(plan: MusicPlan): Promise<Buffer> {
+  const cacheKey = `audio:music:${hashKey(JSON.stringify(plan))}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
+
+  // Format composition plan for ElevenLabs API
+  const body = {
+    composition_plan: {
+      positive_global_styles: plan.positiveGlobalStyles,
+      negative_global_styles: plan.negativeGlobalStyles,
+      sections: plan.sections.map(s => ({
+        section_name: s.sectionName,
+        duration_ms: s.durationMs,
+        lines: s.lines,
+        positive_local_styles: s.positiveStyles || [],
+        negative_local_styles: s.negativeStyles || []
+      }))
+    },
+    respect_sections_durations: true,
+    output_format: "mp3_44100_128"
+  };
+
+  console.log(`[Music] Calling https://api.elevenlabs.io/v1/music/detailed`);
+  console.log(`[Music] Genre: ${plan.genre}, Mood: ${plan.mood}`);
+
+  const response = await withRetry(() => fetch("https://api.elevenlabs.io/v1/music/detailed", {
+    method: "POST",
+    headers: {
+      "xi-api-key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  }), 1, 3000); // 1 retry, longer delay for music
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Music] Error response:`, errorText);
+    throw new Error(`ElevenLabs Music API error: ${response.status} ${response.statusText}`);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  console.log(`[Music] Got ${buffer.length} bytes`);
+  setCached(cacheKey, buffer);
+  return buffer;
+}
+
 /** Synthesize a single script segment to mp3 buffer */
 export async function synthesizeSpeech(
   segment: ScriptSegment,
@@ -81,7 +131,6 @@ export async function synthesizeSpeech(
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // Use direct REST API instead of SDK to avoid 402 errors
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
 
@@ -94,7 +143,6 @@ export async function synthesizeSpeech(
   };
 
   console.log(`[TTS] Calling ${url}`);
-  console.log(`[TTS] Body:`, JSON.stringify(body).slice(0, 100));
 
   const response = await withRetry(() => fetch(url, {
     method: "POST",
@@ -105,8 +153,6 @@ export async function synthesizeSpeech(
     body: JSON.stringify(body),
   }));
 
-  console.log(`[TTS] Response status: ${response.status} ${response.statusText}`);
-
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[TTS] Error response:`, errorText);
@@ -114,7 +160,6 @@ export async function synthesizeSpeech(
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
-  console.log(`[TTS] Got ${buffer.length} bytes`);
   setCached(cacheKey, buffer);
   return buffer;
 }
@@ -152,7 +197,6 @@ export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promis
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
-    console.log(`[SFX] Got ${buffer.length} bytes for "${prompt}"`);
     setCached(cacheKey, buffer);
     return buffer;
   } catch (e) {

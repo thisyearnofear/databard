@@ -21,7 +21,7 @@ const WIZARD_STEPS: { key: WizardStep; label: string; icon: string }[] = [
   { key: "connect", label: "Connect", icon: "🔌" },
   { key: "pick-schema", label: "Pick a dataset", icon: "📋" },
   { key: "generating", label: "Create episode", icon: "⚡" },
-  { key: "episode", label: "Listen", icon: "🎧" },
+  { key: "episode", label: "Listen / Play", icon: "🎧" },
 ];
 
 type WizardAction =
@@ -124,6 +124,7 @@ export default function Home() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
+  const [solanaSolDomain, setSolanaSolDomain] = useState<string | null>(null);
   const { publicKey: solanaPublicKey, signTransaction: solanaSignTx } = useWallet();
   const [mintStats, setMintStats] = useState<{ total: number; recent: Array<{ schemaName: string; healthScore: number; walletAddress: string; txSignature: string; network: string; createdAt: string }> } | null>(null);
 
@@ -282,6 +283,30 @@ export default function Home() {
       dispatch({ type: "EPISODE_READY" });
     } catch (e: unknown) {
       showError(e instanceof Error ? e.message : "Failed to load demo");
+      dispatch({ type: "RESET" });
+    } finally {
+      setGenStep(-1);
+    }
+  }
+
+  async function handleDemoAnthem() {
+    dispatch({ type: "START_GENERATING" });
+    setGenStep(0);
+    setStatus("Loading demo anthem…");
+
+    try {
+      const isWeb3 = persona === "web3";
+      const sampleUrl = isWeb3 ? "/sample-anthem-web3.json" : "/sample-anthem-enterprise.json";
+
+      const res = await fetch(sampleUrl);
+      const demo: Episode = await res.json();
+      setGenStep(2);
+      setEpisode(demo);
+      setAudioUrl(null);
+      setStatus("Demo anthem loaded (audio requires ElevenLabs API key to generate)");
+      dispatch({ type: "EPISODE_READY" });
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : "Failed to load demo anthem");
       dispatch({ type: "RESET" });
     } finally {
       setGenStep(-1);
@@ -571,6 +596,62 @@ export default function Home() {
     }
   }
 
+  async function handleGenerateAnthem(schemaFqn: string) {
+    dispatch({ type: "START_GENERATING" });
+    setStatus("Composing your Data Anthem…");
+
+    try {
+      const body: Record<string, unknown> = { schemaFqn, source, type: "anthem", persona };
+      if (source === "openmetadata") { body.url = omUrl; body.token = token; }
+      else if (source === "dbt-cloud") { body.dbtCloud = { accountId: dbtAccountId, projectId: dbtProjectId, token: dbtToken }; }
+      else if (source === "dbt-local" && manifestFile) {
+        const text = await manifestFile.text();
+        body.dbtLocal = { manifestContent: text };
+      } else if (source === "the-graph") {
+        body.theGraph = { subgraphUrl: graphUrl, apiKey: graphApiKey || undefined };
+      } else if (source === "dune") {
+        body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined, queryUrl: duneQueryUrl || undefined };
+      }
+
+      const res = await fetch("/api/synthesize", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        let message = `Request failed (${res.status})`;
+        try {
+          const data = await res.json();
+          if (typeof data?.error === "string" && data.error) message = data.error;
+        } catch { /* keep fallback */ }
+        showError(message);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.ok) { showError(data.error || "Anthem generation failed"); return; }
+
+      const bytes = Uint8Array.from(atob(data.audio), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+
+      // Build a minimal episode object for the player
+      const anthemEpisode: Episode = {
+        schemaFqn,
+        schemaName: schemaFqn.split(".").slice(-1)[0],
+        tableCount: 0,
+        qualitySummary: { passed: 0, failed: 0, total: 0 },
+        script: [],
+        musicPlan: data.musicPlan,
+      };
+
+      setEpisode({ ...anthemEpisode, audioUrl: url });
+      setAudioUrl(url);
+      setStatus("");
+      dispatch({ type: "EPISODE_READY" });
+    } catch (e: unknown) {
+      showError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setGenStep(-1);
+    }
+  }
+
   async function handleCheckout() {
     const res = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: "team" }) });
     const data = await res.json();
@@ -673,6 +754,7 @@ export default function Home() {
           episodeId,
           reportHash,
           walletAddress: solanaPublicKey.toBase58(),
+          ...(solanaSolDomain ? { solDomain: solanaSolDomain } : {}),
         }),
       });
       const mintData = await mintRes.json();
@@ -691,6 +773,7 @@ export default function Home() {
           episodeId,
           reportHash,
           walletAddress: solanaPublicKey.toBase58(),
+          ...(solanaSolDomain ? { solDomain: solanaSolDomain } : {}),
           signedTxBase64: Buffer.from(signedTx.serialize()).toString("base64"),
         }),
       });
@@ -794,7 +877,7 @@ export default function Home() {
 
                {/* Solana (primary) */}
                <div className="mb-3">
-                 <SolanaWalletConnect onAddressChange={setSolanaAddress} />
+                 <SolanaWalletConnect onAddressChange={setSolanaAddress} onSolDomainChange={setSolanaSolDomain} />
                  {solanaPublicKey && (
                    <button 
                      onClick={handleMintSolana} 
@@ -1047,14 +1130,30 @@ export default function Home() {
                 ) : (
                   <p className="text-sm text-[var(--text-muted)] italic">← Pick a schema from the list</p>
                 )}
-                <button
-                  type="button"
-                  onClick={() => selectedSchema && handleGenerate(selectedSchema)}
-                  disabled={!selectedSchema}
-                  className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] shrink-0"
-                >
-                  {selectedSchema ? "⚡ Generate episode" : "Select a schema first"}
-                </button>
+                {!selectedSchema && (
+                  <p className="text-xs text-center text-[var(--text-muted)] italic">Select a schema to generate</p>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => selectedSchema && handleGenerate(selectedSchema)}
+                    disabled={!selectedSchema}
+                    className="flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                  >
+                    <span>🎙️ Podcast</span>
+                    <span className="text-xs opacity-75 font-normal mt-0.5">AI hosts · analysis</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectedSchema && handleGenerateAnthem(selectedSchema)}
+                    disabled={!selectedSchema}
+                    className="flex flex-col items-center justify-center rounded-lg border-2 px-3 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                    style={{borderColor: "#a855f7", background: "linear-gradient(135deg, var(--surface), #a855f710)", color: "#a855f7"}}
+                  >
+                    <span>🎵 Anthem</span>
+                    <span className="text-xs opacity-75 font-normal mt-0.5">Music · lyrics</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1086,24 +1185,34 @@ export default function Home() {
       {/* Hero */}
       <section className="flex flex-col items-center text-center pt-8 sm:pt-12 pb-10 sm:pb-14 max-w-2xl">
         <p className="text-xs text-[var(--accent)] font-medium tracking-wider uppercase mb-4">
-          {persona === "enterprise" ? "AI podcast episodes for your data catalog" : "AI podcast episodes for your onchain data"}
+          {persona === "enterprise" ? "AI podcasts & data anthems for your catalog" : "AI podcasts & data anthems for your onchain data"}
         </p>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
-          {persona === "enterprise" ? "Your data catalog," : "Your onchain data,"}<br />as a podcast
+          {persona === "enterprise" ? "Your data catalog," : "Your onchain data,"}<br />
+          <span className="text-[var(--accent)]">as a podcast</span> or <span style={{background: "linear-gradient(90deg, var(--accent), #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent"}}>anthem</span>
         </h1>
         <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
           {persona === "enterprise" 
-            ? "Ask a question about your data. Connect your catalog. Get a podcast episode where two AI hosts investigate the answer."
-            : "Connect your Dune queries or subgraph. Get a podcast episode where two AI hosts analyze the data — then mint it on Solana."
+            ? "Connect your catalog. Two AI hosts investigate your data — then turn it into a podcast episode or a full music anthem."
+            : "Connect your Dune queries or subgraph. Two AI hosts analyze the data — then mint the podcast or compose a data anthem on Solana."
           }
         </p>
 
         <div className="flex flex-wrap justify-center gap-3 mb-3">
           <button
             onClick={handleDemo}
-            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-8 py-4 text-lg font-medium cursor-pointer transition-all hover:scale-[1.02]"
+            className="inline-flex flex-col items-center justify-center rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-7 py-4 font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg shadow-[var(--accent)]/20"
           >
-            ▶ Listen to a demo episode
+            <span className="text-lg">▶ Demo podcast</span>
+            <span className="text-xs opacity-80 mt-0.5">Two AI hosts · data analysis</span>
+          </button>
+          <button
+            onClick={handleDemoAnthem}
+            className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-7 py-4 font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg"
+            style={{borderColor: "#a855f7", background: "linear-gradient(135deg, var(--surface), #a855f710)", color: "#a855f7", boxShadow: "0 8px 24px #a855f720"}}
+          >
+            <span className="text-lg">🎵 Demo anthem</span>
+            <span className="text-xs opacity-80 mt-0.5">Music · genre · lyrics</span>
           </button>
           <Link
             href="/research/sessions"
@@ -1138,19 +1247,19 @@ export default function Home() {
       <section className="flex flex-wrap justify-center gap-6 text-xs text-[var(--text-muted)] pb-8 sm:pb-10 max-w-2xl">
         {persona === "enterprise" ? (
           <>
-            <span>Built on <span className="text-[var(--text)]">OpenMetadata</span></span>
+            <span>🎙️ Podcasts by <span className="text-[var(--text)]">ElevenLabs</span></span>
             <span>·</span>
-            <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
+            <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
             <span>·</span>
             <span>Works with <span className="text-[var(--text)]">dbt, OpenMetadata & Dune</span></span>
           </>
         ) : (
           <>
-            <span>Built on <span className="text-[var(--text)]">Solana & ElevenLabs</span></span>
+            <span>🎙️ Podcasts by <span className="text-[var(--text)]">ElevenLabs</span></span>
             <span>·</span>
-            <span>Voices by <span className="text-[var(--text)]">ElevenLabs</span></span>
+            <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
             <span>·</span>
-            <span>Works with <span className="text-[var(--text)]">Dune, The Graph & Palm USD</span></span>
+            <span>Built on <span className="text-[var(--text)]">Solana · Dune · The Graph</span></span>
           </>
         )}
       </section>
@@ -1163,7 +1272,7 @@ export default function Home() {
         {persona === "web3" && (
           <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-xl p-4 flex flex-col gap-3">
             <p className="text-sm font-medium text-center">Connect your Solana wallet to mint episodes on-chain</p>
-            <SolanaWalletConnect onAddressChange={setSolanaAddress} />
+            <SolanaWalletConnect onAddressChange={setSolanaAddress} onSolDomainChange={setSolanaSolDomain} />
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-[var(--border)]" />
               <span className="text-xs text-[var(--text-muted)]">or connect a data source below</span>
@@ -1386,7 +1495,7 @@ export default function Home() {
             <h3 className="font-semibold text-lg mb-1">Free</h3>
             <p className="text-3xl font-bold mb-3">$0</p>
             <ul className="text-sm text-[var(--text-muted)] space-y-1.5 mb-4">
-              <li>✓ Unlimited one-off episodes</li>
+              <li>✓ Unlimited one-off episodes & anthems</li>
               <li>✓ All data sources</li>
               <li>✓ Health score & coverage analysis</li>
               <li>✓ {persona === "enterprise" ? "Test failure" : "Indexer lag"} breakdown</li>
@@ -1394,6 +1503,7 @@ export default function Home() {
               <li>✓ {persona === "enterprise" ? "Sensitive data & governance flags" : "On-chain verification"}</li>
               <li>✓ Prioritized action items</li>
               <li>✓ MP3 download & sharing</li>
+              <li>✓ 🎵 Data Anthem (music from your data)</li>
             </ul>
             <button onClick={handleDemo} className="w-full bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
               Try demo
@@ -1448,7 +1558,7 @@ export default function Home() {
             },
             {
               q: "What are the two AI hosts?",
-              a: "Alex is the enthusiastic data advocate who highlights what's working well. Morgan is the skeptical quality auditor who flags risks, failing tests, and governance gaps. Together they create a balanced, engaging walkthrough.",
+              a: "Alex is the enthusiastic data advocate who highlights what's working well. Morgan is the skeptical quality auditor who flags risks, failing tests, and governance gaps. Together they create a balanced, engaging podcast — or a full Data Anthem where your health score, schema name, and issues are turned into genre-matched music with lyrics.",
             },
           ].map((item) => (
             <details key={item.q} className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl">

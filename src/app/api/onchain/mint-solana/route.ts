@@ -3,7 +3,7 @@
  * Records episode metadata on Solana via a memo transaction.
  * The client signs and submits the transaction; this route constructs it.
  *
- * Body: { schemaName, healthScore, episodeId, walletAddress, network? }
+ * Body: { schemaName, healthScore, episodeId, walletAddress, solDomain?, network? }
  * Returns: { ok, txSignature, explorerUrl } or { ok: false, error }
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -19,6 +19,8 @@ interface MintBody {
   episodeId: string;
   walletAddress: string;
   reportHash?: string;
+  /** .sol domain of the creator (resolved via SNS/Bonfida) */
+  solDomain?: string;
   /** Base64-encoded signed transaction from the client */
   signedTxBase64?: string;
 }
@@ -26,7 +28,7 @@ interface MintBody {
 export async function POST(req: NextRequest) {
   try {
     const body: MintBody = await req.json();
-    const { schemaName, healthScore, episodeId, walletAddress, reportHash, signedTxBase64 } = body;
+    const { schemaName, healthScore, episodeId, walletAddress, reportHash, solDomain, signedTxBase64 } = body;
 
     if (!schemaName || !episodeId || !walletAddress) {
       return NextResponse.json(
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
       episode_id: episodeId,
       report_hash: reportHash || "",
       author: walletAddress,
+      ...(solDomain ? { sol_domain: solDomain } : {}),
       timestamp: new Date().toISOString(),
       network: NETWORK,
     });

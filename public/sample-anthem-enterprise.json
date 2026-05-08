@@ -1,0 +1,68 @@
+{
+  "schemaFqn": "analytics.ecommerce",
+  "schemaName": "ecommerce",
+  "researchQuestion": "What is the biggest risk hiding in this warehouse right now?",
+  "tableCount": 6,
+  "qualitySummary": { "passed": 8, "failed": 3, "total": 11 },
+  "generatedAt": "2026-05-07T10:00:00Z",
+  "script": [],
+  "musicPlan": {
+    "genre": "Melancholic Blues Rock",
+    "mood": "Serious and weary",
+    "positiveGlobalStyles": ["blues rock", "distorted guitar", "slow drums", "gritty"],
+    "negativeGlobalStyles": ["upbeat", "pop", "electronic", "cheerful"],
+    "sections": [
+      {
+        "sectionName": "Intro",
+        "durationMs": 8000,
+        "lines": ["[Intro] (Serious and weary instrumental buildup)"],
+        "positiveStyles": ["slow blues riff", "atmospheric", "tension build"]
+      },
+      {
+        "sectionName": "Verse 1",
+        "durationMs": 15000,
+        "lines": [
+          "[Verse 1] Scanning ecommerce warehouse, checking every row",
+          "Six tables in the catalog, ready for the show",
+          "Alex sees the brightness, lineage flowing clear",
+          "But Morgan's in the shadows, waiting for the fear"
+        ],
+        "positiveStyles": ["gritty vocals", "blues guitar", "steady kick"]
+      },
+      {
+        "sectionName": "Chorus",
+        "durationMs": 15000,
+        "lines": [
+          "[Chorus] ecommerce warehouse, sixty-one percent wrong",
+          "Data health is falling down, listen to our song",
+          "Eight tests are passing, three are left in doubt",
+          "DataBard is here to tell you what it's all about"
+        ],
+        "positiveStyles": ["anthemic", "distorted guitar swell", "vocal harmony"]
+      },
+      {
+        "sectionName": "Verse 2",
+        "durationMs": 15000,
+        "lines": [
+          "[Verse 2] Morgan spots the trouble, cracks within the wall",
+          "Flagging orders table for stale pipeline data",
+          "Flagging customers table for PII governance gaps",
+          "Trace the lineage backward, watch the metrics fall",
+          "But knowledge is the power, to fix what we have found"
+        ],
+        "positiveStyles": ["slow blues breakdown", "wailing guitar", "heavy snare"]
+      },
+      {
+        "sectionName": "Outro",
+        "durationMs": 10000,
+        "lines": [
+          "[Outro] Fix the pipelines, close the governance gap",
+          "Document the schemas, DataBard has the map",
+          "ecommerce warehouse — sixty-one, rising soon",
+          "DataBard will be back, same data blues tune"
+        ],
+        "positiveStyles": ["fade out", "slow blues decay", "reverb guitar tail"]
+      }
+    ]
+  }
+}

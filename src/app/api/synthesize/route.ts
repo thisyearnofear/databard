@@ -1,59 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { generateScript } from "@/lib/script-generator";
-import { synthesizeEpisode } from "@/lib/audio-engine";
-import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
+import { synthesizeEpisode, synthesizeMusic } from "@/lib/audio-engine";
+import type { ConnectionConfig, ScriptSegment, Episode } from "@/lib/types";
 import { buildResearchTrail } from "@/lib/research";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { getDuneTableStats } from "@/lib/dune-adapter";
+import { generateMusicPlan } from "@/lib/music-generator";
 
 /**
- * Full pipeline: metadata → script → audio.
+ * Full pipeline: metadata → script/music → audio.
  * Also accepts a raw `script` array for demo mode (skips metadata fetch).
  * Returns JSON with base64 audio.
  * 
- * Falls back to web UI automation if API returns 402 (free tier limitation).
+ * Falls back to web UI automation for speech if API returns 402.
+ * Music generation does not have a web fallback.
  */
 export async function POST(req: NextRequest) {
   try {
     guardMutation(req);
 
     const body = await req.json();
+    const type = body.type === "anthem" ? "anthem" : "podcast";
+    const persona = body.persona === "enterprise" ? "enterprise" : "web3";
 
-    let script: ScriptSegment[];
-
-    if (body.script) {
+    if (body.script && type === "podcast") {
       // Demo mode — script provided directly
-      script = body.script;
-    } else {
-      // Normal mode — fetch metadata and generate script
-      const { schemaFqn, source = "openmetadata", researchQuestion } = body;
-      const normalizedResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()
-        ? researchQuestion.trim()
-        : undefined;
-      if (normalizedResearchQuestion) {
-        validateResearchQuestion(normalizedResearchQuestion);
-      }
-      const config: ConnectionConfig = {
-        source,
-        openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
-        dbtCloud: body.dbtCloud,
-        dbtLocal: body.dbtLocal,
-        theGraph: body.theGraph,
-        dune: body.dune,
-      };
-      const meta = await fetchSchemaMeta(config, schemaFqn);
-      const insights = analyzeSchema(meta);
-      const researchTrail = await enrichResearchTrail(
-        buildResearchTrail(meta, insights, normalizedResearchQuestion),
-        buildEvidenceContext(config)
-      );
-      const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
-      script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail, tableStats });
+      const audioBuffers = await synthesizeEpisode(body.script);
+      const combined = Buffer.concat(audioBuffers);
+      return NextResponse.json({ ok: true, audio: combined.toString("base64") });
     }
 
+    // Normal mode — fetch metadata and generate
+    const { schemaFqn, source = "openmetadata", researchQuestion } = body;
+    const normalizedResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()
+      ? researchQuestion.trim()
+      : undefined;
+    
+    if (normalizedResearchQuestion) {
+      validateResearchQuestion(normalizedResearchQuestion);
+    }
+
+    const config: ConnectionConfig = {
+      source,
+      openmetadata: body.url && body.token ? { url: body.url, token: body.token } : undefined,
+      dbtCloud: body.dbtCloud,
+      dbtLocal: body.dbtLocal,
+      theGraph: body.theGraph,
+      dune: body.dune,
+    };
+
+    const meta = await fetchSchemaMeta(config, schemaFqn);
+    const insights = analyzeSchema(meta);
+    const researchTrail = await enrichResearchTrail(
+      buildResearchTrail(meta, insights, normalizedResearchQuestion),
+      buildEvidenceContext(config)
+    );
+    const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
+
+    // Create a virtual episode object to pass to generators
+    const episode: Episode = {
+      schemaFqn,
+      schemaName: meta.name,
+      researchQuestion: normalizedResearchQuestion,
+      researchTrail,
+      tableCount: meta.tables.length,
+      qualitySummary: { passed: insights.passingTests, failed: insights.failingTests, total: insights.totalTests },
+      script: [], // Will be filled for podcasts
+    };
+
+    if (type === "anthem") {
+      const musicPlan = generateMusicPlan(episode, persona);
+      const audioBuffer = await synthesizeMusic(musicPlan);
+      return NextResponse.json({ 
+        ok: true, 
+        audio: audioBuffer.toString("base64"),
+        musicPlan 
+      });
+    }
+
+    // Podcast mode
+    const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail, tableStats });
     let audioBuffers: Buffer[];
     
     try {
@@ -77,8 +106,8 @@ export async function POST(req: NextRequest) {
     }
     
     const combined = Buffer.concat(audioBuffers);
+    return NextResponse.json({ ok: true, audio: combined.toString("base64"), script });
 
-    return NextResponse.json({ ok: true, audio: combined.toString("base64") });
   } catch (e: unknown) {
     if (e instanceof ValidationError) {
       return NextResponse.json({ ok: false, error: e.message }, { status: e.message.includes("Unauthorized") ? 401 : 400 });

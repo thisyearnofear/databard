@@ -149,6 +149,22 @@ export interface ScriptSegment {
   text: string;
 }
 
+export interface MusicSection {
+  sectionName: string;
+  durationMs: number;
+  lines: string[];
+  positiveStyles?: string[];
+  negativeStyles?: string[];
+}
+
+export interface MusicPlan {
+  positiveGlobalStyles: string[];
+  negativeGlobalStyles: string[];
+  sections: MusicSection[];
+  genre: string;
+  mood: string;
+}
+
 export interface Episode {
   schemaFqn: string;
   schemaName: string;
@@ -158,6 +174,8 @@ export interface Episode {
   tableCount: number;
   qualitySummary: { passed: number; failed: number; total: number };
   script: ScriptSegment[];
+  /** Optional musical plan if this episode was generated as an Anthem */
+  musicPlan?: MusicPlan;
   /** Full schema metadata for interactive drill-down in the player */
   schemaMeta?: SchemaMeta;
   /** ISO timestamp of when this episode was generated */

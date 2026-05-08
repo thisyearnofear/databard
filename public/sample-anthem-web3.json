@@ -1,0 +1,68 @@
+{
+  "schemaFqn": "dune.uniswap",
+  "schemaName": "Uniswap Analytics",
+  "researchQuestion": "What are the biggest risks hiding in Uniswap's onchain data?",
+  "tableCount": 6,
+  "qualitySummary": { "passed": 8, "failed": 3, "total": 11 },
+  "generatedAt": "2026-05-07T10:00:00Z",
+  "script": [],
+  "musicPlan": {
+    "genre": "Dark Cyberpunk Synthwave",
+    "mood": "Urgent and glitchy",
+    "positiveGlobalStyles": ["dark synth", "heavy bass", "industrial", "glitch", "fast tempo"],
+    "negativeGlobalStyles": ["acoustic", "soft", "gentle", "orchestral"],
+    "sections": [
+      {
+        "sectionName": "Intro",
+        "durationMs": 8000,
+        "lines": ["[Intro] (Urgent and glitchy instrumental buildup)"],
+        "positiveStyles": ["buildup", "atmospheric", "synth arp", "tension"]
+      },
+      {
+        "sectionName": "Verse 1",
+        "durationMs": 15000,
+        "lines": [
+          "[Verse 1] Scanning Uniswap Analytics, checking every row",
+          "Six tables in the catalog, ready for the show",
+          "Alex sees the brightness, lineage flowing clear",
+          "But Morgan's in the shadows, waiting for the fear"
+        ],
+        "positiveStyles": ["spoken word flow", "dark synth pad"]
+      },
+      {
+        "sectionName": "Chorus",
+        "durationMs": 15000,
+        "lines": [
+          "[Chorus] Uniswap Analytics, sixty-one percent wrong",
+          "Data health is falling down, listen to our song",
+          "Eight tests are passing, three are left in doubt",
+          "DataBard is here to tell you what it's all about"
+        ],
+        "positiveStyles": ["anthemic", "catchy", "vocal harmony", "heavy drop"]
+      },
+      {
+        "sectionName": "Verse 2",
+        "durationMs": 15000,
+        "lines": [
+          "[Verse 2] Morgan spots the trouble, danger in the stack",
+          "Flagging Whale Movements for stale data — two days back",
+          "Flagging Gas Cost Analysis for missing documentation",
+          "Trace the lineage backward, watch the metrics fall",
+          "But knowledge is the power, to fix what we have found"
+        ],
+        "positiveStyles": ["glitch fx", "industrial drums", "distorted bass"]
+      },
+      {
+        "sectionName": "Outro",
+        "durationMs": 10000,
+        "lines": [
+          "[Outro] Fix the whale query, clear the stale lag",
+          "Document the gas costs, DataBard has the flag",
+          "Uniswap Analytics — sixty-one, rising soon",
+          "DataBard will be back, same onchain tune"
+        ],
+        "positiveStyles": ["fade out", "echo", "reverb tail", "synth decay"]
+      }
+    ]
+  }
+}

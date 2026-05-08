@@ -2,26 +2,43 @@
 
 /**
  * SolanaWalletConnect — connect Phantom/Solflare wallet for on-chain episode minting.
+ * Resolves the connected wallet's .sol domain via Solana Name Service (SNS/Bonfida).
  * Uses @solana/wallet-adapter-react for wallet state.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { resolveSolDomain } from "@/lib/sns";
 
 interface SolanaWalletConnectProps {
   onAddressChange?: (address: string | null) => void;
+  onSolDomainChange?: (domain: string | null) => void;
 }
 
-export function SolanaWalletConnect({ onAddressChange }: SolanaWalletConnectProps) {
+export function SolanaWalletConnect({ onAddressChange, onSolDomainChange }: SolanaWalletConnectProps) {
   const { connection } = useConnection();
   const { publicKey, connected, disconnect, connect, wallet, select } = useWallet();
   const { setVisible } = useWalletModal();
+  const [solDomain, setSolDomain] = useState<string | null>(null);
 
   const address = connected && publicKey ? publicKey.toBase58() : null;
 
   useEffect(() => {
     onAddressChange?.(address);
   }, [address, onAddressChange]);
+
+  // Resolve .sol domain whenever the connected address changes
+  useEffect(() => {
+    if (!address) {
+      setSolDomain(null);
+      onSolDomainChange?.(null);
+      return;
+    }
+    resolveSolDomain(address).then((domain) => {
+      setSolDomain(domain);
+      onSolDomainChange?.(domain);
+    });
+  }, [address, onSolDomainChange]);
 
   if (!wallet) {
     return (
@@ -64,10 +81,13 @@ export function SolanaWalletConnect({ onAddressChange }: SolanaWalletConnectProp
         <span className="text-xs text-[var(--text-muted)]">
           {wallet.adapter.name}
         </span>
-        <span className="text-xs font-mono text-[var(--accent)]">
-          {address?.slice(0, 4)}...{address?.slice(-4)}
+        <span className="text-xs font-mono text-[var(--accent)]" title={address ?? undefined}>
+          {solDomain ?? `${address?.slice(0, 4)}...${address?.slice(-4)}`}
         </span>
       </div>
+      {solDomain && (
+        <p className="text-[10px] text-[var(--text-muted)]">🌐 SNS identity verified</p>
+      )}
       <button
         onClick={disconnect}
         className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] cursor-pointer text-left"

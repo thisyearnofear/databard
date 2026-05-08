@@ -1,15 +1,15 @@
+Command finished with exit code 0.
+Command output:
 # 🎙️ DataBard
 
-**Turn your onchain data into AI podcasts and music anthems — then mint them on Solana.**
+**Your data catalog, as a question-first podcast.**
 
-Connect your Dune queries, subgraph, or data warehouse. Two AI hosts analyze the data, narrate the health story, and generate a shareable episode or a full Data Anthem (music track). Mint the result on Solana under your `.sol` identity.
+Start with a question, connect OpenMetadata, dbt, The Graph, or Dune Analytics, and let the agent execute queries, analyze result data, and turn the analysis into a podcast-style answer your team can actually consume.
 
-> **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required · [🎵 Hear a demo anthem](https://databard.thisyearnofear.com)
+> **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required
 
 **Hackathon reviewers:**
-- **Colosseum Frontier / 100xDevs Track** → Live product: [databard.thisyearnofear.com](https://databard.thisyearnofear.com) · Solana minting · ElevenLabs Music API · SNS `.sol` identity
-- **SNS Identity Track** → `.sol` domain resolved on wallet connect, stored in on-chain memo at mint time
-- **OpenMetadata Hackathon** → [`docs/OPENMETADATA_HACKATHON.md`](docs/OPENMETADATA_HACKATHON.md)
+- **OpenMetadata Hackathon** → [`docs/OPENMETADATA_HACKATHON.md`](docs/OPENMETADATA_HACKATHON.md) — paradoxes [#26608](https://github.com/open-metadata/OpenMetadata/issues/26608) + [#26658](https://github.com/open-metadata/OpenMetadata/issues/26658)
 - **ZerveHack** → [`docs/ZERVEHACK_PITCH.md`](docs/ZERVEHACK_PITCH.md)
 
 ---
