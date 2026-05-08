@@ -34,6 +34,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, audio: combined.toString("base64") });
     }
 
+    if (body.musicPlan && type === "anthem") {
+      // Demo mode — musicPlan provided directly
+      const audioBuffer = await synthesizeMusic(body.musicPlan);
+      return NextResponse.json({ ok: true, audio: audioBuffer.toString("base64"), musicPlan: body.musicPlan });
+    }
+
     // Normal mode — fetch metadata and generate
     const { schemaFqn, source = "openmetadata", researchQuestion } = body;
     const normalizedResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()

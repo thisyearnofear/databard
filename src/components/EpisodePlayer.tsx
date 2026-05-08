@@ -926,7 +926,7 @@ export function EpisodePlayer({
         </div>
 
         {/* Waveform & Controls — only when audio is available */}
-        {currentAudioUrl ? (
+        {currentAudioUrl && (
           <>
             <canvas
               ref={canvasRef}
@@ -968,11 +968,6 @@ export function EpisodePlayer({
               Space to play/pause · ← → to seek 10s · Click a segment to jump
             </p>
           </>
-        ) : (
-          <div className="bg-[var(--bg)] rounded-lg p-4 mb-4 text-center">
-            <p className="text-sm text-[var(--text-muted)]">📝 Transcript only — no audio generated</p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">Set <code className="text-[var(--accent)]">ELEVENLABS_API_KEY</code> to enable audio synthesis</p>
-          </div>
         )}
 
         {/* Report error */}
