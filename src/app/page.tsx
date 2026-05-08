@@ -117,6 +117,7 @@ export default function Home() {
   const [genStartedAt, setGenStartedAt] = useState(0);
   const [genFindings, setGenFindings] = useState<string[]>([]);
   const [episode, setEpisode] = useState<Episode | null>(null);
+  const [groveCid, setGroveCid] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [audioDuration, setAudioDuration] = useState<number>(0);
@@ -643,6 +644,7 @@ export default function Home() {
 
       setEpisode({ ...anthemEpisode, audioUrl: url });
       setAudioUrl(url);
+      setGroveCid(data.groveCid || null);
       setStatus("");
       dispatch({ type: "EPISODE_READY" });
     } catch (e: unknown) {
@@ -755,6 +757,7 @@ export default function Home() {
           reportHash,
           walletAddress: solanaPublicKey.toBase58(),
           ...(solanaSolDomain ? { solDomain: solanaSolDomain } : {}),
+          ...(groveCid ? { groveCid } : {}),
         }),
       });
       const mintData = await mintRes.json();
@@ -774,6 +777,7 @@ export default function Home() {
           reportHash,
           walletAddress: solanaPublicKey.toBase58(),
           ...(solanaSolDomain ? { solDomain: solanaSolDomain } : {}),
+          ...(groveCid ? { groveCid } : {}),
           signedTxBase64: Buffer.from(signedTx.serialize()).toString("base64"),
         }),
       });
@@ -794,7 +798,7 @@ export default function Home() {
   }
 
   function reset() {
-    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setAudioDuration(0); setSelectedSchema(null); setStatus(""); setGenFindings([]);
+    setEpisode(null); setAudioUrl(null); setSegmentOffsets([]); setAudioDuration(0); setSelectedSchema(null); setStatus(""); setGenFindings([]); setGroveCid(null);
     dispatch({ type: "RESET" });
   }
 
@@ -1659,6 +1663,8 @@ export default function Home() {
         <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
         <span>·</span>
         <a href="/leaderboard" className="hover:text-[var(--text)]">🏆 Leaderboard</a>
+        <span>·</span>
+        <a href="/history" className="hover:text-[var(--text)]">📼 History</a>
       </footer>
     </main>
   );

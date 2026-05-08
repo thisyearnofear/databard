@@ -31,6 +31,10 @@ export interface MintRecord {
   network: string;
   /** ISO timestamp when the broadcast confirmed */
   createdAt: string;
+  /** Grove/IPFS CID of the episode metadata (lens:// URI) */
+  groveCid?: string;
+  /** Grove/IPFS URL of the episode audio MP3 */
+  groveAudioUrl?: string;
   /** Optional team identifier for shared accountability grouping */
   teamId?: string;
   /** Health alert threshold (0–100); fire webhook when score drops below this */
@@ -82,6 +86,18 @@ async function readAll(): Promise<MintRecord[]> {
  * Append a mint record. De-duplicates by `txSignature` so retries from the
  * client (or the existing route handler being called twice) don't double-count.
  */
+/** Return all mint records (newest first). */
+export async function getMints(): Promise<MintRecord[]> {
+  try {
+    await fs.access(MINTS_FILE);
+    const raw = await fs.readFile(MINTS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as MintRecord[]).slice().reverse() : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function recordMint(record: MintRecord): Promise<void> {
   try {
     const all = await readAll();

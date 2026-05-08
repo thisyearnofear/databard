@@ -9,6 +9,7 @@ import { analyzeSchema } from "@/lib/schema-analysis";
 import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
 import { getDuneTableStats } from "@/lib/dune-adapter";
 import { generateMusicPlan } from "@/lib/music-generator";
+import { uploadEpisodeToGrove } from "@/lib/grove-storage";
 
 /**
  * Full pipeline: metadata → script/music → audio.
@@ -74,10 +75,21 @@ export async function POST(req: NextRequest) {
     if (type === "anthem") {
       const musicPlan = generateMusicPlan(episode, persona);
       const audioBuffer = await synthesizeMusic(musicPlan);
+      episode.musicPlan = musicPlan;
+      // Upload to Grove/IPFS in background — don't block the response
+      let groveRecord: { metadataCid?: string; audioCid?: string; metadataUrl?: string; audioUrl?: string } = {};
+      try {
+        groveRecord = await uploadEpisodeToGrove(episode, audioBuffer);
+      } catch (groveErr) {
+        console.warn("[Grove] Upload failed (non-fatal):", groveErr);
+      }
       return NextResponse.json({ 
         ok: true, 
         audio: audioBuffer.toString("base64"),
-        musicPlan 
+        musicPlan,
+        groveCid: groveRecord.metadataCid,
+        groveAudioUrl: groveRecord.audioUrl,
+        groveMetadataUrl: groveRecord.metadataUrl
       });
     }
 
@@ -106,7 +118,15 @@ export async function POST(req: NextRequest) {
     }
     
     const combined = Buffer.concat(audioBuffers);
-    return NextResponse.json({ ok: true, audio: combined.toString("base64"), script });
+    episode.script = script;
+    // Upload to Grove/IPFS — non-fatal
+    let groveRecord: { metadataCid?: string; audioCid?: string; metadataUrl?: string; audioUrl?: string } = {};
+    try {
+      groveRecord = await uploadEpisodeToGrove(episode, combined);
+    } catch (groveErr) {
+      console.warn("[Grove] Upload failed (non-fatal):", groveErr);
+    }
+    return NextResponse.json({ ok: true, audio: combined.toString("base64"), script, groveCid: groveRecord.metadataCid, groveAudioUrl: groveRecord.audioUrl, groveMetadataUrl: groveRecord.metadataUrl });
 
   } catch (e: unknown) {
     if (e instanceof ValidationError) {

@@ -21,6 +21,10 @@ interface MintBody {
   reportHash?: string;
   /** .sol domain of the creator (resolved via SNS/Bonfida) */
   solDomain?: string;
+  /** Grove/IPFS CID of the episode metadata (lens:// URI) */
+  groveCid?: string;
+  /** Grove/IPFS URL of the episode audio MP3 */
+  groveAudioUrl?: string;
   /** Base64-encoded signed transaction from the client */
   signedTxBase64?: string;
 }
@@ -28,7 +32,7 @@ interface MintBody {
 export async function POST(req: NextRequest) {
   try {
     const body: MintBody = await req.json();
-    const { schemaName, healthScore, episodeId, walletAddress, reportHash, solDomain, signedTxBase64 } = body;
+    const { schemaName, healthScore, episodeId, walletAddress, reportHash, solDomain, groveCid, groveAudioUrl, signedTxBase64 } = body;
 
     if (!schemaName || !episodeId || !walletAddress) {
       return NextResponse.json(
@@ -64,9 +68,11 @@ export async function POST(req: NextRequest) {
         txSignature: signature,
         network: NETWORK,
         createdAt: new Date().toISOString(),
+        groveCid: groveCid || undefined,
+        groveAudioUrl: groveAudioUrl || undefined,
       });
 
-      return NextResponse.json({ ok: true, txSignature: signature, explorerUrl, network: NETWORK });
+      return NextResponse.json({ ok: true, txSignature: signature, explorerUrl, network: NETWORK, groveCid: groveCid || null });
     }
 
     // No signed tx provided — return the unsigned transaction for the client to sign
@@ -80,6 +86,7 @@ export async function POST(req: NextRequest) {
       report_hash: reportHash || "",
       author: walletAddress,
       ...(solDomain ? { sol_domain: solDomain } : {}),
+      ...(groveCid ? { grove_cid: groveCid } : {}),
       timestamp: new Date().toISOString(),
       network: NETWORK,
     });
