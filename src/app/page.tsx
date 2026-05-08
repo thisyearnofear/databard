@@ -120,7 +120,7 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [audioDuration, setAudioDuration] = useState<number>(0);
-  const [persona, setPersona] = useState<"enterprise" | "web3">("enterprise");
+  const [persona, setPersona] = useState<"enterprise" | "web3">("web3");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
