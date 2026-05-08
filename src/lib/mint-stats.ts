@@ -25,13 +25,29 @@ export interface MintRecord {
   reportHash?: string;
   /** Solana wallet that signed the memo */
   walletAddress: string;
-  /** Solana transaction signature */
+  /** Solana transaction signature — also used as episode access token */
   txSignature: string;
   /** "mainnet-beta" | "devnet" | "testnet" */
   network: string;
   /** ISO timestamp when the broadcast confirmed */
   createdAt: string;
+  /** Optional team identifier for shared accountability grouping */
+  teamId?: string;
+  /** Health alert threshold (0–100); fire webhook when score drops below this */
+  alertThreshold?: number;
+  /** Webhook or Slack URL to notify when alert fires */
+  alertWebhook?: string;
 }
+
+export interface AlertSubscription {
+  walletAddress: string;
+  schemaName: string;
+  threshold: number;
+  webhook: string;
+  createdAt: string;
+}
+
+const ALERTS_FILE = path.join(process.cwd(), "data", "alerts.json");
 
 export interface MintStats {
   total: number;
@@ -98,4 +114,113 @@ export async function getMintStats(limit = 10, schemaName?: string): Promise<Min
 export async function getMintCountForSchema(schemaName: string): Promise<number> {
   const all = await readAll();
   return all.filter((m) => m.schemaName === schemaName).length;
+}
+
+/** Get all mints for a schema across all wallets (team history) */
+export async function getTeamHistory(schemaName: string, teamId?: string): Promise<MintRecord[]> {
+  const all = await readAll();
+  return all
+    .filter((m) => m.schemaName === schemaName && (!teamId || m.teamId === teamId))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Check if a wallet holds a mint for a given episodeId (gated access) */
+export async function walletHoldsMint(walletAddress: string, episodeId: string): Promise<MintRecord | null> {
+  const all = await readAll();
+  return all.find((m) => m.walletAddress === walletAddress && m.episodeId === episodeId) ?? null;
+}
+
+/** Get mint by txSignature (used as access token) */
+export async function getMintByTx(txSignature: string): Promise<MintRecord | null> {
+  const all = await readAll();
+  return all.find((m) => m.txSignature === txSignature) ?? null;
+}
+
+export interface LeaderboardEntry {
+  schemaName: string;
+  latestHealthScore: number;
+  mintCount: number;
+  trend: "up" | "down" | "stable";
+  lastMintedAt: string;
+  wallets: string[];
+}
+
+/** Aggregate mints into a leaderboard sorted by latest health score */
+export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
+  const all = await readAll();
+  const bySchema: Record<string, MintRecord[]> = {};
+  for (const m of all) {
+    if (!bySchema[m.schemaName]) bySchema[m.schemaName] = [];
+    bySchema[m.schemaName].push(m);
+  }
+  const entries: LeaderboardEntry[] = Object.entries(bySchema).map(([schemaName, mints]) => {
+    const sorted = [...mints].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const latest = sorted[0].healthScore;
+    const prev = sorted[1]?.healthScore ?? latest;
+    const trend: "up" | "down" | "stable" = latest > prev ? "up" : latest < prev ? "down" : "stable";
+    const wallets = [...new Set(mints.map((m) => m.walletAddress))];
+    return { schemaName, latestHealthScore: latest, mintCount: mints.length, trend, lastMintedAt: sorted[0].createdAt, wallets };
+  });
+  return entries.sort((a, b) => b.latestHealthScore - a.latestHealthScore).slice(0, limit);
+}
+
+// ── Alert subscriptions ──────────────────────────────────────────────────────
+
+async function readAlerts(): Promise<AlertSubscription[]> {
+  try {
+    await fs.mkdir(path.dirname(ALERTS_FILE), { recursive: true });
+    try { await fs.access(ALERTS_FILE); } catch { await fs.writeFile(ALERTS_FILE, "[]", "utf-8"); }
+    const raw = await fs.readFile(ALERTS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as AlertSubscription[]) : [];
+  } catch { return []; }
+}
+
+export async function registerAlert(sub: AlertSubscription): Promise<void> {
+  const all = await readAlerts();
+  // Upsert by wallet+schema
+  const idx = all.findIndex((a) => a.walletAddress === sub.walletAddress && a.schemaName === sub.schemaName);
+  if (idx >= 0) all[idx] = sub; else all.push(sub);
+  await fs.writeFile(ALERTS_FILE, JSON.stringify(all, null, 2), "utf-8");
+}
+
+export async function getAlerts(): Promise<AlertSubscription[]> {
+  return readAlerts();
+}
+
+/**
+ * Check all alert subscriptions against the latest mint for each schema.
+ * Fires registered webhooks when health drops below threshold.
+ * Returns list of fired alert schema names.
+ */
+export async function checkAndFireAlerts(): Promise<string[]> {
+  const [alerts, all] = await Promise.all([readAlerts(), readAll()]);
+  const fired: string[] = [];
+  for (const sub of alerts) {
+    const mints = all
+      .filter((m) => m.schemaName === sub.schemaName)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (!mints.length) continue;
+    const latest = mints[0].healthScore;
+    if (latest < sub.threshold) {
+      fired.push(sub.schemaName);
+      try {
+        await fetch(sub.webhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: `🚨 DataBard Alert: *${sub.schemaName}* health dropped to *${latest}%* (threshold: ${sub.threshold}%)`,
+            schemaName: sub.schemaName,
+            healthScore: latest,
+            threshold: sub.threshold,
+            episodeId: mints[0].episodeId,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } catch (e) {
+        console.warn(`[alerts] webhook failed for ${sub.schemaName}:`, e);
+      }
+    }
+  }
+  return fired;
 }

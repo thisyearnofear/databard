@@ -1646,6 +1646,8 @@ export default function Home() {
         <span>{persona === "web3" ? "Powered by ElevenLabs & Solana" : "Powered by ElevenLabs & OpenMetadata"}</span>
         <span>·</span>
         <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
+        <span>·</span>
+        <a href="/leaderboard" className="hover:text-[var(--text)]">🏆 Leaderboard</a>
       </footer>
     </main>
   );

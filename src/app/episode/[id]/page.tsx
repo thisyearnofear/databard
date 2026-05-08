@@ -2,17 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
+import { SolanaWalletConnect } from "@/components/SolanaWalletConnect";
 import type { Episode } from "@/lib/types";
 
 export default function SharedEpisode() {
   const params = useParams();
   const id = params.id as string;
+  const { publicKey } = useWallet();
+
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
+
+  // Gated access state
+  const [isMinted, setIsMinted] = useState(false);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(false);
 
   useEffect(() => {
     async function loadEpisode() {
@@ -45,6 +54,17 @@ export default function SharedEpisode() {
     loadEpisode();
   }, [id]);
 
+  // Check wallet ownership whenever wallet connects
+  useEffect(() => {
+    if (!publicKey || !episode) return;
+    setCheckingAccess(true);
+    fetch(`/api/onchain/access?walletAddress=${publicKey.toBase58()}&episodeId=${id}`)
+      .then((r) => r.json())
+      .then((d) => { setIsMinted(d.hasAccess === true); setAccessChecked(true); })
+      .catch(() => setAccessChecked(true))
+      .finally(() => setCheckingAccess(false));
+  }, [publicKey, episode, id]);
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -67,8 +87,11 @@ export default function SharedEpisode() {
     );
   }
 
+  const walletConnected = !!publicKey;
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
+      {/* Expiry banner */}
       <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1.5">
         ⏳ {expiresIn != null
           ? expiresIn > 3600
@@ -78,7 +101,34 @@ export default function SharedEpisode() {
             : "Expiring soon"
           : "Shared episodes expire 24 hours after creation"}
       </div>
+
+      {/* On-chain ownership badge */}
+      {walletConnected && accessChecked && !checkingAccess && (
+        <div
+          className="text-xs px-3 py-1.5 rounded-lg border"
+          style={
+            isMinted
+              ? { background: "rgba(91,245,140,0.08)", borderColor: "var(--success)", color: "var(--success)" }
+              : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }
+          }
+        >
+          {isMinted
+            ? "✓ You minted this episode — on-chain record verified"
+            : "ℹ This episode hasn't been minted by your wallet"}
+        </div>
+      )}
+
       <EpisodePlayer episode={episode} audioUrl={audioUrl} />
+
+      {/* Wallet connect nudge for non-connected visitors */}
+      {!walletConnected && (
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-w-md text-center">
+          <p className="text-xs text-[var(--text-muted)] mb-2">
+            🔗 Connect your Solana wallet to verify on-chain ownership and see team history
+          </p>
+          <SolanaWalletConnect />
+        </div>
+      )}
 
       {/* CTA for shared episode visitors */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-md text-center">
@@ -90,8 +140,8 @@ export default function SharedEpisode() {
           <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium">
             Generate your own
           </a>
-          <a href="/#pricing" className="bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-xs font-medium">
-            See plans
+          <a href="/leaderboard" className="bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-xs font-medium">
+            🏆 Leaderboard
           </a>
         </div>
       </div>
