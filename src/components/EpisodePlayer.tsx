@@ -324,7 +324,7 @@ export function EpisodePlayer({
   const [nudge, setNudge] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<PlayerTab>("segments");
+  const [activeTab, setActiveTab] = useState<PlayerTab>(currentEpisode.musicPlan ? "anthem" : "segments");
   const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
