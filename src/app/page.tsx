@@ -7,6 +7,7 @@ import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
 import { SolanaWalletConnect } from "@/components/SolanaWalletConnect";
+import { PalmUsdCheckout } from "@/components/PalmUsdCheckout";
 import { useToast } from "@/components/Toast";
 import type { Episode, DataSource } from "@/lib/types";
 
@@ -1532,6 +1533,12 @@ export default function Home() {
             <button onClick={handleCheckout} className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer">
               Start Pro
             </button>
+            <div className="flex items-center gap-3 my-2">
+              <div className="flex-1 h-px bg-[var(--border)]" />
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">or</span>
+              <div className="flex-1 h-px bg-[var(--border)]" />
+            </div>
+            <PalmUsdCheckout compact />
             <a href="/pro" className="block text-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] mt-2 cursor-pointer">
               Already subscribed? Manage schedules →
             </a>

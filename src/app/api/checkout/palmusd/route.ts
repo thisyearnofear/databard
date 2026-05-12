@@ -15,13 +15,11 @@ import {
   Connection,
   Transaction,
   PublicKey,
-  SystemProgram,
 } from "@solana/web3.js";
 import {
   getAssociatedTokenAddress,
   createTransferInstruction,
   getAccount,
-  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
@@ -30,7 +28,7 @@ const PRO_PRICE_PUSD = 29; // $29/mo
 
 function getConfig() {
   const mint = new PublicKey(
-    process.env.NEXT_PUBLIC_PALM_USD_MINT ?? "PUSDxMnNvSoANp7B7A3DJ1Ao23DRvuxxu7KF7uN2oNrh",
+    process.env.NEXT_PUBLIC_PALM_USD_MINT ?? "CZzgUBvxaMLwMhVSLgqJn3npmxoTo6nzMNQPAnwtHF3s",
   );
   const recipient = new PublicKey(
     process.env.PALM_USD_RECIPIENT ?? "11111111111111111111111111111111",

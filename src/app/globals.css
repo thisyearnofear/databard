@@ -10,6 +10,9 @@
   --accent-glow: #7c5bf540;
   --danger: #f55b5b;
   --success: #5bf58c;
+  --palm: #3f6b4a;
+  --palm-light: #5a9b68;
+  --palm-glow: #3f6b4a40;
 }
 
 /* Light theme */
@@ -23,6 +26,9 @@
   --accent-glow: #6d4de640;
   --danger: #dc2626;
   --success: #16a34a;
+  --palm: #3f6b4a;
+  --palm-light: #4d8a5c;
+  --palm-glow: #3f6b4a30;
 }
 
 /* System preference when no explicit theme set */
@@ -37,6 +43,9 @@
     --accent-glow: #6d4de640;
     --danger: #dc2626;
     --success: #16a34a;
+    --palm: #3f6b4a;
+    --palm-light: #4d8a5c;
+    --palm-glow: #3f6b4a30;
   }
 }
 
@@ -71,6 +80,27 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.4s ease-out;
+}
+
+@keyframes palm-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.palm-shimmer {
+  background: linear-gradient(90deg, var(--palm) 0%, var(--palm-light) 50%, var(--palm) 100%);
+  background-size: 200% auto;
+  animation: palm-shimmer 3s linear infinite;
+}
+
+@keyframes check-pop {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-check-pop {
+  animation: check-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 @keyframes typing {

@@ -8,6 +8,7 @@ Connect your Dune queries, subgraph, or data warehouse. Two AI hosts analyze the
 
 **Hackathon reviewers:**
 - **Colosseum Frontier / 100xDevs Track** → Live product: [databard.thisyearnofear.com](https://databard.thisyearnofear.com) · Solana minting · ElevenLabs Music API · SNS `.sol` identity
+- **Palm USD x Superteam UAE** → Native PUSD payment for Pro subscriptions · SPL token transfer on Solana · non-freezable stablecoin checkout · [`docs/PALM_USD_INTEGRATION.md`](docs/PALM_USD_INTEGRATION.md)
 - **SNS Identity Track** → `.sol` domain resolved on wallet connect, stored in on-chain memo at mint time
 - **OpenMetadata Hackathon** → [`docs/OPENMETADATA_HACKATHON.md`](docs/OPENMETADATA_HACKATHON.md)
 - **ZerveHack** → [`docs/ZERVEHACK_PITCH.md`](docs/ZERVEHACK_PITCH.md)
@@ -82,7 +83,7 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 - **Smart caching** — SFX cached 30 days, speech 24hr, scripts 1hr, metadata 5-10min
 - **Rate limiting** — 5 episodes/hr per IP to protect API credits
 - **OG images** — dynamic social preview cards for shared episodes
-- **Monetization-ready** — Stripe checkout, private RSS feeds, cron-ready regeneration
+- **Monetization-ready** — Stripe checkout, Palm USD (Solana stablecoin), private RSS feeds, cron-ready regeneration
 
 ## Quick Start
 
@@ -135,7 +136,7 @@ NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
 | AI Scripts | OpenAI-compatible API (GPT-4o-mini default) |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
-| Payments | Stripe Checkout |
+| Payments | Stripe Checkout, Palm USD (Solana SPL stablecoin) |
 | Onchain | Solana (Memo Program + PDA registry), SNS `.sol` identity, episode minting, health alerts, leaderboard |
 | Development | Kiro (spec-driven, see `.kiro/` directory) |
 
@@ -147,6 +148,7 @@ DataBard uses Solana not just for minting receipts, but as a genuine utility lay
 
 | Feature | API | Description |
 |---|---|---|
+| **Palm USD payments** | `POST /api/checkout/palmusd` | Pay for DataBard Pro ($29/mo) using Palm USD, a non-freezable Solana stablecoin. Server builds unsigned SPL transfer → wallet signs → `POST /api/checkout/palmusd/verify` confirms on-chain and activates Pro |
 | **On-chain audit trail** | `POST /api/onchain/mint-solana` | Every episode mint writes a memo + PDA record: `(schema_fqn, health_score, timestamp, episode_id, wallet, .sol domain)` — permanently queryable via RPC |
 | **Health alert subscriptions** | `POST /api/onchain/alerts` | Register a wallet + schema + threshold + webhook; `GET /api/onchain/check-alerts` fires Slack/webhook when health drops below threshold (cron-ready) |
 | **Public leaderboard** | `GET /api/onchain/leaderboard` | Ranked protocols by latest health score, trend (↑↓→), mint count, wallet count — live at [/leaderboard](https://databard.thisyearnofear.com/leaderboard) |
@@ -174,9 +176,10 @@ DataBard fetches query metadata via the Dune REST API, executes non-parameterize
 ### Wallet Connect
 
 ```
-Landing page → Connect Phantom wallet
+Landing page → Connect Phantom/Solflare wallet
              → .sol domain resolved via SNS/Bonfida
              → Episodes minted on-chain under your .sol identity
+             → Pay for Pro with Palm USD (29 PUSD/mo)
              → Health alerts registered per schema
              → Team history visible across wallets
 ```
@@ -195,9 +198,62 @@ Landing page → Connect Phantom wallet
 - [x] Public leaderboard — ranked protocols by health score + trend
 - [x] Team history — cross-wallet mint history per schema
 - [x] Gated episode access — wallet ownership check before replay
+- [x] Palm USD payments — non-freezable stablecoin checkout for Pro subscriptions
 - [ ] Historical diff intros ("since last week, 2 new failures")
 - [ ] Custom Anchor program for richer on-chain PDA queries
 - [ ] Custom voice personalities
+
+## Palm USD Integration
+
+DataBard accepts [Palm USD (PUSD)](https://palmusd.com) as a native payment method for Pro subscriptions. Palm USD is a non-freezable, 1:1 USD-backed stablecoin on Solana — no admin key can seize, pause, or reverse a transaction.
+
+### Why Palm USD?
+
+- **Non-freezable** — no blacklist, no pause function, no clawback. Your subscription payment can never be censored.
+- **1:1 USD backed** — AED & SAR reserves held at regulated custodians, attested monthly (ISAE 3000).
+- **Native on Solana** — SPL token with sub-second finality. No bridges, no wrapped assets.
+- **24/7 settlement** — no weekends, no holidays, no cut-off times.
+
+### Payment Flow
+
+```
+User clicks "Pay with Palm USD"
+  → Connect Solana wallet (Phantom, Solflare)
+  → Server builds unsigned SPL token transfer (29 PUSD → DataBard treasury)
+  → User signs in wallet
+  → Transaction submitted to Solana
+  → Server verifies on-chain confirmation
+  → Pro access activated instantly
+```
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/checkout/palmusd` | POST | Builds unsigned PUSD transfer transaction. Body: `{ walletAddress }` |
+| `/api/checkout/palmusd/verify` | POST | Verifies on-chain payment, activates Pro. Body: `{ walletAddress, txSignature }` |
+
+### Configuration
+
+```env
+# Solana network (mainnet-beta for production)
+NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta
+NEXT_PUBLIC_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+
+# Palm USD SPL token mint address (Solana mainnet)
+NEXT_PUBLIC_PALM_USD_MINT=CZzgUBvxaMLwMhVSLgqJn3npmxoTo6nzMNQPAnwtHF3s
+
+# Your treasury wallet that receives PUSD payments
+PALM_USD_RECIPIENT=your_solana_wallet_address
+```
+
+### Contract Details
+
+| Chain | Address | Type |
+|---|---|---|
+| Solana | `CZzgUBvxaMLwMhVSLgqJn3npmxoTo6nzMNQPAnwtHF3s` | SPL Token (6 decimals) |
+
+For more details, see [`docs/PALM_USD_INTEGRATION.md`](docs/PALM_USD_INTEGRATION.md).
 
 ## ElevenLabs Integration
 
