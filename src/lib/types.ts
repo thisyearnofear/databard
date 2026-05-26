@@ -1,6 +1,6 @@
 /** Shared domain types — single source of truth */
 
-export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune";
+export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune" | "coral";
 
 export interface OMConnection {
   url: string;
@@ -23,6 +23,11 @@ export interface DuneConnection {
   namespace?: string;
 }
 
+export interface CoralConnection {
+  query: string;
+  localFiles?: { path: string; name: string }[];
+}
+
 export interface ConnectionConfig {
   source: DataSource;
   openmetadata?: OMConnection;
@@ -30,6 +35,7 @@ export interface ConnectionConfig {
   dbtLocal?: { manifestPath?: string; manifestContent?: string };
   theGraph?: TheGraphConnection;
   dune?: DuneConnection;
+  coral?: CoralConnection;
 }
 
 export interface ColumnMeta {

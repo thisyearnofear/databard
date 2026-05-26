@@ -68,6 +68,7 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 
 ## Features
 
+- **Multi-source SQL narration (Coral)** — Join data across APIs and files in real-time with "No ETL" queries
 - **Deep OpenMetadata integration** — owners, PII, glossary, profiler, quality, lineage
 - **Question-first analysis** — Zerve-aligned workflow that starts from a research prompt, not a blank script
 - **Research trail** — each answer now includes a plan, evidence, and recommended next actions
@@ -130,7 +131,7 @@ NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
 | Layer | Technology |
 |---|---|
 | Web UI | Next.js 15, React 19, Tailwind CSS 4 |
-| Metadata | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics |
+| Metadata | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics, Coral (Unified SQL) |
 | AI Scripts | OpenAI-compatible API (GPT-4o-mini default) |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
@@ -156,12 +157,17 @@ DataBard uses Solana not just for minting receipts, but as a genuine utility lay
 
 ### Onchain Data Sources
 
-DataBard natively supports onchain data catalogs alongside traditional ones:
+DataBard natively supports onchain and unified data catalogs alongside traditional ones:
 
 ```
+# Coral (Unified SQL) — Join APIs, DBs, and local files
+Source: Coral
+Query: SELECT * FROM github.issues JOIN slack.messages ON ...
+
 # The Graph — paste any subgraph URL
 Source: The Graph (subgraph)
 URL: https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3
+```
 
 # Dune Analytics — connect your query namespace
 Source: Dune Analytics
@@ -197,6 +203,7 @@ Landing page → Connect Phantom/Solflare wallet
 - [x] Team history — cross-wallet mint history per schema
 - [x] Gated episode access — wallet ownership check before replay
 - [x] Palm USD payments — non-freezable stablecoin checkout for Pro subscriptions
+- [x] Coral Integration — Unified "No ETL" SQL joins across APIs and files
 - [ ] Historical diff intros ("since last week, 2 new failures")
 - [ ] Custom Anchor program for richer on-chain PDA queries
 - [ ] Custom voice personalities

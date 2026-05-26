@@ -74,7 +74,7 @@ export default async function ResearchSessionsPage({ searchParams }: { searchPar
       return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
     });
 
-  const sourceOptions = ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune"] as const;
+  const sourceOptions = ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune", "coral"] as const;
   const hasFilters = Boolean(query || source || sort !== "newest" || (Number.isFinite(minBranches) && minBranches > 0) || hasEpisode);
   const quickFilters = [
     { label: "All", href: buildHref(resolvedSearchParams, { q: "", source: "", minBranches: "", hasEpisode: "", sort: "" }) },

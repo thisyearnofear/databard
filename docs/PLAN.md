@@ -21,31 +21,33 @@ This project is submitted to two concurrent hackathons:
 
 1. **WeMakeDevs × OpenMetadata** (Apr 17–26) — Track T-01: MCP & AI Agents
 2. **ElevenHacks Hack #5: Kiro** (Apr 16–23) — Kiro spec-driven dev + ElevenLabs APIs
+3. **Pirates of the Coral-bean Hackathon** (May 2026) — "No ETL" cross-source SQL joins with Coral
 
 ## Roadmap
 
 ### Phase 1: Core (Days 1–3) ← hackathon scope
-- [ ] Connect to OpenMetadata via REST API
-- [ ] Fetch schema metadata (tables, columns, quality, lineage, tags)
-- [ ] Generate two-host conversation script from metadata
-- [ ] Synthesize audio via ElevenLabs TTS (two voices)
-- [ ] Episode player with waveform visualization
-- [ ] Catalog browser UI
+- [x] Connect to OpenMetadata via REST API
+- [x] Fetch schema metadata (tables, columns, quality, lineage, tags)
+- [x] Generate two-host conversation script from metadata
+- [x] Synthesize audio via ElevenLabs TTS (two voices)
+- [x] Episode player with waveform visualization
+- [x] Catalog browser UI
 
 ### Phase 2: Polish (Days 4–6) ← hackathon scope
-- [ ] ElevenLabs sound effects for transitions/alerts
-- [ ] ElevenLabs music generation for intro/outro
-- [ ] Visual segment timeline (highlights current topic during playback)
-- [ ] Episode card design (artwork, metadata summary)
-- [ ] Demo video
+- [x] ElevenLabs sound effects for transitions/alerts
+- [x] ElevenLabs music generation for intro/outro
+- [x] Visual segment timeline (highlights current topic during playback)
+- [x] Episode card design (artwork, metadata summary)
+- [x] Demo video
 
-### Phase 3: Post-Hackathon
+### Phase 3: Post-Hackathon & Coral Integration
 - [x] Visual health report — server-side PDF export (3 slides: Overview, Critical Tables & Actions, Lineage & Ownership) via `/api/canvas/export` using Puppeteer. No external runtime dependency for users.
 - [x] Scheduled regeneration when catalog changes (Pro tier — `/api/schedules` + `/pro` settings UI)
 - [x] Shareable episode links / embeds (`/episode/[id]`)
 - [x] Monetization: SaaS subscription per data team (Stripe checkout + webhook → Pro activation)
 - [x] The Graph subgraph adapter — `src/lib/the-graph-adapter.ts` — introspects GraphQL schema, maps entities→tables, fields→columns, cross-entity refs→lineage
 - [x] Dune Analytics adapter — `src/lib/dune-adapter.ts` — fetches query metadata for a namespace, maps queries→tables, result columns→schema, executes non-parameterized queries to compute column statistics (min/max/avg, top values) for data-aware podcast narration
+- [ ] **Coral Integration** — `src/lib/coral-adapter.ts` — Use Coral's SQL query layer to join data across APIs (OpenMetadata, Dune) and local files (CSV/JSON) for unified "No ETL" narration.
 - [x] Initia InterwovenKit wallet connect — `/pro` page — `.init` wallet as alternative to Stripe customer ID
 - [x] On-chain episode minting — `POST /api/onchain/mint` — records schema name, health score, episode ID, author address on Initia testnet
 - [ ] Initia appchain deployment — get valid rollup chain ID on `initiation-2` testnet

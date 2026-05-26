@@ -32,7 +32,11 @@ export async function POST(req: NextRequest) {
     const meta = session.schemaMeta;
     const insights = analyzeSchema(meta);
     const researchTrail = await enrichResearchTrail(buildResearchTrail(meta, insights, question), session.evidenceContext);
-    const script = await generateScript(meta, { researchQuestion: question, researchTrail });
+    const script = await generateScript(meta, { 
+      researchQuestion: question, 
+      researchTrail,
+      source: session.source 
+    });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);
     const totalTests = meta.tables.reduce((count, table) => count + table.qualityTests.length, 0);

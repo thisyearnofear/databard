@@ -75,7 +75,12 @@ export async function POST(req: NextRequest) {
               })
             : null;
           const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
-          const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail, tableStats });
+          const script = await generateScript(meta, { 
+            researchQuestion: normalizedResearchQuestion, 
+            researchTrail, 
+            tableStats,
+            source 
+          });
           if (signal.aborted) { controller.close(); return; }
 
           // Send metadata

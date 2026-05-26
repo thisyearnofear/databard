@@ -71,14 +71,16 @@ export default function ProSettings() {
   async function handleSaveSchedule() {
     if (!schemaFqn) { setStatus("Schema FQN required"); return; }
     if (source === "dune" && !duneApiKey) { setStatus("Dune API key required"); return; }
+    if (source === "coral" && !coralQuery) { setStatus("Coral query required"); return; }
     setLoading(true);
     try {
       const dune = source === "dune" ? { apiKey: duneApiKey, namespace: duneNamespace || undefined } : undefined;
+      const coral = source === "coral" ? { query: coralQuery } : undefined;
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schedule: { schemaFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune },
+          schedule: { schemaFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral },
         }),
       });
       const data = await res.json();

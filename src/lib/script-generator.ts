@@ -60,6 +60,7 @@ RULES:
 - Make it sound like two people actually talking. Interruptions, reactions, disagreements are good
 - Total script should be 12-25 segments depending on schema size
 - If a research question is provided, answer it directly and keep it in view throughout the script
+- If the data source is "Coral", highlight that this is a "No ETL" unified view joining multiple sources (APIs, files, databases) in real-time.
 - No markdown, no code blocks — just the JSON array
 - If dataHighlights are present, narrate actual data findings. Reference specific numbers, ranges, and notable values. For numeric columns mention min/max/avg ranges. For categorical columns mention the most common values. Don't just list column names — tell the story the data reveals.`;
 
@@ -90,6 +91,7 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?:
   return JSON.stringify({
     researchQuestion: context?.researchQuestion?.trim() || undefined,
     researchTrail: context?.researchTrail,
+    source: context?.source,
     schema: schema.name,
     fqn: schema.fqn,
     description: schema.description,

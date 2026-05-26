@@ -142,6 +142,7 @@ export default function Home() {
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
   const [duneQueryUrl, setDuneQueryUrl] = useState("");
+  const [coralQuery, setCoralQuery] = useState("SELECT * FROM github.issues JOIN slack.messages ON issues.id = messages.id");
 
   const { toast } = useToast();
 
@@ -342,9 +343,12 @@ export default function Home() {
     } else if (source === "dune") {
       if (!duneApiKey) { showError("Dune API key required"); return null; }
       body.dune = { apiKey: duneApiKey, namespace: duneNamespace || undefined, queryUrl: duneQueryUrl || undefined };
+    } else if (source === "coral") {
+      if (!coralQuery) { showError("Coral query required"); return null; }
+      body.coral = { query: coralQuery };
     }
     return body;
-  }, [source, omMode, token, omUrl, dbtAccountId, dbtProjectId, dbtToken, manifestFile, graphUrl, graphApiKey, duneApiKey, duneNamespace]);
+  }, [source, omMode, token, omUrl, dbtAccountId, dbtProjectId, dbtToken, manifestFile, graphUrl, graphApiKey, duneApiKey, duneNamespace, coralQuery]);
 
   async function handleTestConnection() {
     setConnectionTested("testing");
@@ -810,6 +814,7 @@ export default function Home() {
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
     "dune": "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
+    coral: "Unified 'No ETL' SQL engine. Join data across APIs and local files in a single statement.",
   };
 
   const sourceLabel: Record<DataSource, string> = {
@@ -818,6 +823,7 @@ export default function Home() {
     "dbt-local": "dbt Local",
     "the-graph": "The Graph",
     dune: "Dune",
+    coral: "Coral (Unified SQL)",
   };
 
   const activeContext =
@@ -1340,6 +1346,9 @@ export default function Home() {
                 <option value="the-graph">The Graph (subgraph)</option>
                 <option value="dune">Dune Analytics</option>
               </optgroup>
+              <optgroup label="⚓ Unified">
+                <option value="coral">Coral (No ETL Joins)</option>
+              </optgroup>
             </select>
             <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
 
@@ -1468,7 +1477,21 @@ export default function Home() {
                 <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Browse all</span>
               </div>
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap (defaults to your own)" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
-            </>)}
+              </>)}
+              {source === "coral" && (<>
+              <label className="text-sm text-[var(--text-muted)]">Unified SQL Query</label>
+              <textarea 
+                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm h-32 font-mono"
+                value={coralQuery}
+                onChange={(e) => setCoralQuery(e.target.value)}
+                placeholder="SELECT * FROM github.issues JOIN slack.messages..."
+                title="Enter a SQL query that joins data across your configured Coral sources. DataBard will analyze the results and narrate the findings."
+              />
+              <p className="text-[10px] text-[var(--text-muted)] -mt-2">
+                Join APIs, DBs, and local files locally. No data leaves your machine.
+              </p>
+              </>)}
+
 
             {source !== "dbt-local" && (
               <p className="text-xs text-[var(--text-muted)] -mt-2 flex items-center gap-1 opacity-70">

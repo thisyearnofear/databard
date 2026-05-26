@@ -80,7 +80,12 @@ export async function POST(req: NextRequest) {
     }
 
     const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
-    const script = await generateScript(meta, { researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined, researchTrail, tableStats });
+    const script = await generateScript(meta, { 
+      researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined, 
+      researchTrail, 
+      tableStats,
+      source 
+    });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);
 

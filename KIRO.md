@@ -3,10 +3,10 @@
 This document chronicles how Kiro was used to build DataBard — a podcast generator for data catalogs that turns OpenMetadata schemas into audio episodes using ElevenLabs TTS.
 
 ## Project Stats
-- **Timeline**: 6 days (hackathon sprint)
-- **Lines of code**: ~5,000 (15 API routes, 10 lib modules, 5 components)
+- **Timeline**: 7 days (including Coral integration sprint)
+- **Lines of code**: ~5,500 (16 API routes, 11 lib modules, 6 components)
 - **Kiro features used**: Specs, steering (2 files), hooks (1 active), MCP integration
-- **APIs integrated**: OpenMetadata REST API, ElevenLabs SDK (TTS + Sound Effects API), dbt Cloud, The Graph (GraphQL introspection), Dune Analytics, Stripe, Initia InterwovenKit
+- **APIs integrated**: OpenMetadata REST API, ElevenLabs SDK (TTS + Sound Effects API), dbt Cloud, The Graph (GraphQL introspection), Dune Analytics, Coral (Unified SQL), Stripe, Initia InterwovenKit
 
 ## Workflow
 

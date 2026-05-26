@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
       if (!body.theGraph?.subgraphUrl) throw new ValidationError("Subgraph URL required");
     } else if (source === "dune") {
       if (!body.dune?.apiKey) throw new ValidationError("Dune API key required");
+    } else if (source === "coral") {
+      if (!body.coral?.query) throw new ValidationError("Coral query required");
     } else {
       throw new ValidationError(`Unsupported data source: ${source}`);
     }
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
       dbtLocal: body.dbtLocal,
       theGraph: body.theGraph,
       dune: body.dune,
+      coral: body.coral,
     };
 
     let schemas: string[] = [];

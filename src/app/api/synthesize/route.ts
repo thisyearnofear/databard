@@ -100,7 +100,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Podcast mode
-    const script = await generateScript(meta, { researchQuestion: normalizedResearchQuestion, researchTrail, tableStats });
+    const script = await generateScript(meta, { 
+      researchQuestion: normalizedResearchQuestion, 
+      researchTrail, 
+      tableStats,
+      source 
+    });
     let audioBuffers: Buffer[];
     
     try {

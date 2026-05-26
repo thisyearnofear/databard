@@ -49,6 +49,9 @@ export async function fetchSchemaMeta(config: ConnectionConfig, schemaFqn: strin
     if (!config.openmetadata) throw new Error("OpenMetadata config missing");
     return fetchOM(config.openmetadata, schemaFqn);
   }
+  if (config.source === "coral") {
+    return fetchCoralMeta(config);
+  }
   if (config.source === "the-graph") {
     if (!config.theGraph) throw new Error("The Graph config missing");
     return fetchTheGraphMeta(config.theGraph, schemaFqn.replace("the-graph.", ""));

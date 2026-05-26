@@ -22,5 +22,6 @@ export async function buildConfig(body: Record<string, unknown>): Promise<Connec
     dbtLocal: body.dbtLocal as ConnectionConfig["dbtLocal"],
     theGraph: body.theGraph as ConnectionConfig["theGraph"],
     dune: body.dune as ConnectionConfig["dune"],
+    coral: body.coral as ConnectionConfig["coral"],
   };
 }

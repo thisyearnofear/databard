@@ -11,6 +11,7 @@ function resolveSourceUrl(config: ConnectionConfig): string | undefined {
   if (config.source === "dbt-local") return config.dbtLocal?.manifestPath ? `file://${config.dbtLocal.manifestPath}` : undefined;
   if (config.source === "the-graph") return config.theGraph?.subgraphUrl;
   if (config.source === "dune") return config.dune?.namespace ? `https://dune.com/${config.dune.namespace}` : undefined;
+  if (config.source === "coral") return "https://withcoral.com";
   return undefined;
 }
 
@@ -21,6 +22,7 @@ export function buildEvidenceContext(config: ConnectionConfig): EvidenceSourceCo
     "dbt-local": "dbt local manifest",
     "the-graph": "The Graph subgraph",
     dune: "Dune workspace",
+    coral: "Coral Unified SQL",
   };
 
   return {

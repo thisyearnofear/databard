@@ -45,6 +45,7 @@ A dedicated section explaining **"Data Accountability on Initia"**:
 In the `Connect` flow, sources must be grouped to guide the user:
 - **Enterprise**: OpenMetadata, dbt Cloud, dbt Local.
 - **On-chain**: The Graph, Dune Analytics, Initia.
+- **Unified (No ETL)**: Coral (Multi-source SQL joins).
 
 ### Seamless Transitions
 - **Performance**: Use dynamic imports for the Initia InterwovenKit to keep the "Warehouse" path lightweight.
