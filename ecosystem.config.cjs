@@ -30,6 +30,7 @@ module.exports = {
       cwd: '/opt/databard/current',
       env: {
         PORT: 42101,
+        PATH: "/usr/local/bin:/usr/bin:/bin:/home/deploy/.local/bin",
         // CORAL_GATEWAY_TOKEN: 'your-secret-token',
         // GITHUB_TOKEN: '...',
         // SLACK_TOKEN: '...',
