@@ -199,6 +199,7 @@ export interface ScheduleConfig {
   shareId?: string; // ID of the last generated episode
   /** Source-specific credentials (stored server-side for scheduled regeneration) */
   dune?: { apiKey: string; namespace?: string };
+  coral?: { query: string };
 }
 
 export const proAccounts = {
