@@ -40,6 +40,10 @@ export async function listSchemas(config: ConnectionConfig): Promise<string[]> {
     if (!config.dune) throw new Error("Dune config missing");
     return listDuneSchemas(config.dune);
   }
+  if (config.source === "coral") {
+    // Coral is a single-query source — return a virtual schema so the wizard can proceed
+    return ["coral.unified"];
+  }
 
   const { manifest, runResults } = await getDbtBundle(config);
   return parseDbtManifest(manifest, undefined, runResults).map((s) => s.fqn);

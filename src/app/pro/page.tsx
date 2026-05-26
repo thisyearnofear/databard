@@ -71,18 +71,19 @@ export default function ProSettings() {
   }
 
   async function handleSaveSchedule() {
-    if (!schemaFqn) { setStatus("Schema FQN required"); return; }
+    if (source !== "coral" && !schemaFqn) { setStatus("Schema FQN required"); return; }
     if (source === "dune" && !duneApiKey) { setStatus("Dune API key required"); return; }
     if (source === "coral" && !coralQuery) { setStatus("Coral query required"); return; }
     setLoading(true);
     try {
+      const effectiveFqn = source === "coral" ? "coral.unified" : schemaFqn;
       const dune = source === "dune" ? { apiKey: duneApiKey, namespace: duneNamespace || undefined } : undefined;
       const coral = source === "coral" ? { query: coralQuery } : undefined;
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schedule: { schemaFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral },
+          schedule: { schemaFqn: effectiveFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral },
         }),
       });
       const data = await res.json();
@@ -108,6 +109,7 @@ export default function ProSettings() {
           source: schedule.source,
           shareId: schedule.shareId,
           dune: schedule.dune,
+          coral: schedule.coral,
         }),
       });
       const data = await res.json();
@@ -390,13 +392,14 @@ export default function ProSettings() {
             <select
               className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm cursor-pointer"
               value={source}
-              onChange={(e) => setSource(e.target.value as "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune")}
+              onChange={(e) => setSource(e.target.value as DataSource)}
             >
               <option value="openmetadata">OpenMetadata</option>
               <option value="dbt-cloud">dbt Cloud</option>
               <option value="dbt-local">dbt Local</option>
               <option value="the-graph">The Graph</option>
               <option value="dune">Dune Analytics</option>
+              <option value="coral">Coral (Cross-source SQL) ★</option>
             </select>
           </div>
 
@@ -421,15 +424,30 @@ export default function ProSettings() {
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-[var(--text-muted)]">Schema FQN</label>
-            <input
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
-              value={schemaFqn}
-              onChange={(e) => setSchemaFqn(e.target.value)}
-              placeholder={source === "dune" ? "dune.namespace" : "database.schema_name"}
-            />
-          </div>
+          {source === "coral" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-[var(--text-muted)]">Cross-source SQL Query</label>
+              <textarea
+                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm h-24 font-mono"
+                value={coralQuery}
+                onChange={(e) => setCoralQuery(e.target.value)}
+                placeholder="SELECT * FROM github.issues JOIN slack.messages..."
+              />
+              <p className="text-[10px] text-[var(--text-muted)]">Joins APIs, databases, and local files. No data leaves your machine.</p>
+            </div>
+          )}
+
+          {source !== "coral" && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-[var(--text-muted)]">Schema FQN</label>
+              <input
+                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+                value={schemaFqn}
+                onChange={(e) => setSchemaFqn(e.target.value)}
+                placeholder={source === "dune" ? "dune.namespace" : "database.schema_name"}
+              />
+            </div>
+          )}
 
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">

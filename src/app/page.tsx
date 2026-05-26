@@ -814,7 +814,7 @@ export default function Home() {
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
     "dune": "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
-    coral: "Unified 'No ETL' SQL engine. Join data across APIs and local files in a single statement.",
+    coral: "Write a single SQL query to join data across GitHub, Slack, Dune, databases, and local files — no pipelines, no ETL. Coral runs entirely on your machine.",
   };
 
   const sourceLabel: Record<DataSource, string> = {
@@ -823,7 +823,7 @@ export default function Home() {
     "dbt-local": "dbt Local",
     "the-graph": "The Graph",
     dune: "Dune",
-    coral: "Coral (Unified SQL)",
+    coral: "Coral",
   };
 
   const activeContext =
@@ -837,9 +837,11 @@ export default function Home() {
           ? manifestFile?.name || "No manifest uploaded"
           : source === "the-graph"
             ? graphUrl || "No subgraph endpoint set"
-            : duneNamespace
-              ? `Dune user: ${duneNamespace}`
-              : "Dune username optional";
+            : source === "coral"
+              ? "Cross-source SQL"
+              : duneNamespace
+                ? `Dune user: ${duneNamespace}`
+                : "Dune username optional";
 
   const questionPresets = persona === "enterprise"
     ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
@@ -1263,7 +1265,7 @@ export default function Home() {
             <span>·</span>
             <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
             <span>·</span>
-            <span>Works with <span className="text-[var(--text)]">dbt, OpenMetadata & Dune</span></span>
+            <span>Works with <span className="text-[var(--text)]">dbt, OpenMetadata, Dune &amp; Coral</span></span>
           </>
         ) : (
           <>
@@ -1271,7 +1273,7 @@ export default function Home() {
             <span>·</span>
             <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
             <span>·</span>
-            <span>Built on <span className="text-[var(--text)]">Solana · Dune · The Graph</span></span>
+            <span>Built on <span className="text-[var(--text)]">Solana · Dune · The Graph · Coral</span></span>
             <span>·</span>
             <a href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Protocol leaderboard</a>
           </>
@@ -1346,8 +1348,8 @@ export default function Home() {
                 <option value="the-graph">The Graph (subgraph)</option>
                 <option value="dune">Dune Analytics</option>
               </optgroup>
-              <optgroup label="⚓ Unified">
-                <option value="coral">Coral (No ETL Joins)</option>
+              <optgroup label="⚓ Cross-source (no ETL)">
+                <option value="coral">Coral — join data across APIs &amp; files ★ NEW</option>
               </optgroup>
             </select>
             <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
@@ -1479,17 +1481,46 @@ export default function Home() {
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap (defaults to your own)" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
               </>)}
               {source === "coral" && (<>
-              <label className="text-sm text-[var(--text-muted)]">Unified SQL Query</label>
+              <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/15 rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
+                <p className="flex items-center gap-2 text-[var(--text)] font-medium mb-1">
+                  <span>⚓</span>
+                  <span>Coral joins data across sources with no ETL pipelines</span>
+                </p>
+                <p className="leading-relaxed">
+                  Write a SQL query that joins APIs, databases, and local files.
+                  The data stays on your machine — Coral runs locally.
+                </p>
+              </div>
+              <label className="text-sm text-[var(--text-muted)]">Quick start</label>
+              <div className="flex flex-col gap-2">
+                {[
+                  { label: "GitHub + Slack", query: "SELECT * FROM github.issues JOIN slack.messages ON issues.id = messages.id" },
+                  { label: "Dune + local CSV", query: "SELECT * FROM dune.trades JOIN local.balances ON trades.token = balances.address" },
+                  { label: "Custom SQL", query: "" },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setCoralQuery(preset.query)}
+                    className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors ${
+                      coralQuery === preset.query && preset.query
+                        ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                        : "border-[var(--border)] hover:border-[var(--accent)]"
+                    }`}
+                  >
+                    <span className="font-medium text-[var(--text)]">{preset.label}</span>
+                    {preset.query && <p className="text-[var(--text-muted)] mt-0.5 font-mono text-[10px] truncate">{preset.query}</p>}
+                  </button>
+                ))}
+              </div>
+              <label className="text-sm text-[var(--text-muted)]">SQL Query</label>
               <textarea 
-                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm h-32 font-mono"
+                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm h-28 font-mono"
                 value={coralQuery}
                 onChange={(e) => setCoralQuery(e.target.value)}
                 placeholder="SELECT * FROM github.issues JOIN slack.messages..."
-                title="Enter a SQL query that joins data across your configured Coral sources. DataBard will analyze the results and narrate the findings."
+                title="Enter a SQL query that joins data across your configured Coral sources."
               />
-              <p className="text-[10px] text-[var(--text-muted)] -mt-2">
-                Join APIs, DBs, and local files locally. No data leaves your machine.
-              </p>
               </>)}
 
 
@@ -1584,7 +1615,7 @@ export default function Home() {
             },
             {
               q: "What data sources are supported?",
-              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), and Dune Analytics. For Dune, we run your queries and analyze the results. For all sources, we examine data quality, table dependencies, and test coverage to build your health profile.",
+              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), Dune Analytics, and Coral. Coral lets you join data across multiple sources — APIs, databases, and local files — with a single SQL query and no ETL pipelines. For Dune, we run your queries and analyze the results. For all sources, we examine data quality, table dependencies, and test coverage to build your health profile.",
             },
             {
               q: "How does the blockchain integration work?",
@@ -1635,7 +1666,7 @@ export default function Home() {
                   : "Your onchain data has thousands of entities. Dashboards get ignored. But audio reports build trust."
                 }
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                   { 
                     icon: persona === "enterprise" ? "🎧" : "⛓️", 
@@ -1656,6 +1687,11 @@ export default function Home() {
                     title: "Click to explore", 
                     desc: "Hear something interesting? Click the segment to see columns, tests, and data flow in real-time." 
                   },
+                  { 
+                    icon: "⚓", 
+                    title: "Cross-source joins", 
+                    desc: "Use Coral to join data across APIs, databases, and local files with SQL. No ETL needed." 
+                  },
                 ].map((item) => (
                   <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
                     <div className="text-xl mb-1.5">{item.icon}</div>
@@ -1668,12 +1704,13 @@ export default function Home() {
 
             {/* How it works steps */}
             <div>
-              <h3 className="text-base font-semibold text-center mb-4">Three steps</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <h3 className="text-xl sm:text-2xl font-bold text-center mb-4">Four steps</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or another data source" : "Paste your Dune API key or subgraph URL" },
+                  { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, Dune, or join sources with Coral" : "Paste your Dune API key, subgraph URL, or join sources with Coral" },
                   { step: "2", title: "Analyze", desc: "AI examines your tables for quality issues, data flow problems, and missing tests" },
                   { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & share", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Solana and share with your community" },
+                  { step: "4", title: "Cross-source", desc: "Use Coral to join multiple data sources with SQL before generating episodes" },
                 ].map((item) => (
                   <div key={item.step} className="flex flex-col items-center text-center">
                     <div className="w-7 h-7 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-xs font-bold mb-2">{item.step}</div>
@@ -1689,7 +1726,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="text-xs text-[var(--text-muted)] pb-8 flex gap-3">
-        <span>{persona === "web3" ? "Powered by ElevenLabs & Solana" : "Powered by ElevenLabs & OpenMetadata"}</span>
+        <span>{persona === "web3" ? "Powered by ElevenLabs, Solana & Coral" : "Powered by ElevenLabs, OpenMetadata & Coral"}</span>
         <span>·</span>
         <a href="/api/feed" className="hover:text-[var(--text)]">RSS Feed</a>
         <span>·</span>
