@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { ScheduleConfig } from "@/lib/store";
+import type { DataSource } from "@/lib/types";
 import { ProWalletIsland } from "@/components/pro/ProWalletIsland";
 import { PalmUsdCheckout } from "@/components/PalmUsdCheckout";
 
@@ -37,9 +38,10 @@ export default function ProSettings() {
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [hour, setHour] = useState(9);
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [source, setSource] = useState<"openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune">("openmetadata");
+  const [source, setSource] = useState<DataSource>("openmetadata");
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
+  const [coralQuery, setCoralQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/pro/auth/session")

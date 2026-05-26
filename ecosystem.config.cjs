@@ -7,8 +7,8 @@ module.exports = {
       cwd: '/opt/databard/current',
       env: {
         NODE_ENV: 'production',
-        PORT: 5100,
-        CORAL_GATEWAY_URL: 'http://localhost:3001/query',
+        PORT: 42100,
+        CORAL_GATEWAY_URL: 'http://localhost:42101/query',
         // CORAL_GATEWAY_TOKEN: 'your-secret-token', // Set this on server or via env
       },
       exec_mode: 'fork',
@@ -29,7 +29,7 @@ module.exports = {
       interpreter: 'node',
       cwd: '/opt/databard/current',
       env: {
-        PORT: 3001,
+        PORT: 42101,
         // CORAL_GATEWAY_TOKEN: 'your-secret-token',
         // GITHUB_TOKEN: '...',
         // SLACK_TOKEN: '...',

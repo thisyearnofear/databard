@@ -66,7 +66,7 @@ ssh "$REMOTE" bash <<EOF
 
   DEPLOY_DIR="$DEPLOY_DIR"
   RELEASE_DIR="$RELEASE_DIR"
-  APP_PORT=5100
+  APP_PORT=42100
 
   # Update symlink
   ln -sfn "\$RELEASE_DIR" "$DEPLOY_DIR/current"

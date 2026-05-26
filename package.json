@@ -22,7 +22,7 @@
     "@sparticuz/chromium": "^147.0.2",
     "@tanstack/react-query": "5.99.2",
     "agent-browser": "^0.1.0",
-    "elevenlabs": "^1.56.0",
+    "@elevenlabs/elevenlabs-js": "^2.49.0",
     "next": "15.5.18",
     "puppeteer-core": "^24.42.0",
     "react": "^19.1.0",

@@ -7,6 +7,7 @@ import { fetchSchemaMeta as fetchOM, listSchemas as listOM } from "./openmetadat
 import { fetchDbtCloudManifest, parseDbtManifest, loadLocalManifest, loadManifestFromContent } from "./dbt-adapter";
 import { fetchTheGraphMeta, listTheGraphSchemas } from "./the-graph-adapter";
 import { fetchDuneMeta, listDuneSchemas, fetchSingleDuneQuery, fetchDuneBatch } from "./dune-adapter";
+import { fetchCoralMeta } from "./coral-adapter";
 
 async function getDbtBundle(config: ConnectionConfig) {
   if (config.source === "dbt-cloud") {

@@ -22,6 +22,7 @@ interface ScriptContext {
   researchQuestion?: string;
   researchTrail?: ResearchTrail;
   tableStats?: Record<string, TableStatSummary>;
+  source?: string;
 }
 
 /** Simple hash for cache keys */

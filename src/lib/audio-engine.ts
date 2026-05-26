@@ -3,7 +3,7 @@
  * TTS (two voices), sound effects, music generation, and stream-to-buffer helpers.
  * Uses file-backed cache for audio persistence across restarts.
  */
-import { ElevenLabsClient } from "elevenlabs";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import type { Readable } from "stream";
 import type { ScriptSegment, MusicPlan } from "./types";
 import { audioCache } from "./store";
