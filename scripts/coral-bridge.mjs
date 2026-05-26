@@ -27,7 +27,7 @@ const server = createServer(async (req, res) => {
         if (!query) throw new Error("Query required");
 
         // Execute via local CLI
-        const { stdout } = await execAsync(`coral sql --output json "${query.replace(/"/g, '\\"')}"`);
+        const { stdout } = await execAsync(`coral sql --format json "${query.replace(/"/g, '\\"')}"`);
         
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ results: JSON.parse(stdout) }));

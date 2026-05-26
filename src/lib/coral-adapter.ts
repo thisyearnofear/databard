@@ -30,7 +30,7 @@ export async function fetchCoralMeta(config: ConnectionConfig): Promise<SchemaMe
       results = data.results;
     } else {
       // Local/Sidecar path: Execute via CLI
-      const { stdout } = await execAsync(`coral sql --output json "${query.replace(/"/g, '\\"')}"`);
+      const { stdout } = await execAsync(`coral sql --format json "${query.replace(/"/g, '\\"')}"`);
       results = JSON.parse(stdout);
     }
 
