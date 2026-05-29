@@ -1232,6 +1232,8 @@ export default function Home() {
           </>
         )}
         <span>·</span>
+        <Link href="/briefing" className="hover:text-[var(--text)] transition-colors">🏴‍☠️ Morning Briefing</Link>
+        <span>·</span>
         <span>+ 50 more via <span className="text-[var(--text)]">Coral</span></span>
       </section>
 
