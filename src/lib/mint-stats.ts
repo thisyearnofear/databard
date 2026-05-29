@@ -11,8 +11,9 @@
  */
 import { promises as fs } from "fs";
 import path from "path";
+import { getDataPath } from "./data-dir";
 
-const MINTS_FILE = path.join(process.cwd(), "data", "mints.json");
+const MINTS_FILE = getDataPath("mints.json");
 
 export interface MintRecord {
   /** Schema FQN or label that was minted (e.g. "uniswap.analytics") */
@@ -51,7 +52,7 @@ export interface AlertSubscription {
   createdAt: string;
 }
 
-const ALERTS_FILE = path.join(process.cwd(), "data", "alerts.json");
+const ALERTS_FILE = getDataPath("alerts.json");
 
 export interface MintStats {
   total: number;

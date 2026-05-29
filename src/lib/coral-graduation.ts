@@ -11,8 +11,9 @@
  */
 import { promises as fs } from "fs";
 import path from "path";
+import { getDataPath } from "./data-dir";
 
-const SOURCES_FILE = path.join(process.cwd(), "data", "coral-sources.json");
+const SOURCES_FILE = getDataPath("coral-sources.json");
 const GRADUATION_THRESHOLD = 10; // requests before flagging for Tier 1 promotion
 
 export interface CoralSourceRecord {

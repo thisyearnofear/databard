@@ -1,98 +1,136 @@
 #!/bin/bash
 # DataBard — local build, rsync deploy
 # Builds on your local machine, sends only the standalone artifact to the server.
-# Usage: ./scripts/deploy.sh
-# Requires: npm, ssh snel-bot configured
+# Server is space-constrained, so we keep the build local and rsync minimal artefacts.
+#
+# Usage: ./scripts/deploy.sh [--dry-run]
+# Requires: npm, ssh <host> configured
 
 set -e
 
-REMOTE="snel-bot"
-APP_NAME="databard"
-APP_PORT=5100
+REMOTE="${DEPLOY_HOST:-snel-bot}"
+APP_PORT=42100
 DEPLOY_DIR="/opt/databard"
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+DRY_RUN=false
+
+if [ "${1:-}" = "--dry-run" ]; then
+  DRY_RUN=true
+  echo "🔍 DRY RUN — no files will be synced"
+fi
 
 cd "$LOCAL_DIR"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo " 🎙️  Deploying DataBard to production"
+echo " 🎙️  Deploying DataBard to $REMOTE:$APP_PORT"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 1. Local build ──────────────────────────────────────────────
 echo ""
 echo "→ Building locally..."
-NEXT_DISABLE_ESLINT=1 npm run build 2>&1
+NEXT_DISABLE_ESLINT=1 npm run build
 
 echo ""
 echo "→ Preparing standalone output..."
 node scripts/prepare-standalone.mjs
 
-echo ""
-echo "→ Cleaning up deploy artifacts..."
-node scripts/cleanup-deploy.mjs
-
-# ── 2. Rsync to server ─────────────────────────────────────────
-echo ""
-echo "→ Creating new release folder..."
+# ── 2. Package the release (minimal footprint for space-constrained server) ──
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RELEASE_DIR="$DEPLOY_DIR/releases/$TIMESTAMP"
 
-ssh "$REMOTE" "mkdir -p $RELEASE_DIR/.next"
-
-echo "→ Rsyncing standalone build to server..."
-rsync -avz --delete \
-  .next/standalone/ \
-  "$REMOTE:$RELEASE_DIR/"
-
-# Sync public and static (handled by prepare-standalone.mjs into .next/standalone/.next)
-# Wait, prepare-standalone.mjs copies them into .next/standalone/.next/static etc.
-# So they are already in .next/standalone/ which we rsync above.
-
-echo "→ Syncing ecosystem and scripts..."
-rsync -avz \
-  ecosystem.config.cjs \
-  package.json \
-  "$REMOTE:$RELEASE_DIR/"
-
-rsync -avz \
-  scripts/coral-bridge.mjs \
-  "$REMOTE:$RELEASE_DIR/scripts/"
-
-# ── 3. Server switch & restart ──────────────────────────────────
 echo ""
-echo "→ Switching symlink and restarting..."
+echo "→ Packaging release $TIMESTAMP..."
+
+# Collect exactly what the server needs
+TARFILE="/tmp/databard-$TIMESTAMP.tar.gz"
+tar czf "$TARFILE" \
+  -C "$LOCAL_DIR" \
+  .next/standalone/.next \
+  .next/standalone/server.js \
+  .next/standalone/package.json \
+  .next/standalone/node_modules \
+  .next/standalone/public \
+  ecosystem.config.cjs \
+  scripts/coral-bridge.mjs \
+  package.json \
+  2>/dev/null
+
+SIZE=$(du -h "$TARFILE" | cut -f1)
+echo "   Release tarball: $SIZE"
+
+# ── 3. Sync to server ───────────────────────────────────────────
+if $DRY_RUN; then
+  echo ""
+  echo "→ DRY RUN — skipping rsync. Tarball at $TARFILE"
+  exit 0
+fi
+
+echo ""
+echo "→ Sending tarball to $REMOTE..."
+scp "$TARFILE" "$REMOTE:/tmp/databard-$TIMESTAMP.tar.gz"
+
+rm "$TARFILE"
+
+# ── 4. Server-side unpack, symlink, restart ─────────────────────
+echo ""
+echo "→ Unpacking and restarting on server..."
 ssh "$REMOTE" bash <<EOF
   set -e
 
   DEPLOY_DIR="$DEPLOY_DIR"
-  RELEASE_DIR="$RELEASE_DIR"
-  APP_PORT=42100
+  TIMESTAMP="$TIMESTAMP"
+  RELEASE_DIR="$DEPLOY_DIR/releases/\$TIMESTAMP"
 
-  # Update symlink
-  ln -sfn "\$RELEASE_DIR" "$DEPLOY_DIR/current"
+  # Create release dir and unpack
+  mkdir -p "\$RELEASE_DIR"
+  tar xzf "/tmp/databard-\$TIMESTAMP.tar.gz" -C "\$RELEASE_DIR"
+  rm "/tmp/databard-\$TIMESTAMP.tar.gz"
 
-  # Ensure logs dir exists in root (shared across releases)
+  # Move standalone contents to release root (flatten the .next/standalone path)
+  if [ -d "\$RELEASE_DIR/.next/standalone" ]; then
+    for item in "\$RELEASE_DIR/.next/standalone"/*; do
+      mv "\$item" "\$RELEASE_DIR/" 2>/dev/null || true
+    done
+    # Merge .next subdirs
+    if [ -d "\$RELEASE_DIR/.next/standalone/.next" ]; then
+      mkdir -p "\$RELEASE_DIR/.next"
+      cp -r "\$RELEASE_DIR/.next/standalone/.next/"* "\$RELEASE_DIR/.next/" 2>/dev/null || true
+    fi
+    rm -rf "\$RELEASE_DIR/.next/standalone"
+  fi
+
+  # Ensure logs dir exists (shared across releases)
   mkdir -p "$DEPLOY_DIR/logs"
 
+  # Data directory for mint-stats, coral-graduation, leads — persists across deploys.
+  # The app reads DATABARD_DATA_DIR (set in ecosystem.config.cjs).
+  mkdir -p "$DEPLOY_DIR/data"
+
+  # Update current symlink
+  ln -sfn "\$RELEASE_DIR" "$DEPLOY_DIR/current"
+
   # Restart via PM2
-  echo "   Starting via PM2..."
+  echo "   Reloading PM2..."
   cd "$DEPLOY_DIR/current"
   /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --update-env
   /usr/local/bin/pm2 save
 
   # Cleanup old releases (keep last 5)
-  ls -dt "$DEPLOY_DIR/releases/"* | tail -n +6 | xargs rm -rf || true
-EOF
+  echo "   Cleaning up old releases..."
+  ls -dt "$DEPLOY_DIR/releases/"* 2>/dev/null | tail -n +6 | xargs rm -rf || true
 
-# ── 4. Local cleanup ───────────────────────────────────────────
-echo ""
-echo "→ Restoring local node_modules (for IDE)..."
-npm install --silent 2>/dev/null &
+  # Health check
+  sleep 3
+  echo ""
+  echo "   Health check..."
+  curl -s -o /dev/null -w "   HTTP %{http_code}" http://127.0.0.1:$APP_PORT/ || echo " (not responding yet — check pm2 logs)"
+  echo ""
+EOF
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo " ✓ Deploy complete"
-echo "   Server: $REMOTE:$APP_PORT"
-echo "   Logs:   $REMOTE logs - press ctrl+C to follow"
-echo "   View:   pm2 logs $APP_NAME"
+echo "   App:    http://$REMOTE:$APP_PORT"
+echo "   Logs:   ssh $REMOTE 'pm2 logs databard'"
+echo "   Status: ssh $REMOTE 'pm2 status'"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
