@@ -17,11 +17,7 @@ Data documentation is universally neglected. Nobody reads wiki pages about table
 
 ## Hackathon Targets
 
-This project is submitted to two concurrent hackathons:
-
-1. **WeMakeDevs × OpenMetadata** (Apr 17–26) — Track T-01: MCP & AI Agents
-2. **ElevenHacks Hack #5: Kiro** (Apr 16–23) — Kiro spec-driven dev + ElevenLabs APIs
-3. **Pirates of the Coral-bean Hackathon** (May 2026) — "No ETL" cross-source SQL joins with Coral
+DataBard was originally built for the WeMakeDevs × OpenMetadata and ElevenHacks hackathons. The Coral integration came from the Pirates of the Coral-bean Hackathon.
 
 ## Roadmap
 
@@ -49,11 +45,7 @@ This project is submitted to two concurrent hackathons:
 - [x] Dune Analytics adapter — `src/lib/dune-adapter.ts` — fetches query metadata for a namespace, maps queries→tables, result columns→schema, executes non-parameterized queries to compute column statistics (min/max/avg, top values) for data-aware podcast narration
 - [x] **Coral Integration (Tier 2 Escape Hatch)** — `src/lib/coral-adapter.ts` — "Bring Your Own Source" via SQL for the long tail of sources without first-class adapters. Cross-source joins, local files, 50+ connectors. See `docs/DATA_SOURCES_ARCHITECTURE.md`.
 - [ ] **Coral Graduation Pipeline** — Track which sources users connect via Coral; when a source hits usage threshold, build a first-class Tier 1 adapter with deep metadata extraction.
-- [x] Initia InterwovenKit wallet connect — `/pro` page — `.init` wallet as alternative to Stripe customer ID
-- [x] On-chain episode minting — `POST /api/onchain/mint` — records schema name, health score, episode ID, author address on Initia testnet
-- [ ] Initia appchain deployment — get valid rollup chain ID on `initiation-2` testnet
-- [x] Multi-episode playlists (full database series)
-- [x] Custom voice cloning for branded docs
+- [x] On-chain episode minting — Solana Memo Program + PDA registry, SNS identity
 - [x] Historical diff intros ("since last week, 2 new failures")
 
 ### Paper Canvas (developer tool)

@@ -16,7 +16,7 @@ DataBard is evolving from a "data catalog podcast" into an **Information Feed En
 ### Path B: The Protocol Operator (On-chain/Web3)
 *   **Goal**: Protocol reliability, indexer monitoring, and community trust.
 *   **Terminology**: Subgraphs, Indexers, Chain Sync, Lag, Entities.
-*   **Output**: **On-chain Attestations (Initia)**, RSS for DAO governance.
+*   **Output**: **On-chain Attestations (Solana)**, RSS for DAO governance.
 *   **Success Metric**: "Publicly verifiable health of the protocol."
 
 ---
@@ -30,12 +30,12 @@ Instead of a single headline, we implement a **Perspective Toggle** or a side-by
 
 ### Visualizing the Value
 - **Enterprise**: Show a "Health Score" dashboard with dbt test icons.
-- **Web3**: Show a "Protocol Pulse" with Initia transaction hashes and Subgraph entity counts.
+- **Web3**: Show a "Protocol Pulse" with Solana transaction hashes and Subgraph entity counts.
 
 ### On-chain Verification Section
-A dedicated section explaining **"Data Accountability on Initia"**:
+A dedicated section explaining **"Data Accountability on Solana"**:
 - Explain that every health report can be minted as a snapshot.
-- Use the .init wallet as the "Identity of Record" for the auditor.
+- Use the wallet address as the "Identity of Record" for the auditor.
 
 ---
 
@@ -77,5 +77,5 @@ See [`DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) for the full 
 - [ ] First candidate: GitHub (high demand via Coral, rich metadata available).
 
 ### Phase 4: Performance Optimization
-- [ ] Lazy-load heavy Web3 libraries.
-- [ ] Implement SSR for the initial "Demo" path to ensure instant playback.
+- [x] Lazy-load heavy Web3 libraries.
+- [x] Implement SSR for the initial "Demo" path to ensure instant playback.

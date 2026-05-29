@@ -239,7 +239,7 @@ export default function ProSettings() {
         </div>
       </div>
 
-      <ProWalletIsland initiaAddress={walletAddress} onAddressChange={handleAddressChange} onSessionChange={handleSessionChange} />
+      <ProWalletIsland walletAddress={walletAddress} onAddressChange={handleAddressChange} onSessionChange={handleSessionChange} />
 
       <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
         <div className="flex items-center justify-between">

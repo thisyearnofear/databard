@@ -126,7 +126,6 @@ export default function Home() {
   const [segmentOffsets, setSegmentOffsets] = useState<number[]>([]);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [persona, setPersona] = useState<"enterprise" | "web3">("web3");
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
   const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
   const [solanaSolDomain, setSolanaSolDomain] = useState<string | null>(null);
@@ -198,14 +197,6 @@ export default function Home() {
         if (cfg.dbtToken) setDbtToken(cfg.dbtToken);
       }
     } catch { /* ignore corrupt localStorage */ }
-  }, []);
-
-  useEffect(() => {
-    try {
-      setWalletAddress(localStorage.getItem("databard:initiaAddress"));
-    } catch {
-      setWalletAddress(null);
-    }
   }, []);
 
   // Persist connection config to localStorage (excluding sensitive tokens from localStorage for security)
@@ -670,59 +661,6 @@ export default function Home() {
     else showError(data.error || "Checkout not available yet");
   }
 
-  async function handleMint() {
-    if (!episode || !walletAddress) return;
-    setMinting(true);
-    setStatus("Minting on-chain…");
-
-    try {
-      // 1. First ensure it's "shared" to get an ID (since minting needs an ID)
-      let episodeId = "";
-      const shareRes = await fetch("/api/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(episode),
-      });
-      const shareData = await shareRes.json();
-      if (shareData.ok) {
-        episodeId = shareData.id;
-      } else {
-        throw new Error(shareData.error || "Failed to prepare episode for minting");
-      }
-
-      // 2. Compute report hash for tamper-evidence
-      const scriptJson = JSON.stringify(episode.script);
-      const encoder = new TextEncoder();
-      const encodedScript = encoder.encode(scriptJson);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", encodedScript as any);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const reportHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
-      // 3. Mint on-chain
-      const res = await fetch("/api/onchain/mint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          schemaName: episode.schemaName,
-          healthScore: episode.qualitySummary.total > 0 ? Math.round((episode.qualitySummary.passed / episode.qualitySummary.total) * 100) : 100,
-          episodeId: episodeId,
-          reportHash,
-          initiaAddress: walletAddress,
-        }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setStatus(`✓ Minted on-chain! ${data.txHash ? `TX: ${data.txHash.slice(0, 8)}…` : "(Stubbed)"}`);
-      } else {
-        showError(data.error);
-      }
-    } catch (e: unknown) {
-      showError(e instanceof Error ? e.message : "Minting failed");
-    } finally {
-      setMinting(false);
-    }
-  }
-
   async function handleMintSolana() {
     if (!episode || !solanaPublicKey || !solanaSignTx) return;
     setMinting(true);
@@ -875,7 +813,7 @@ export default function Home() {
           audioUrl={audioUrl} 
           segmentOffsets={segmentOffsets}
           audioDuration={audioDuration}
-          onMint={persona === "web3" && solanaPublicKey ? handleMintSolana : persona === "web3" && walletAddress ? handleMint : undefined}
+          onMint={persona === "web3" && solanaPublicKey ? handleMintSolana : undefined}
           minting={minting}
         />
 
@@ -900,20 +838,6 @@ export default function Home() {
                  onMint={handleMintSolana}
                  minting={minting}
                />
-
-               {/* Initia (secondary) */}
-               {walletAddress && (
-                 <div className="border-t border-[var(--border)] pt-3">
-                   <p className="text-xs text-[var(--text-muted)] mb-2">Initia: {walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}</p>
-                   <button 
-                     onClick={handleMint} 
-                     disabled={minting}
-                     className="w-full bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-lg px-4 py-1.5 text-xs cursor-pointer disabled:opacity-50"
-                   >
-                     {minting ? "Minting…" : "Mint on Initia"}
-                   </button>
-                 </div>
-               )}
              </div>
            ) : (
             <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">

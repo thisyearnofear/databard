@@ -4,7 +4,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { WalletProviderBoundary } from "@/components/pro/WalletProviderBoundary";
 
 interface ProWalletIslandProps {
-  initiaAddress: string | null;
+  walletAddress: string | null;
   onAddressChange: (address: string | null) => void;
   onSessionChange: (session: unknown) => void;
 }
@@ -15,12 +15,12 @@ const walletFallback = (
   </div>
 );
 
-export function ProWalletIsland({ initiaAddress, onAddressChange, onSessionChange }: ProWalletIslandProps) {
+export function ProWalletIsland({ walletAddress, onAddressChange, onSessionChange }: ProWalletIslandProps) {
   return (
     <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Wallet Sign-in</h2>
-        {initiaAddress ? (
+        {walletAddress ? (
           <span className="text-xs text-[var(--success)]">Signed in</span>
         ) : (
           <span className="text-xs text-[var(--text-muted)]">Not connected</span>
@@ -33,9 +33,9 @@ export function ProWalletIsland({ initiaAddress, onAddressChange, onSessionChang
         <WalletConnect onAddressChange={onAddressChange} onSessionChange={onSessionChange} />
       </WalletProviderBoundary>
 
-      {initiaAddress && (
+      {walletAddress && (
         <p className="text-xs text-[var(--text-muted)]">
-          Episodes generated while connected will be recorded on-chain with your .init identity.
+          Episodes generated while connected will be recorded on-chain with your wallet identity.
         </p>
       )}
     </div>
