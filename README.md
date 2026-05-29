@@ -49,27 +49,38 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────┐
-│ OpenMetadata │────▶│   Analysis   │────▶│   Script    │────▶│  Audio   │
-│  dbt Cloud   │     │ Health score │     │ LLM / tmpl  │     │ ElevenLabs│
-│  dbt Local   │     │ Critical tbl │     │ Two hosts   │     │ TTS + SFX │
-└─────────────┘     │ PII, owners  │     └─────────────┘     └──────────┘
-                    │ Lineage risk │                               │
-                    └──────────────┘                               ▼
-                                                          ┌──────────────┐
-                                                          │  Interactive │
-                                                          │   Player     │
-                                                          │ Drill-down   │
-                                                          │ Share/RSS    │
-                                                          └──────────────┘
+┌─────────────────────────────────────────┐
+│          Tier 1: First-Class            │
+│  OpenMetadata · dbt · The Graph · Dune  │
+│  (full lineage, PII, owners, tests)     │
+├─────────────────────────────────────────┤
+│     Tier 2: Coral Escape Hatch          │
+│  Any source via SQL · cross-source joins│
+│  (generic columns + data types)         │
+└───────────────────┬─────────────────────┘
+                    │
+                    ▼
+          ┌──────────────┐     ┌─────────────┐     ┌──────────┐
+          │   Analysis   │────▶│   Script    │────▶│  Audio   │
+          │ Health score │     │ LLM / tmpl  │     │ ElevenLabs│
+          │ Critical tbl │     │ Two hosts   │     │ TTS + SFX │
+          │ PII, owners  │     └─────────────┘     └──────────┘
+          │ Lineage risk │                               │
+          └──────────────┘                               ▼
+                                                 ┌──────────────┐
+                                                 │  Interactive │
+                                                 │   Player     │
+                                                 │ Drill-down   │
+                                                 │ Share/RSS    │
+                                                 └──────────────┘
 ```
 
-**Pipeline:** Question → Metadata fetch → Schema analysis → Script generation (LLM or template) → Streaming audio synthesis → Interactive player with data drill-down
+**Pipeline:** Question → Metadata fetch (Tier 1 adapter or Coral SQL) → Schema analysis → Script generation (LLM or template) → Streaming audio synthesis → Interactive player with data drill-down
 
 ## Features
 
-- **Multi-source SQL narration (Coral)** — Join data across APIs and files in real-time with "No ETL" queries
-- **Deep OpenMetadata integration** — owners, PII, glossary, profiler, quality, lineage
+- **Tier 1 adapters** — Deep integration with OpenMetadata, dbt, The Graph, Dune (lineage, PII, owners, quality tests, profiler — zero extra dependencies)
+- **Tier 2: Coral escape hatch** — "Bring Your Own Source" via SQL for the long tail (Salesforce, Jira, Postgres, local files, cross-source joins)
 - **Question-first analysis** — Zerve-aligned workflow that starts from a research prompt, not a blank script
 - **Research trail** — each answer now includes a plan, evidence, and recommended next actions
 - **Two-voice AI podcast** — Alex (advocate) and Morgan (auditor) via ElevenLabs
@@ -131,7 +142,8 @@ NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
 | Layer | Technology |
 |---|---|
 | Web UI | Next.js 15, React 19, Tailwind CSS 4 |
-| Metadata | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics, Coral (Unified SQL) |
+| Metadata (Tier 1) | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics |
+| Metadata (Tier 2) | Coral — "Bring Your Own Source" SQL layer for long-tail connectors + cross-source joins |
 | AI Scripts | OpenAI-compatible API (GPT-4o-mini default) |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
@@ -155,25 +167,32 @@ DataBard uses Solana not just for minting receipts, but as a genuine utility lay
 | **Gated episode access** | `GET /api/onchain/access` | Episode replay checks wallet ownership of the mint record; non-holders see a wallet-connect nudge |
 | **SNS `.sol` identity** | `src/lib/sns.ts` | Wallet address resolved to `.sol` domain on connect; stored in on-chain memo at mint time |
 
-### Onchain Data Sources
+### Onchain Data Sources (Tier 1)
 
-DataBard natively supports onchain and unified data catalogs alongside traditional ones:
+DataBard has first-class adapters for onchain data — deep metadata extraction, no extra dependencies:
 
 ```
-# Coral (Unified SQL) — Join APIs, DBs, and local files
-Source: Coral
-Query: SELECT * FROM github.issues JOIN slack.messages ON ...
-
 # The Graph — paste any subgraph URL
 Source: The Graph (subgraph)
 URL: https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3
-```
 
 # Dune Analytics — connect your query namespace
 Source: Dune Analytics
 API Key: <from dune.com/settings/api>
 Namespace: uniswap
 ```
+
+### Bring Your Own Source (Tier 2 — Coral)
+
+For sources we don't have a first-class adapter for yet, use Coral to connect anything via SQL:
+
+```
+# Coral — Join APIs, DBs, and local files with SQL
+Source: Coral
+Query: SELECT * FROM github.issues JOIN slack.messages ON ...
+```
+
+Coral supports 50+ sources (Salesforce, Jira, Postgres, Notion, Stripe, etc.) plus local CSV/JSON files. See [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) for the full rationale behind tiered sources.
 
 DataBard fetches query metadata via the Dune REST API, executes non-parameterized queries in parallel, and computes column statistics (min/max/avg, top values) from result data. This enables data-aware podcast narration — the episode discusses actual numbers and trends, not just schema structure.
 
@@ -203,7 +222,8 @@ Landing page → Connect Phantom/Solflare wallet
 - [x] Team history — cross-wallet mint history per schema
 - [x] Gated episode access — wallet ownership check before replay
 - [x] Palm USD payments — non-freezable stablecoin checkout for Pro subscriptions
-- [x] Coral Integration — Unified "No ETL" SQL joins across APIs and files
+- [x] Coral Integration — "Bring Your Own Source" escape hatch via SQL (long-tail connectors + cross-source joins)
+- [ ] Coral graduation pipeline — track usage, promote popular sources to Tier 1
 - [ ] Historical diff intros ("since last week, 2 new failures")
 - [ ] Custom Anchor program for richer on-chain PDA queries
 - [ ] Custom voice personalities

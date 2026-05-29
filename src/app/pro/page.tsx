@@ -6,6 +6,8 @@ import type { DataSource } from "@/lib/types";
 import { ProWalletIsland } from "@/components/pro/ProWalletIsland";
 import { PalmUsdCheckout } from "@/components/PalmUsdCheckout";
 
+import { VoicePicker } from "@/components/VoicePicker";
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type ProSession = {
@@ -319,6 +321,9 @@ export default function ProSettings() {
           </div>
         </div>
       )}
+
+      {/* Voice Configuration */}
+      <VoicePicker />
 
       {/* Schedules */}
       {(schedules.length > 0 || feedToken) && (

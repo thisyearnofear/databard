@@ -146,6 +146,12 @@ export async function walletHoldsMint(walletAddress: string, episodeId: string):
   return all.find((m) => m.walletAddress === walletAddress && m.episodeId === episodeId) ?? null;
 }
 
+/** Check if any mint exists for a given episodeId (public verification) */
+export async function episodeHasMint(episodeId: string): Promise<MintRecord | null> {
+  const all = await readAll();
+  return all.find((m) => m.episodeId === episodeId) ?? null;
+}
+
 /** Get mint by txSignature (used as access token) */
 export async function getMintByTx(txSignature: string): Promise<MintRecord | null> {
   const all = await readAll();

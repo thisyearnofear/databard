@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
-import { SolanaWalletConnect } from "@/components/SolanaWalletConnect";
 import type { Episode } from "@/lib/types";
+
+// Lazy-load Solana wallet connect — avoids bundling Phantom/Solflare adapters
+// on shared episode pages until the user clicks to connect.
+const SolanaWalletConnect = dynamic(
+  () => import("@/components/SolanaWalletConnect").then((m) => ({ default: m.SolanaWalletConnect })),
+  { ssr: false, loading: () => null },
+);
 
 export default function SharedEpisode() {
   const params = useParams();
@@ -20,6 +27,8 @@ export default function SharedEpisode() {
 
   // Gated access state
   const [isMinted, setIsMinted] = useState(false);
+  const [isMintedAtAll, setIsMintedAtAll] = useState(false);
+  const [mintTxSignature, setMintTxSignature] = useState<string | null>(null);
   const [accessChecked, setAccessChecked] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(false);
 
@@ -53,6 +62,20 @@ export default function SharedEpisode() {
 
     loadEpisode();
   }, [id]);
+
+  // Check public verification (is this episode minted by anyone?)
+  useEffect(() => {
+    if (!episode) return;
+    fetch(`/api/onchain/access?episodeId=${id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.isMintedAtAll && d.mint?.txSignature) {
+          setIsMintedAtAll(true);
+          setMintTxSignature(d.mint.txSignature);
+        }
+      })
+      .catch(() => {});
+  }, [episode, id]);
 
   // Check wallet ownership whenever wallet connects
   useEffect(() => {
@@ -101,6 +124,20 @@ export default function SharedEpisode() {
             : "Expiring soon"
           : "Shared episodes expire 24 hours after creation"}
       </div>
+
+      {/* Verified on Solana badge */}
+      {isMintedAtAll && mintTxSignature && (
+        <a
+          href={`https://explorer.solana.com/tx/${mintTxSignature}${process.env.NEXT_PUBLIC_SOLANA_NETWORK !== "mainnet-beta" ? `?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet"}` : ""}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)] hover:brightness-110 transition-all"
+        >
+          <span>⛓️</span>
+          <span className="font-medium">Verified on Solana</span>
+          <span className="text-[var(--text-muted)] hidden sm:inline">· {mintTxSignature.slice(0, 6)}…{mintTxSignature.slice(-4)}</span>
+        </a>
+      )}
 
       {/* On-chain ownership badge */}
       {walletConnected && accessChecked && !checkingAccess && (

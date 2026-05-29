@@ -2,14 +2,17 @@
 
 import { useState, useEffect, useReducer, useCallback } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ProviderStatus } from "@/components/ProviderStatus";
-import { SolanaWalletConnect } from "@/components/SolanaWalletConnect";
-import { PalmUsdCheckout } from "@/components/PalmUsdCheckout";
 import { useToast } from "@/components/Toast";
 import type { Episode, DataSource } from "@/lib/types";
+
+// Lazy-load Solana features — avoids bundling @solana/web3.js + wallet-adapter
+// for enterprise/data-team users who never touch the web3 persona.
+const SolanaFeatures = dynamic(() => import("@/components/SolanaFeatures"), { ssr: false });
 
 type OMMode = "sandbox" | "custom";
 
@@ -814,7 +817,7 @@ export default function Home() {
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
     "dune": "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
-    coral: "Write a single SQL query to join data across GitHub, Slack, Dune, databases, and local files — no pipelines, no ETL. Coral runs entirely on your machine.",
+    coral: "Don't see your source above? Coral connects 50+ APIs, databases, and local files via SQL — no pipelines, no waiting on us to build an adapter.",
   };
 
   const sourceLabel: Record<DataSource, string> = {
@@ -890,18 +893,13 @@ export default function Home() {
                </p>
 
                {/* Solana (primary) */}
-               <div className="mb-3">
-                 <SolanaWalletConnect onAddressChange={setSolanaAddress} onSolDomainChange={setSolanaSolDomain} />
-                 {solanaPublicKey && (
-                   <button 
-                     onClick={handleMintSolana} 
-                     disabled={minting}
-                     className="mt-2 w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-6 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
-                   >
-                     {minting ? "Minting…" : "Mint on Solana"}
-                   </button>
-                 )}
-               </div>
+               <SolanaFeatures 
+                 mode="mint"
+                 onAddressChange={setSolanaAddress} 
+                 onSolDomainChange={setSolanaSolDomain} 
+                 onMint={handleMintSolana}
+                 minting={minting}
+               />
 
                {/* Initia (secondary) */}
                {walletAddress && (
@@ -1202,24 +1200,58 @@ export default function Home() {
           {persona === "enterprise" ? "AI podcasts & data anthems for your catalog" : "AI podcasts & data anthems for your onchain data"}
         </p>
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
-          {persona === "enterprise" ? "Your data catalog," : "Your onchain data,"}<br />
-          <span className="text-[var(--accent)]">as a podcast</span> or <span style={{background: "linear-gradient(90deg, var(--accent), #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent"}}>anthem</span>
+          {persona === "enterprise" ? "Your dbt warehouse," : "Your on-chain data,"}<br />
+          <span className="text-[var(--accent)]">as a podcast</span>
         </h1>
-        <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-8 max-w-lg">
+        <p className="text-lg sm:text-xl text-[var(--text-muted)] mb-6 max-w-lg">
           {persona === "enterprise" 
-            ? "Connect your catalog. Two AI hosts investigate your data — then turn it into a podcast episode or a full music anthem."
-            : "Connect your Dune queries or subgraph. Two AI hosts analyze the data — then mint the podcast or compose a data anthem on Solana."
+            ? "Two AI hosts discuss table health, failing dbt tests, lineage hotspots, and PII governance gaps — then publish an MP3 or a Data Anthem."
+            : "Two AI hosts analyze indexer lag, entity relationships, and query performance — then mint the report on Solana and share with your community."
           }
         </p>
+        {/* Visual value-props grid — dual-identity */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
+          {persona === "enterprise" ? (
+            <>
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-center">
+                <span className="text-xl">📊</span>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Health scores with dbt test coverage</p>
+              </div>
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-center">
+                <span className="text-xl">🔗</span>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Lineage hotspot detection</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-center">
+                <span className="text-xl">⛓️</span>
+                <p className="text-xs text-[var(--text-muted)] mt-1">On-chain verifiable health reports</p>
+              </div>
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-center">
+                <span className="text-xl">🏆</span>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Public protocol leaderboard</p>
+              </div>
+            </>
+          )}
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-center">
+            <span className="text-xl">🎙️</span>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Two AI hosts: Alex &amp; Morgan</p>
+          </div>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3 text-center">
+            <span className="text-xl">🔌</span>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Tier 1 adapters + 50 more via Coral</p>
+          </div>
+        </div>
 
         <div className="flex flex-wrap justify-center gap-3 mb-3">
-          <button
-            onClick={handleDemo}
+          <Link
+            href="/demo"
             className="inline-flex flex-col items-center justify-center rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-7 py-4 font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg shadow-[var(--accent)]/20"
           >
             <span className="text-lg">▶ Demo podcast</span>
-            <span className="text-xs opacity-80 mt-0.5">Two AI hosts · data analysis</span>
-          </button>
+            <span className="text-xs opacity-80 mt-0.5">Instant playback · no waiting</span>
+          </Link>
           <button
             onClick={handleDemoAnthem}
             className="inline-flex flex-col items-center justify-center rounded-xl border-2 px-7 py-4 font-medium cursor-pointer transition-all hover:scale-[1.02] shadow-lg"
@@ -1257,27 +1289,26 @@ export default function Home() {
         )}
       </section>
 
-      {/* Social proof */}
-      <section className="flex flex-wrap justify-center gap-6 text-xs text-[var(--text-muted)] pb-8 sm:pb-10 max-w-2xl">
+      {/* Social proof & links */}
+      <section className="flex flex-wrap justify-center gap-4 text-xs text-[var(--text-muted)] pb-8 sm:pb-10 max-w-2xl">
+        <span>🎙️ Powered by <span className="text-[var(--text)]">ElevenLabs</span></span>
         {persona === "enterprise" ? (
           <>
-            <span>🎙️ Podcasts by <span className="text-[var(--text)]">ElevenLabs</span></span>
             <span>·</span>
-            <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
-            <span>·</span>
-            <span>Works with <span className="text-[var(--text)]">dbt, OpenMetadata, Dune &amp; Coral</span></span>
+            <span>Works with <span className="text-[var(--text)]">dbt, OpenMetadata, Dune</span></span>
           </>
         ) : (
           <>
-            <span>🎙️ Podcasts by <span className="text-[var(--text)]">ElevenLabs</span></span>
             <span>·</span>
-            <span>🎵 Anthems by <span className="text-[var(--text)]">ElevenLabs Music</span></span>
+            <span>Native <span className="text-[var(--text)]">Dune &amp; The Graph</span> support</span>
             <span>·</span>
-            <span>Built on <span className="text-[var(--text)]">Solana · Dune · The Graph · Coral</span></span>
+            <a href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Leaderboard</a>
             <span>·</span>
-            <a href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Protocol leaderboard</a>
+            <a href="/protocol" className="hover:text-[var(--text)] transition-colors">📡 Protocol health</a>
           </>
         )}
+        <span>·</span>
+        <span>+ 50 more via <span className="text-[var(--text)]">Coral</span></span>
       </section>
 
       {/* Connect CTA — prominent, right after hero */}
@@ -1286,15 +1317,7 @@ export default function Home() {
         <ProviderStatus />
 
         {persona === "web3" && (
-          <div className="bg-[var(--surface)] border border-[var(--accent)]/30 rounded-xl p-4 flex flex-col gap-3">
-            <p className="text-sm font-medium text-center">Connect your Solana wallet to mint episodes on-chain</p>
-            <SolanaWalletConnect onAddressChange={setSolanaAddress} onSolDomainChange={setSolanaSolDomain} />
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-[var(--border)]" />
-              <span className="text-xs text-[var(--text-muted)]">or connect a data source below</span>
-              <div className="flex-1 h-px bg-[var(--border)]" />
-            </div>
-          </div>
+          <SolanaFeatures mode="connect" onAddressChange={setSolanaAddress} onSolDomainChange={setSolanaSolDomain} />
         )}
 
         {/* Skeleton loader while connecting */}
@@ -1339,17 +1362,17 @@ export default function Home() {
             <label className="text-sm text-[var(--text-muted)]">Data Source</label>
             <select className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm cursor-pointer"
               value={source} onChange={(e) => setSource(e.target.value as DataSource)}>
-              <optgroup label="📊 Data stack">
+              <optgroup label="Enterprise">
                 <option value="openmetadata">OpenMetadata</option>
                 <option value="dbt-cloud">dbt Cloud</option>
                 <option value="dbt-local">dbt Local (manifest.json)</option>
               </optgroup>
-              <optgroup label="⛓️ Onchain">
+              <optgroup label="Onchain">
                 <option value="the-graph">The Graph (subgraph)</option>
                 <option value="dune">Dune Analytics</option>
               </optgroup>
-              <optgroup label="⚓ Cross-source (no ETL)">
-                <option value="coral">Coral — join data across APIs &amp; files ★ NEW</option>
+              <optgroup label="Connect anything else">
+                <option value="coral">Coral — bring your own source via SQL</option>
               </optgroup>
             </select>
             <p className="text-xs text-[var(--text-muted)] -mt-2">{sourceHelp[source]}</p>
@@ -1481,21 +1504,24 @@ export default function Home() {
               <input className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" value={duneNamespace} onChange={(e) => setDuneNamespace(e.target.value)} placeholder="e.g. uniswap (defaults to your own)" title="Your Dune username or team name. DataBard fetches your queries, runs them, and analyzes the results." />
               </>)}
               {source === "coral" && (<>
-              <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/15 rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
                 <p className="flex items-center gap-2 text-[var(--text)] font-medium mb-1">
-                  <span>⚓</span>
-                  <span>Coral joins data across sources with no ETL pipelines</span>
+                  <span>🔌</span>
+                  <span>Bring your own source</span>
                 </p>
                 <p className="leading-relaxed">
-                  Write a SQL query that joins APIs, databases, and local files.
-                  The data stays on your machine — Coral runs locally.
+                  Coral connects 50+ sources (Salesforce, Jira, Postgres, Notion, Stripe, and more) via SQL.
+                  You can also join multiple sources in a single query. Runs locally — your data never leaves your machine.
+                </p>
+                <p className="mt-2 leading-relaxed">
+                  Requires <code className="bg-[var(--bg)] px-1 py-0.5 rounded text-[10px]">brew install withcoral/tap/coral</code> then <code className="bg-[var(--bg)] px-1 py-0.5 rounded text-[10px]">coral source add [your source]</code>
                 </p>
               </div>
-              <label className="text-sm text-[var(--text-muted)]">Quick start</label>
+              <label className="text-sm text-[var(--text-muted)]">Example queries</label>
               <div className="flex flex-col gap-2">
                 {[
                   { label: "GitHub + Slack", query: "SELECT * FROM github.issues JOIN slack.messages ON issues.id = messages.id" },
-                  { label: "Dune + local CSV", query: "SELECT * FROM dune.trades JOIN local.balances ON trades.token = balances.address" },
+                  { label: "Jira + Postgres", query: "SELECT * FROM jira.issues JOIN postgres.deployments ON issues.key = deployments.ticket_id" },
                   { label: "Custom SQL", query: "" },
                 ].map((preset) => (
                   <button
@@ -1514,7 +1540,7 @@ export default function Home() {
                 ))}
               </div>
               <label className="text-sm text-[var(--text-muted)]">SQL Query</label>
-              <textarea 
+              <textarea
                 className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm h-28 font-mono"
                 value={coralQuery}
                 onChange={(e) => setCoralQuery(e.target.value)}
@@ -1592,7 +1618,7 @@ export default function Home() {
               <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">or</span>
               <div className="flex-1 h-px bg-[var(--border)]" />
             </div>
-            <PalmUsdCheckout compact />
+            <SolanaFeatures mode="pro-checkout" />
             <a href="/pro" className="block text-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] mt-2 cursor-pointer">
               Already subscribed? Manage schedules →
             </a>
@@ -1615,7 +1641,7 @@ export default function Home() {
             },
             {
               q: "What data sources are supported?",
-              a: "We support OpenMetadata, dbt (Cloud & Local), The Graph (any subgraph), Dune Analytics, and Coral. Coral lets you join data across multiple sources — APIs, databases, and local files — with a single SQL query and no ETL pipelines. For Dune, we run your queries and analyze the results. For all sources, we examine data quality, table dependencies, and test coverage to build your health profile.",
+              a: "Tier 1 (first-class): OpenMetadata, dbt, The Graph, Dune — deep metadata including lineage, test results, PII tags, and owners. Tier 2: Coral as the escape hatch — connect 50+ sources (Salesforce, Jira, Postgres, Notion, Stripe) via SQL with no ETL. You can even join multiple sources in a single query.",
             },
             {
               q: "How does the blockchain integration work?",
@@ -1687,10 +1713,10 @@ export default function Home() {
                     title: "Click to explore", 
                     desc: "Hear something interesting? Click the segment to see columns, tests, and data flow in real-time." 
                   },
-                  { 
-                    icon: "⚓", 
-                    title: "Cross-source joins", 
-                    desc: "Use Coral to join data across APIs, databases, and local files with SQL. No ETL needed." 
+                  {
+                    icon: "🔌",
+                    title: "Any source",
+                    desc: "First-class adapters for the big 5. Plus Coral for 50+ more sources — Salesforce, Jira, Postgres, you name it."
                   },
                 ].map((item) => (
                   <div key={item.title} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
@@ -1707,10 +1733,10 @@ export default function Home() {
               <h3 className="text-xl sm:text-2xl font-bold text-center mb-4">Four steps</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, Dune, or join sources with Coral" : "Paste your Dune API key, subgraph URL, or join sources with Coral" },
+                  { step: "1", title: "Connect", desc: persona === "enterprise" ? "Connect OpenMetadata, dbt, or Dune in seconds. Or bring any other source via Coral" : "Paste your Dune API key or subgraph URL. Or connect anything else via Coral SQL" },
                   { step: "2", title: "Analyze", desc: "AI examines your tables for quality issues, data flow problems, and missing tests" },
                   { step: "3", title: persona === "enterprise" ? "Listen & share" : "Mint & share", desc: persona === "enterprise" ? "Stream episodes or share MP3s via Slack" : "Record findings on Solana and share with your community" },
-                  { step: "4", title: "Cross-source", desc: "Use Coral to join multiple data sources with SQL before generating episodes" },
+                  { step: "4", title: "Any source", desc: persona === "enterprise" ? "First-class adapters for dbt, OM, Dune. Coral for everything else — SQL, no ETL" : "Native Dune & The Graph support. Coral for 50+ other APIs via SQL" },
                 ].map((item) => (
                   <div key={item.step} className="flex flex-col items-center text-center">
                     <div className="w-7 h-7 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-xs font-bold mb-2">{item.step}</div>
@@ -1733,6 +1759,8 @@ export default function Home() {
         <a href="/leaderboard" className="hover:text-[var(--text)]">🏆 Leaderboard</a>
         <span>·</span>
         <a href="/history" className="hover:text-[var(--text)]">📼 History</a>
+        <span>·</span>
+        <a href="/playlists" className="hover:text-[var(--text)]">📋 Playlists</a>
       </footer>
     </main>
   );

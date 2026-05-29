@@ -7,12 +7,16 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import type { Readable } from "stream";
 import type { ScriptSegment, MusicPlan } from "./types";
 import { audioCache } from "./store";
+import { getVoiceConfig } from "./voice-config";
 
-// Two fixed podcast host voices (premade, available on all paid tiers)
-const VOICES = {
-  Alex: "JBFqnCBsd6RMkjVDRZzb",   // George — Warm, Captivating Storyteller
-  Morgan: "EXAVITQu4vr4xnSDxMaL",  // Sarah — Mature, Reassuring, Confident
-} as const;
+// Two fixed podcast host voices — runtime-overridable via voice-config store
+function getVoices() {
+  const cfg = getVoiceConfig();
+  return {
+    Alex: cfg.alex,
+    Morgan: cfg.morgan,
+  } as const;
+}
 
 const MODEL = "eleven_multilingual_v2";
 const AUDIO_CACHE_TTL = 86400; // 24 hours
@@ -134,7 +138,8 @@ export async function synthesizeSpeech(
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
 
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${VOICES[segment.speaker]}?output_format=mp3_44100_128`;
+  const voices = getVoices();
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voices[segment.speaker]}?output_format=mp3_44100_128`;
   const body = {
     text: segment.text,
     model_id: MODEL,

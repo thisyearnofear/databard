@@ -262,8 +262,12 @@ export default function OnChainWall() {
         <OnChainWallContent />
       </Suspense>
 
-      <footer className="text-[10px] text-[var(--text-muted)] pt-8 pb-4">
-        Powered by Solana Memo Program · {new Date().getFullYear()} DataBard
+      <footer className="text-[10px] text-[var(--text-muted)] pt-8 pb-4 flex gap-3">
+        <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Leaderboard</Link>
+        <span>·</span>
+        <Link href="/protocol" className="hover:text-[var(--text)] transition-colors">📡 Protocol dashboard</Link>
+        <span>·</span>
+        <span>Powered by Solana Memo Program · {new Date().getFullYear()} DataBard</span>
       </footer>
     </main>
   );

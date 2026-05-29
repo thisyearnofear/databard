@@ -10,6 +10,9 @@ export async function fetchCoralMeta(config: ConnectionConfig): Promise<SchemaMe
   }
 
   const { query } = config.coral;
+
+  // Record anonymised usage for the graduation pipeline — fire-and-forget
+  import("./coral-graduation").then((mod) => mod.trackCoralUsage(query)).catch(() => {});
   const gatewayUrl = process.env.CORAL_GATEWAY_URL;
 
   try {

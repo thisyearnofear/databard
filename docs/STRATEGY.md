@@ -42,14 +42,21 @@ A dedicated section explaining **"Data Accountability on Initia"**:
 ## 3. UI/UX & Intuitive Design
 
 ### Source Categorization
-In the `Connect` flow, sources must be grouped to guide the user:
-- **Enterprise**: OpenMetadata, dbt Cloud, dbt Local.
-- **On-chain**: The Graph, Dune Analytics, Initia.
-- **Unified (No ETL)**: Coral (Multi-source SQL joins).
+In the `Connect` flow, sources are tiered by integration depth:
+- **Tier 1 (First-Class)**: OpenMetadata, dbt Cloud, dbt Local, The Graph, Dune Analytics — deep metadata extraction, zero extra dependencies, source-specific error handling.
+- **Tier 2 (Coral Escape Hatch)**: Any source Coral supports — user writes SQL, gets generic schema. Best for: long-tail sources, cross-source joins, local files, custom APIs.
+
+See [`DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) for the full rationale.
+
+### Source Grouping in UI
+- **Enterprise / Off-chain**: OpenMetadata, dbt Cloud, dbt Local
+- **On-chain / Protocol**: The Graph, Dune Analytics
+- **Bring Your Own (Coral)**: Any source via SQL — positioned as the power-user path
 
 ### Seamless Transitions
-- **Performance**: Use dynamic imports for the Initia InterwovenKit to keep the "Warehouse" path lightweight.
-- **Clarity**: Use distinct icons (🗄️ vs ⛓️) to differentiate between a "Table" and an "Entity."
+- **Performance**: Use dynamic imports for heavy Web3 libraries to keep the "Warehouse" path lightweight.
+- **Clarity**: Use distinct icons to differentiate between a "Table" and an "Entity."
+- **Progressive disclosure**: Coral appears as "Connect anything else" — not competing with Tier 1 sources for attention.
 
 ---
 
@@ -57,12 +64,18 @@ In the `Connect` flow, sources must be grouped to guide the user:
 
 ### Phase 1: Messaging Refresh
 - [ ] Update `page.tsx` with the dual-identity hero.
-- [ ] Group data sources by "Warehouse" and "Protocol."
+- [ ] Group data sources by tier in the Connect wizard.
+- [ ] Position Coral as "Connect anything else" with SQL editor UX.
 
 ### Phase 2: On-chain Visibility
-- [ ] Add a "Verified on Initia" badge to episodes that have been minted.
+- [ ] Add a "Verified on Solana" badge to episodes that have been minted.
 - [ ] Create a "Protocol Dashboard" view for The Graph/Dune sources.
 
-### Phase 3: Performance Optimization
-- [ ] Lazy-load heavy Web3 libraries (Initia InterwovenKit).
+### Phase 3: Coral Graduation Pipeline
+- [ ] Track which sources users connect via Coral (anonymous usage signal).
+- [ ] When a source hits threshold usage, spec out a first-class adapter.
+- [ ] First candidate: GitHub (high demand via Coral, rich metadata available).
+
+### Phase 4: Performance Optimization
+- [ ] Lazy-load heavy Web3 libraries.
 - [ ] Implement SSR for the initial "Demo" path to ensure instant playback.

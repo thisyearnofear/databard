@@ -47,12 +47,14 @@ This project is submitted to two concurrent hackathons:
 - [x] Monetization: SaaS subscription per data team (Stripe checkout + webhook → Pro activation)
 - [x] The Graph subgraph adapter — `src/lib/the-graph-adapter.ts` — introspects GraphQL schema, maps entities→tables, fields→columns, cross-entity refs→lineage
 - [x] Dune Analytics adapter — `src/lib/dune-adapter.ts` — fetches query metadata for a namespace, maps queries→tables, result columns→schema, executes non-parameterized queries to compute column statistics (min/max/avg, top values) for data-aware podcast narration
-- [ ] **Coral Integration** — `src/lib/coral-adapter.ts` — Use Coral's SQL query layer to join data across APIs (OpenMetadata, Dune) and local files (CSV/JSON) for unified "No ETL" narration.
+- [x] **Coral Integration (Tier 2 Escape Hatch)** — `src/lib/coral-adapter.ts` — "Bring Your Own Source" via SQL for the long tail of sources without first-class adapters. Cross-source joins, local files, 50+ connectors. See `docs/DATA_SOURCES_ARCHITECTURE.md`.
+- [ ] **Coral Graduation Pipeline** — Track which sources users connect via Coral; when a source hits usage threshold, build a first-class Tier 1 adapter with deep metadata extraction.
 - [x] Initia InterwovenKit wallet connect — `/pro` page — `.init` wallet as alternative to Stripe customer ID
 - [x] On-chain episode minting — `POST /api/onchain/mint` — records schema name, health score, episode ID, author address on Initia testnet
 - [ ] Initia appchain deployment — get valid rollup chain ID on `initiation-2` testnet
-- [ ] Multi-episode playlists (full database series)
-- [ ] Custom voice cloning for branded docs
+- [x] Multi-episode playlists (full database series)
+- [x] Custom voice cloning for branded docs
+- [x] Historical diff intros ("since last week, 2 new failures")
 
 ### Paper Canvas (developer tool)
 The Paper.design MCP integration in `src/lib/paper-canvas.ts` renders the same 3-slide dashboard onto a live Paper canvas for design iteration. This requires Paper Desktop running locally and is **not** used in the user-facing export path. Use it when iterating on the dashboard layout — the pure HTML builders (`buildOverviewHtml`, `buildCriticalAndActionsHtml`, `buildLineageAndOwnershipHtml`, `buildDashboardHtml`) are the single source of truth for both the Paper preview and the PDF export.

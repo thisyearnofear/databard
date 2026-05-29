@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeSpeech, synthesizeSfx, estimateCost } from "@/lib/audio-engine";
-import type { ConnectionConfig } from "@/lib/types";
+import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { buildResearchTrail } from "@/lib/research";
 import { createResearchSession } from "@/lib/research-session";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
-import { analyzeSchema } from "@/lib/schema-analysis";
+import { analyzeSchema, diffInsights } from "@/lib/schema-analysis";
 import { validateSchemaFqn, ValidationError, rateLimit, validateResearchQuestion } from "@/lib/validation";
 import { getSessionConfig } from "@/lib/session";
 import { getDuneTableStats } from "@/lib/dune-adapter";
+import { getLatestSnapshot, saveSnapshot } from "@/lib/schema-snapshots";
 
 /**
  * Streaming synthesis — sends audio chunks as they're generated.
@@ -83,6 +84,37 @@ export async function POST(req: NextRequest) {
           });
           if (signal.aborted) { controller.close(); return; }
 
+          // Historical diff intro — what changed since the last episode?
+          const prevSnapshot = getLatestSnapshot(schemaFqn);
+          let diffIntro: ScriptSegment | null = null;
+          if (prevSnapshot) {
+            const diff = diffInsights(
+              prevSnapshot.insights,
+              insights,
+              prevSnapshot.tableNames,
+              meta.tables.map((t) => t.name),
+            );
+            if (diff.summary !== "no changes") {
+              diffIntro = {
+                speaker: "Alex",
+                topic: "What's changed",
+                text: `Welcome back. Since our last check on ${prevSnapshot.recordedAt.slice(0, 10)}: ${diff.summary.replace(/,/g, ", and")}. ${diff.healthScoreChange < 0 ? "We'll dig into what's going on." : "Things are looking" + (diff.healthScoreChange > 0 ? " better" : " steady") + "."}`,
+              };
+            }
+          }
+
+          // Save snapshot for next time
+          saveSnapshot({
+            schemaFqn,
+            schemaName: meta.name,
+            tableNames: meta.tables.map((t) => t.name),
+            insights,
+            recordedAt: new Date().toISOString(),
+          });
+
+          // Prepend diff intro if available
+          const fullScript = diffIntro ? [diffIntro, ...script] : script;
+
           // Send metadata
           const totalTests = meta.tables.reduce((n, t) => n + t.qualityTests.length, 0);
           const failedTests = meta.tables.reduce((n, t) => n + t.qualityTests.filter((q) => q.status === "Failed").length, 0);
@@ -96,7 +128,7 @@ export async function POST(req: NextRequest) {
             tableCount: meta.tables.length,
             testsTotal: totalTests,
             testsFailed: failedTests,
-            script,
+            script: fullScript,
             schemaMeta: meta,
             researchTrail,
             researchSessionId: researchSession?.id,
@@ -136,7 +168,7 @@ export async function POST(req: NextRequest) {
           }
 
           // Send cost estimate before synthesizing
-          const estimate = estimateCost(script);
+          const estimate = estimateCost(fullScript);
           send(controller, {
             type: "estimate",
             segments: estimate.segments,
@@ -150,19 +182,19 @@ export async function POST(req: NextRequest) {
           if (intro.length > 0) send(controller, { type: "audio", data: intro.toString("base64") });
 
           // Synthesize segments
-          for (let i = 0; i < script.length; i++) {
+          for (let i = 0; i < fullScript.length; i++) {
             if (signal.aborted) { controller.close(); return; }
 
-            const prev = i > 0 ? script[i - 1].text : undefined;
-            const next = i < script.length - 1 ? script[i + 1].text : undefined;
+            const prev = i > 0 ? fullScript[i - 1].text : undefined;
+            const next = i < fullScript.length - 1 ? fullScript[i + 1].text : undefined;
 
-            if (i > 0 && script[i].topic !== script[i - 1].topic) {
+            if (i > 0 && fullScript[i].topic !== fullScript[i - 1].topic) {
               const transition = await synthesizeSfx("short subtle whoosh transition sound", 1);
               if (signal.aborted) { controller.close(); return; }
               if (transition.length > 0) send(controller, { type: "audio", data: transition.toString("base64") });
             }
 
-            const audio = await synthesizeSpeech(script[i], prev, next);
+            const audio = await synthesizeSpeech(fullScript[i], prev, next);
             if (signal.aborted) { controller.close(); return; }
             send(controller, { type: "audio", data: audio.toString("base64"), segment: i });
           }
