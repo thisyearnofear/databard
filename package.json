@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build && node scripts/prepare-standalone.mjs",
     "start": "next start",
-    "lint": "eslint .",
-    "cleanup:deploy": "node scripts/cleanup-deploy.mjs"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@bonfida/spl-name-service": "^3.0.21",

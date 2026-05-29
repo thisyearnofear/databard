@@ -44,7 +44,7 @@ DataBard was originally built for the WeMakeDevs × OpenMetadata and ElevenHacks
 - [x] The Graph subgraph adapter — `src/lib/the-graph-adapter.ts` — introspects GraphQL schema, maps entities→tables, fields→columns, cross-entity refs→lineage
 - [x] Dune Analytics adapter — `src/lib/dune-adapter.ts` — fetches query metadata for a namespace, maps queries→tables, result columns→schema, executes non-parameterized queries to compute column statistics (min/max/avg, top values) for data-aware podcast narration
 - [x] **Coral Integration (Tier 2 Escape Hatch)** — `src/lib/coral-adapter.ts` — "Bring Your Own Source" via SQL for the long tail of sources without first-class adapters. Cross-source joins, local files, 50+ connectors. See `docs/DATA_SOURCES_ARCHITECTURE.md`.
-- [ ] **Coral Graduation Pipeline** — Track which sources users connect via Coral; when a source hits usage threshold, build a first-class Tier 1 adapter with deep metadata extraction.
+- [x] **Coral Graduation Pipeline** — Track which sources users connect via Coral; when a source hits usage threshold, build a first-class Tier 1 adapter with deep metadata extraction.
 - [x] On-chain episode minting — Solana Memo Program + PDA registry, SNS identity
 - [x] Historical diff intros ("since last week, 2 new failures")
 

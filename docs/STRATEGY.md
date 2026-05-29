@@ -63,18 +63,18 @@ See [`DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) for the full 
 ## 4. Implementation Roadmap
 
 ### Phase 1: Messaging Refresh
-- [ ] Update `page.tsx` with the dual-identity hero.
-- [ ] Group data sources by tier in the Connect wizard.
-- [ ] Position Coral as "Connect anything else" with SQL editor UX.
+- [x] Update `page.tsx` with the dual-identity hero.
+- [x] Group data sources by tier in the Connect wizard.
+- [x] Position Coral as "Connect anything else" with SQL editor UX.
 
 ### Phase 2: On-chain Visibility
-- [ ] Add a "Verified on Solana" badge to episodes that have been minted.
-- [ ] Create a "Protocol Dashboard" view for The Graph/Dune sources.
+- [x] Add a "Verified on Solana" badge to episodes that have been minted.
+- [x] Create a "Protocol Dashboard" view for The Graph/Dune sources.
 
 ### Phase 3: Coral Graduation Pipeline
-- [ ] Track which sources users connect via Coral (anonymous usage signal).
-- [ ] When a source hits threshold usage, spec out a first-class adapter.
-- [ ] First candidate: GitHub (high demand via Coral, rich metadata available).
+- [x] Track which sources users connect via Coral (anonymous usage signal).
+- [x] When a source hits threshold usage, spec out a first-class adapter.
+- [x] First candidate: GitHub (high demand via Coral, rich metadata available).
 
 ### Phase 4: Performance Optimization
 - [x] Lazy-load heavy Web3 libraries.
