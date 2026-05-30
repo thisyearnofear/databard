@@ -6,11 +6,6 @@ Connect your Dune queries, subgraph, or data warehouse. Two AI hosts analyze the
 
 > **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required · [🎵 Hear a demo anthem](https://databard.thisyearnofear.com)
 
-**Hackathon reviewers:**
-- **Colosseum Frontier / 100xDevs Track** → Live product: [databard.thisyearnofear.com](https://databard.thisyearnofear.com) · Solana minting · ElevenLabs Music API · SNS `.sol` identity
-- **Palm USD x Superteam UAE** → Native PUSD payment for Pro subscriptions · SPL token transfer on Solana · non-freezable stablecoin checkout · [`docs/PALM_USD_INTEGRATION.md`](docs/PALM_USD_INTEGRATION.md)
-- **SNS Identity Track** → `.sol` domain resolved on wallet connect, stored in on-chain memo at mint time
-
 ---
 
 ## The Problem

@@ -10,6 +10,7 @@ import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/
 import { getDuneTableStats } from "@/lib/dune-adapter";
 import { generateMusicPlan } from "@/lib/music-generator";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
+import { rateLimit, getClientIp, GENERATE_RATE_LIMIT } from "@/lib/rate-limit";
 
 /**
  * Full pipeline: metadata → script/music → audio.
@@ -20,6 +21,23 @@ import { uploadEpisodeToGrove } from "@/lib/grove-storage";
  * Music generation does not have a web fallback.
  */
 export async function POST(req: NextRequest) {
+  // Rate limiting for generation endpoints
+  const ip = getClientIp(req);
+  const { allowed, remaining, resetAt } = rateLimit(ip, GENERATE_RATE_LIMIT);
+  if (!allowed) {
+    const retryAfter = Math.ceil((resetAt - Date.now()) / 1000);
+    return NextResponse.json(
+      { ok: false, error: "Too many generation requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": retryAfter.toString(),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": resetAt.toString(),
+        },
+      }
+    );
+  }
   try {
     guardMutation(req);
 

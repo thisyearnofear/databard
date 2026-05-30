@@ -15,10 +15,6 @@ Data documentation is universally neglected. Nobody reads wiki pages about table
 - Onchain/web3 teams cataloging indexer pipelines, subgraph schemas, DeFi protocol data
 - Anyone who'd rather listen than read
 
-## Hackathon Targets
-
-DataBard was originally built for the WeMakeDevs × OpenMetadata and ElevenHacks hackathons. The Coral integration came from the Pirates of the Coral-bean Hackathon.
-
 ## Roadmap
 
 ### Phase 1: Core (Days 1–3) ← hackathon scope

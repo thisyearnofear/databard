@@ -925,6 +925,46 @@ export function EpisodePlayer({
           </div>
         </div>
 
+        {/* Mobile bottom action bar - always visible */}
+        <div data-testid="mobile-action-bar" className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--surface)] border-t border-[var(--border)] px-4 py-3 z-20">
+          <div className="flex items-center justify-around gap-2">
+            <button
+              onClick={togglePlay}
+              disabled={!currentAudioUrl}
+              className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
+            >
+              <span className="text-xl">{playing ? "⏸" : "▶"}</span>
+              <span className="text-[10px]">{playing ? "Pause" : "Play"}</span>
+            </button>
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
+            >
+              <span className="text-xl">🔗</span>
+              <span className="text-[10px]">Share</span>
+            </button>
+            {onMint && (
+              <button
+                onClick={onMint}
+                disabled={minting}
+                className="flex flex-col items-center gap-1 text-[var(--accent)] disabled:opacity-50"
+              >
+                <span className="text-xl">⛓️</span>
+                <span className="text-[10px]">Mint</span>
+              </button>
+            )}
+            <button
+              onClick={handleDownload}
+              disabled={!currentAudioUrl}
+              className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
+            >
+              <span className="text-xl">↓</span>
+              <span className="text-[10px]">Save</span>
+            </button>
+          </div>
+        </div>
+
         {/* Waveform & Controls — only when audio is available */}
         {currentAudioUrl && (
           <>
@@ -936,6 +976,7 @@ export function EpisodePlayer({
 
             <div className="flex items-center gap-3 sm:gap-4">
               <button
+                data-testid="play-button"
                 onClick={togglePlay}
                 className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
                 aria-label={playing ? "Pause" : "Play"}
@@ -988,6 +1029,9 @@ export function EpisodePlayer({
           </div>
         )}
       </div>
+
+      {/* Mobile bottom padding to prevent content from being hidden behind fixed bottom bar */}
+      <div className="md:hidden h-16" />
 
       {/* Tabbed panel: Insights | Actions | Segments */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
