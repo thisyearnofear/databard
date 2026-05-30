@@ -26,6 +26,7 @@
     "agent-browser": "^0.1.0",
     "@elevenlabs/elevenlabs-js": "^2.49.0",
     "next": "15.5.18",
+    "pg": "^8.13.0",
     "puppeteer-core": "^24.42.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -37,11 +38,13 @@
     "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/node": "^22.15.2",
+    "@types/pg": "^8.11.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "^15.5.15",
     "tailwindcss": "^4.1.4",
+    "tsx": "^4.19.0",
     "typescript": "^5.8.3"
   }
 }

@@ -32,7 +32,7 @@ export async function query<T = unknown>(
 ): Promise<{ rows: T[] }> {
   const p = getPool();
   if (!p) throw new Error("DATABASE_URL not configured");
-  return p.query(text, params) as Promise<{ rows: T[] }>;
+  return p.query(text, params) as unknown as Promise<{ rows: T[] }>;
 }
 
 /** Get a dedicated client for transactions. Remember to release(). */

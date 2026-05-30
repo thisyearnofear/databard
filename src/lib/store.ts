@@ -1,7 +1,13 @@
 /**
- * Unified store — namespaced, typed, file-backed persistence.
- * Replaces the raw Cache class with session-aware semantics.
- * Single source of truth for all server-side state.
+ * Unified store — namespaced, typed persistence.
+ *
+ * Hybrid strategy:
+ * - When DATABASE_URL is set, dbStore (PostgreSQL) is available for async callers
+ * - This file remains the synchronous fallback (file-backed) for all existing code
+ * - Callers that can await should prefer dbStore for new features
+ *
+ * The public API (sessions, shares, etc.) stays synchronous and file-backed.
+ * See db-store.ts for the async PostgreSQL adapter.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from "fs";
 import { join } from "path";

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, useReducer, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import type { Episode, DataSource } from "@/lib/types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -324,19 +324,28 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   }, [state.source, state.omMode, state.researchQuestion, state.omUrl, state.dbtAccountId, state.dbtProjectId]);
   
   // Pre-fill first question preset when entering schema picker with empty question
-  const questionPresets = state.persona === "enterprise"
-    ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
-    : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
+  const questionPresets = useMemo(() =>
+    state.persona === "enterprise"
+      ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
+      : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"],
+    [state.persona]
+  );
 
   // Filtered schemas
-  const filteredSchemas = state.schemas.filter((s) =>
-    s.toLowerCase().includes(state.searchQuery.toLowerCase())
+  const filteredSchemas = useMemo(() =>
+    state.schemas.filter((s) =>
+      s.toLowerCase().includes(state.searchQuery.toLowerCase())
+    ),
+    [state.schemas, state.searchQuery]
   );
 
   // Smart schema recommendation: schemas with more dots (deeper hierarchy) tend to be richer
-  const recommendedSchema = state.schemas.length > 1
-    ? state.schemas.reduce((best, s) => (s.split(".").length > best.split(".").length || s.length > best.length ? s : best), state.schemas[0])
-    : state.schemas[0] ?? null;
+  const recommendedSchema = useMemo(() =>
+    state.schemas.length > 1
+      ? state.schemas.reduce((best, s) => (s.split(".").length > best.split(".").length || s.length > best.length ? s : best), state.schemas[0])
+      : state.schemas[0] ?? null,
+    [state.schemas]
+  );
 
   useEffect(() => {
     if (state.step === "pick-schema" && !state.researchQuestion) {
