@@ -10,6 +10,7 @@ interface RateLimitEntry {
 }
 
 const ipMap = new Map<string, RateLimitEntry>();
+const MAX_ENTRIES = 10_000;
 
 export interface RateLimitConfig {
   limit: number;
@@ -105,13 +106,22 @@ export function withRateLimit<T>(
   };
 }
 
-// Cleanup old entries periodically (every 5 minutes)
+// Cleanup expired entries and enforce max map size (every 5 minutes)
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
     for (const [ip, entry] of ipMap.entries()) {
       if (now > entry.resetAt) {
         ipMap.delete(ip);
+      }
+    }
+    // If still over cap after expiry cleanup, evict oldest entries
+    if (ipMap.size > MAX_ENTRIES) {
+      const excess = ipMap.size - MAX_ENTRIES;
+      const iter = ipMap.keys();
+      for (let i = 0; i < excess; i++) {
+        const oldest = iter.next().value;
+        if (oldest !== undefined) ipMap.delete(oldest);
       }
     }
   }, 5 * 60 * 1000);
