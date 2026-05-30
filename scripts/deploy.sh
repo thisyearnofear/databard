@@ -3,7 +3,7 @@
 # Builds on your local machine, sends only the standalone artifact to the server.
 # Server is space-constrained, so we keep the build local and rsync minimal artefacts.
 #
-# Usage: ./scripts/deploy.sh [--dry-run]
+# Usage: ./scripts/deploy.sh [--dry-run] [--rollback]
 # Requires: npm, ssh <host> configured
 
 set -e
@@ -13,13 +13,71 @@ APP_PORT=42100
 DEPLOY_DIR="/opt/databard"
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DRY_RUN=false
+ROLLBACK=false
 
-if [ "${1:-}" = "--dry-run" ]; then
-  DRY_RUN=true
-  echo "🔍 DRY RUN — no files will be synced"
-fi
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)  DRY_RUN=true ;;
+    --rollback) ROLLBACK=true ;;
+  esac
+done
 
 cd "$LOCAL_DIR"
+
+# ── Rollback mode ───────────────────────────────────────────────
+if $ROLLBACK; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ↩️  Rolling back $REMOTE to previous release"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  ssh "$REMOTE" bash <<'ROLLBACK_EOF'
+    set -e
+    DEPLOY_DIR="/opt/databard"
+    CURRENT=$(readlink "$DEPLOY_DIR/current" 2>/dev/null || echo "")
+
+    if [ -z "$CURRENT" ]; then
+      echo "❌ No current symlink found at $DEPLOY_DIR/current"
+      exit 1
+    fi
+
+    CURRENT_TS=$(basename "$CURRENT")
+    echo "   Current release: $CURRENT_TS"
+
+    PREV=$(ls -dtr "$DEPLOY_DIR/releases"/*/ 2>/dev/null \
+      | sort -r \
+      | grep -v "$CURRENT_TS" \
+      | head -1 \
+      | sed 's|/$||')
+
+    if [ -z "$PREV" ]; then
+      echo "❌ No previous release found to roll back to"
+      exit 1
+    fi
+
+    PREV_TS=$(basename "$PREV")
+    echo "   Rolling back to: $PREV_TS"
+
+    ln -sfn "$PREV" "$DEPLOY_DIR/current"
+
+    cd "$DEPLOY_DIR/current"
+    /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --update-env
+    /usr/local/bin/pm2 save
+
+    sleep 2
+    echo ""
+    echo "   Health check..."
+    curl -s -o /dev/null -w "   HTTP %{http_code}" http://127.0.0.1:42100/ || echo " (not responding yet — check pm2 logs)"
+    echo ""
+    echo "   ✓ Rollback complete — now serving $PREV_TS"
+ROLLBACK_EOF
+
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo " ↩️  Rollback done"
+  echo "   Status: ssh $REMOTE 'pm2 status'"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  exit 0
+fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo " 🎙️  Deploying DataBard to $REMOTE:$APP_PORT"

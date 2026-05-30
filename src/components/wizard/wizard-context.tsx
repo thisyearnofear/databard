@@ -324,15 +324,26 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   }, [state.source, state.omMode, state.researchQuestion, state.omUrl, state.dbtAccountId, state.dbtProjectId]);
   
   // Pre-fill first question preset when entering schema picker with empty question
+  const questionPresets = state.persona === "enterprise"
+    ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
+    : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
+
+  // Filtered schemas
+  const filteredSchemas = state.schemas.filter((s) =>
+    s.toLowerCase().includes(state.searchQuery.toLowerCase())
+  );
+
+  // Smart schema recommendation: schemas with more dots (deeper hierarchy) tend to be richer
+  const recommendedSchema = state.schemas.length > 1
+    ? state.schemas.reduce((best, s) => (s.split(".").length > best.split(".").length || s.length > best.length ? s : best), state.schemas[0])
+    : state.schemas[0] ?? null;
+
   useEffect(() => {
     if (state.step === "pick-schema" && !state.researchQuestion) {
-      const presets = state.persona === "enterprise"
-        ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
-        : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
-      dispatch({ type: "SET_RESEARCH_QUESTION", question: presets[0] });
+      dispatch({ type: "SET_RESEARCH_QUESTION", question: questionPresets[0] });
     }
-  }, [state.step, state.researchQuestion, state.persona]);
-  
+  }, [state.step, state.researchQuestion, state.persona, questionPresets]);
+
   // Auto-expand the group containing the recommended schema on first load
   useEffect(() => {
     if (state.step === "pick-schema" && recommendedSchema && state.expandedGroups.size === 0) {
@@ -341,21 +352,6 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
       dispatch({ type: "TOGGLE_GROUP", group: prefix });
     }
   }, [state.step, recommendedSchema, state.expandedGroups.size]);
-  
-  // Filtered schemas
-  const filteredSchemas = state.schemas.filter((s) =>
-    s.toLowerCase().includes(state.searchQuery.toLowerCase())
-  );
-  
-  // Smart schema recommendation: schemas with more dots (deeper hierarchy) tend to be richer
-  const recommendedSchema = state.schemas.length > 1
-    ? state.schemas.reduce((best, s) => (s.split(".").length > best.split(".").length || s.length > best.length ? s : best), state.schemas[0])
-    : state.schemas[0] ?? null;
-  
-  // Question presets
-  const questionPresets = state.persona === "enterprise"
-    ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
-    : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"];
   
   // Source labels
   const sourceLabel: Record<DataSource, string> = {
