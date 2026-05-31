@@ -335,7 +335,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   const questionPresets = useMemo(() =>
     state.persona === "enterprise"
       ? ["What tables are most likely to break downstream?", "Where are the biggest coverage gaps?", "What changed since last week?"]
-      : ["Which entities are behind on freshness?", "Where is the biggest indexer risk?", "What protocol issue should we fix first?"],
+      : ["What patterns should the hosts investigate?", "Which repos need the most attention?", "What should we prioritize next?"],
     [state.persona]
   );
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateScript } from "@/lib/script-generator";
 import { synthesizeSpeech, synthesizeSfx, estimateCost } from "@/lib/audio-engine";
-import type { ConnectionConfig, ScriptSegment } from "@/lib/types";
+import type { ConnectionConfig, ScriptSegment, SchemaMeta } from "@/lib/types";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { buildResearchTrail } from "@/lib/research";
 import { createResearchSession } from "@/lib/research-session";
@@ -11,6 +11,54 @@ import { validateSchemaFqn, ValidationError, rateLimit, validateResearchQuestion
 import { getSessionConfig } from "@/lib/session";
 import { getDuneTableStats } from "@/lib/dune-adapter";
 import { getLatestSnapshot, saveSnapshot } from "@/lib/schema-snapshots";
+import type { TableStatSummary } from "@/lib/dune-adapter";
+
+/**
+ * Build tableStats from Coral metadata so the script generator can narrate
+ * actual data findings (column types, sample values, row counts).
+ */
+function buildCoralTableStats(meta: SchemaMeta): Record<string, TableStatSummary> | undefined {
+  const table = meta.tables[0];
+  if (!table || !table.rowCount) return undefined;
+
+  const columnHighlights: TableStatSummary["columnHighlights"] = [];
+
+  for (const col of table.columns) {
+    const desc = col.description ?? "";
+    const uniqueMatch = desc.match(/(\d+) unique values/);
+    const samplesMatch = desc.match(/samples: (.+?)(?:;|$)/);
+    const uniqueCount = uniqueMatch ? parseInt(uniqueMatch[1]) : undefined;
+    const samples = samplesMatch ? samplesMatch[1].split(", ") : [];
+
+    // Detect numeric columns from dataType
+    if (col.dataType === "number" && samples.length > 0) {
+      const nums = samples.map((s) => parseFloat(s)).filter((n) => !isNaN(n));
+      if (nums.length > 0) {
+        columnHighlights.push({
+          column: col.name,
+          type: "numeric",
+          min: Math.min(...nums),
+          max: Math.max(...nums),
+          avg: nums.reduce((a, b) => a + b, 0) / nums.length,
+        });
+      }
+    } else if (uniqueCount !== undefined && uniqueCount <= 20 && samples.length > 0) {
+      // Categorical column with limited unique values
+      columnHighlights.push({
+        column: col.name,
+        type: "categorical",
+        topValues: samples.slice(0, 5),
+      });
+    }
+  }
+
+  return {
+    [table.name]: {
+      rowCount: table.rowCount,
+      columnHighlights,
+    },
+  };
+}
 
 /**
  * Streaming synthesis — sends audio chunks as they're generated.
@@ -76,7 +124,11 @@ export async function POST(req: NextRequest) {
                 evidenceContext,
               })
             : null;
-          const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
+          const tableStats = source === "dune"
+            ? getDuneTableStats(schemaFqn)
+            : source === "coral"
+              ? buildCoralTableStats(meta)
+              : undefined;
           const script = await generateScript(meta, { 
             researchQuestion: normalizedResearchQuestion, 
             researchTrail, 
