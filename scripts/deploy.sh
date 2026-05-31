@@ -164,6 +164,11 @@ ssh "$REMOTE" bash <<EOF
   # The app reads DATABARD_DATA_DIR (set in ecosystem.config.cjs).
   mkdir -p "$DEPLOY_DIR/data"
 
+  # Symlink persistent .env if it exists (API keys, secrets — not in git)
+  if [ -f "$DEPLOY_DIR/.env" ] && [ ! -f "$RELEASE_DIR/.env" ]; then
+    ln -sf "$DEPLOY_DIR/.env" "$RELEASE_DIR/.env"
+  fi
+
   # Update current symlink
   ln -sfn "\$RELEASE_DIR" "$DEPLOY_DIR/current"
 
