@@ -153,3 +153,51 @@ export function parseCoralError(error: string): { message: string; hint?: string
 export function getPresetsForPersona(persona: string): CoralPreset[] {
   return persona === "web3" ? WEB3_PRESETS : ENTERPRISE_PRESETS;
 }
+
+// ─── Data-aware question presets ─────────────────────────────────────────────
+// Derives meaningful research questions from the actual query results,
+// so users get relevant prompts instead of generic ones.
+
+export function getDataAwarePresets(
+  query: string,
+  columns: Array<{ name: string; dataType: string }>,
+  sources: string[],
+): string[] {
+  const colNames = columns.map((c) => c.name.toLowerCase());
+  const hasState = colNames.some((c) => c === "state" || c === "status");
+  const hasDate = colNames.some((c) => c.includes("date") || c.includes("created") || c.includes("updated") || c.includes("ts") || c.includes("time"));
+  const hasAuthor = colNames.some((c) => c.includes("author") || c.includes("user") || c.includes("login") || c.includes("name"));
+  const hasNumeric = columns.some((c) => c.dataType === "number" || c.dataType === "integer" || c.dataType === "bigint");
+  const hasText = colNames.some((c) => c.includes("title") || c.includes("text") || c.includes("description") || c.includes("purpose"));
+  const hasLabels = colNames.some((c) => c.includes("label") || c.includes("tag") || c.includes("category"));
+
+  const presets: string[] = [];
+
+  // Source-specific
+  if (sources.includes("github")) {
+    presets.push("What are the most active issues?");
+    if (hasAuthor) presets.push("Who are the top contributors?");
+    if (hasState) presets.push("How many items are still open?");
+    if (hasDate) presets.push("What's the recent activity trend?");
+  } else if (sources.includes("slack")) {
+    presets.push("What channels are most active?");
+    if (hasDate) presets.push("What's the posting pattern?");
+    presets.push("Which channels need more engagement?");
+  } else {
+    // Generic data-aware presets
+    if (hasText) presets.push("What are the key themes in this data?");
+    if (hasAuthor) presets.push("Who are the most active contributors?");
+    if (hasDate) presets.push("What trends do we see over time?");
+  }
+
+  // Column-type-based
+  if (hasNumeric) presets.push("What do the numbers tell us?");
+  if (hasLabels) presets.push("What are the most common categories?");
+  if (hasState) presets.push("What's the current status breakdown?");
+
+  // Always available
+  presets.push("Summarize the key findings");
+
+  // Deduplicate and limit
+  return [...new Set(presets)].slice(0, 4);
+}

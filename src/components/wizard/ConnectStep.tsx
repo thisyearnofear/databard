@@ -5,7 +5,7 @@ import { useWizard } from "./wizard-context";
 import { useGeneration } from "./useGeneration";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
-import { validateCoralSql, extractCoralSources, parseCoralError, getPresetsForPersona } from "./coral-helpers";
+import { validateCoralSql, extractCoralSources, parseCoralError, getPresetsForPersona, getDataAwarePresets } from "./coral-helpers";
 
 const DEFAULT_OM_SANDBOX_URL = process.env.NEXT_PUBLIC_OM_SANDBOX_URL || "https://sandbox.open-metadata.org";
 
@@ -19,8 +19,8 @@ const DATA_SOURCES: { value: DataSource; label: string; emoji: string }[] = [
 ];
 
 export function ConnectStep() {
-  const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp, questionPresets } = useWizard();
-  const { generatePodcast } = useGeneration();
+  const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp } = useWizard();
+  const { generatePodcast, generateAnthem } = useGeneration();
   const { toast } = useToast();
 
   function showError(message: string) {
@@ -28,18 +28,53 @@ export function ConnectStep() {
     dispatch({ type: "SET_STATUS", status: `Error: ${message}` });
   }
 
-  async function handleCoralGenerate() {
+  async function handleCoralRunQuery() {
     if (!validateCoralSql(state.coralQuery).valid) return;
     dispatch({ type: "SET_CONNECTING", connecting: true });
-    dispatch({ type: "SET_STATUS", status: "Generating episode…" });
-    // Pre-fill a question if empty
+    dispatch({ type: "SET_STATUS", status: "Running query…" });
+    try {
+      const res = await fetch("/api/coral/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: state.coralQuery }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        dispatch({ type: "SET_CORAL_PREVIEW_DATA", data });
+        dispatch({ type: "SET_CORAL_SUB_STEP", subStep: "configure" });
+        // Auto-fill research question with data-aware preset if empty
+        if (!state.researchQuestion) {
+          const presets = getDataAwarePresets(state.coralQuery, data.columns, data.sources);
+          if (presets.length > 0) {
+            dispatch({ type: "SET_RESEARCH_QUESTION", question: presets[0] });
+          }
+        }
+        dispatch({ type: "SET_STATUS", status: "" });
+      } else {
+        showError(data.error || "Query failed");
+      }
+    } catch (e) {
+      showError(e instanceof Error ? e.message : "Query failed");
+    } finally {
+      dispatch({ type: "SET_CONNECTING", connecting: false });
+    }
+  }
+
+  async function handleCoralGenerate() {
+    dispatch({ type: "SET_CONNECTING", connecting: true });
+    dispatch({ type: "SET_STATUS", status: "Generating…" });
     if (!state.researchQuestion) {
-      dispatch({ type: "SET_RESEARCH_QUESTION", question: questionPresets[0] ?? "What patterns should the hosts investigate?" });
+      const preview = state.coralPreviewData;
+      const presets = preview ? getDataAwarePresets(state.coralQuery, preview.columns, preview.sources) : [];
+      dispatch({ type: "SET_RESEARCH_QUESTION", question: presets[0] ?? "Summarize the key findings" });
     }
     dispatch({ type: "SET_SELECTED_SCHEMA", schema: "coral.unified" });
-    // Small delay so state settles before generation reads it
     await new Promise((r) => setTimeout(r, 50));
-    await generatePodcast("coral.unified");
+    if (state.outputFormat === "anthem") {
+      await generateAnthem("coral.unified");
+    } else {
+      await generatePodcast("coral.unified");
+    }
     dispatch({ type: "SET_CONNECTING", connecting: false });
   }
   
@@ -503,81 +538,65 @@ export function ConnectStep() {
           </>
         )}
         
-        {/* Coral */}
-        {state.source === "coral" && (
+        {/* Coral — two-phase flow */}
+        {state.source === "coral" && state.coralSubStep === "query" && (
           <>
             <CoralForm
               query={state.coralQuery}
               onQueryChange={(q) => dispatch({ type: "SET_CORAL_QUERY", query: q })}
             />
-
-            {/* Question input — moved here from SchemaPicker so Coral skips that step */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your question</label>
-              <textarea
-                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm min-h-16 resize-y focus:border-[var(--accent)] focus:outline-none transition-colors"
-                value={state.researchQuestion}
-                onChange={(e) => dispatch({ type: "SET_RESEARCH_QUESTION", question: e.target.value })}
-                placeholder="What patterns should the hosts investigate in this data?"
-              />
-              <div className="flex flex-wrap gap-1.5">
-                {questionPresets.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => dispatch({ type: "SET_RESEARCH_QUESTION", question: preset })}
-                    className={`text-[10px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
-                      state.researchQuestion === preset
-                        ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
-                        : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-col gap-2 mt-1">
-          {state.source === "coral" ? (
             <button
-              onClick={handleCoralGenerate}
+              onClick={handleCoralRunQuery}
               disabled={state.connecting || !validateCoralSql(state.coralQuery).valid}
               className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
             >
               {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {state.connecting ? "Generating…" : "Generate Episode 🎙️"}
+              {state.connecting ? "Running query…" : "Run Query →"}
             </button>
-          ) : (
-            <>
-              <button
-                onClick={handleConnect}
-                disabled={state.connecting}
-                className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
-              >
-                {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                {state.connecting ? "Connecting…" : "Connect & Continue →"}
-              </button>
+          </>
+        )}
 
-              {/* Test Connection — only visible after an error */}
-              {showTestButton && (
-                <button
-                  onClick={handleTestConnection}
-                  disabled={state.connectionTested === "testing"}
-                  className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-                >
-                  {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
-                  {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
-                  {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
-                  Test Connection
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        {state.source === "coral" && state.coralSubStep === "configure" && state.coralPreviewData && (
+          <CoralConfigureStep
+            preview={state.coralPreviewData}
+            query={state.coralQuery}
+            outputFormat={state.outputFormat}
+            researchQuestion={state.researchQuestion}
+            connecting={state.connecting}
+            onFormatChange={(f) => dispatch({ type: "SET_OUTPUT_FORMAT", format: f })}
+            onQuestionChange={(q) => dispatch({ type: "SET_RESEARCH_QUESTION", question: q })}
+            onGenerate={handleCoralGenerate}
+            onBack={() => dispatch({ type: "SET_CORAL_SUB_STEP", subStep: "query" })}
+          />
+        )}
+
+        {/* Actions — only for non-Coral sources (Coral has its own buttons inline) */}
+        {state.source !== "coral" && (
+          <div className="flex flex-col gap-2 mt-1">
+            <button
+              onClick={handleConnect}
+              disabled={state.connecting}
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
+            >
+              {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {state.connecting ? "Connecting…" : "Connect & Continue →"}
+            </button>
+
+            {/* Test Connection — only visible after an error */}
+            {showTestButton && (
+              <button
+                onClick={handleTestConnection}
+                disabled={state.connectionTested === "testing"}
+                className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+              >
+                {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
+                {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
+                {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
+                Test Connection
+              </button>
+            )}
+          </div>
+        )}
 
         {state.status && (
           <p className={`text-xs text-center py-1.5 px-3 rounded-lg transition-colors ${
@@ -909,5 +928,192 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         </div>
       )}
     </>
+  );
+}
+
+// ─── CoralConfigureStep ──────────────────────────────────────────────────────
+// Phase 2 of the Coral flow: shows query results, format picker, and
+// data-aware research question presets before generation.
+
+interface CoralConfigureStepProps {
+  preview: {
+    columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
+    rows: Record<string, unknown>[];
+    rowCount: number;
+    sources: string[];
+    message?: string;
+  };
+  query: string;
+  outputFormat: "podcast" | "anthem";
+  researchQuestion: string;
+  connecting: boolean;
+  onFormatChange: (format: "podcast" | "anthem") => void;
+  onQuestionChange: (question: string) => void;
+  onGenerate: () => void;
+  onBack: () => void;
+}
+
+function CoralConfigureStep({
+  preview,
+  query,
+  outputFormat,
+  researchQuestion,
+  connecting,
+  onFormatChange,
+  onQuestionChange,
+  onGenerate,
+  onBack,
+}: CoralConfigureStepProps) {
+  const { columns, rows, rowCount, sources } = preview;
+  const presets = getDataAwarePresets(query, columns, sources);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Data summary */}
+      <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📊</span>
+            <div>
+              <p className="text-sm font-semibold text-[var(--text)]">
+                {rowCount} row{rowCount !== 1 ? "s" : ""} from {sources.join(", ") || "Coral"}
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                {columns.length} column{columns.length !== 1 ? "s" : ""}: {columns.map((c) => c.name).join(", ")}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer border border-[var(--border)] rounded-lg px-2.5 py-1 hover:border-[var(--accent)] transition-colors"
+          >
+            ← Edit query
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible data preview */}
+      <details className="group">
+        <summary className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer flex items-center gap-1">
+          <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
+          Preview data
+        </summary>
+        <div className="border border-[var(--border)] rounded-xl overflow-hidden mt-2">
+          {/* Column badges */}
+          <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b border-[var(--border)] bg-[var(--bg)]">
+            {columns.map((col) => (
+              <span key={col.name} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)]">
+                <span className="font-medium text-[var(--text)]">{col.name}</span>
+                <span className="text-[var(--text-muted)] ml-1">{col.dataType}</span>
+              </span>
+            ))}
+          </div>
+          {/* Rows */}
+          <div className="overflow-x-auto max-h-32">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  {columns.map((col) => (
+                    <th key={col.name} className="text-left px-2.5 py-1.5 font-medium text-[var(--text-muted)] whitespace-nowrap">{col.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 5).map((row, i) => (
+                  <tr key={i} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)]">
+                    {columns.map((col) => {
+                      const val = row[col.name];
+                      const display = val === null ? "—" : typeof val === "object" ? JSON.stringify(val) : String(val).slice(0, 60);
+                      return <td key={col.name} className="px-2.5 py-1.5 text-[var(--text-muted)] max-w-32 truncate" title={String(val ?? "")}>{display}</td>;
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {rowCount > 5 && (
+            <div className="px-3 py-1.5 text-[10px] text-[var(--text-muted)] bg-[var(--bg)] border-t border-[var(--border)]">
+              + {rowCount - 5} more rows
+            </div>
+          )}
+        </div>
+      </details>
+
+      {/* Format picker */}
+      <div>
+        <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">Output format</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => onFormatChange("podcast")}
+            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition-all ${
+              outputFormat === "podcast"
+                ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm"
+                : "border-[var(--border)] hover:border-[var(--accent)]"
+            }`}
+          >
+            <span className="text-lg mb-1">🎙️</span>
+            <span className="text-sm font-semibold text-[var(--text)]">Podcast</span>
+            <span className="text-[10px] text-[var(--text-muted)] mt-0.5">Two AI hosts analyze & narrate</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onFormatChange("anthem")}
+            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition-all ${
+              outputFormat === "anthem"
+                ? "border-purple-500 bg-purple-500/5 shadow-sm"
+                : "border-[var(--border)] hover:border-purple-500"
+            }`}
+            style={outputFormat === "anthem" ? { borderColor: "#a855f7" } : {}}
+          >
+            <span className="text-lg mb-1">🎵</span>
+            <span className="text-sm font-semibold text-[var(--text)]">Anthem</span>
+            <span className="text-[10px] text-[var(--text-muted)] mt-0.5">Data-driven song with lyrics</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Research question */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your question</label>
+        <textarea
+          className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm min-h-16 resize-y focus:border-[var(--accent)] focus:outline-none transition-colors"
+          value={researchQuestion}
+          onChange={(e) => onQuestionChange(e.target.value)}
+          placeholder="What do you want to know about this data?"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => onQuestionChange(preset)}
+              className={`text-[10px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+                researchQuestion === preset
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
+                  : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
+              }`}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Generate button */}
+      <button
+        onClick={onGenerate}
+        disabled={connecting}
+        className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
+      >
+        {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+        {connecting
+          ? "Generating…"
+          : outputFormat === "anthem"
+            ? "Compose Anthem 🎵"
+            : "Generate Episode 🎙️"}
+      </button>
+    </div>
   );
 }

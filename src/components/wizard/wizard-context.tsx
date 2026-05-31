@@ -29,6 +29,15 @@ export interface WizardState {
   duneNamespace: string;
   duneQueryUrl: string;
   coralQuery: string;
+  coralSubStep: "query" | "configure";
+  coralPreviewData: {
+    columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
+    rows: Record<string, unknown>[];
+    rowCount: number;
+    sources: string[];
+    message?: string;
+  } | null;
+  outputFormat: "podcast" | "anthem";
   
   // Schemas
   schemas: string[];
@@ -83,6 +92,9 @@ type WizardAction =
   | { type: "SET_DUNE_NAMESPACE"; ns: string }
   | { type: "SET_DUNE_QUERY_URL"; url: string }
   | { type: "SET_CORAL_QUERY"; query: string }
+  | { type: "SET_CORAL_SUB_STEP"; subStep: "query" | "configure" }
+  | { type: "SET_CORAL_PREVIEW_DATA"; data: WizardState["coralPreviewData"] }
+  | { type: "SET_OUTPUT_FORMAT"; format: "podcast" | "anthem" }
   | { type: "SET_SCHEMAS"; schemas: string[] }
   | { type: "SET_SELECTED_SCHEMA"; schema: string | null }
   | { type: "SET_SEARCH_QUERY"; query: string }
@@ -135,6 +147,9 @@ FROM github.pull_requests g
 JOIN slack.messages s ON s.channel = '#incidents'
 WHERE g.merged_at >= NOW() - INTERVAL '7 days'
 ORDER BY g.merged_at DESC`,
+  coralSubStep: "query",
+  coralPreviewData: null,
+  outputFormat: "podcast",
   schemas: [],
   selectedSchema: null,
   searchQuery: "",
@@ -166,7 +181,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case "SET_STEP": return { ...state, step: action.step };
     case "SET_PERSONA": return { ...state, persona: action.persona };
-    case "SET_SOURCE": return { ...state, source: action.source, connectionTested: "idle" };
+    case "SET_SOURCE": return { ...state, source: action.source, connectionTested: "idle", coralSubStep: "query", coralPreviewData: null };
     case "SET_OM_MODE": return { ...state, omMode: action.omMode, connectionTested: "idle" };
     case "SET_OM_URL": return { ...state, omUrl: action.url, connectionTested: "idle" };
     case "SET_TOKEN": return { ...state, token: action.token, connectionTested: "idle" };
@@ -180,6 +195,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case "SET_DUNE_NAMESPACE": return { ...state, duneNamespace: action.ns };
     case "SET_DUNE_QUERY_URL": return { ...state, duneQueryUrl: action.url };
     case "SET_CORAL_QUERY": return { ...state, coralQuery: action.query };
+    case "SET_CORAL_SUB_STEP": return { ...state, coralSubStep: action.subStep };
+    case "SET_CORAL_PREVIEW_DATA": return { ...state, coralPreviewData: action.data };
+    case "SET_OUTPUT_FORMAT": return { ...state, outputFormat: action.format };
     case "SET_SCHEMAS": {
       const newSchemas = action.schemas;
       return { ...state, schemas: newSchemas, selectedSchema: newSchemas[0] ?? null };
