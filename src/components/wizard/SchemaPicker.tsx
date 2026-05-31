@@ -4,54 +4,14 @@ import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useGeneration } from "./useGeneration";
 import { SchemasEmpty, SearchEmpty } from "@/components/EmptyState";
+import { validateCoralSql, extractCoralSources, getPresetsForPersona } from "./coral-helpers";
 
 const SCHEMAS_PER_PAGE = 10;
 
-const CORAL_PRESETS = [
-  {
-    label: "GitHub + Slack",
-    query: `SELECT g.title, g.state, s.text, s.ts
-FROM github.pull_requests g
-JOIN slack.messages s ON s.channel = '#incidents'
-WHERE g.merged_at >= NOW() - INTERVAL '7 days'
-ORDER BY g.merged_at DESC`,
-  },
-  {
-    label: "Jira + Postgres",
-    query: `SELECT j.key, j.summary, j.status, p.version, p.deployed_at
-FROM jira.issues j
-JOIN postgres.deployments p ON j.key = p.ticket_id
-WHERE p.deployed_at >= NOW() - INTERVAL '30 days'`,
-  },
-  {
-    label: "Stripe + Notion",
-    query: `SELECT s.amount, s.currency, s.status, n.body as notes
-FROM stripe.charges s
-JOIN notion.pages n ON n.title LIKE '%' || s.customer_email || '%'`,
-  },
-];
-
-function extractCoralSources(query: string): string[] {
-  const sources = new Set<string>();
-  const re = /(?:FROM|JOIN)\s+(\w+)\.\w+/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(query)) !== null) {
-    sources.add(m[1].toLowerCase());
-  }
-  return [...sources];
-}
-
-function validateCoralQuery(query: string): { valid: boolean; hint?: string } {
-  const trimmed = query.trim();
-  if (!trimmed) return { valid: false, hint: "Query is empty" };
-  if (!/\bSELECT\b/i.test(trimmed)) return { valid: false, hint: "Query should start with SELECT" };
-  if (!/\bFROM\b/i.test(trimmed)) return { valid: false, hint: "Query needs a FROM clause" };
-  if (!/\w+\.\w+/i.test(trimmed)) return { valid: false, hint: "Use source.table syntax (e.g. github.issues)" };
-  return { valid: true };
-}
-
 function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryChange: (q: string) => void }) {
-  const validation = validateCoralQuery(query);
+  const { state } = useWizard();
+  const presets = getPresetsForPersona(state.persona);
+  const validation = validateCoralSql(query);
   const sources = extractCoralSources(query);
   const [previewing, setPreviewing] = useState(false);
   const [previewResult, setPreviewResult] = useState<{ rowCount: number; columns: number; sources: string[] } | null>(null);
@@ -113,7 +73,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
       <div className="flex items-center gap-2">
         <div className="flex flex-wrap gap-1.5 flex-1">
           <span className="text-[10px] text-[var(--text-muted)] self-center mr-1">Templates:</span>
-          {CORAL_PRESETS.map((preset) => (
+          {presets.map((preset) => (
             <button
               key={preset.label}
               type="button"
@@ -418,7 +378,7 @@ export function SchemaPicker() {
               <button
                 type="button"
                 onClick={() => state.selectedSchema && generatePodcast(state.selectedSchema)}
-                disabled={!state.selectedSchema || (isCoral && !validateCoralQuery(state.coralQuery).valid)}
+                disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
                 className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
               >
                 <span>🎙️ Podcast</span>
@@ -427,7 +387,7 @@ export function SchemaPicker() {
               <button
                 type="button"
                 onClick={() => state.selectedSchema && generateAnthem(state.selectedSchema)}
-                disabled={!state.selectedSchema || (isCoral && !validateCoralQuery(state.coralQuery).valid)}
+                disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
                 className={`flex flex-col items-center justify-center rounded-lg border-2 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"} px-3`}
                 style={{borderColor: "#a855f7", background: "linear-gradient(135deg, var(--surface), #a855f710)", color: "#a855f7"}}
               >

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
+import { validateCoralSql, extractCoralSources, parseCoralError, getPresetsForPersona } from "./coral-helpers";
 
 const DEFAULT_OM_SANDBOX_URL = process.env.NEXT_PUBLIC_OM_SANDBOX_URL || "https://sandbox.open-metadata.org";
 
@@ -463,119 +464,12 @@ interface CoralFormProps {
   onQueryChange: (q: string) => void;
 }
 
-const ENTERPRISE_PRESETS = [
-  {
-    label: "GitHub issues",
-    description: "Browse recent issues from a repo",
-    query: `SELECT number, title, state, created_at
-FROM github.issues
-WHERE owner = 'facebook' AND repo = 'react'
-ORDER BY created_at DESC
-LIMIT 10`,
-  },
-  {
-    label: "GitHub PRs + Issues",
-    description: "Cross-reference PRs with issues",
-    query: `SELECT p.number, p.title, p.state, p.merged_at
-FROM github.pulls p
-WHERE p.owner = 'facebook' AND p.repo = 'react'
-ORDER BY p.created_at DESC
-LIMIT 10`,
-  },
-  {
-    label: "Coral catalog",
-    description: "Explore all available tables",
-    query: `SELECT schema_name, table_name
-FROM coral.tables
-ORDER BY schema_name, table_name`,
-  },
-];
-
-const WEB3_PRESETS = [
-  {
-    label: "GitHub issues",
-    description: "Browse recent issues from a repo",
-    query: `SELECT number, title, state, created_at
-FROM github.issues
-WHERE owner = 'facebook' AND repo = 'react'
-ORDER BY created_at DESC
-LIMIT 10`,
-  },
-  {
-    label: "GitHub PRs",
-    description: "Review recent pull requests",
-    query: `SELECT number, title, state, merged_at
-FROM github.pulls
-WHERE owner = 'facebook' AND repo = 'react'
-ORDER BY created_at DESC
-LIMIT 10`,
-  },
-  {
-    label: "Coral catalog",
-    description: "Explore all available tables and sources",
-    query: `SELECT schema_name, table_name
-FROM coral.tables
-ORDER BY schema_name, table_name`,
-  },
-];
-
-
-function parseCoralError(error: string): { message: string; hint?: string; action?: string } {
-  if (/ENOENT|not found|command not found|coral: not found/i.test(error)) {
-    return {
-      message: "Coral CLI not found",
-      hint: "Install Coral to run cross-source queries locally.",
-      action: "brew install withcoral/tap/coral",
-    };
-  }
-  if (/ECONNREFUSED|ETIMEDOUT|fetch failed|Gateway error|network/i.test(error)) {
-    return {
-      message: "Coral gateway unreachable",
-      hint: "Check that CORAL_GATEWAY_URL is correct and the gateway is running.",
-    };
-  }
-  if (/timeout|timed out/i.test(error)) {
-    return {
-      message: "Query timed out",
-      hint: "Try a simpler query or increase CORAL_TIMEOUT_MS.",
-    };
-  }
-  if (/source.*not.*configured|unknown source/i.test(error)) {
-    const sourceMatch = error.match(/source[:\s]+['"]?(\w+)['"]?/i);
-    return {
-      message: `Source "${sourceMatch?.[1] ?? "unknown"}" not configured`,
-      hint: "Add the source to Coral before querying it.",
-      action: `coral source add ${sourceMatch?.[1] ?? "<source>"}`,
-    };
-  }
-  return { message: error };
-}
-
-function validateCoralSql(query: string): { valid: boolean; hint?: string } {
-  const trimmed = query.trim();
-  if (!trimmed) return { valid: false, hint: "Query is empty" };
-  if (!/\bSELECT\b/i.test(trimmed)) return { valid: false, hint: "Query should start with SELECT" };
-  if (!/\bFROM\b/i.test(trimmed)) return { valid: false, hint: "Query needs a FROM clause" };
-  if (!/\w+\.\w+/i.test(trimmed)) return { valid: false, hint: "Use source.table syntax (e.g. github.issues)" };
-  return { valid: true };
-}
-
-function extractSources(query: string): string[] {
-  const sources = new Set<string>();
-  const re = /(?:FROM|JOIN)\s+(\w+)\.\w+/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(query)) !== null) {
-    sources.add(m[1].toLowerCase());
-  }
-  return [...sources];
-}
-
 function CoralForm({ query, onQueryChange }: CoralFormProps) {
   const { state } = useWizard();
-  const presets = state.persona === "web3" ? WEB3_PRESETS : ENTERPRISE_PRESETS;
+  const presets = getPresetsForPersona(state.persona);
   const [previewOpen, setPreviewOpen] = useState(false);
   const validation = validateCoralSql(query);
-  const querySources = extractSources(query);
+  const querySources = extractCoralSources(query);
   const [previewing, setPreviewing] = useState(false);
   const [previewData, setPreviewData] = useState<{
     columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
