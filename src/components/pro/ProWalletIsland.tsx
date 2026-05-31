@@ -1,7 +1,12 @@
 "use client";
 
-import { WalletConnect } from "@/components/WalletConnect";
+import dynamic from "next/dynamic";
 import { WalletProviderBoundary } from "@/components/pro/WalletProviderBoundary";
+
+const WalletConnect = dynamic(
+  () => import("@/components/WalletConnect").then((m) => ({ default: m.WalletConnect })),
+  { ssr: false }
+);
 
 interface ProWalletIslandProps {
   walletAddress: string | null;

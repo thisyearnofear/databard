@@ -379,7 +379,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
     dune: "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
-    coral: "Don't see your source above? Coral connects 50+ APIs, databases, and local files via SQL — no pipelines, no waiting on us to build an adapter.",
+    coral: "Query 50+ sources via SQL — GitHub, Slack, Jira, Postgres, Notion, Stripe, and more. Join across sources in a single query.",
   };
   
   // Active context string
@@ -405,8 +405,13 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   const showConnect = useCallback(() => dispatch({ type: "SET_STEP", step: "connect" }), []);
   const connected = useCallback((schemas: string[]) => {
     dispatch({ type: "SET_SCHEMAS", schemas });
-    dispatch({ type: "SET_STEP", step: schemas.length > 0 ? "pick-schema" : "connect" });
-  }, []);
+    // Coral skips the schema picker — goes straight to question + generate
+    if (state.source === "coral") {
+      dispatch({ type: "SET_STEP", step: "pick-schema" });
+    } else {
+      dispatch({ type: "SET_STEP", step: schemas.length > 0 ? "pick-schema" : "connect" });
+    }
+  }, [state.source]);
   const startGenerating = useCallback(() => dispatch({ type: "SET_STEP", step: "generating" }), []);
   const backToSchema = useCallback(() => dispatch({ type: "SET_STEP", step: "pick-schema" }), []);
   const episodeReady = useCallback(() => dispatch({ type: "SET_STEP", step: "episode" }), []);

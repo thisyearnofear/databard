@@ -1,10 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import type { ScheduleConfig } from "@/lib/store";
 import type { DataSource } from "@/lib/types";
 import { ProWalletIsland } from "@/components/pro/ProWalletIsland";
-import { PalmUsdCheckout } from "@/components/PalmUsdCheckout";
+
+const PalmUsdCheckout = dynamic(
+  () => import("@/components/PalmUsdCheckout").then((m) => ({ default: m.PalmUsdCheckout })),
+  { ssr: false }
+);
 
 import { VoicePicker } from "@/components/VoicePicker";
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
@@ -381,50 +382,10 @@ export function ConnectStep() {
         
         {/* Coral */}
         {state.source === "coral" && (
-          <>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
-              <p className="flex items-center gap-2 text-[var(--text)] font-medium mb-1">
-                <span>🔌</span>
-                <span>Bring your own source</span>
-              </p>
-              <p className="leading-relaxed">
-                Coral connects 50+ sources (Salesforce, Jira, Postgres, Notion, Stripe, and more) via SQL.
-                You can also join multiple sources in a single query. Runs locally — your data never leaves your machine.
-              </p>
-              <p className="mt-2 leading-relaxed">
-                Requires <code className="bg-[var(--bg)] px-1 py-0.5 rounded text-[10px]">brew install withcoral/tap/coral</code> then <code className="bg-[var(--bg)] px-1 py-0.5 rounded text-[10px]">coral source add [your source]</code>
-              </p>
-            </div>
-            <label className="text-sm text-[var(--text-muted)]">Example queries</label>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "GitHub + Slack", query: "SELECT * FROM github.issues JOIN slack.messages ON issues.id = messages.id" },
-                { label: "Jira + Postgres", query: "SELECT * FROM jira.issues JOIN postgres.deployments ON issues.key = deployments.ticket_id" },
-                { label: "Custom SQL", query: "" },
-              ].map((preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => dispatch({ type: "SET_CORAL_QUERY", query: preset.query })}
-                  className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors ${
-                    state.coralQuery === preset.query && preset.query
-                      ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                      : "border-[var(--border)] hover:border-[var(--accent)]"
-                  }`}
-                >
-                  <span className="font-medium text-[var(--text)]">{preset.label}</span>
-                  {preset.query && <p className="text-[var(--text-muted)] mt-0.5 font-mono text-[10px] truncate">{preset.query}</p>}
-                </button>
-              ))}
-            </div>
-            <label className="text-sm text-[var(--text-muted)]">SQL Query</label>
-            <textarea
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm h-28 font-mono"
-              value={state.coralQuery}
-              onChange={(e) => dispatch({ type: "SET_CORAL_QUERY", query: e.target.value })}
-              placeholder="SELECT * FROM github.issues JOIN slack.messages..."
-            />
-          </>
+          <CoralForm
+            query={state.coralQuery}
+            onQueryChange={(q) => dispatch({ type: "SET_CORAL_QUERY", query: q })}
+          />
         )}
 
         {state.source !== "dbt-local" && (
@@ -461,5 +422,275 @@ export function ConnectStep() {
         </button>
       </div>
     </div>
+  );
+}
+
+// ─── CoralForm ───────────────────────────────────────────────────────────────
+
+interface CoralFormProps {
+  query: string;
+  onQueryChange: (q: string) => void;
+}
+
+const PRESET_QUERIES = [
+  {
+    label: "GitHub + Slack",
+    description: "Correlate issues with team discussions",
+    query: `SELECT g.title, g.state, s.text, s.ts
+FROM github.pull_requests g
+JOIN slack.messages s ON s.channel = '#incidents'
+WHERE g.merged_at >= NOW() - INTERVAL '7 days'
+ORDER BY g.merged_at DESC`,
+  },
+  {
+    label: "Jira + Postgres",
+    description: "Link tickets to deployment history",
+    query: `SELECT j.key, j.summary, j.status, p.version, p.deployed_at
+FROM jira.issues j
+JOIN postgres.deployments p ON j.key = p.ticket_id
+WHERE p.deployed_at >= NOW() - INTERVAL '30 days'`,
+  },
+  {
+    label: "Stripe + Notion",
+    description: "Match payments to customer notes",
+    query: `SELECT s.amount, s.currency, s.status, n.body as notes
+FROM stripe.charges s
+JOIN notion.pages n ON n.title LIKE '%' || s.customer_email || '%'`,
+  },
+];
+
+function CoralForm({ query, onQueryChange }: CoralFormProps) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewData, setPreviewData] = useState<{
+    columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
+    rows: Record<string, unknown>[];
+    rowCount: number;
+    sources: string[];
+    message?: string;
+  } | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  async function handlePreview() {
+    if (!query.trim()) return;
+    setPreviewing(true);
+    setPreviewError(null);
+    setPreviewData(null);
+    try {
+      const res = await fetch("/api/coral/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPreviewData(data);
+        setPreviewOpen(true);
+      } else {
+        setPreviewError(data.error || "Preview failed");
+      }
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : "Preview failed");
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
+  const detectedSources = previewData?.sources ?? [];
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-start gap-3 bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-xl px-4 py-3">
+        <span className="text-lg mt-0.5">🪸</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-[var(--text)]">Query Any Source</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
+            Coral connects 50+ sources via SQL — GitHub, Slack, Jira, Postgres, Notion, Stripe, and more.
+            Join across sources in a single query. Runs locally — your data never leaves your machine.
+          </p>
+        </div>
+      </div>
+
+      {/* Setup hint */}
+      <div className="text-xs text-[var(--text-muted)] bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
+        <span className="font-medium text-[var(--text)]">Setup: </span>
+        <code className="bg-[var(--surface)] px-1 py-0.5 rounded text-[10px]">brew install withcoral/tap/coral</code>
+        {" + "}
+        <code className="bg-[var(--surface)] px-1 py-0.5 rounded text-[10px]">coral source add [source]</code>
+        {" · "}
+        <a
+          href="https://withcoral.com/docs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--accent)] hover:underline"
+        >
+          Docs →
+        </a>
+      </div>
+
+      {/* Preset queries */}
+      <div>
+        <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">
+          Start from a template
+        </label>
+        <div className="flex flex-col gap-2">
+          {PRESET_QUERIES.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => {
+                onQueryChange(preset.query);
+                setPreviewData(null);
+                setPreviewOpen(false);
+              }}
+              className={`text-left border rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${
+                query === preset.query
+                  ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                  : "border-[var(--border)] hover:border-[var(--accent)]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-[var(--text)]">{preset.label}</span>
+                <span className="text-[10px] text-[var(--text-muted)]">{preset.description}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* SQL editor */}
+      <div>
+        <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">
+          SQL Query
+        </label>
+        <div className="relative">
+          <pre
+            className="absolute inset-0 w-full h-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono text-[var(--text)] whitespace-pre-wrap break-all leading-relaxed pointer-events-none"
+            aria-hidden="true"
+          >
+            {query || " "}
+          </pre>
+          <textarea
+            value={query}
+            onChange={(e) => {
+              onQueryChange(e.target.value);
+              setPreviewData(null);
+              setPreviewOpen(false);
+            }}
+            placeholder="SELECT * FROM github.issues JOIN slack.messages ON..."
+            spellCheck={false}
+            className="relative w-full bg-transparent border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono text-transparent caret-[var(--accent)] resize-y min-h-32 focus:border-[var(--accent)] focus:outline-none transition-colors"
+            style={{ WebkitTextFillColor: "transparent" }}
+          />
+        </div>
+      </div>
+
+      {/* Source badges + preview */}
+      {detectedSources.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Sources:</span>
+          {detectedSources.map((s) => (
+            <span
+              key={s}
+              className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handlePreview}
+          disabled={!query.trim() || previewing}
+          className="flex-1 bg-[var(--surface)] hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+        >
+          {previewing && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
+          {previewing ? "Previewing…" : "Preview Results"}
+        </button>
+      </div>
+
+      {/* Preview panel */}
+      {previewError && (
+        <div className="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3 text-xs text-red-400">
+          {previewError}
+        </div>
+      )}
+
+      {previewOpen && previewData && (
+        <div className="border border-[var(--border)] rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between bg-[var(--surface)] px-4 py-2 border-b border-[var(--border)]">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-[var(--text)]">Results</span>
+              <span className="text-[10px] text-[var(--text-muted)]">
+                {previewData.rowCount} row{previewData.rowCount !== 1 ? "s" : ""} · {previewData.columns.length} columns
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Column list */}
+          <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg)]">
+            {previewData.columns.map((col) => (
+              <span
+                key={col.name}
+                className="text-[11px] px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)]"
+              >
+                <span className="font-medium text-[var(--text)]">{col.name}</span>
+                <span className="text-[var(--text-muted)] ml-1">{col.dataType}</span>
+                {col.nullCount > 0 && (
+                  <span className="text-[var(--text-muted)] ml-1 opacity-60">({col.nullCount} null)</span>
+                )}
+              </span>
+            ))}
+          </div>
+
+          {/* Sample rows */}
+          <div className="overflow-x-auto max-h-48">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  {previewData.columns.map((col) => (
+                    <th key={col.name} className="text-left px-3 py-2 font-medium text-[var(--text-muted)] whitespace-nowrap">
+                      {col.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {previewData.rows.map((row, i) => (
+                  <tr key={i} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)]">
+                    {previewData.columns.map((col) => {
+                      const val = row[col.name];
+                      const display = val === null ? "null" : typeof val === "object" ? JSON.stringify(val) : String(val);
+                      return (
+                        <td key={col.name} className="px-3 py-2 text-[var(--text-muted)] max-w-48 truncate" title={display}>
+                          {display}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {previewData.message && (
+            <div className="px-4 py-2 text-xs text-[var(--text-muted)] italic bg-[var(--bg)]">
+              {previewData.message}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }

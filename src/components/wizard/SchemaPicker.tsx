@@ -41,26 +41,53 @@ export function SchemaPicker() {
     return a.localeCompare(b);
   });
   
+  const isCoral = state.source === "coral";
+
   return (
     <div className="w-full max-w-3xl flex flex-col gap-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Select a schema</h2>
-        <button onClick={() => dispatch({ type: "RESET" })} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</button>
+        <h2 className="text-xl font-semibold">{isCoral ? "Frame your question" : "Select a schema"}</h2>
+        <button onClick={() => dispatch(isCoral ? { type: "SET_STEP", step: "connect" } : { type: "RESET" })} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">← Back</button>
       </div>
       
       {/* Context bar */}
       <div className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
-        <span className="text-lg">🔌</span>
+        <span className="text-lg">{isCoral ? "🪸" : "🔌"}</span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{sourceLabel[state.source]} · {activeContext}</p>
-          <p className="text-xs text-[var(--text-muted)]">{filteredSchemas.length} schema{filteredSchemas.length !== 1 ? "s" : ""} available</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {isCoral
+              ? "Cross-source SQL · runs locally, no ETL"
+              : `${filteredSchemas.length} schema${filteredSchemas.length !== 1 ? "s" : ""} available`}
+          </p>
         </div>
       </div>
       
       {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {/* Schema list — left 3 cols */}
+        {/* Schema list / Coral query summary — left 3 cols */}
         <div className="md:col-span-3 flex flex-col gap-3" data-tour="schema-picker">
+          {isCoral ? (
+            <div className="border border-[var(--accent)] bg-[var(--accent)]/5 rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your Coral query</span>
+                <button
+                  type="button"
+                  onClick={() => dispatch({ type: "SET_STEP", step: "connect" })}
+                  className="text-[11px] text-[var(--accent)] hover:underline cursor-pointer"
+                >
+                  Edit
+                </button>
+              </div>
+              <pre className="text-[11px] font-mono leading-relaxed bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all max-h-48">
+                {state.coralQuery || "SELECT …"}
+              </pre>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                DataBard runs this query through Coral, then narrates the joined dataset. Use the
+                question on the right to focus what the hosts dig into.
+              </p>
+            </div>
+          ) : <>
           {state.schemas.length > 5 && (
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">🔍</span>
@@ -166,6 +193,7 @@ export function SchemaPicker() {
               >Next →</button>
             </div>
           )}
+          </>}
         </div>
         
         {/* Right panel — question + generate */}
@@ -216,8 +244,14 @@ export function SchemaPicker() {
               ? "border-[var(--accent)] bg-[var(--accent)]/5"
               : "border-[var(--border)] bg-[var(--surface)]"
           }`}>
-            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Selected dataset</p>
-            {state.selectedSchema ? (
+            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">
+              {isCoral ? "Ready to generate" : "Selected dataset"}
+            </p>
+            {isCoral ? (
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+                Query runs at generation time. Cross-source joins, auth, and pagination handled by Coral.
+              </p>
+            ) : state.selectedSchema ? (
               <div className="min-w-0">
                 <p className="text-base font-semibold truncate">{state.selectedSchema.split(".").slice(-1)[0]}</p>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5 break-all">{state.selectedSchema}</p>
@@ -225,7 +259,7 @@ export function SchemaPicker() {
             ) : (
               <p className="text-sm text-[var(--text-muted)] italic">← Pick a schema from the list</p>
             )}
-            {!state.selectedSchema && (
+            {!isCoral && !state.selectedSchema && (
               <p className="text-xs text-center text-[var(--text-muted)] italic">Select a schema to generate</p>
             )}
             <div className="grid grid-cols-2 gap-2">

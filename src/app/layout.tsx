@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AppProviders } from "@/components/AppProviders";
-import { SolanaProvider } from "@/components/SolanaProvider";
+import { ClientProviders } from "@/components/ClientProviders";
 import { ToastProvider } from "@/components/Toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
@@ -32,12 +32,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AppProviders>
-          <SolanaProvider>
+          <ClientProviders>
             <ToastProvider>
               <ThemeToggle />
               {children}
             </ToastProvider>
-          </SolanaProvider>
+          </ClientProviders>
         </AppProviders>
       </body>
     </html>

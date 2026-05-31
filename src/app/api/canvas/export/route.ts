@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     try {
       const page = await browser.newPage();
       await page.setViewport({ width: 1440, height: 900 });
-      await page.setContent(html, { waitUntil: "networkidle0" });
+      await page.setContent(html, { waitUntil: "load" });
 
       const pdf = await page.pdf({
         width: "1440px",

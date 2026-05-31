@@ -52,6 +52,8 @@ export function useGeneration() {
           namespace: state.duneNamespace || undefined,
           queryUrl: state.duneQueryUrl || undefined,
         };
+      } else if (state.source === "coral") {
+        body.coral = { query: state.coralQuery };
       }
       return body;
     },
