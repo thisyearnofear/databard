@@ -229,58 +229,130 @@ export function ConnectStep() {
         </div>
       )}
 
-      {/* Source picker — Coral is primary for hackathon */}
+      {/* Source picker — persona-aware primary source */}
       <div className="flex flex-col gap-3 mb-5">
-        {/* Coral — primary option */}
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
-          className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition-all ${
-            state.source === "coral"
-              ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
-              : "border-[var(--border)] hover:border-[var(--accent)]"
-          }`}
-        >
-          <span className="text-xl">🪸</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-[var(--text)]">Cross-source SQL</p>
-            <p className="text-[11px] text-[var(--text-muted)]">Join 50+ sources (GitHub, Slack, Jira, Notion, Stripe…) in a single query</p>
-          </div>
-          {state.source === "coral" && <span className="text-[var(--accent)] text-sm">✓</span>}
-        </button>
-
-        {/* Other sources — secondary */}
-        {state.source !== "coral" && (
+        {state.persona === "web3" ? (
           <>
-            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Or connect a specific source</p>
-            <div className="flex flex-wrap gap-1.5">
-              {MAIN_SOURCES.map((ds) => (
-                <button
-                  key={ds.value}
-                  type="button"
-                  onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
-                  className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
-                    state.source === ds.value
-                      ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
-                      : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
-                  }`}
-                >
-                  <span>{ds.emoji}</span>
-                  <span>{ds.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+            {/* Web3: Coral is primary */}
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
+              className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition-all ${
+                state.source === "coral"
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
+                  : "border-[var(--border)] hover:border-[var(--accent)]"
+              }`}
+            >
+              <span className="text-xl">🪸</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-[var(--text)]">Cross-source SQL</p>
+                <p className="text-[11px] text-[var(--text-muted)]">Join Dune, GitHub, Slack, and 50+ sources in one query</p>
+              </div>
+              {state.source === "coral" && <span className="text-[var(--accent)] text-sm">✓</span>}
+            </button>
 
-        {state.source === "coral" && (
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_SOURCE", source: state.persona === "web3" ? "dune" : "openmetadata" })}
-            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
-          >
-            ← Use a specific source instead
-          </button>
+            {state.source !== "coral" && (
+              <>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Or connect a specific source</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {MAIN_SOURCES.map((ds) => (
+                    <button
+                      key={ds.value}
+                      type="button"
+                      onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
+                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                        state.source === ds.value
+                          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
+                          : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
+                      }`}
+                    >
+                      <span>{ds.emoji}</span>
+                      <span>{ds.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {state.source === "coral" && (
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "SET_SOURCE", source: "dune" })}
+                className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
+              >
+                ← Use a specific source instead
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Enterprise: OpenMetadata sandbox is primary */}
+            <button
+              type="button"
+              onClick={() => {
+                dispatch({ type: "SET_SOURCE", source: "openmetadata" });
+                dispatch({ type: "SET_OM_MODE", omMode: "sandbox" });
+              }}
+              className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition-all ${
+                state.source === "openmetadata"
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
+                  : "border-[var(--border)] hover:border-[var(--accent)]"
+              }`}
+            >
+              <span className="text-xl">🔍</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-[var(--text)]">OpenMetadata</p>
+                <p className="text-[11px] text-[var(--text-muted)]">Deep metadata — lineage, PII, quality tests, ownership. Sandbox available.</p>
+              </div>
+              {state.source === "openmetadata" && <span className="text-[var(--accent)] text-sm">✓</span>}
+            </button>
+
+            {state.source !== "openmetadata" && (
+              <>
+                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Or try another source</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {MAIN_SOURCES.filter((ds) => ds.value !== "openmetadata").map((ds) => (
+                    <button
+                      key={ds.value}
+                      type="button"
+                      onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
+                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                        state.source === ds.value
+                          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
+                          : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
+                      }`}
+                    >
+                      <span>{ds.emoji}</span>
+                      <span>{ds.label}</span>
+                    </button>
+                  ))}
+                  {/* Coral as cross-source option */}
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
+                    className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                      state.source === "coral"
+                        ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
+                        : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
+                    }`}
+                  >
+                    <span>🪸</span>
+                    <span>Coral (cross-source SQL)</span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {state.source === "openmetadata" && (
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "SET_SOURCE", source: "dbt-cloud" })}
+                className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
+              >
+                ← Use dbt, Dune, or Coral instead
+              </button>
+            )}
+          </>
         )}
       </div>
       

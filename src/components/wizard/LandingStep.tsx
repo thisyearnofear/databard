@@ -97,7 +97,7 @@ export function LandingStep() {
         
         <p className="text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
           {state.persona === "enterprise" 
-            ? "Two AI hosts debate your schema health — join OpenMetadata, dbt, GitHub, and Slack in one query. Flag failing tests, trace lineage, call out PII gaps."
+            ? "Two AI hosts debate your schema health — flag failing tests, trace lineage, call out PII gaps."
             : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
         
@@ -116,7 +116,7 @@ export function LandingStep() {
             onClick={showConnect}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
           >
-            {state.persona === "enterprise" ? "Query your data" : "Query your data"}
+            {state.persona === "enterprise" ? "Connect your data" : "Query your data"}
           </button>
         </div>
         
@@ -168,11 +168,11 @@ export function LandingStep() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-2xl mb-2">🪸</div>
-            <h3 className="text-sm font-semibold mb-1">Query</h3>
+            <div className="text-2xl mb-2">{state.persona === "enterprise" ? "🔌" : "🪸"}</div>
+            <h3 className="text-sm font-semibold mb-1">{state.persona === "enterprise" ? "Connect" : "Query"}</h3>
             <p className="text-xs text-[var(--text-muted)]">
               {state.persona === "enterprise" 
-                ? "Write SQL to join OpenMetadata, dbt, GitHub, Slack, and 50+ sources"
+                ? "Link your OpenMetadata, dbt, or use Coral for cross-source SQL"
                 : "Join Dune, subgraphs, GitHub, Slack, and 50+ sources in one SQL query"}
             </p>
           </div>

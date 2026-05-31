@@ -117,7 +117,7 @@ const DEFAULT_OM_SANDBOX_URL = process.env.NEXT_PUBLIC_OM_SANDBOX_URL || "https:
 const initialState: WizardState = {
   step: "landing",
   persona: "web3",
-  source: "coral",
+  source: "openmetadata",
   omMode: "sandbox",
   omUrl: "http://localhost:8585",
   token: "",
@@ -271,12 +271,13 @@ interface WizardProviderProps {
 export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }: WizardProviderProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   
-  // Auto-switch source when persona changes (but never override coral)
+  // Auto-switch source when persona changes
+  // web3 → Coral (cross-source SQL is the hero)
+  // enterprise → OpenMetadata (deep metadata is the hero)
   useEffect(() => {
-    if (state.source === "coral") return;
-    if (state.persona === "web3" && (state.source === "openmetadata" || state.source === "dbt-cloud" || state.source === "dbt-local")) {
-      dispatch({ type: "SET_SOURCE", source: "dune" });
-    } else if (state.persona === "enterprise" && (state.source === "the-graph" || state.source === "dune")) {
+    if (state.persona === "web3" && state.source === "openmetadata") {
+      dispatch({ type: "SET_SOURCE", source: "coral" });
+    } else if (state.persona === "enterprise" && state.source === "coral") {
       dispatch({ type: "SET_SOURCE", source: "openmetadata" });
     }
   }, [state.persona, state.source]);
