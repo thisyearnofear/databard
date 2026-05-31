@@ -8,7 +8,11 @@ function WizardContent() {
   
   // Show landing step when on landing page
   if (state.step === "landing") {
-    return <LandingStep />;
+    return (
+      <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
+        <LandingStep />
+      </main>
+    );
   }
   
   // Show step indicator for all wizard steps
