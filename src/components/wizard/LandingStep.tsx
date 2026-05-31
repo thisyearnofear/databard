@@ -97,7 +97,7 @@ export function LandingStep() {
         
         <p className="text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
           {state.persona === "enterprise" 
-            ? "Two AI hosts debate your schema health — flag failing tests, trace lineage, call out PII gaps."
+            ? "Two AI hosts debate your schema health — join OpenMetadata, dbt, GitHub, and Slack in one query. Flag failing tests, trace lineage, call out PII gaps."
             : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
         
@@ -116,7 +116,7 @@ export function LandingStep() {
             onClick={showConnect}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
           >
-            {state.persona === "enterprise" ? "Connect your data" : "Query your data"}
+            {state.persona === "enterprise" ? "Query your data" : "Query your data"}
           </button>
         </div>
         
@@ -168,12 +168,12 @@ export function LandingStep() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-2xl mb-2">🔌</div>
-            <h3 className="text-sm font-semibold mb-1">Connect</h3>
+            <div className="text-2xl mb-2">🪸</div>
+            <h3 className="text-sm font-semibold mb-1">Query</h3>
             <p className="text-xs text-[var(--text-muted)]">
               {state.persona === "enterprise" 
-                ? "Link your OpenMetadata, dbt, or other data source"
-                : "Paste your Dune API key or subgraph URL"}
+                ? "Write SQL to join OpenMetadata, dbt, GitHub, Slack, and 50+ sources"
+                : "Join Dune, subgraphs, GitHub, Slack, and 50+ sources in one SQL query"}
             </p>
           </div>
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
@@ -225,7 +225,7 @@ export function LandingStep() {
               <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-              Coral is an open-source tool that lets you query 50+ data sources (GitHub, Slack, Jira, Postgres, Stripe, etc.) with standard SQL. DataBard uses it as an escape hatch — if your source isn&apos;t natively supported, write a Coral query and we&apos;ll narrate the results.
+              Coral is an open-source SQL engine that queries 50+ data sources — GitHub, Slack, Jira, Postgres, Stripe, and more. DataBard uses it as the primary data layer: write a SQL query, and we&apos;ll analyze the results and generate a podcast episode. You can also connect specific sources directly (OpenMetadata, dbt, Dune) for deeper metadata extraction.
             </p>
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">

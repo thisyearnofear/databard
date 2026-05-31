@@ -16,18 +16,28 @@ function WizardContent() {
   }
   
   // Show step indicator for all wizard steps
+  // Coral skips "pick-schema" — the query IS the schema
+  const isCoral = state.source === "coral";
+  const steps = isCoral
+    ? [
+        { key: "connect", label: "Query & ask", icon: "🪸" },
+        { key: "generating", label: "Generate", icon: "⚡" },
+        { key: "episode", label: "Listen", icon: "🎧" },
+      ]
+    : [
+        { key: "connect", label: "Connect", icon: "🔌" },
+        { key: "pick-schema", label: "Pick dataset", icon: "📋" },
+        { key: "generating", label: "Generate", icon: "⚡" },
+        { key: "episode", label: "Listen", icon: "🎧" },
+      ];
+
   return (
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-6">
       {/* Step indicator */}
       <nav className="w-full max-w-lg mx-auto mb-2" aria-label="Progress">
         <ol className="flex items-center justify-between">
-          {[
-            { key: "connect", label: "Connect", icon: "🔌" },
-            { key: "pick-schema", label: state.source === "coral" ? "Query & ask" : "Pick dataset", icon: state.source === "coral" ? "🪸" : "📋" },
-            { key: "generating", label: "Generate", icon: "⚡" },
-            { key: "episode", label: "Listen", icon: "🎧" },
-          ].map((step, i) => {
-            const stepOrder = ["connect", "pick-schema", "generating", "episode"];
+          {steps.map((step, i) => {
+            const stepOrder = steps.map((s) => s.key);
             const currentIdx = stepOrder.indexOf(state.step);
             const stepIdx = stepOrder.indexOf(step.key);
             const isComplete = stepIdx < currentIdx;
@@ -53,9 +63,9 @@ function WizardContent() {
         </ol>
       </nav>
       
-      {/* Step content */}
+      {/* Step content — pick-schema is skipped for Coral */}
       {state.step === "connect" && <ConnectStep />}
-      {state.step === "pick-schema" && <SchemaPicker />}
+      {!isCoral && state.step === "pick-schema" && <SchemaPicker />}
       {state.step === "generating" && <GenerationStep />}
       {state.step === "episode" && <EpisodeStep />}
     </main>
