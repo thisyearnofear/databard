@@ -19,7 +19,7 @@ export const ENTERPRISE_PRESETS: CoralPreset[] = [
   {
     label: "GitHub issues",
     description: "Recent issues from a popular repo",
-    query: `SELECT number, title, state, created_at, user->>'login' as author, labels
+    query: `SELECT number, title, state, created_at, user__login as author
 FROM github.issues
 WHERE owner = 'facebook' AND repo = 'react'
 ORDER BY created_at DESC
@@ -28,7 +28,7 @@ LIMIT 15`,
   {
     label: "GitHub PRs",
     description: "Recent pull requests with authors",
-    query: `SELECT number, title, state, created_at, user->>'login' as author, merged_at
+    query: `SELECT number, title, state, created_at, user__login as author, merged_at
 FROM github.pulls
 WHERE owner = 'facebook' AND repo = 'react'
 ORDER BY created_at DESC
@@ -37,7 +37,7 @@ LIMIT 15`,
   {
     label: "Slack channels",
     description: "Workspace channels and activity",
-    query: `SELECT name, purpose, num_members, created
+    query: `SELECT name, purpose, num_members
 FROM slack.channels
 ORDER BY num_members DESC
 LIMIT 15`,
@@ -55,7 +55,7 @@ export const WEB3_PRESETS: CoralPreset[] = [
   {
     label: "GitHub issues",
     description: "Recent issues from a popular repo",
-    query: `SELECT number, title, state, created_at, user->>'login' as author, labels
+    query: `SELECT number, title, state, created_at, user__login as author
 FROM github.issues
 WHERE owner = 'facebook' AND repo = 'react'
 ORDER BY created_at DESC
@@ -64,7 +64,7 @@ LIMIT 15`,
   {
     label: "GitHub PRs",
     description: "Recent pull requests with authors",
-    query: `SELECT number, title, state, created_at, user->>'login' as author, merged_at
+    query: `SELECT number, title, state, created_at, user__login as author, merged_at
 FROM github.pulls
 WHERE owner = 'facebook' AND repo = 'react'
 ORDER BY created_at DESC
@@ -73,7 +73,7 @@ LIMIT 15`,
   {
     label: "Slack channels",
     description: "Workspace channels and activity",
-    query: `SELECT name, purpose, num_members, created
+    query: `SELECT name, purpose, num_members
 FROM slack.channels
 ORDER BY num_members DESC
 LIMIT 15`,
