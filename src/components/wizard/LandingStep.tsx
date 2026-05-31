@@ -98,7 +98,7 @@ export function LandingStep() {
         <p className="text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
           {state.persona === "enterprise" 
             ? "Two AI hosts debate your schema health — flag failing tests, trace lineage, call out PII gaps."
-            : "Turn Dune queries and subgraphs into shareable episodes. Mint on Solana."}
+            : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
         
         {/* Primary CTA */}
@@ -116,7 +116,7 @@ export function LandingStep() {
             onClick={showConnect}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
           >
-            {state.persona === "enterprise" ? "Connect your data" : "Connect Dune, subgraph, or Coral"}
+            {state.persona === "enterprise" ? "Connect your data" : "Query your data"}
           </button>
         </div>
         
