@@ -4,12 +4,13 @@
  * This avoids the overhead of Docker while keeping Coral isolated.
  */
 import { createServer } from "http";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { promisify } from "util";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const PORT = process.env.PORT || 3001;
 const TOKEN = process.env.CORAL_GATEWAY_TOKEN;
+const CORAL_BIN = process.env.CORAL_BIN || "coral";
 
 const server = createServer(async (req, res) => {
   // Simple auth check
@@ -26,9 +27,12 @@ const server = createServer(async (req, res) => {
         const { query } = JSON.parse(body);
         if (!query) throw new Error("Query required");
 
-        // Execute via local CLI
-        const { stdout } = await execAsync(`coral sql --format json "${query.replace(/"/g, '\\"')}"`);
-        
+        // Execute via local CLI — execFile, no shell interpolation
+        const { stdout } = await execFileAsync(CORAL_BIN, ["sql", "--format", "json", query], {
+          timeout: 60_000,
+          maxBuffer: 10 * 1024 * 1024,
+        });
+
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ results: JSON.parse(stdout) }));
       } catch (err) {

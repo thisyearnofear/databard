@@ -465,57 +465,57 @@ interface CoralFormProps {
 
 const ENTERPRISE_PRESETS = [
   {
-    label: "GitHub + Slack",
-    description: "Correlate issues with team discussions",
-    query: `SELECT g.title, g.state, s.text, s.ts
-FROM github.pull_requests g
-JOIN slack.messages s ON s.channel = '#incidents'
-WHERE g.merged_at >= NOW() - INTERVAL '7 days'
-ORDER BY g.merged_at DESC`,
+    label: "GitHub issues",
+    description: "Browse recent issues from a repo",
+    query: `SELECT number, title, state, created_at
+FROM github.issues
+WHERE owner = 'facebook' AND repo = 'react'
+ORDER BY created_at DESC
+LIMIT 10`,
   },
   {
-    label: "Jira + Postgres",
-    description: "Link tickets to deployment history",
-    query: `SELECT j.key, j.summary, j.status, p.version, p.deployed_at
-FROM jira.issues j
-JOIN postgres.deployments p ON j.key = p.ticket_id
-WHERE p.deployed_at >= NOW() - INTERVAL '30 days'`,
+    label: "GitHub PRs + Issues",
+    description: "Cross-reference PRs with issues",
+    query: `SELECT p.number, p.title, p.state, p.merged_at
+FROM github.pulls p
+WHERE p.owner = 'facebook' AND p.repo = 'react'
+ORDER BY p.created_at DESC
+LIMIT 10`,
   },
   {
-    label: "Stripe + Notion",
-    description: "Match payments to customer notes",
-    query: `SELECT s.amount, s.currency, s.status, n.body as notes
-FROM stripe.charges s
-JOIN notion.pages n ON n.title LIKE '%' || s.customer_email || '%'`,
+    label: "Coral catalog",
+    description: "Explore all available tables",
+    query: `SELECT schema_name, table_name
+FROM coral.tables
+ORDER BY schema_name, table_name`,
   },
 ];
 
 const WEB3_PRESETS = [
   {
-    label: "Dune + GitHub",
-    description: "Correlate on-chain activity with repo commits",
-    query: `SELECT d.block_time, d.tx_hash, g.message, g.author
-FROM dune.transactions d
-JOIN github.commits g ON g.committed_at::date = d.block_time::date
-WHERE d.block_time >= NOW() - INTERVAL '7 days'
-ORDER BY d.block_time DESC`,
+    label: "GitHub issues",
+    description: "Browse recent issues from a repo",
+    query: `SELECT number, title, state, created_at
+FROM github.issues
+WHERE owner = 'thisyearnofear' AND repo = 'databard'
+ORDER BY created_at DESC
+LIMIT 10`,
   },
   {
-    label: "TheGraph + Slack",
-    description: "Match protocol events with team alerts",
-    query: `SELECT t.event, t.amount, t.timestamp, s.text
-FROM thegraph.swap_events t
-JOIN slack.messages s ON s.channel = '#protocol-alerts'
-WHERE t.timestamp >= NOW() - INTERVAL '7 days'`,
+    label: "GitHub PRs",
+    description: "Review recent pull requests",
+    query: `SELECT number, title, state, merged_at
+FROM github.pulls
+WHERE owner = 'thisyearnofear' AND repo = 'databard'
+ORDER BY created_at DESC
+LIMIT 10`,
   },
   {
-    label: "GitHub + Slack",
-    description: "Correlate PRs with incident discussions",
-    query: `SELECT g.title, g.state, s.text, s.ts
-FROM github.pull_requests g
-JOIN slack.messages s ON s.channel = '#incidents'
-WHERE g.merged_at >= NOW() - INTERVAL '7 days'
-ORDER BY g.merged_at DESC`,
+    label: "Coral catalog",
+    description: "Explore all available tables",
+    query: `SELECT schema_name, table_name
+FROM coral.tables
+ORDER BY schema_name, table_name`,
   },
 ];
 

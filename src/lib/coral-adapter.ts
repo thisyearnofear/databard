@@ -5,7 +5,7 @@ import { extractSources } from "./coral-graduation";
 
 const execFileAsync = promisify(execFile);
 const CORAL_BIN = process.env.CORAL_BIN || "coral";
-const CORAL_TIMEOUT_MS = Number(process.env.CORAL_TIMEOUT_MS) || 30_000;
+const CORAL_TIMEOUT_MS = Number(process.env.CORAL_TIMEOUT_MS) || 60_000;
 const CORAL_MAX_BUFFER = Number(process.env.CORAL_MAX_BUFFER) || 10 * 1024 * 1024; // 10 MB
 
 /**
