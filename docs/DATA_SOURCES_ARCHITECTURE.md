@@ -64,9 +64,11 @@ User selects "Coral" source
 
 ## When to Promote Coral → First-Class
 
+Graduation tracking is live (`src/lib/coral-graduation.ts`). The `/api/coral/preview` route fires `trackCoralUsage()` on every query, accumulating anonymous source counts in `data/coral-sources.json`. Sources crossing the threshold (10 requests) are flagged for Tier 1 promotion.
+
 A source should get a dedicated adapter when:
 
-1. **Usage signal**: Multiple users connect the same source via Coral repeatedly
+1. **Usage signal**: Source crosses the graduation threshold in `coral-sources.json`
 2. **Metadata depth**: The source has rich metadata (lineage, quality, ownership) that Coral's SQL can't surface
 3. **Reliability requirement**: Enterprise users need guaranteed uptime without Coral as a dependency
 

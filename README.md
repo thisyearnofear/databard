@@ -218,7 +218,7 @@ Landing page → Connect Phantom/Solflare wallet
 - [x] Gated episode access — wallet ownership check before replay
 - [x] Palm USD payments — non-freezable stablecoin checkout for Pro subscriptions
 - [x] Coral Integration — "Bring Your Own Source" escape hatch via SQL (long-tail connectors + cross-source joins)
-- [ ] Coral graduation pipeline — track usage, promote popular sources to Tier 1
+- [x] Coral graduation pipeline — track usage, promote popular sources to Tier 1
 - [ ] Historical diff intros ("since last week, 2 new failures")
 - [ ] Custom Anchor program for richer on-chain PDA queries
 - [ ] Custom voice personalities

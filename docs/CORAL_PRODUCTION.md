@@ -93,6 +93,16 @@ Coral automatically reads environment variables for source credentials. In produ
 - `SLACK_TOKEN=...`
 - `STRIPE_API_KEY=...`
 
-## 5. Security Note
+## 5. Custom Binary Path
+
+The adapter uses `execFile` (no shell interpolation) and respects the `CORAL_BIN` environment variable to override the default `coral` binary path:
+
+```env
+CORAL_BIN=/usr/local/bin/coral
+```
+
+This is useful when Coral is installed in a non-standard location or when running multiple versions side by side.
+
+## 6. Security Note
 
 When using the **Gateway Pattern**, ensure your query endpoint is protected by an API key (e.g., `X-Coral-Auth`) so only your DataBard instance can execute queries against your Coral runtime.
