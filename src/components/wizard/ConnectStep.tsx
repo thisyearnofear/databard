@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
@@ -150,101 +150,157 @@ export function ConnectStep() {
     }
   }
   
+  // Auto-detect source from pasted input
+  function handleSmartPaste(value: string) {
+    const trimmed = value.trim();
+    if (/thegraph\.com\/subgraphs|api\.studio\.thegraph/i.test(trimmed)) {
+      dispatch({ type: "SET_SOURCE", source: "the-graph" });
+      dispatch({ type: "SET_GRAPH_URL", url: trimmed });
+    } else if (/dune\.com\/queries\/\d+/i.test(trimmed)) {
+      dispatch({ type: "SET_SOURCE", source: "dune" });
+      dispatch({ type: "SET_DUNE_QUERY_URL", url: trimmed });
+    } else if (/^https?:\/\/.*openmetadata/i.test(trimmed)) {
+      dispatch({ type: "SET_SOURCE", source: "openmetadata" });
+      dispatch({ type: "SET_OM_MODE", omMode: "custom" });
+      dispatch({ type: "SET_OM_URL", url: trimmed });
+    }
+  }
+
+  const MAIN_SOURCES: { value: DataSource; label: string; emoji: string; hint: string }[] = state.persona === "web3"
+    ? [
+        { value: "dune", label: "Dune", emoji: "🏜️", hint: "API key" },
+        { value: "the-graph", label: "The Graph", emoji: "🔗", hint: "Subgraph URL" },
+        { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },
+      ]
+    : [
+        { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },
+        { value: "dbt-cloud", label: "dbt Cloud", emoji: "☁️", hint: "Account + token" },
+        { value: "dbt-local", label: "dbt Local", emoji: "💻", hint: "Upload manifest" },
+      ];
+
+  const showTestButton = state.connectionTested === "error" || state.status?.startsWith("✗") || state.status?.startsWith("Error");
+
   return (
     <div className="w-full max-w-md">
-      <h2 className="text-xl font-semibold mb-1">Connect your data</h2>
-      <p className="text-sm text-[var(--text-muted)] mb-6">{sourceHelp[state.source]}</p>
-      
-      {/* Source picker */}
-      <div className="grid grid-cols-2 gap-2 mb-6">
-        {DATA_SOURCES.map((ds) => (
+      <h2 className="text-xl font-semibold mb-1">
+        {state.source === "coral" ? "Query your data" : "Connect your data"}
+      </h2>
+      <p className="text-sm text-[var(--text-muted)] mb-5">
+        {state.source === "coral"
+          ? "Write SQL to join any sources — DataBard will narrate the results."
+          : "Paste a URL or API key and you're generating in 30 seconds."}
+      </p>
+
+      {/* Smart paste bar — auto-detects source */}
+      {state.source !== "coral" && (
+        <div className="mb-5">
+          <input
+            className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors"
+            placeholder={state.persona === "web3"
+              ? "Paste a Dune query URL, Subgraph endpoint, or API key…"
+              : "Paste an OpenMetadata URL, dbt token, or subgraph endpoint…"}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text");
+              setTimeout(() => handleSmartPaste(pasted), 0);
+            }}
+            onChange={(e) => handleSmartPaste(e.target.value)}
+          />
+          <p className="text-[10px] text-[var(--text-muted)] mt-1.5 opacity-70">
+            We&apos;ll auto-detect the source — or pick one below
+          </p>
+        </div>
+      )}
+
+      {/* Tiered source picker */}
+      {state.source !== "coral" && (
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {MAIN_SOURCES.map((ds) => (
+            <button
+              key={ds.value}
+              type="button"
+              onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
+              className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                state.source === ds.value
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
+                  : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
+              }`}
+            >
+              <span>{ds.emoji}</span>
+              <span>{ds.label}</span>
+            </button>
+          ))}
+          {/* Coral as escape hatch */}
           <button
-            key={ds.value}
             type="button"
-            onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
-            className={`text-left border rounded-lg px-3 py-2.5 cursor-pointer transition-all ${
-              state.source === ds.value
-                ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                : "border-[var(--border)] hover:border-[var(--accent)]"
-            }`}
+            onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
+            className="inline-flex items-center gap-1.5 border border-dashed border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{ds.emoji}</span>
-              <div>
-                <p className="text-sm font-medium">{ds.label}</p>
-              </div>
-            </div>
+            <span>🪸</span>
+            <span>Any source (SQL)</span>
           </button>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Coral back button — when in Coral mode, show way to go back to main sources */}
+      {state.source === "coral" && (
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "SET_SOURCE", source: state.persona === "web3" ? "dune" : "openmetadata" })}
+          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer mb-4 flex items-center gap-1"
+        >
+          ← Back to preset sources
+        </button>
+      )}
       
       {/* Source-specific form */}
       <div className="flex flex-col gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
         {/* OpenMetadata */}
         {state.source === "openmetadata" && (
           <>
-            <label className="text-sm text-[var(--text-muted)]">OpenMetadata Mode</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => dispatch({ type: "SET_OM_MODE", omMode: "sandbox" })}
-                className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer ${
-                  state.omMode === "sandbox" ? "border-[var(--accent)] bg-[var(--bg)]" : "border-[var(--border)]"
+                className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors ${
+                  state.omMode === "sandbox" ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] hover:border-[var(--accent)]"
                 }`}
               >
-                <p className="font-medium text-[var(--text)]">Use Sandbox</p>
-                <p className="text-[var(--text-muted)]">Fastest way to try DataBard with sample metadata.</p>
+                <p className="font-medium text-[var(--text)]">Sandbox</p>
+                <p className="text-[var(--text-muted)]">Try with sample data</p>
               </button>
               <button
                 type="button"
                 onClick={() => dispatch({ type: "SET_OM_MODE", omMode: "custom" })}
-                className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer ${
-                  state.omMode === "custom" ? "border-[var(--accent)] bg-[var(--bg)]" : "border-[var(--border)]"
+                className={`text-left border rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors ${
+                  state.omMode === "custom" ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] hover:border-[var(--accent)]"
                 }`}
               >
-                <p className="font-medium text-[var(--text)]">Connect Your Instance</p>
-                <p className="text-[var(--text-muted)]">Use your own OpenMetadata URL and bot token.</p>
+                <p className="font-medium text-[var(--text)]">Your instance</p>
+                <p className="text-[var(--text-muted)]">URL + bot token</p>
               </button>
             </div>
-
-            {state.omMode === "sandbox" ? (
+            {state.omMode === "custom" && (
               <>
-                <label className="text-sm text-[var(--text-muted)]">Sandbox Endpoint</label>
-                <input
-                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm text-[var(--text-muted)]"
-                  value={DEFAULT_OM_SANDBOX_URL}
-                  readOnly
-                />
-                <label className="text-sm text-[var(--text-muted)]">Sandbox Token (optional)</label>
-                <input
-                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm"
-                  type="password"
-                  autoComplete="off"
-                  value={state.token}
-                  onChange={(e) => dispatch({ type: "SET_TOKEN", token: e.target.value })}
-                  placeholder="Paste your OpenMetadata PAT/JWT if sandbox is not preconfigured"
-                />
-                <p className="text-xs text-[var(--text-muted)] -mt-2">Leave blank if admin configured shared sandbox credentials.</p>
-              </>
-            ) : (
-              <>
-                <label className="text-sm text-[var(--text-muted)]">OpenMetadata URL</label>
                 <input 
-                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
                   value={state.omUrl} 
                   onChange={(e) => dispatch({ type: "SET_OM_URL", url: e.target.value })} 
                   placeholder="http://localhost:8585" 
                 />
-                <label className="text-sm text-[var(--text-muted)]">Auth Token</label>
                 <input 
-                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+                  className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
                   type="password" 
                   autoComplete="off" 
                   value={state.token} 
                   onChange={(e) => dispatch({ type: "SET_TOKEN", token: e.target.value })} 
-                  placeholder="JWT from Settings → Bots" 
+                  placeholder="Auth token (JWT from Settings → Bots)" 
                 />
               </>
+            )}
+            {state.omMode === "sandbox" && (
+              <p className="text-xs text-[var(--text-muted)]">
+                Connects to sample metadata — no credentials needed.
+              </p>
             )}
           </>
         )}
@@ -252,28 +308,25 @@ export function ConnectStep() {
         {/* dbt Cloud */}
         {state.source === "dbt-cloud" && (
           <>
-            <label className="text-sm text-[var(--text-muted)]">Account ID</label>
             <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
               value={state.dbtAccountId} 
               onChange={(e) => dispatch({ type: "SET_DBT_ACCOUNT_ID", id: e.target.value })} 
-              placeholder="From URL: cloud.getdbt.com/deploy/{id}" 
+              placeholder="Account ID (from cloud.getdbt.com/deploy/{id})" 
             />
-            <label className="text-sm text-[var(--text-muted)]">Project ID</label>
             <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
               value={state.dbtProjectId} 
               onChange={(e) => dispatch({ type: "SET_DBT_PROJECT_ID", id: e.target.value })} 
-              placeholder="From URL: …/projects/{id}" 
+              placeholder="Project ID (from …/projects/{id})" 
             />
-            <label className="text-sm text-[var(--text-muted)]">API Token</label>
             <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
               type="password" 
               autoComplete="off" 
               value={state.dbtToken} 
               onChange={(e) => dispatch({ type: "SET_DBT_TOKEN", token: e.target.value })} 
-              placeholder="Account Settings → API Access" 
+              placeholder="API token (Account Settings → API Access)" 
             />
           </>
         )}
@@ -281,102 +334,68 @@ export function ConnectStep() {
         {/* dbt Local */}
         {state.source === "dbt-local" && (
           <>
-            <label className="text-sm text-[var(--text-muted)]">Upload manifest.json</label>
-            <div className="relative">
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={(e) => dispatch({ type: "SET_MANIFEST_FILE", file: e.target.files?.[0] ?? null })}
-                className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm w-full file:mr-3 file:rounded file:border-0 file:bg-[var(--accent)] file:text-white file:px-3 file:py-1 file:text-xs file:cursor-pointer"
-              />
-              {state.manifestFile && (
-                <p className="text-xs text-[var(--success)] mt-1">✓ {state.manifestFile.name} ({(state.manifestFile.size / 1024).toFixed(0)} KB)</p>
-              )}
-            </div>
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={(e) => dispatch({ type: "SET_MANIFEST_FILE", file: e.target.files?.[0] ?? null })}
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm w-full file:mr-3 file:rounded file:border-0 file:bg-[var(--accent)] file:text-white file:px-3 file:py-1 file:text-xs file:cursor-pointer"
+            />
+            {state.manifestFile && (
+              <p className="text-xs text-[var(--success)]">✓ {state.manifestFile.name} ({(state.manifestFile.size / 1024).toFixed(0)} KB)</p>
+            )}
+            {!state.manifestFile && (
+              <p className="text-xs text-[var(--text-muted)]">Upload your target/manifest.json from a dbt build</p>
+            )}
           </>
         )}
         
         {/* The Graph */}
         {state.source === "the-graph" && (
           <>
-            <label className="text-sm text-[var(--text-muted)]">Subgraph Endpoint URL</label>
             <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
               value={state.graphUrl} 
               onChange={(e) => dispatch({ type: "SET_GRAPH_URL", url: e.target.value })} 
-              placeholder="https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3" 
+              placeholder="Subgraph URL (e.g. api.thegraph.com/subgraphs/name/…)" 
             />
-            <label className="text-sm text-[var(--text-muted)]">API Key (optional)</label>
             <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
               type="password" 
               autoComplete="off" 
               value={state.graphApiKey} 
               onChange={(e) => dispatch({ type: "SET_GRAPH_API_KEY", key: e.target.value })} 
-              placeholder="For The Graph Network endpoints" 
+              placeholder="API key (optional, for Network endpoints)" 
             />
           </>
         )}
         
-        {/* Dune */}
+        {/* Dune — simplified */}
         {state.source === "dune" && (
           <>
-            {state.persona === "web3" && (
-              <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-lg px-4 py-3 text-xs text-[var(--text-muted)]">
-                <p className="flex items-center gap-2 text-[var(--text)] font-medium mb-1">
-                  <span>💡</span>
-                  <span>Getting started with Dune</span>
-                </p>
-                <p className="leading-relaxed">
-                  Create a free API key at <a href="https://dune.com/settings/api" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">dune.com/settings/api</a>. 
-                  DataBard will analyze queries in your namespace and narrate the results.
-                </p>
-              </div>
-            )}
-            <label className="text-sm text-[var(--text-muted)]">Dune API Key</label>
             <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm focus:border-[var(--accent)] focus:outline-none" 
               type="password" 
               autoComplete="off" 
               value={state.duneApiKey} 
               onChange={(e) => dispatch({ type: "SET_DUNE_API_KEY", key: e.target.value })} 
-              placeholder="Paste your Dune API key" 
+              placeholder="Dune API key (from dune.com/settings/api)" 
             />
-            
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--text-muted)]">Analyze specific queries</label>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Recommended</span>
-            </div>
             <input 
-              className={`bg-[var(--bg)] border rounded-lg px-4 py-2 text-sm transition-colors ${
+              className={`bg-[var(--bg)] border rounded-lg px-4 py-2 text-sm focus:outline-none transition-colors ${
                 state.duneQueryUrl && !state.duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/))
                   ? "border-yellow-500/50 focus:border-yellow-500" 
                   : "border-[var(--border)] focus:border-[var(--accent)]"
               }`} 
               value={state.duneQueryUrl} 
               onChange={(e) => dispatch({ type: "SET_DUNE_QUERY_URL", url: e.target.value })} 
-              placeholder="dune.com/queries/123, 456..." 
+              placeholder="Query URL or ID (e.g. dune.com/queries/123)" 
             />
-            {state.duneQueryUrl && !state.duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/)) && (
-              <p className="text-[10px] text-yellow-500 flex items-center gap-1">
-                <span>⚠️</span>
-                <span>Please provide valid Query URLs or IDs (comma-separated).</span>
-              </p>
-            )}
-            {!state.duneQueryUrl && (
-              <p className="text-[10px] text-[var(--text-muted)] opacity-60">Paste multiple query URLs (comma-separated) for a batch report</p>
-            )}
-
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-[var(--text-muted)]">Dune Username</label>
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Browse all</span>
-            </div>
-            <input 
-              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm" 
-              value={state.duneNamespace} 
-              onChange={(e) => dispatch({ type: "SET_DUNE_NAMESPACE", ns: e.target.value })} 
-              placeholder="e.g. uniswap (defaults to your own)" 
-            />
+            <p className="text-[10px] text-[var(--text-muted)] -mt-1">
+              {state.duneQueryUrl
+                ? (state.duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/))
+                    ? "✓ Valid query ID" : "⚠️ Paste a valid Dune query URL or ID")
+                : "Paste one or more query URLs — or leave blank to browse your namespace"}
+            </p>
           </>
         )}
         
@@ -388,13 +407,8 @@ export function ConnectStep() {
           />
         )}
 
-        {state.source !== "dbt-local" && (
-          <p className="text-xs text-[var(--text-muted)] -mt-2 flex items-center gap-1 opacity-70">
-            <span>🔒</span> Credentials are sent over HTTPS and never stored on disk
-          </p>
-        )}
-
-        <div className="flex flex-col gap-2 mt-2">
+        {/* Actions */}
+        <div className="flex flex-col gap-2 mt-1">
           <button 
             onClick={handleConnect} 
             disabled={state.connecting || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
@@ -403,17 +417,22 @@ export function ConnectStep() {
             {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
             {state.connecting ? "Connecting…" : "Connect & Continue →"}
           </button>
-          <button 
-            onClick={handleTestConnection} 
-            disabled={state.connectionTested === "testing" || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
-            className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-          >
-            {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
-            {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
-            {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
-            Test Connection
-          </button>
+
+          {/* Test Connection — only visible after an error */}
+          {showTestButton && (
+            <button 
+              onClick={handleTestConnection} 
+              disabled={state.connectionTested === "testing" || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
+              className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+            >
+              {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
+              {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
+              {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
+              Test Connection
+            </button>
+          )}
         </div>
+
         {state.status && (
           <p className={`text-xs text-center py-1.5 px-3 rounded-lg transition-colors ${
             state.status.startsWith("✓") || state.status.startsWith("Connected")
@@ -425,9 +444,10 @@ export function ConnectStep() {
             {state.status}
           </p>
         )}
+
         <button 
           onClick={() => dispatch({ type: "SET_STEP", step: "landing" })} 
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer text-center mt-2"
+          className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer text-center mt-1"
         >
           ← Back
         </button>
@@ -499,28 +519,6 @@ ORDER BY g.merged_at DESC`,
   },
 ];
 
-const CORAL_SOURCE_SETUP: Record<string, { cmd: string; auth: string }> = {
-  github: { cmd: "coral source add github --token ghp_your_token", auth: "Personal Access Token" },
-  slack: { cmd: "coral source add slack --token xoxb-your-token", auth: "Bot OAuth Token" },
-  jira: { cmd: "coral source add jira --url https://you.atlassian.net --email you@co.com --token your_api_token", auth: "API Token + Email" },
-  postgres: { cmd: "coral source add postgres --connection-string postgresql://user:pass@host:5432/db", auth: "Connection String" },
-  notion: { cmd: "coral source add notion --token ntn_your_integration_token", auth: "Integration Token" },
-  stripe: { cmd: "coral source add stripe --api-key sk_live_xxx", auth: "Secret API Key" },
-  dune: { cmd: "coral source add dune --api-key your_dune_key", auth: "Dune API Key" },
-  thegraph: { cmd: "coral source add thegraph --api-key your_graph_key", auth: "API Key (optional)" },
-  mysql: { cmd: "coral source add mysql --connection-string mysql://user:pass@host:3306/db", auth: "Connection String" },
-  mongodb: { cmd: "coral source add mongodb --connection-string mongodb+srv://user:pass@cluster/db", auth: "Connection String" },
-  bigquery: { cmd: "coral source add bigquery --project your-project --credentials /path/to/key.json", auth: "Service Account JSON" },
-  snowflake: { cmd: "coral source add snowflake --account xx.snowflakecomputing.com --user you --password xxx", auth: "Account + Credentials" },
-  linear: { cmd: "coral source add linear --api-key lin_api_xxx", auth: "Personal API Key" },
-  hubspot: { cmd: "coral source add hubspot --access-token pat-xxx", auth: "Private App Token" },
-};
-
-interface GraduationSource {
-  source: string;
-  requestCount: number;
-  flagged: boolean;
-}
 
 function parseCoralError(error: string): { message: string; hint?: string; action?: string } {
   if (/ENOENT|not found|command not found|coral: not found/i.test(error)) {
@@ -579,14 +577,6 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
   const validation = validateCoralSql(query);
   const querySources = extractSources(query);
   const [previewing, setPreviewing] = useState(false);
-  const [graduationSources, setGraduationSources] = useState<GraduationSource[]>([]);
-
-  useEffect(() => {
-    fetch("/api/coral/sources")
-      .then((r) => r.json())
-      .then((d) => { if (d.ok && Array.isArray(d.sources)) setGraduationSources(d.sources); })
-      .catch(() => {});
-  }, []);
   const [previewData, setPreviewData] = useState<{
     columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
     rows: Record<string, unknown>[];
@@ -637,109 +627,6 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         </div>
       </div>
 
-      {/* Dynamic source setup guide */}
-      <details className="group bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden">
-        <summary className="px-4 py-2.5 text-xs cursor-pointer flex items-center justify-between list-none">
-          <span className="flex items-center gap-2">
-            <span className="font-medium text-[var(--text)]">
-              {querySources.length > 0 ? `Setup guide for ${querySources.join(", ")}` : "Setup guide"}
-            </span>
-            {querySources.length > 0 && (
-              <span className="text-[10px] text-[var(--text-muted)]">({querySources.length} source{querySources.length !== 1 ? "s" : ""})</span>
-            )}
-          </span>
-          <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform">+</span>
-        </summary>
-        <div className="px-4 pb-3 pt-1 flex flex-col gap-2.5 border-t border-[var(--border)]">
-          {/* Install Coral */}
-          <div className="flex items-start gap-2">
-            <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">1.</span>
-            <div className="min-w-0">
-              <p className="text-xs text-[var(--text)]">Install Coral CLI</p>
-              <code className="block mt-1 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
-                brew install withcoral/tap/coral
-              </code>
-            </div>
-          </div>
-
-          {/* Source-specific setup */}
-          {querySources.length > 0 ? (
-            <div className="flex items-start gap-2">
-              <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">2.</span>
-              <div className="min-w-0 flex flex-col gap-2 w-full">
-                <p className="text-xs text-[var(--text)]">Configure each source</p>
-                {querySources.map((src) => {
-                  const info = CORAL_SOURCE_SETUP[src] ?? { cmd: `coral source add ${src}`, auth: "See Coral docs for setup" };
-                  return (
-                    <div key={src} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-medium text-[var(--text)]">{src}</span>
-                        <span className="text-[10px] text-[var(--text-muted)]">{info.auth}</span>
-                      </div>
-                      <code className="block bg-[var(--bg)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all break-all">
-                        {info.cmd}
-                      </code>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-2">
-              <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">2.</span>
-              <div className="min-w-0">
-                <p className="text-xs text-[var(--text)]">Add sources used in your query</p>
-                <code className="block mt-1 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
-                  coral source add github --token ghp_xxx
-                </code>
-              </div>
-            </div>
-          )}
-
-          {/* Verify */}
-          <div className="flex items-start gap-2">
-            <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">3.</span>
-            <div className="min-w-0">
-              <p className="text-xs text-[var(--text)]">Verify sources are connected</p>
-              <code className="block mt-1 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
-                coral source list
-              </code>
-            </div>
-          </div>
-
-          <a
-            href="https://withcoral.com/docs/sources"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] text-[var(--accent)] hover:underline self-start mt-0.5"
-          >
-            Full source setup docs →
-          </a>
-        </div>
-      </details>
-
-      {/* Graduation badges */}
-      {graduationSources.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mr-0.5">Popular sources:</span>
-          {graduationSources.slice(0, 5).map((s) => (
-            <span
-              key={s.source}
-              className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                s.flagged
-                  ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/20"
-                  : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border)]"
-              }`}
-              title={`${s.requestCount} queries${s.flagged ? " — first-class adapter coming soon" : ""}`}
-            >
-              {s.source}
-              <span className="ml-1 opacity-60">{s.requestCount}×</span>
-              {s.flagged && <span className="ml-0.5">🎓</span>}
-            </span>
-          ))}
-        </div>
-      )}
-
       {/* Preset queries */}
       <div>
         <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">
@@ -786,7 +673,7 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         </div>
         <div className="relative">
           <pre
-            className="absolute inset-0 w-full h-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono whitespace-pre-wrap break-all leading-relaxed pointer-events-none"
+            className="absolute inset-0 w-full h-full overflow-hidden bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono whitespace-pre-wrap break-all leading-relaxed pointer-events-none"
             aria-hidden="true"
           >
             {(query || " ").split(/(\b(?:SELECT|FROM|JOIN|WHERE|ON|AND|OR|ORDER\s+BY|GROUP\s+BY|HAVING|LIMIT|AS|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|INTERVAL|DESC|ASC|IN|NOT|NULL|LIKE|BETWEEN|EXISTS|DISTINCT|CASE|WHEN|THEN|ELSE|END|NOW)\b)/gi).map((part, i) =>
