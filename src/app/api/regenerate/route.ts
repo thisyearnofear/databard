@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       dbtLocal: body.dbtLocal,
       theGraph: body.theGraph,
       dune: body.dune,
+      coral: body.coral,
     };
 
     // Full pipeline: fetch → analyze → diff → script → synthesize

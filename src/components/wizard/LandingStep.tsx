@@ -196,6 +196,90 @@ export function LandingStep() {
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <section className="w-full max-w-2xl pb-12">
+        <h2 className="text-lg font-semibold text-center mb-5">FAQ</h2>
+        <div className="flex flex-col gap-3">
+          <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
+              <span>Is my data stored anywhere?</span>
+              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+            </summary>
+            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+              No. Credentials are sent over HTTPS and never persisted on disk. Coral queries run locally on your machine — data never leaves it. Generated audio is ephemeral unless you explicitly save or mint it.
+            </p>
+          </details>
+          <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
+              <span>How long does it take?</span>
+              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+            </summary>
+            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+              About 30–90 seconds from Connect to listening. The AI analyzes your schema, writes a script, and synthesizes audio in real time. You can watch each step complete.
+            </p>
+          </details>
+          <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
+              <span>What is Coral?</span>
+              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+            </summary>
+            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+              Coral is an open-source tool that lets you query 50+ data sources (GitHub, Slack, Jira, Postgres, Stripe, etc.) with standard SQL. DataBard uses it as an escape hatch — if your source isn&apos;t natively supported, write a Coral query and we&apos;ll narrate the results.
+            </p>
+          </details>
+          <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
+              <span>{state.persona === "enterprise" ? "Does it cost anything?" : "Do I need SOL to use this?"}</span>
+              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+            </summary>
+            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+              {state.persona === "enterprise"
+                ? "DataBard is free to try. Generation uses your own API keys (ElevenLabs for audio). No hidden fees."
+                : "Listening is free. Minting a report on-chain costs a small SOL transaction fee (~0.01 SOL). No wallet needed just to generate and listen."}
+            </p>
+          </details>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="w-full max-w-2xl border-t border-[var(--border)] pt-6 pb-8 mt-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-muted)]">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-[var(--text)]">DataBard</span>
+            <span>·</span>
+            <span>© {new Date().getFullYear()}</span>
+          </div>
+          <nav className="flex items-center gap-4">
+            <a
+              href="https://github.com/thisyearnofear/databard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--text)] transition-colors"
+            >
+              GitHub
+            </a>
+            {state.persona === "web3" && (
+              <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">
+                Leaderboard
+              </Link>
+            )}
+            {state.persona === "web3" && (
+              <Link href="/onchain" className="hover:text-[var(--text)] transition-colors">
+                On-chain
+              </Link>
+            )}
+            <a
+              href="https://withcoral.com/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[var(--text)] transition-colors"
+            >
+              Coral Docs
+            </a>
+          </nav>
+        </div>
+      </footer>
     </>
   );
 }

@@ -499,6 +499,23 @@ ORDER BY g.merged_at DESC`,
   },
 ];
 
+const CORAL_SOURCE_SETUP: Record<string, { cmd: string; auth: string }> = {
+  github: { cmd: "coral source add github --token ghp_your_token", auth: "Personal Access Token" },
+  slack: { cmd: "coral source add slack --token xoxb-your-token", auth: "Bot OAuth Token" },
+  jira: { cmd: "coral source add jira --url https://you.atlassian.net --email you@co.com --token your_api_token", auth: "API Token + Email" },
+  postgres: { cmd: "coral source add postgres --connection-string postgresql://user:pass@host:5432/db", auth: "Connection String" },
+  notion: { cmd: "coral source add notion --token ntn_your_integration_token", auth: "Integration Token" },
+  stripe: { cmd: "coral source add stripe --api-key sk_live_xxx", auth: "Secret API Key" },
+  dune: { cmd: "coral source add dune --api-key your_dune_key", auth: "Dune API Key" },
+  thegraph: { cmd: "coral source add thegraph --api-key your_graph_key", auth: "API Key (optional)" },
+  mysql: { cmd: "coral source add mysql --connection-string mysql://user:pass@host:3306/db", auth: "Connection String" },
+  mongodb: { cmd: "coral source add mongodb --connection-string mongodb+srv://user:pass@cluster/db", auth: "Connection String" },
+  bigquery: { cmd: "coral source add bigquery --project your-project --credentials /path/to/key.json", auth: "Service Account JSON" },
+  snowflake: { cmd: "coral source add snowflake --account xx.snowflakecomputing.com --user you --password xxx", auth: "Account + Credentials" },
+  linear: { cmd: "coral source add linear --api-key lin_api_xxx", auth: "Personal API Key" },
+  hubspot: { cmd: "coral source add hubspot --access-token pat-xxx", auth: "Private App Token" },
+};
+
 interface GraduationSource {
   source: string;
   requestCount: number;
@@ -620,22 +637,86 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         </div>
       </div>
 
-      {/* Setup hint */}
-      <div className="text-xs text-[var(--text-muted)] bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2">
-        <span className="font-medium text-[var(--text)]">Setup: </span>
-        <code className="bg-[var(--surface)] px-1 py-0.5 rounded text-[10px]">brew install withcoral/tap/coral</code>
-        {" + "}
-        <code className="bg-[var(--surface)] px-1 py-0.5 rounded text-[10px]">coral source add [source]</code>
-        {" · "}
-        <a
-          href="https://withcoral.com/docs"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[var(--accent)] hover:underline"
-        >
-          Docs →
-        </a>
-      </div>
+      {/* Dynamic source setup guide */}
+      <details className="group bg-[var(--bg)] border border-[var(--border)] rounded-xl overflow-hidden">
+        <summary className="px-4 py-2.5 text-xs cursor-pointer flex items-center justify-between list-none">
+          <span className="flex items-center gap-2">
+            <span className="font-medium text-[var(--text)]">
+              {querySources.length > 0 ? `Setup guide for ${querySources.join(", ")}` : "Setup guide"}
+            </span>
+            {querySources.length > 0 && (
+              <span className="text-[10px] text-[var(--text-muted)]">({querySources.length} source{querySources.length !== 1 ? "s" : ""})</span>
+            )}
+          </span>
+          <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform">+</span>
+        </summary>
+        <div className="px-4 pb-3 pt-1 flex flex-col gap-2.5 border-t border-[var(--border)]">
+          {/* Install Coral */}
+          <div className="flex items-start gap-2">
+            <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">1.</span>
+            <div className="min-w-0">
+              <p className="text-xs text-[var(--text)]">Install Coral CLI</p>
+              <code className="block mt-1 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
+                brew install withcoral/tap/coral
+              </code>
+            </div>
+          </div>
+
+          {/* Source-specific setup */}
+          {querySources.length > 0 ? (
+            <div className="flex items-start gap-2">
+              <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">2.</span>
+              <div className="min-w-0 flex flex-col gap-2 w-full">
+                <p className="text-xs text-[var(--text)]">Configure each source</p>
+                {querySources.map((src) => {
+                  const info = CORAL_SOURCE_SETUP[src] ?? { cmd: `coral source add ${src}`, auth: "See Coral docs for setup" };
+                  return (
+                    <div key={src} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-medium text-[var(--text)]">{src}</span>
+                        <span className="text-[10px] text-[var(--text-muted)]">{info.auth}</span>
+                      </div>
+                      <code className="block bg-[var(--bg)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all break-all">
+                        {info.cmd}
+                      </code>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">2.</span>
+              <div className="min-w-0">
+                <p className="text-xs text-[var(--text)]">Add sources used in your query</p>
+                <code className="block mt-1 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
+                  coral source add github --token ghp_xxx
+                </code>
+              </div>
+            </div>
+          )}
+
+          {/* Verify */}
+          <div className="flex items-start gap-2">
+            <span className="text-[10px] text-[var(--text-muted)] mt-0.5 shrink-0">3.</span>
+            <div className="min-w-0">
+              <p className="text-xs text-[var(--text)]">Verify sources are connected</p>
+              <code className="block mt-1 bg-[var(--surface)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
+                coral source list
+              </code>
+            </div>
+          </div>
+
+          <a
+            href="https://withcoral.com/docs/sources"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-[var(--accent)] hover:underline self-start mt-0.5"
+          >
+            Full source setup docs →
+          </a>
+        </div>
+      </details>
 
       {/* Graduation badges */}
       {graduationSources.length > 0 && (

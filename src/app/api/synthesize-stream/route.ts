@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
             dbtLocal: body.dbtLocal,
             theGraph: body.theGraph,
             dune: body.dune,
+            coral: body.coral,
           };
 
           // Fetch metadata and generate script

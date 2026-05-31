@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       dbtLocal: body.dbtLocal,
       theGraph: body.theGraph,
       dune: body.dune,
+      coral: body.coral,
     };
 
     const meta = await fetchSchemaMeta(config, schemaFqn);
