@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useWizard } from "./wizard-context";
+import { useGeneration } from "./useGeneration";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
 import { validateCoralSql, extractCoralSources, parseCoralError, getPresetsForPersona } from "./coral-helpers";
@@ -18,12 +19,28 @@ const DATA_SOURCES: { value: DataSource; label: string; emoji: string }[] = [
 ];
 
 export function ConnectStep() {
-  const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp } = useWizard();
+  const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp, questionPresets } = useWizard();
+  const { generatePodcast } = useGeneration();
   const { toast } = useToast();
-  
+
   function showError(message: string) {
     toast(message, "error");
     dispatch({ type: "SET_STATUS", status: `Error: ${message}` });
+  }
+
+  async function handleCoralGenerate() {
+    if (!validateCoralSql(state.coralQuery).valid) return;
+    dispatch({ type: "SET_CONNECTING", connecting: true });
+    dispatch({ type: "SET_STATUS", status: "Generating episode…" });
+    // Pre-fill a question if empty
+    if (!state.researchQuestion) {
+      dispatch({ type: "SET_RESEARCH_QUESTION", question: questionPresets[0] ?? "What patterns should the hosts investigate?" });
+    }
+    dispatch({ type: "SET_SELECTED_SCHEMA", schema: "coral" });
+    // Small delay so state settles before generation reads it
+    await new Promise((r) => setTimeout(r, 50));
+    await generatePodcast("coral");
+    dispatch({ type: "SET_CONNECTING", connecting: false });
   }
   
   async function buildConnectBody(): Promise<Record<string, unknown> | null> {
@@ -212,46 +229,60 @@ export function ConnectStep() {
         </div>
       )}
 
-      {/* Tiered source picker */}
-      {state.source !== "coral" && (
-        <div className="flex flex-wrap gap-1.5 mb-5">
-          {MAIN_SOURCES.map((ds) => (
-            <button
-              key={ds.value}
-              type="button"
-              onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
-              className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
-                state.source === ds.value
-                  ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
-                  : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
-              }`}
-            >
-              <span>{ds.emoji}</span>
-              <span>{ds.label}</span>
-            </button>
-          ))}
-          {/* Coral as escape hatch */}
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
-            className="inline-flex items-center gap-1.5 border border-dashed border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all"
-          >
-            <span>🪸</span>
-            <span>Any source (SQL)</span>
-          </button>
-        </div>
-      )}
-
-      {/* Coral back button — when in Coral mode, show way to go back to main sources */}
-      {state.source === "coral" && (
+      {/* Source picker — Coral is primary for hackathon */}
+      <div className="flex flex-col gap-3 mb-5">
+        {/* Coral — primary option */}
         <button
           type="button"
-          onClick={() => dispatch({ type: "SET_SOURCE", source: state.persona === "web3" ? "dune" : "openmetadata" })}
-          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer mb-4 flex items-center gap-1"
+          onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
+          className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition-all ${
+            state.source === "coral"
+              ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
+              : "border-[var(--border)] hover:border-[var(--accent)]"
+          }`}
         >
-          ← Back to preset sources
+          <span className="text-xl">🪸</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-[var(--text)]">Cross-source SQL</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Join 50+ sources (GitHub, Slack, Jira, Notion, Stripe…) in a single query</p>
+          </div>
+          {state.source === "coral" && <span className="text-[var(--accent)] text-sm">✓</span>}
         </button>
-      )}
+
+        {/* Other sources — secondary */}
+        {state.source !== "coral" && (
+          <>
+            <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Or connect a specific source</p>
+            <div className="flex flex-wrap gap-1.5">
+              {MAIN_SOURCES.map((ds) => (
+                <button
+                  key={ds.value}
+                  type="button"
+                  onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
+                  className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                    state.source === ds.value
+                      ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
+                      : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
+                  }`}
+                >
+                  <span>{ds.emoji}</span>
+                  <span>{ds.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {state.source === "coral" && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SET_SOURCE", source: state.persona === "web3" ? "dune" : "openmetadata" })}
+            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
+          >
+            ← Use a specific source instead
+          </button>
+        )}
+      </div>
       
       {/* Source-specific form */}
       <div className="flex flex-col gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
@@ -402,35 +433,77 @@ export function ConnectStep() {
         
         {/* Coral */}
         {state.source === "coral" && (
-          <CoralForm
-            query={state.coralQuery}
-            onQueryChange={(q) => dispatch({ type: "SET_CORAL_QUERY", query: q })}
-          />
+          <>
+            <CoralForm
+              query={state.coralQuery}
+              onQueryChange={(q) => dispatch({ type: "SET_CORAL_QUERY", query: q })}
+            />
+
+            {/* Question input — moved here from SchemaPicker so Coral skips that step */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your question</label>
+              <textarea
+                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm min-h-16 resize-y focus:border-[var(--accent)] focus:outline-none transition-colors"
+                value={state.researchQuestion}
+                onChange={(e) => dispatch({ type: "SET_RESEARCH_QUESTION", question: e.target.value })}
+                placeholder="What patterns should the hosts investigate in this data?"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {questionPresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => dispatch({ type: "SET_RESEARCH_QUESTION", question: preset })}
+                    className={`text-[10px] px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+                      state.researchQuestion === preset
+                        ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
+                        : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         {/* Actions */}
         <div className="flex flex-col gap-2 mt-1">
-          <button 
-            onClick={handleConnect} 
-            disabled={state.connecting || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
-            className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
-          >
-            {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            {state.connecting ? "Connecting…" : "Connect & Continue →"}
-          </button>
-
-          {/* Test Connection — only visible after an error */}
-          {showTestButton && (
-            <button 
-              onClick={handleTestConnection} 
-              disabled={state.connectionTested === "testing" || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
-              className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+          {state.source === "coral" ? (
+            <button
+              onClick={handleCoralGenerate}
+              disabled={state.connecting || !validateCoralSql(state.coralQuery).valid}
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
             >
-              {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
-              {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
-              {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
-              Test Connection
+              {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {state.connecting ? "Generating…" : "Generate Episode 🎙️"}
             </button>
+          ) : (
+            <>
+              <button
+                onClick={handleConnect}
+                disabled={state.connecting}
+                className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
+              >
+                {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {state.connecting ? "Connecting…" : "Connect & Continue →"}
+              </button>
+
+              {/* Test Connection — only visible after an error */}
+              {showTestButton && (
+                <button
+                  onClick={handleTestConnection}
+                  disabled={state.connectionTested === "testing"}
+                  className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                >
+                  {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
+                  {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
+                  {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
+                  Test Connection
+                </button>
+              )}
+            </>
           )}
         </div>
 

@@ -35,8 +35,16 @@ ORDER BY created_at DESC
 LIMIT 10`,
   },
   {
-    label: "Coral catalog",
-    description: "Explore all available tables and sources",
+    label: "Slack channels",
+    description: "List workspace channels + members",
+    query: `SELECT name, purpose, num_members
+FROM slack.channels
+ORDER BY num_members DESC
+LIMIT 10`,
+  },
+  {
+    label: "All sources",
+    description: "See everything Coral can query",
     query: `SELECT schema_name, table_name
 FROM coral.tables
 ORDER BY schema_name, table_name`,
@@ -63,8 +71,16 @@ ORDER BY created_at DESC
 LIMIT 10`,
   },
   {
-    label: "Coral catalog",
-    description: "Explore all available tables and sources",
+    label: "Slack channels",
+    description: "List workspace channels + members",
+    query: `SELECT name, purpose, num_members
+FROM slack.channels
+ORDER BY num_members DESC
+LIMIT 10`,
+  },
+  {
+    label: "All sources",
+    description: "See everything Coral can query",
     query: `SELECT schema_name, table_name
 FROM coral.tables
 ORDER BY schema_name, table_name`,
