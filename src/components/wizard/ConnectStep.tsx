@@ -621,11 +621,8 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text)]">Query Any Source</p>
           <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
-            Coral connects 50+ sources via SQL — GitHub, Slack, Jira, Notion, Stripe, and more.
-            Pick a template below to see it in action, then edit for your own repos.
-          </p>
-          <p className="text-[10px] text-[var(--accent)] mt-1.5">
-            Want your own data? Run <code className="bg-[var(--bg)] px-1 py-0.5 rounded">coral source add &lt;source&gt;</code> on your machine.
+            Coral joins data across 50+ sources via SQL — GitHub, Slack, Jira, Notion, Stripe, and more.
+            Pick a template to see real data, then edit the query for your needs.
           </p>
         </div>
       </div>
