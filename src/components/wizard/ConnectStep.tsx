@@ -497,7 +497,7 @@ const WEB3_PRESETS = [
     description: "Browse recent issues from a repo",
     query: `SELECT number, title, state, created_at
 FROM github.issues
-WHERE owner = 'thisyearnofear' AND repo = 'databard'
+WHERE owner = 'facebook' AND repo = 'react'
 ORDER BY created_at DESC
 LIMIT 10`,
   },
@@ -506,13 +506,13 @@ LIMIT 10`,
     description: "Review recent pull requests",
     query: `SELECT number, title, state, merged_at
 FROM github.pulls
-WHERE owner = 'thisyearnofear' AND repo = 'databard'
+WHERE owner = 'facebook' AND repo = 'react'
 ORDER BY created_at DESC
 LIMIT 10`,
   },
   {
     label: "Coral catalog",
-    description: "Explore all available tables",
+    description: "Explore all available tables and sources",
     query: `SELECT schema_name, table_name
 FROM coral.tables
 ORDER BY schema_name, table_name`,
@@ -621,8 +621,11 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text)]">Query Any Source</p>
           <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
-            Coral connects 50+ sources via SQL — GitHub, Slack, Jira, Postgres, Notion, Stripe, and more.
-            Join across sources in a single query. Runs locally — your data never leaves your machine.
+            Coral connects 50+ sources via SQL — GitHub, Slack, Jira, Notion, Stripe, and more.
+            Pick a template below to see it in action, then edit for your own repos.
+          </p>
+          <p className="text-[10px] text-[var(--accent)] mt-1.5">
+            Want your own data? Run <code className="bg-[var(--bg)] px-1 py-0.5 rounded">coral source add &lt;source&gt;</code> on your machine.
           </p>
         </div>
       </div>
@@ -630,7 +633,7 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
       {/* Preset queries */}
       <div>
         <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">
-          Start from a template
+          Try a template
         </label>
         <div className="flex flex-col gap-2">
           {presets.map((preset) => (
@@ -641,6 +644,23 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
                 onQueryChange(preset.query);
                 setPreviewData(null);
                 setPreviewOpen(false);
+                // Auto-preview after setting query
+                setTimeout(() => {
+                  setPreviewing(true);
+                  setPreviewError(null);
+                  fetch("/api/coral/preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query: preset.query }),
+                  })
+                    .then((r) => r.json())
+                    .then((data) => {
+                      if (data.ok) { setPreviewData(data); setPreviewOpen(true); }
+                      else { setPreviewError(data.error || "Preview failed"); }
+                    })
+                    .catch((e) => setPreviewError(e instanceof Error ? e.message : "Preview failed"))
+                    .finally(() => setPreviewing(false));
+                }, 100);
               }}
               className={`text-left border rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${
                 query === preset.query
@@ -787,51 +807,63 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
             </button>
           </div>
 
-          {/* Column list */}
-          <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg)]">
-            {previewData.columns.map((col) => (
-              <span
-                key={col.name}
-                className="text-[11px] px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)]"
-              >
-                <span className="font-medium text-[var(--text)]">{col.name}</span>
-                <span className="text-[var(--text-muted)] ml-1">{col.dataType}</span>
-                {col.nullCount > 0 && (
-                  <span className="text-[var(--text-muted)] ml-1 opacity-60">({col.nullCount} null)</span>
-                )}
-              </span>
-            ))}
-          </div>
-
-          {/* Sample rows */}
-          <div className="overflow-x-auto max-h-48">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  {previewData.columns.map((col) => (
-                    <th key={col.name} className="text-left px-3 py-2 font-medium text-[var(--text-muted)] whitespace-nowrap">
-                      {col.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {previewData.rows.map((row, i) => (
-                  <tr key={i} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)]">
-                    {previewData.columns.map((col) => {
-                      const val = row[col.name];
-                      const display = val === null ? "null" : typeof val === "object" ? JSON.stringify(val) : String(val);
-                      return (
-                        <td key={col.name} className="px-3 py-2 text-[var(--text-muted)] max-w-48 truncate" title={display}>
-                          {display}
-                        </td>
-                      );
-                    })}
-                  </tr>
+          {previewData.rowCount === 0 && previewData.columns.length === 0 ? (
+            <div className="px-4 py-6 text-center">
+              <p className="text-sm text-[var(--text-muted)] mb-2">No results for this query</p>
+              <p className="text-[10px] text-[var(--text-muted)] opacity-70">
+                Try changing the <code className="bg-[var(--bg)] px-1 rounded">owner</code> and <code className="bg-[var(--bg)] px-1 rounded">repo</code> to your own,
+                or pick a different template above.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Column list */}
+              <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-[var(--border)] bg-[var(--bg)]">
+                {previewData.columns.map((col) => (
+                  <span
+                    key={col.name}
+                    className="text-[11px] px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)]"
+                  >
+                    <span className="font-medium text-[var(--text)]">{col.name}</span>
+                    <span className="text-[var(--text-muted)] ml-1">{col.dataType}</span>
+                    {col.nullCount > 0 && (
+                      <span className="text-[var(--text-muted)] ml-1 opacity-60">({col.nullCount} null)</span>
+                    )}
+                  </span>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              {/* Sample rows */}
+              <div className="overflow-x-auto max-h-48">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      {previewData.columns.map((col) => (
+                        <th key={col.name} className="text-left px-3 py-2 font-medium text-[var(--text-muted)] whitespace-nowrap">
+                          {col.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewData.rows.map((row, i) => (
+                      <tr key={i} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)]">
+                        {previewData.columns.map((col) => {
+                          const val = row[col.name];
+                          const display = val === null ? "null" : typeof val === "object" ? JSON.stringify(val) : String(val);
+                          return (
+                            <td key={col.name} className="px-3 py-2 text-[var(--text-muted)] max-w-48 truncate" title={display}>
+                              {display}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           {previewData.message && (
             <div className="px-4 py-2 text-xs text-[var(--text-muted)] italic bg-[var(--bg)]">
