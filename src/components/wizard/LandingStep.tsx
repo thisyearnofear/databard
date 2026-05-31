@@ -116,7 +116,7 @@ export function LandingStep() {
             onClick={showConnect}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
           >
-            {state.persona === "enterprise" ? "Connect your data" : "Connect Dune or subgraph"}
+            {state.persona === "enterprise" ? "Connect your data" : "Connect Dune, subgraph, or Coral"}
           </button>
         </div>
         
@@ -145,13 +145,15 @@ export function LandingStep() {
               <span>·</span>
               <span>dbt Cloud</span>
               <span>·</span>
-              <span>Dune</span>
+              <span>Coral</span>
             </>
           ) : (
             <>
               <span>Dune</span>
               <span>·</span>
               <span>The Graph</span>
+              <span>·</span>
+              <span>Coral</span>
               <span>·</span>
               <a href="/leaderboard" className="hover:text-[var(--text)]">Leaderboard</a>
             </>

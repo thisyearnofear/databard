@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWizard } from "./wizard-context";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
@@ -397,7 +397,7 @@ export function ConnectStep() {
         <div className="flex flex-col gap-2 mt-2">
           <button 
             onClick={handleConnect} 
-            disabled={state.connecting} 
+            disabled={state.connecting || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
             className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
           >
             {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
@@ -405,7 +405,7 @@ export function ConnectStep() {
           </button>
           <button 
             onClick={handleTestConnection} 
-            disabled={state.connectionTested === "testing"} 
+            disabled={state.connectionTested === "testing" || (state.source === "coral" && !validateCoralSql(state.coralQuery).valid)} 
             className="w-full bg-transparent hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
           >
             {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
@@ -414,6 +414,17 @@ export function ConnectStep() {
             Test Connection
           </button>
         </div>
+        {state.status && (
+          <p className={`text-xs text-center py-1.5 px-3 rounded-lg transition-colors ${
+            state.status.startsWith("✓") || state.status.startsWith("Connected")
+              ? "text-[var(--success)] bg-[var(--success)]/5"
+              : state.status.startsWith("✗") || state.status.startsWith("Error")
+                ? "text-red-400 bg-red-500/5"
+                : "text-[var(--text-muted)]"
+          }`}>
+            {state.status}
+          </p>
+        )}
         <button 
           onClick={() => dispatch({ type: "SET_STEP", step: "landing" })} 
           className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer text-center mt-2"
@@ -432,7 +443,7 @@ interface CoralFormProps {
   onQueryChange: (q: string) => void;
 }
 
-const PRESET_QUERIES = [
+const ENTERPRISE_PRESETS = [
   {
     label: "GitHub + Slack",
     description: "Correlate issues with team discussions",
@@ -459,9 +470,106 @@ JOIN notion.pages n ON n.title LIKE '%' || s.customer_email || '%'`,
   },
 ];
 
+const WEB3_PRESETS = [
+  {
+    label: "Dune + GitHub",
+    description: "Correlate on-chain activity with repo commits",
+    query: `SELECT d.block_time, d.tx_hash, g.message, g.author
+FROM dune.transactions d
+JOIN github.commits g ON g.committed_at::date = d.block_time::date
+WHERE d.block_time >= NOW() - INTERVAL '7 days'
+ORDER BY d.block_time DESC`,
+  },
+  {
+    label: "TheGraph + Slack",
+    description: "Match protocol events with team alerts",
+    query: `SELECT t.event, t.amount, t.timestamp, s.text
+FROM thegraph.swap_events t
+JOIN slack.messages s ON s.channel = '#protocol-alerts'
+WHERE t.timestamp >= NOW() - INTERVAL '7 days'`,
+  },
+  {
+    label: "GitHub + Slack",
+    description: "Correlate PRs with incident discussions",
+    query: `SELECT g.title, g.state, s.text, s.ts
+FROM github.pull_requests g
+JOIN slack.messages s ON s.channel = '#incidents'
+WHERE g.merged_at >= NOW() - INTERVAL '7 days'
+ORDER BY g.merged_at DESC`,
+  },
+];
+
+interface GraduationSource {
+  source: string;
+  requestCount: number;
+  flagged: boolean;
+}
+
+function parseCoralError(error: string): { message: string; hint?: string; action?: string } {
+  if (/ENOENT|not found|command not found|coral: not found/i.test(error)) {
+    return {
+      message: "Coral CLI not found",
+      hint: "Install Coral to run cross-source queries locally.",
+      action: "brew install withcoral/tap/coral",
+    };
+  }
+  if (/ECONNREFUSED|ETIMEDOUT|fetch failed|Gateway error|network/i.test(error)) {
+    return {
+      message: "Coral gateway unreachable",
+      hint: "Check that CORAL_GATEWAY_URL is correct and the gateway is running.",
+    };
+  }
+  if (/timeout|timed out/i.test(error)) {
+    return {
+      message: "Query timed out",
+      hint: "Try a simpler query or increase CORAL_TIMEOUT_MS.",
+    };
+  }
+  if (/source.*not.*configured|unknown source/i.test(error)) {
+    const sourceMatch = error.match(/source[:\s]+['"]?(\w+)['"]?/i);
+    return {
+      message: `Source "${sourceMatch?.[1] ?? "unknown"}" not configured`,
+      hint: "Add the source to Coral before querying it.",
+      action: `coral source add ${sourceMatch?.[1] ?? "<source>"}`,
+    };
+  }
+  return { message: error };
+}
+
+function validateCoralSql(query: string): { valid: boolean; hint?: string } {
+  const trimmed = query.trim();
+  if (!trimmed) return { valid: false, hint: "Query is empty" };
+  if (!/\bSELECT\b/i.test(trimmed)) return { valid: false, hint: "Query should start with SELECT" };
+  if (!/\bFROM\b/i.test(trimmed)) return { valid: false, hint: "Query needs a FROM clause" };
+  if (!/\w+\.\w+/i.test(trimmed)) return { valid: false, hint: "Use source.table syntax (e.g. github.issues)" };
+  return { valid: true };
+}
+
+function extractSources(query: string): string[] {
+  const sources = new Set<string>();
+  const re = /(?:FROM|JOIN)\s+(\w+)\.\w+/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(query)) !== null) {
+    sources.add(m[1].toLowerCase());
+  }
+  return [...sources];
+}
+
 function CoralForm({ query, onQueryChange }: CoralFormProps) {
+  const { state } = useWizard();
+  const presets = state.persona === "web3" ? WEB3_PRESETS : ENTERPRISE_PRESETS;
   const [previewOpen, setPreviewOpen] = useState(false);
+  const validation = validateCoralSql(query);
+  const querySources = extractSources(query);
   const [previewing, setPreviewing] = useState(false);
+  const [graduationSources, setGraduationSources] = useState<GraduationSource[]>([]);
+
+  useEffect(() => {
+    fetch("/api/coral/sources")
+      .then((r) => r.json())
+      .then((d) => { if (d.ok && Array.isArray(d.sources)) setGraduationSources(d.sources); })
+      .catch(() => {});
+  }, []);
   const [previewData, setPreviewData] = useState<{
     columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
     rows: Record<string, unknown>[];
@@ -529,13 +637,35 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         </a>
       </div>
 
+      {/* Graduation badges */}
+      {graduationSources.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mr-0.5">Popular sources:</span>
+          {graduationSources.slice(0, 5).map((s) => (
+            <span
+              key={s.source}
+              className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                s.flagged
+                  ? "bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/20"
+                  : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--border)]"
+              }`}
+              title={`${s.requestCount} queries${s.flagged ? " — first-class adapter coming soon" : ""}`}
+            >
+              {s.source}
+              <span className="ml-1 opacity-60">{s.requestCount}×</span>
+              {s.flagged && <span className="ml-0.5">🎓</span>}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Preset queries */}
       <div>
         <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">
           Start from a template
         </label>
         <div className="flex flex-col gap-2">
-          {PRESET_QUERIES.map((preset) => (
+          {presets.map((preset) => (
             <button
               key={preset.label}
               type="button"
@@ -561,15 +691,28 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
 
       {/* SQL editor */}
       <div>
-        <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">
-          SQL Query
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium">
+            SQL Query
+          </label>
+          {querySources.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              {querySources.map((s) => (
+                <span key={s} className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium">{s}</span>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="relative">
           <pre
-            className="absolute inset-0 w-full h-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono text-[var(--text)] whitespace-pre-wrap break-all leading-relaxed pointer-events-none"
+            className="absolute inset-0 w-full h-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono whitespace-pre-wrap break-all leading-relaxed pointer-events-none"
             aria-hidden="true"
           >
-            {query || " "}
+            {(query || " ").split(/(\b(?:SELECT|FROM|JOIN|WHERE|ON|AND|OR|ORDER\s+BY|GROUP\s+BY|HAVING|LIMIT|AS|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|INTERVAL|DESC|ASC|IN|NOT|NULL|LIKE|BETWEEN|EXISTS|DISTINCT|CASE|WHEN|THEN|ELSE|END|NOW)\b)/gi).map((part, i) =>
+              /^(?:SELECT|FROM|JOIN|WHERE|ON|AND|OR|ORDER\s+BY|GROUP\s+BY|HAVING|LIMIT|AS|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|INTERVAL|DESC|ASC|IN|NOT|NULL|LIKE|BETWEEN|EXISTS|DISTINCT|CASE|WHEN|THEN|ELSE|END|NOW)$/i.test(part)
+                ? <span key={i} className="text-[var(--accent)] font-semibold">{part}</span>
+                : <span key={i} className="text-[var(--text)]">{part}</span>
+            )}
           </pre>
           <textarea
             value={query}
@@ -580,10 +723,20 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
             }}
             placeholder="SELECT * FROM github.issues JOIN slack.messages ON..."
             spellCheck={false}
-            className="relative w-full bg-transparent border border-[var(--border)] rounded-lg px-4 py-3 text-sm font-mono text-transparent caret-[var(--accent)] resize-y min-h-32 focus:border-[var(--accent)] focus:outline-none transition-colors"
+            className={`relative w-full bg-transparent border rounded-lg px-4 py-3 text-sm font-mono text-transparent caret-[var(--accent)] resize-y min-h-32 focus:outline-none transition-colors ${
+              !validation.valid && query.trim()
+                ? "border-yellow-500/50 focus:border-yellow-500"
+                : "border-[var(--border)] focus:border-[var(--accent)]"
+            }`}
             style={{ WebkitTextFillColor: "transparent" }}
           />
         </div>
+        {!validation.valid && query.trim() && validation.hint && (
+          <p className="text-[10px] text-yellow-500 flex items-center gap-1 mt-1.5">
+            <span>⚠️</span>
+            <span>{validation.hint}</span>
+          </p>
+        )}
       </div>
 
       {/* Source badges + preview */}
@@ -605,7 +758,7 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
         <button
           type="button"
           onClick={handlePreview}
-          disabled={!query.trim() || previewing}
+          disabled={!query.trim() || previewing || !validation.valid}
           className="flex-1 bg-[var(--surface)] hover:bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
         >
           {previewing && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
@@ -614,11 +767,39 @@ function CoralForm({ query, onQueryChange }: CoralFormProps) {
       </div>
 
       {/* Preview panel */}
-      {previewError && (
-        <div className="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3 text-xs text-red-400">
-          {previewError}
+      {previewing && !previewData && (
+        <div className="border border-[var(--border)] rounded-xl overflow-hidden animate-pulse">
+          <div className="bg-[var(--surface)] px-4 py-2 border-b border-[var(--border)] flex items-center gap-2">
+            <div className="h-3 w-16 bg-[var(--border)] rounded" />
+            <div className="h-3 w-24 bg-[var(--border)] rounded" />
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            <div className="flex gap-1.5">
+              <div className="h-5 w-20 bg-[var(--border)] rounded" />
+              <div className="h-5 w-16 bg-[var(--border)] rounded" />
+              <div className="h-5 w-24 bg-[var(--border)] rounded" />
+            </div>
+            <div className="h-4 w-full bg-[var(--border)] rounded" />
+            <div className="h-4 w-3/4 bg-[var(--border)] rounded" />
+            <div className="h-4 w-5/6 bg-[var(--border)] rounded" />
+          </div>
         </div>
       )}
+
+      {previewError && (() => {
+        const parsed = parseCoralError(previewError);
+        return (
+          <div className="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3 text-xs">
+            <p className="text-red-400 font-medium">{parsed.message}</p>
+            {parsed.hint && <p className="text-red-400/70 mt-1">{parsed.hint}</p>}
+            {parsed.action && (
+              <code className="block mt-1.5 bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
+                {parsed.action}
+              </code>
+            )}
+          </div>
+        );
+      })()}
 
       {previewOpen && previewData && (
         <div className="border border-[var(--border)] rounded-xl overflow-hidden">

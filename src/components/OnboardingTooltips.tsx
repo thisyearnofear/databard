@@ -25,6 +25,13 @@ const DEFAULT_STEPS: TooltipStep[] = [
     position: "right",
   },
   {
+    id: "coral-query",
+    target: "[data-tour='schema-picker']",
+    title: "Coral SQL Editor",
+    content: "Write cross-source SQL queries here — join GitHub, Slack, Jira, Postgres and 50+ sources in a single query. Use the template chips to start quickly, then customize.",
+    position: "right",
+  },
+  {
     id: "research-question",
     target: "[data-tour='research-question']",
     title: "Ask Your Question",

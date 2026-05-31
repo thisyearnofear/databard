@@ -23,7 +23,7 @@ function WizardContent() {
         <ol className="flex items-center justify-between">
           {[
             { key: "connect", label: "Connect", icon: "🔌" },
-            { key: "pick-schema", label: "Pick dataset", icon: "📋" },
+            { key: "pick-schema", label: state.source === "coral" ? "Query & ask" : "Pick dataset", icon: state.source === "coral" ? "🪸" : "📋" },
             { key: "generating", label: "Generate", icon: "⚡" },
             { key: "episode", label: "Listen", icon: "🎧" },
           ].map((step, i) => {
@@ -58,10 +58,6 @@ function WizardContent() {
       {state.step === "pick-schema" && <SchemaPicker />}
       {state.step === "generating" && <GenerationStep />}
       {state.step === "episode" && <EpisodeStep />}
-      
-      {state.status && (
-        <p className="text-sm text-[var(--text-muted)]">{state.status}</p>
-      )}
     </main>
   );
 }

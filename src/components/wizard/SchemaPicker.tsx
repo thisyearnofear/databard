@@ -1,10 +1,174 @@
 "use client";
 
+import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useGeneration } from "./useGeneration";
 import { SchemasEmpty, SearchEmpty } from "@/components/EmptyState";
 
 const SCHEMAS_PER_PAGE = 10;
+
+const CORAL_PRESETS = [
+  {
+    label: "GitHub + Slack",
+    query: `SELECT g.title, g.state, s.text, s.ts
+FROM github.pull_requests g
+JOIN slack.messages s ON s.channel = '#incidents'
+WHERE g.merged_at >= NOW() - INTERVAL '7 days'
+ORDER BY g.merged_at DESC`,
+  },
+  {
+    label: "Jira + Postgres",
+    query: `SELECT j.key, j.summary, j.status, p.version, p.deployed_at
+FROM jira.issues j
+JOIN postgres.deployments p ON j.key = p.ticket_id
+WHERE p.deployed_at >= NOW() - INTERVAL '30 days'`,
+  },
+  {
+    label: "Stripe + Notion",
+    query: `SELECT s.amount, s.currency, s.status, n.body as notes
+FROM stripe.charges s
+JOIN notion.pages n ON n.title LIKE '%' || s.customer_email || '%'`,
+  },
+];
+
+function extractCoralSources(query: string): string[] {
+  const sources = new Set<string>();
+  const re = /(?:FROM|JOIN)\s+(\w+)\.\w+/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(query)) !== null) {
+    sources.add(m[1].toLowerCase());
+  }
+  return [...sources];
+}
+
+function validateCoralQuery(query: string): { valid: boolean; hint?: string } {
+  const trimmed = query.trim();
+  if (!trimmed) return { valid: false, hint: "Query is empty" };
+  if (!/\bSELECT\b/i.test(trimmed)) return { valid: false, hint: "Query should start with SELECT" };
+  if (!/\bFROM\b/i.test(trimmed)) return { valid: false, hint: "Query needs a FROM clause" };
+  if (!/\w+\.\w+/i.test(trimmed)) return { valid: false, hint: "Use source.table syntax (e.g. github.issues)" };
+  return { valid: true };
+}
+
+function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryChange: (q: string) => void }) {
+  const validation = validateCoralQuery(query);
+  const sources = extractCoralSources(query);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewResult, setPreviewResult] = useState<{ rowCount: number; columns: number; sources: string[] } | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  async function handlePreview() {
+    if (!validation.valid) return;
+    setPreviewing(true);
+    setPreviewError(null);
+    setPreviewResult(null);
+    try {
+      const res = await fetch("/api/coral/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPreviewResult({ rowCount: data.rowCount, columns: data.columns?.length ?? 0, sources: data.sources ?? [] });
+      } else {
+        setPreviewError(data.error || "Preview failed");
+      }
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : "Preview failed");
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
+  return (
+    <div className="border border-[var(--accent)] bg-[var(--accent)]/5 rounded-xl p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Coral SQL query</span>
+        {sources.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            {sources.map((s) => (
+              <span key={s} className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium">{s}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <textarea
+        value={query}
+        onChange={(e) => { onQueryChange(e.target.value); setPreviewResult(null); }}
+        spellCheck={false}
+        placeholder="SELECT * FROM github.issues JOIN slack.messages ON..."
+        className={`w-full bg-[var(--bg)] border rounded-lg px-3 py-2.5 text-sm font-mono min-h-32 resize-y focus:outline-none transition-colors ${
+          !validation.valid && query.trim()
+            ? "border-yellow-500/50 focus:border-yellow-500"
+            : "border-[var(--border)] focus:border-[var(--accent)]"
+        }`}
+      />
+      {!validation.valid && query.trim() && validation.hint && (
+        <p className="text-[10px] text-yellow-500 flex items-center gap-1 -mt-1">
+          <span>⚠️</span>
+          <span>{validation.hint}</span>
+        </p>
+      )}
+      <div className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-1.5 flex-1">
+          <span className="text-[10px] text-[var(--text-muted)] self-center mr-1">Templates:</span>
+          {CORAL_PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => { onQueryChange(preset.query); setPreviewResult(null); }}
+              className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                query === preset.query
+                  ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
+                  : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
+              }`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handlePreview}
+          disabled={!validation.valid || previewing}
+          className="text-[11px] px-3 py-1 rounded-full border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+        >
+          {previewing && <span className="inline-block w-2.5 h-2.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
+          {previewing ? "Testing…" : "▶ Test"}
+        </button>
+      </div>
+
+      {/* Preview result summary */}
+      {previewResult && (
+        <div className="flex items-center gap-2 text-[10px] text-[var(--success)] bg-[var(--success)]/5 border border-[var(--success)]/10 rounded-lg px-3 py-1.5">
+          <span>✓</span>
+          <span>{previewResult.rowCount} rows · {previewResult.columns} columns</span>
+          {previewResult.sources.length > 0 && (
+            <span className="text-[var(--text-muted)]">· {previewResult.sources.join(", ")}</span>
+          )}
+        </div>
+      )}
+      {previewError && (
+        <div className="text-[10px] text-red-400 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-1.5">
+          {previewError}
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {previewing && !previewResult && (
+        <div className="animate-pulse flex items-center gap-2 px-3 py-1.5">
+          <div className="h-3 w-16 bg-[var(--border)] rounded" />
+          <div className="h-3 w-20 bg-[var(--border)] rounded" />
+        </div>
+      )}
+
+      <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+        DataBard runs this query through Coral, then narrates the joined dataset. Use the question on the right to focus what the hosts dig into.
+      </p>
+    </div>
+  );
+}
 
 export function SchemaPicker() {
   const { 
@@ -68,25 +232,10 @@ export function SchemaPicker() {
         {/* Schema list / Coral query summary — left 3 cols */}
         <div className="md:col-span-3 flex flex-col gap-3" data-tour="schema-picker">
           {isCoral ? (
-            <div className="border border-[var(--accent)] bg-[var(--accent)]/5 rounded-xl p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your Coral query</span>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "SET_STEP", step: "connect" })}
-                  className="text-[11px] text-[var(--accent)] hover:underline cursor-pointer"
-                >
-                  Edit
-                </button>
-              </div>
-              <pre className="text-[11px] font-mono leading-relaxed bg-[var(--bg)] border border-[var(--border)] rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all max-h-48">
-                {state.coralQuery || "SELECT …"}
-              </pre>
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                DataBard runs this query through Coral, then narrates the joined dataset. Use the
-                question on the right to focus what the hosts dig into.
-              </p>
-            </div>
+            <CoralInlineEditor
+              query={state.coralQuery}
+              onQueryChange={(q) => dispatch({ type: "SET_CORAL_QUERY", query: q })}
+            />
           ) : <>
           {state.schemas.length > 5 && (
             <div className="relative">
@@ -205,12 +354,15 @@ export function SchemaPicker() {
               <span className="text-[10px] text-[var(--accent)] opacity-75" title="A focused question helps the AI hosts investigate specific issues">💡</span>
             </div>
             <textarea
+              autoFocus={isCoral}
               className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm min-h-20 resize-y focus:border-[var(--accent)] focus:outline-none transition-colors"
               value={state.researchQuestion}
               onChange={(e) => dispatch({ type: "SET_RESEARCH_QUESTION", question: e.target.value })}
-              placeholder={state.persona === "enterprise"
-                ? "What is the biggest risk in this dataset?"
-                : "Which data health issue should we investigate first?"}
+              placeholder={isCoral
+                ? "What patterns should the hosts investigate in this cross-source data?"
+                : state.persona === "enterprise"
+                  ? "What is the biggest risk in this dataset?"
+                  : "Which data health issue should we investigate first?"}
             />
             <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-muted)]">
               <p className="font-medium text-[var(--text)] mb-1">💡 Good questions are specific:</p>
@@ -262,12 +414,12 @@ export function SchemaPicker() {
             {!isCoral && !state.selectedSchema && (
               <p className="text-xs text-center text-[var(--text-muted)] italic">Select a schema to generate</p>
             )}
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid gap-2 ${isCoral ? "grid-cols-1" : "grid-cols-2"}`}>
               <button
                 type="button"
                 onClick={() => state.selectedSchema && generatePodcast(state.selectedSchema)}
-                disabled={!state.selectedSchema}
-                className="flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                disabled={!state.selectedSchema || (isCoral && !validateCoralQuery(state.coralQuery).valid)}
+                className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
               >
                 <span>🎙️ Podcast</span>
                 <span className="text-xs opacity-75 font-normal mt-0.5">AI hosts · analysis</span>
@@ -275,8 +427,8 @@ export function SchemaPicker() {
               <button
                 type="button"
                 onClick={() => state.selectedSchema && generateAnthem(state.selectedSchema)}
-                disabled={!state.selectedSchema}
-                className="flex flex-col items-center justify-center rounded-lg border-2 px-3 py-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+                disabled={!state.selectedSchema || (isCoral && !validateCoralQuery(state.coralQuery).valid)}
+                className={`flex flex-col items-center justify-center rounded-lg border-2 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"} px-3`}
                 style={{borderColor: "#a855f7", background: "linear-gradient(135deg, var(--surface), #a855f710)", color: "#a855f7"}}
               >
                 <span>🎵 Anthem</span>

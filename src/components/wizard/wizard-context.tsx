@@ -130,7 +130,11 @@ const initialState: WizardState = {
   duneApiKey: "",
   duneNamespace: "",
   duneQueryUrl: "",
-  coralQuery: "SELECT * FROM github.issues JOIN slack.messages ON issues.id = messages.id",
+  coralQuery: `SELECT g.title, g.state, s.text, s.ts
+FROM github.pull_requests g
+JOIN slack.messages s ON s.channel = '#incidents'
+WHERE g.merged_at >= NOW() - INTERVAL '7 days'
+ORDER BY g.merged_at DESC`,
   schemas: [],
   selectedSchema: null,
   searchQuery: "",
@@ -305,6 +309,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
         if (cfg.dbtAccountId) dispatch({ type: "SET_DBT_ACCOUNT_ID", id: cfg.dbtAccountId });
         if (cfg.dbtProjectId) dispatch({ type: "SET_DBT_PROJECT_ID", id: cfg.dbtProjectId });
         if (cfg.dbtToken) dispatch({ type: "SET_DBT_TOKEN", token: cfg.dbtToken });
+        if (cfg.coralQuery) dispatch({ type: "SET_CORAL_QUERY", query: cfg.coralQuery });
       }
     } catch { /* ignore corrupt localStorage */ }
   }, []);
@@ -319,9 +324,10 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
         omUrl: state.omUrl,
         dbtAccountId: state.dbtAccountId,
         dbtProjectId: state.dbtProjectId,
+        coralQuery: state.coralQuery,
       }));
     } catch { /* quota exceeded or private mode */ }
-  }, [state.source, state.omMode, state.researchQuestion, state.omUrl, state.dbtAccountId, state.dbtProjectId]);
+  }, [state.source, state.omMode, state.researchQuestion, state.omUrl, state.dbtAccountId, state.dbtProjectId, state.coralQuery]);
   
   // Pre-fill first question preset when entering schema picker with empty question
   const questionPresets = useMemo(() =>
