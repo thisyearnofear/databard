@@ -36,10 +36,10 @@ export function ConnectStep() {
     if (!state.researchQuestion) {
       dispatch({ type: "SET_RESEARCH_QUESTION", question: questionPresets[0] ?? "What patterns should the hosts investigate?" });
     }
-    dispatch({ type: "SET_SELECTED_SCHEMA", schema: "coral" });
+    dispatch({ type: "SET_SELECTED_SCHEMA", schema: "coral.unified" });
     // Small delay so state settles before generation reads it
     await new Promise((r) => setTimeout(r, 50));
-    await generatePodcast("coral");
+    await generatePodcast("coral.unified");
     dispatch({ type: "SET_CONNECTING", connecting: false });
   }
   
