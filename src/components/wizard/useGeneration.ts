@@ -135,6 +135,20 @@ export function useGeneration() {
         let sseBuffer = "";
         let localGenSegments = 0;
 
+        /** Strip ID3v2 header from an MP3 buffer (each ElevenLabs response includes one).
+            Concatenating multiple MP3s with ID3v2 headers causes MediaError in browsers. */
+        function stripId3v2(buf: Uint8Array): Uint8Array {
+          if (buf.length < 10 || buf[0] !== 0x49 || buf[1] !== 0x44 || buf[2] !== 0x33) return buf;
+          // Synchsafe size: each byte uses only 7 bits
+          const size = (buf[6] << 21) | (buf[7] << 14) | (buf[8] << 7) | buf[9];
+          const headerEnd = 10 + size;
+          if (headerEnd >= buf.length) return buf;
+          // Skip optional ID3v2 footer (10 bytes if present)
+          const hasFooter = (buf[5] & 0x10) !== 0;
+          const dataStart = headerEnd + (hasFooter ? 10 : 0);
+          return buf.subarray(dataStart);
+        }
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -208,17 +222,20 @@ export function useGeneration() {
               const audioData = Uint8Array.from(atob(data.data as string), (c) =>
                 c.charCodeAt(0)
               );
-              audioChunks.push(audioData.buffer as ArrayBuffer);
+              // Strip ID3v2 from all chunks after the first — browsers choke on
+              // multiple ID3v2 headers in a single concatenated MP3 blob.
+              const cleaned = audioChunks.length === 0 ? audioData : stripId3v2(audioData);
+              audioChunks.push(cleaned.buffer as ArrayBuffer);
               if (data.segment !== undefined) {
                 segmentByteSizes[data.segment] =
-                  (segmentByteSizes[data.segment] || 0) + audioData.byteLength;
+                  (segmentByteSizes[data.segment] || 0) + cleaned.byteLength;
                 localGenSegments++;
                 dispatch({
                   type: "SET_GEN_SEGMENTS",
                   count: localGenSegments,
                 });
               } else {
-                sfxBytes += audioData.byteLength;
+                sfxBytes += cleaned.byteLength;
               }
               dispatch({
                 type: "SET_STATUS",
