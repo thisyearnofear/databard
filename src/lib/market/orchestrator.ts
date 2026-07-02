@@ -55,6 +55,7 @@ function getBuyerKeypair(buyerPubkey: string): Keypair {
 }
 import { explorerUrl } from "../settlement/verifier";
 import { recordWin } from "./reputation";
+import { mintOnSettle } from "./mint-on-settle";
 
 /* ---------- 1) POST WANT ---------- */
 
@@ -86,7 +87,7 @@ export async function award(wantId: string): Promise<AwardResult> {
   const want = getWant(wantId);
   if (!want) throw new Error(`Want ${wantId} not found`);
   const bids = listBidsForWant(wantId);
-  const pick = pickBid(want, bids);
+  const pick = await pickBid(want, bids);
   if (!pick) throw new Error(`No qualifying bid for ${wantId}`);
 
   const winningBid = bids.find((b) => b.id === pick.award.winningBidId);
@@ -235,6 +236,22 @@ export async function releaseDeal(wantId: string): Promise<ReleaseResult> {
 
   // Reputation flywheel — the seller just got paid; count the win.
   recordWin(deal.personaId, deal.priceLamports);
+
+  // Auto-mint on-chain: seller signs a memo attesting to this settled deal. Verifiable
+  // reputation outside DataBard's cache. Non-blocking — a failed mint doesn't invalidate
+  // the release that already fired.
+  let mintResult: Awaited<ReturnType<typeof mintOnSettle>> | undefined;
+  try {
+    mintResult = await mintOnSettle(updated);
+    if (mintResult.ok && mintResult.txSignature) {
+      const withMint = updateDeal(wantId, {
+        explorer: { mint: mintResult.explorerUrl },
+      });
+      if (withMint) Object.assign(updated, withMint);
+    }
+  } catch (err) {
+    console.warn("[Orchestrator] mint-on-settle threw (non-fatal):", err);
+  }
 
   // If this was a reseller (Digest) deal, cascade the release to sub-escrows so its
   // downstream sellers get paid too. Import is dynamic to avoid a cycle.

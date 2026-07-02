@@ -1,0 +1,35 @@
+[
+  {
+    "schemaName": "analytics.ecommerce",
+    "healthScore": 0,
+    "episodeId": "want_d74b8052ba05",
+    "walletAddress": "FQo4VYfad2AUk8NyaF4PFWPxtdbFoMvainwv3fZQXwTX",
+    "reportHash": "927435d6f47c398436afd7d9c25e04f4f4a9367d4f5b137519a196011f285146",
+    "txSignature": "3Z8pSY7h95difha6E9epbVWQAdaVUs9hVmuQEbXQiD8EWzKGAEtr2fRPYMQ39nnuvh4TdK3J4X2uJPpB8Fb2xj6",
+    "network": "devnet",
+    "createdAt": "2026-07-02T22:46:46.152Z",
+    "teamId": "persona:newsroom"
+  },
+  {
+    "schemaName": "analytics.ecommerce",
+    "healthScore": 0,
+    "episodeId": "want_c6b49d6201c0",
+    "walletAddress": "FQo4VYfad2AUk8NyaF4PFWPxtdbFoMvainwv3fZQXwTX",
+    "reportHash": "26f44233e9e99b76b12bf58fe565a924c6fc6a165b9dd0ddeda4f5fd8c1d572c",
+    "txSignature": "21JratQPAHAUen2KgLMYA5cLShcqu5Kqj7MrMDBeQXSnm778gBhf1xWSGGY6qHgpVf1j8sWP1AUo6iLeEd1pt9oD",
+    "network": "devnet",
+    "createdAt": "2026-07-02T22:47:03.663Z",
+    "teamId": "persona:newsroom"
+  },
+  {
+    "schemaName": "analytics.ecommerce",
+    "healthScore": 0,
+    "episodeId": "want_9fa3fc954686",
+    "walletAddress": "BkrHzLborwhomWSeqFShvRbPyu3HqpBzUxwi8ouHy3Ni",
+    "reportHash": "5b8a8011921f0bdd869d60421f418ff74f5cf311c2b2e2554ea39cfaf280ae72",
+    "txSignature": "swwfAVhByAHCZ5za6dNDZaTo88AyJNKkcc4y3abiCFUdVwEdSX5nrfbK34d39fcQkQyGU3w3Kw1fsStLWsvYWDH",
+    "network": "devnet",
+    "createdAt": "2026-07-02T22:47:19.801Z",
+    "teamId": "persona:cascade"
+  }
+]

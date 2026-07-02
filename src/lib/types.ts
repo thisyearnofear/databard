@@ -231,6 +231,8 @@ export interface DealRef {
     commit?: string;
     release?: string;
     refund?: string;
+    /** Auto-mint attestation — the seller's on-chain memo of the settled deal. */
+    mint?: string;
   };
 }
 

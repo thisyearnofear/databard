@@ -1,0 +1,122 @@
+name: LOOP invariants
+
+# Runs the DataBard × TestSprite verification loop on every PR that touches market /
+# settlement code. The loop's local runner (scripts/loop/loop-local.mjs) executes the
+# Python invariant suite against the deployed production URL, and — on failure — asks
+# the fixer provider chain (Venice → NVIDIA → Anthropic) for a strict-JSON patch.
+#
+# Failure mode: the workflow does NOT auto-commit fixes from CI (that would be scary in
+# a PR). Instead it comments the failure bundle + the proposed patch onto the PR as a
+# review suggestion. A maintainer reviews and applies with a click.
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/market/**"
+      - "src/lib/settlement/**"
+      - "src/lib/voice-config.ts"
+      - "tests/testsprite/**"
+      - "scripts/loop/**"
+      - ".github/workflows/loop.yml"
+  workflow_dispatch:
+    inputs:
+      invariant:
+        description: "Which invariant to run (blank = all)"
+        required: false
+        default: ""
+
+concurrency:
+  group: loop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TARGET_URL: https://databard.thisyearnofear.com
+      VENICE_API_KEY: ${{ secrets.VENICE_API_KEY }}
+      NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      LOOP_PROVIDER_ORDER: venice,nvidia,anthropic
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Node deps
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Python deps
+        run: pip install requests pytest
+
+      - name: Health check target URL
+        run: |
+          set -e
+          echo "Probing $TARGET_URL/api/market/keypairs …"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL/api/market/keypairs")
+          if [ "$code" != "200" ]; then
+            echo "::error::Production URL not reachable (HTTP $code). The loop can't verify without a live target."
+            exit 1
+          fi
+          echo "target-url: $TARGET_URL (HTTP $code)"
+
+      - name: Run the loop
+        id: loop
+        continue-on-error: true
+        run: |
+          set +e
+          INVARIANT="${{ github.event.inputs.invariant }}"
+          if [ -z "$INVARIANT" ]; then
+            node scripts/loop/loop-local.mjs --target-url "$TARGET_URL" 2>&1 | tee .loop/ci-output.log
+          else
+            node scripts/loop/loop-local.mjs "$INVARIANT" --target-url "$TARGET_URL" 2>&1 | tee .loop/ci-output.log
+          fi
+          EXIT=$?
+          echo "loop-exit=$EXIT" >> "$GITHUB_OUTPUT"
+
+      - name: Summarize loop output
+        if: always()
+        run: |
+          echo "## LOOP result (exit ${{ steps.loop.outputs.loop-exit }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 100 .loop/ci-output.log 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || echo "(no output)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment loop result on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            let body = "### 🐕 LOOP invariant run\n\n";
+            let output = "";
+            try { output = fs.readFileSync(".loop/ci-output.log", "utf-8"); } catch {}
+            const exit = "${{ steps.loop.outputs.loop-exit }}";
+            body += exit === "0"
+              ? "✓ All invariants passed against `${{ env.TARGET_URL }}`.\n"
+              : `× Loop exited ${exit}. Fixer output below — apply as PR suggestion if the diff looks right.\n`;
+            body += "\n<details><summary>Last 80 lines</summary>\n\n```\n" +
+              output.split("\n").slice(-80).join("\n") + "\n```\n</details>\n";
+            const { owner, repo } = context.repo;
+            await github.rest.issues.createComment({
+              owner, repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Fail the job if the loop failed
+        if: steps.loop.outputs.loop-exit != '0'
+        run: |
+          echo "::error::LOOP exited non-zero (${{ steps.loop.outputs.loop-exit }}). See summary."
+          exit 1

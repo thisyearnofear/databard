@@ -6,7 +6,8 @@
       "Bash(npx next *)",
       "Bash(npx tsc *)",
       "Bash(npx --package=typescript tsc --noEmit)",
-      "Bash(npx --package=typescript tsc --noEmit --skipLibCheck)"
+      "Bash(npx --package=typescript tsc --noEmit --skipLibCheck)",
+      "Bash(git reset *)"
     ]
   }
 }

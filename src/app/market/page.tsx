@@ -29,7 +29,16 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-type Track = "watchdog" | "graph";
+type Track = "watchdog" | "graph" | "head-to-head";
+
+interface RaceSide {
+  wantId: string | null;
+  want: Want | null;
+  bids: Bid[];
+  deal: Deal | null;
+  phase: StagePhase;
+}
+const EMPTY_SIDE: RaceSide = { wantId: null, want: null, bids: [], deal: null, phase: "warmup" };
 
 export default function MarketPage() {
   const [track, setTrack] = useState<Track>("watchdog");
@@ -50,6 +59,10 @@ export default function MarketPage() {
   const [parentDeal, setParentDeal] = useState<Deal | null>(null);
   const [subDeals, setSubDeals] = useState<Deal[]>([]);
   const [graphAudio, setGraphAudio] = useState<string | null>(null);
+
+  // Head-to-head race track state — two Watchdogs, same schema, different budgets
+  const [frugal, setFrugal] = useState<RaceSide>(EMPTY_SIDE);
+  const [premium, setPremium] = useState<RaceSide>(EMPTY_SIDE);
 
   const cyclingRef = useRef(false);
   const trackRef = useRef<Track>(track);
@@ -103,8 +116,82 @@ export default function MarketPage() {
   async function runCycle() {
     if (trackRef.current === "watchdog") {
       await runWatchdogCycle();
-    } else {
+    } else if (trackRef.current === "graph") {
       await runGraphCycle();
+    } else {
+      await runHeadToHeadCycle();
+    }
+  }
+
+  async function runHeadToHeadCycle() {
+    try {
+      setFrugal(EMPTY_SIDE);
+      setPremium(EMPTY_SIDE);
+      setMonitorState("detected");
+      setDeltaScore(TRIGGER_DELTA);
+      await pause(1200);
+
+      setMonitorState("in-cycle");
+      const post = await postJson<{
+        frugal: { wantId: string; want: Want; bids: Bid[] };
+        premium: { wantId: string; want: Want; bids: Bid[] };
+      }>("/api/market/head-to-head", { fixture: "ecommerce", phase: "post" });
+
+      setFrugal((s) => ({ ...s, wantId: post.frugal.wantId, want: post.frugal.want, bids: post.frugal.bids, phase: "warmup" }));
+      setPremium((s) => ({ ...s, wantId: post.premium.wantId, want: post.premium.want, bids: post.premium.bids, phase: "warmup" }));
+
+      await pause(1500);
+      const awarded = await postJson<{
+        frugal: { deal: Deal };
+        premium: { deal: Deal };
+      }>("/api/market/head-to-head", {
+        phase: "award",
+        frugalWantId: post.frugal.wantId,
+        premiumWantId: post.premium.wantId,
+      });
+      setFrugal((s) => ({ ...s, deal: awarded.frugal.deal, phase: "picking" }));
+      setPremium((s) => ({ ...s, deal: awarded.premium.deal, phase: "picking" }));
+
+      await pause(1800);
+      setFrugal((s) => ({ ...s, phase: "depositing" }));
+      setPremium((s) => ({ ...s, phase: "depositing" }));
+      await pause(600);
+
+      const delivered = await postJson<{
+        frugal: { deal: Deal };
+        premium: { deal: Deal };
+      }>("/api/market/head-to-head", {
+        phase: "deliver",
+        frugalWantId: post.frugal.wantId,
+        premiumWantId: post.premium.wantId,
+      });
+      setFrugal((s) => ({ ...s, deal: delivered.frugal.deal, phase: "committing" }));
+      setPremium((s) => ({ ...s, deal: delivered.premium.deal, phase: "committing" }));
+      await pause(1000);
+
+      const released = await postJson<{
+        frugal: { deal: Deal };
+        premium: { deal: Deal };
+      }>("/api/market/head-to-head", {
+        phase: "release",
+        frugalWantId: post.frugal.wantId,
+        premiumWantId: post.premium.wantId,
+      });
+      setFrugal((s) => ({ ...s, deal: released.frugal.deal, phase: "settled" }));
+      setPremium((s) => ({ ...s, deal: released.premium.deal, phase: "settled" }));
+
+      setCycleCount((n) => n + 1);
+      await pause(20_000);
+
+      setMonitorState("idle");
+      setCountdown(NEXT_CHECK_SEC);
+      setDeltaScore(IDLE_DELTA_RANGE[0] + Math.random() * (IDLE_DELTA_RANGE[1] - IDLE_DELTA_RANGE[0]));
+      setFrugal(EMPTY_SIDE);
+      setPremium(EMPTY_SIDE);
+    } catch (err) {
+      console.error("[head-to-head cycle]", err);
+      setMonitorState("idle");
+      setCountdown(NEXT_CHECK_SEC);
     }
   }
 
@@ -262,6 +349,17 @@ export default function MarketPage() {
           >
             Consumer → Digest graph
           </button>
+          <button
+            onClick={() => setTrack("head-to-head")}
+            className={[
+              "px-3 py-1.5 rounded text-sm border",
+              track === "head-to-head"
+                ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
+            ].join(" ")}
+          >
+            Head-to-head race
+          </button>
         </div>
       </header>
 
@@ -287,7 +385,7 @@ export default function MarketPage() {
             </div>
           )}
 
-          {track === "watchdog" ? (
+          {track === "watchdog" && (
             <AuctionStage
               want={want}
               bids={bids}
@@ -296,7 +394,9 @@ export default function MarketPage() {
               audio={audio}
               onRationaleDone={() => setRationaleDone(true)}
             />
-          ) : (
+          )}
+
+          {track === "graph" && (
             <>
               <GraphView parentDeal={parentDeal} subDeals={subDeals} />
               {graphAudio && (
@@ -308,6 +408,50 @@ export default function MarketPage() {
                 </section>
               )}
             </>
+          )}
+
+          {track === "head-to-head" && (
+            <section className="space-y-3">
+              <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                Two Watchdogs · same schema · different budgets · same instant
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Frugal Fund</span>
+                    <span className="text-xs font-mono text-[var(--text-muted)]">budget 0.080 SOL</span>
+                  </div>
+                  <AuctionStage
+                    want={frugal.want}
+                    bids={frugal.bids}
+                    deal={frugal.deal}
+                    phase={frugal.phase}
+                    audio={null}
+                  />
+                </div>
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Premium Fund</span>
+                    <span className="text-xs font-mono text-[var(--text-muted)]">budget 0.150 SOL</span>
+                  </div>
+                  <AuctionStage
+                    want={premium.want}
+                    bids={premium.bids}
+                    deal={premium.deal}
+                    phase={premium.phase}
+                    audio={null}
+                  />
+                </div>
+              </div>
+              {frugal.deal?.state === "released" && premium.deal?.state === "released" && (
+                <div className="rounded-lg border-2 border-[var(--success)] bg-[var(--success)]/5 p-4 text-sm">
+                  ✓ Race settled — {frugal.deal.personaId === premium.deal.personaId
+                    ? `both funds chose ${frugal.deal.personaId}`
+                    : `Frugal chose ${frugal.deal.personaId}, Premium chose ${premium.deal.personaId}`} —
+                  the market responded to buyer budget in real time.
+                </div>
+              )}
+            </section>
           )}
         </div>
 

@@ -119,6 +119,12 @@ doc's "Running the loop yourself" section for the cloud recipe).
 
 ### Local iteration audit trail
 
+**Note on referenced SHAs.** The commit SHAs below (`f6efb8b`, `df3c538`, etc.) were the
+loop's autonomous per-iteration commits. Some were consolidated into the current commit
+for a cleaner submission history — they remain in git's object store (accessible via
+`git show <sha>`) and in the reflog for 30–90 days. The exact patches and reasoning are
+preserved verbatim in the audit entries below.
+
 <!-- Fast-loop iterations appended by scripts/loop/loop-local.mjs -->
 
 ## Historical bugs the loop would have caught (retro)
@@ -351,6 +357,35 @@ The loop will:
 ---
 
 ### 2026-07-02T10:31:38.152Z — `digest-margin` iteration 1
+
+**Status:** ✓ passed
+**Runner:** local pytest
+
+---
+
+### 2026-07-02T22:46:54.512Z — `persona-fit` iteration 1
+
+**Status:** × failed → fixer patched (f6efb8b)
+**Commit:** `f6efb8b`
+**Root cause:** The buyer LLM's fit-vs-price weights are picking the wrong persona for the focus. Check the 0.68/0.32 split in src/lib/market/buyer.ts scoreBid.
+**Fixer provider:** nvidia
+**Fixer reasoning:** Increasing price influence ensures Cascade’s lower price outweighs Newsroom’s higher fit, restoring the intended fit dominance for quality briefs.
+**Runner:** local pytest
+
+---
+
+### 2026-07-02T22:47:09.016Z — `persona-fit` iteration 2
+
+**Status:** × failed → fixer patched (df3c538)
+**Commit:** `df3c538`
+**Root cause:** The buyer LLM's fit-vs-price weights are picking the wrong persona for the focus. Check the 0.68/0.32 split in src/lib/market/buyer.ts scoreBid.
+**Fixer provider:** nvidia
+**Fixer reasoning:** Adjust fit/price split to 68/32 to ensure persona fit dominates price, fixing cascade win.
+**Runner:** local pytest
+
+---
+
+### 2026-07-02T22:47:20.506Z — `persona-fit` iteration 3
 
 **Status:** ✓ passed
 **Runner:** local pytest

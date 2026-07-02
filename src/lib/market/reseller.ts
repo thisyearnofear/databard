@@ -147,7 +147,7 @@ export async function resellerDeliver(input: ResellerDeliverInput): Promise<Rese
 
     // 2. Digest picks a bid (uses the same heuristic buyer — Newsroom typically wins on freshness)
     const bids = listBidsForWant(subWant.id);
-    const pick = pickBid(subWant, bids);
+    const pick = await pickBid(subWant, bids);
     if (!pick) throw new Error(`No bids for sub-WANT ${subWant.id}`);
     const winningBid = bids.find((b) => b.id === pick.award.winningBidId)!;
 
