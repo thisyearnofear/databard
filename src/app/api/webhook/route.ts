@@ -1,32 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { proAccounts, type ProAccount } from "@/lib/store";
-
 /**
  * Stripe webhook handler.
- * Handles subscription lifecycle: created, updated, deleted.
+ * Subscription lifecycle events (created, updated, deleted).
  *
- * Set STRIPE_WEBHOOK_SECRET from: stripe listen --forward-to localhost:3000/api/webhook
- * Or from the Stripe dashboard → Webhooks → Signing secret
+ * Activation / cancellation logic lives in settlement/backends/stripe.ts so it can be reused
+ * (e.g., admin tools, tests). This route only handles signature verification + routing.
+ *
+ * Set STRIPE_WEBHOOK_SECRET from: `stripe listen --forward-to localhost:3000/api/webhook`
+ * or from the Stripe dashboard → Webhooks → Signing secret.
  */
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { activateStripePro, cancelStripePro } from "@/lib/settlement/backends/stripe";
+
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    return NextResponse.json({ ok: false, error: "STRIPE_WEBHOOK_SECRET not configured" }, { status: 503 });
-  }
-
   const stripeKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeKey) {
-    return NextResponse.json({ ok: false, error: "STRIPE_SECRET_KEY not configured" }, { status: 503 });
+  if (!webhookSecret || !stripeKey) {
+    return NextResponse.json({ ok: false, error: "Stripe not configured" }, { status: 503 });
   }
 
   const stripe = new Stripe(stripeKey);
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
-
-  if (!sig) {
-    return NextResponse.json({ ok: false, error: "Missing stripe-signature header" }, { status: 400 });
-  }
+  if (!sig) return NextResponse.json({ ok: false, error: "Missing stripe-signature" }, { status: 400 });
 
   let event: Stripe.Event;
   try {
@@ -45,38 +41,20 @@ export async function POST(req: NextRequest) {
       if (session.mode === "subscription" && session.customer && session.subscription) {
         const customerId = typeof session.customer === "string" ? session.customer : session.customer.id;
         const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
-        const feedToken = Math.random().toString(36).substring(2, 18);
-
-        const account: ProAccount = {
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subscriptionId,
-          plan: "team",
-          activatedAt: new Date().toISOString(),
-          schedules: [],
-          feedToken,
-        };
-
-        proAccounts.set(customerId, account);
+        activateStripePro({ customerId, subscriptionId });
         console.log(`[Webhook] Pro account activated: ${customerId}`);
       }
       break;
     }
-
     case "customer.subscription.deleted": {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-      const account = proAccounts.get(customerId);
-      if (account) {
-        proAccounts.update(customerId, { schedules: [] });
-        console.log(`[Webhook] Subscription cancelled: ${customerId}`);
-      }
+      cancelStripePro(customerId);
+      console.log(`[Webhook] Subscription cancelled: ${customerId}`);
       break;
     }
-
-    case "customer.subscription.updated": {
-      // Handle plan changes if needed in future
+    case "customer.subscription.updated":
       break;
-    }
   }
 
   return NextResponse.json({ ok: true });

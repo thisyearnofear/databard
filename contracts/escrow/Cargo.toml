@@ -1,0 +1,9 @@
+# Cargo workspace — DataBard escrow (forked from solana_coralOS).
+# `anchor build` builds programs/escrow.
+[workspace]
+members = ["programs/*"]
+resolver = "2"
+
+# Anchor requires overflow checks on release builds — set at the workspace root.
+[profile.release]
+overflow-checks = true

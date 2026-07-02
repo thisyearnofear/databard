@@ -2,6 +2,19 @@ node_modules/
 .next/
 .env
 .env.local
+
+# LOOP internals (transient commit messages, sandbox dirs)
+.loop/
+
+# Python bytecode / pytest cache
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Rust / Anchor build artifacts
+contracts/escrow/target/
+contracts/escrow/.anchor/
+contracts/escrow/node_modules/
 out/
 dist/
 .DS_Store

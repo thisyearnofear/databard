@@ -44,5 +44,17 @@ Data documentation is universally neglected. Nobody reads wiki pages about table
 - [x] On-chain episode minting — Solana Memo Program + PDA registry, SNS identity
 - [x] Historical diff intros ("since last week, 2 new failures")
 
+### Phase 4: Marketplace of AI Hosts (Solana × CoralOS hackathon)
+See `docs/CORAL_HACKATHON.md` for the full plan.
+- [x] **Fork escrow program** — added `deliverable_hash: Option<[u8;32]>` + `commit_delivery` instruction; deployed to devnet as `DCq82m9wgkgQGVqokKmYsvjv9Ym8Lyz8usKvcSwUS3kY`. Settlement proves *what* was delivered, not just that it was paid.
+- [x] **Persona sellers** — `voice-config.ts` extended into Signal (premium executive brief), Cascade (mid-tier deep-dive; DataBard's classic voice), Newsroom (discount breaking-changes flash). Each has cost floor + pricing strategy.
+- [x] **Market protocol** — `src/lib/market/` (protocol, sellers, buyer, watchdog, orchestrator) owns WANT → BID → AWARD → DEPOSITED → DELIVERED → RELEASED lifecycle.
+- [x] **Settlement consolidation** — one `settlement/verifier.ts` interface, three backends (escrow/pusd/stripe). Existing checkout routes now delegate; duplication deleted.
+- [x] **Watchdog (machine buyer)** — `/api/market/watchdog?autoDrive=true` fetches schema → computes health delta vs. last snapshot → posts a WANT if delta ≥ threshold → drives the full auction end-to-end. Delta-triggered, not tick-triggered.
+- [x] **Public market API** — `POST /api/market/want`, `GET /api/market/bids`, `POST /api/market/award`, `POST /api/market/deliver`, `POST /api/market/deal`. External seller agents can plug in against this contract.
+- [ ] **`/market` live auction dashboard** — pitch UI. WANT → three persona bid cards with reasoning → buyer rationale → escrow state pill → episode player as settlement receipt. Explorer links at every state.
+- [ ] **Reputation feed** — settled Deals mint to existing `api/onchain/mint-solana` registry; bid card shows persona win count and avg price. Reuses infra, no new store.
+- [ ] **Pitch deck + demo video** — 5 slides, 3-min video. Leads with settlement + Explorer link + delivered audio.
+
 ### Paper Canvas (developer tool)
 The Paper.design MCP integration in `src/lib/paper-canvas.ts` renders the same 3-slide dashboard onto a live Paper canvas for design iteration. This requires Paper Desktop running locally and is **not** used in the user-facing export path. Use it when iterating on the dashboard layout — the pure HTML builders (`buildOverviewHtml`, `buildCriticalAndActionsHtml`, `buildLineageAndOwnershipHtml`, `buildDashboardHtml`) are the single source of truth for both the Paper preview and the PDF export.

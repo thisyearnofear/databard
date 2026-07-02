@@ -12,7 +12,9 @@
     "test:unit": "tsx tests/rate-limit.unit.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.109.1",
     "@bonfida/spl-name-service": "^3.0.21",
+    "@coral-xyz/anchor": "^0.32.1",
     "@elevenlabs/elevenlabs-js": "^2.49.0",
     "@lens-chain/storage-client": "^1.0.6",
     "@rainbow-me/rainbowkit": "^2.2.9",

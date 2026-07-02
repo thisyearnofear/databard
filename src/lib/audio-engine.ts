@@ -7,11 +7,12 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import type { Readable } from "stream";
 import type { ScriptSegment, MusicPlan } from "./types";
 import { audioCache } from "./store";
-import { getVoiceConfig } from "./voice-config";
+import { getVoiceConfig, type VoiceConfig } from "./voice-config";
 
-// Two fixed podcast host voices — runtime-overridable via voice-config store
-function getVoices() {
-  const cfg = getVoiceConfig();
+// Two fixed podcast host voices — persona-scoped when caller passes an override,
+// otherwise falls back to the runtime-overridable store (Pro settings UI).
+function getVoices(override?: VoiceConfig) {
+  const cfg = override ?? getVoiceConfig();
   return {
     Alex: cfg.alex,
     Morgan: cfg.morgan,
@@ -130,15 +131,15 @@ export async function synthesizeSpeech(
   segment: ScriptSegment,
   prevText?: string,
   nextText?: string,
+  voiceOverride?: VoiceConfig,
 ): Promise<Buffer> {
-  const cacheKey = `audio:speech:${segment.speaker}:${hashKey(segment.text)}`;
+  const voices = getVoices(voiceOverride);
+  const cacheKey = `audio:speech:${voices[segment.speaker]}:${hashKey(segment.text)}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set");
-
-  const voices = getVoices();
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${voices[segment.speaker]}?output_format=mp3_44100_128`;
   const body = {
     text: segment.text,
@@ -220,7 +221,10 @@ export function estimateCost(script: ScriptSegment[]): { segments: number; sfxCa
 }
 
 /** Synthesize full episode: intro sfx + speech segments + transition sfx + outro sfx */
-export async function synthesizeEpisode(script: ScriptSegment[]): Promise<Buffer[]> {
+export async function synthesizeEpisode(
+  script: ScriptSegment[],
+  voiceOverride?: VoiceConfig,
+): Promise<Buffer[]> {
   const buffers: Buffer[] = [];
 
   buffers.push(await synthesizeSfx("podcast intro jingle, upbeat tech vibes, short", 3));
@@ -233,7 +237,7 @@ export async function synthesizeEpisode(script: ScriptSegment[]): Promise<Buffer
       buffers.push(await synthesizeSfx("short subtle whoosh transition sound", 1));
     }
 
-    buffers.push(await synthesizeSpeech(script[i], prev, next));
+    buffers.push(await synthesizeSpeech(script[i], prev, next, voiceOverride));
   }
 
   buffers.push(await synthesizeSfx("podcast outro jingle, mellow fade out, short", 3));
