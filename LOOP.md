@@ -85,25 +85,37 @@ Every entry below is appended by `loop-local.mjs` as it runs. Each row includes 
 timestamp, the test that fired, whether the agent fixed it, and the git SHA of the patch.
 Reviewers can `git show <sha>` to see the exact edit the agent made.
 
-### Official TestSprite Cloud verification — 2026-07-02
+### Official TestSprite Cloud verifications — 2026-07-02
 
-The `digest-margin` invariant, sealed on TestSprite's cloud runner (Python + `requests` +
-pytest) against the tunneled live app. Backend tests are 0-credit at run time, so the
-loop can iterate freely without eating the plan's budget.
+The `digest-margin` invariant, sealed twice on TestSprite's cloud runner (Python +
+`requests` + pytest). Backend tests are 0-credit at run time, so the loop can iterate
+freely without eating the plan's budget.
+
+**Run 1 — against tunneled localhost** (during development)
 
 | Field | Value |
 |---|---|
-| Project | `DataBard Market API` (`98d788db-4ec4-46ea-abb9-49acd9d4ffd5`) |
 | Test | `digest-margin-official-v2` (`ba123a58-77d2-4f9d-881f-235dca9ef936`) |
 | Run | `c50a8f76-fe76-417e-a365-c1cdba001ef1` |
-| Verdict | ✓ **passed** (1/1 steps, 56s wall-clock) |
+| Verdict | ✓ **passed** (1/1 steps, 56s) |
 | Dashboard | https://www.testsprite.com/dashboard/tests/98d788db-4ec4-46ea-abb9-49acd9d4ffd5/test/ba123a58-77d2-4f9d-881f-235dca9ef936 |
-| Target | tunneled localhost:3000 via `cloudflared` (URL baked into test code — see note below) |
+| Target | `cloudflared` tunnel → localhost:3000 |
+
+**Run 2 — against LIVE production URL** (post-deploy, submission evidence)
+
+| Field | Value |
+|---|---|
+| Test | `digest-margin-prod` (`cfa9db2e-57a8-4cd4-a821-396e697b0de4`) |
+| Verdict | ✓ **passed** (34s wall-clock) |
+| Dashboard | https://www.testsprite.com/dashboard/tests/98d788db-4ec4-46ea-abb9-49acd9d4ffd5/test/cfa9db2e-57a8-4cd4-a821-396e697b0de4 |
+| Target | https://databard.thisyearnofear.com — stable public URL, no tunnel |
 
 **Author's note on backend test URLs:** TestSprite's CLI advisory said "`--target-url`
 has no effect for backend tests" — the base URL must be literal in the Python source.
-For the CLI submission we bake the tunnel URL inline before upload; the on-disk test
-uses `os.environ.get("TARGET_URL", …)` so the local loop stays reusable across runs.
+The on-disk test uses `os.environ.get("TARGET_URL", "http://localhost:3000")` so the
+local loop stays reusable; for cloud submission we `sed`-substitute the target URL
+inline before upload (see `scripts/loop/loop-local.mjs` for the local flow, and this
+doc's "Running the loop yourself" section for the cloud recipe).
 
 ### Local iteration audit trail
 
