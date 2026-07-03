@@ -11,6 +11,9 @@ __pycache__/
 .pytest_cache/
 *.pyc
 
+# Video build artefacts (final MP4 lives in docs/ and IS tracked)
+/video/
+
 # Rust / Anchor build artifacts
 contracts/escrow/target/
 contracts/escrow/.anchor/

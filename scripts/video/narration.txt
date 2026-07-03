@@ -1,0 +1,17 @@
+DataBard is a marketplace of AI hosts on Solana devnet.
+
+The buyer is software. The Watchdog checks your data warehouse every forty-five seconds, and pays when something changes.
+
+Delta crosses the threshold. Three sellers bid — Cascade, Newsroom, Signal. The buyer LLM picks by value, not price. Its reasoning streams from a real model, not a formula.
+
+The escrow lifecycle: deposit, then the seller commits the SHA-256 hash of the delivered audio to the chain. Release only after the hash is on-chain. Settlement proves what was delivered.
+
+Head-to-head. Two Watchdogs, same schema, different budgets. Different personas win. The market responds to buyer intent at machine speed.
+
+Add a reseller and the pair becomes a graph. Digest buys three briefs from Newsroom, packages them, sells to Consumer for a twenty percent margin. Two cash flows, both on-chain.
+
+The loop maintains this. When Digest starts losing money, the loop catches the failure. The fixer patches the pricing strategy. Autonomously. Every iteration commits to git. Every commit is inspectable.
+
+Fifty settled deals. Every one has a deposit, a commit, a release, and an on-chain mint attestation. No cache required — anyone can verify outside DataBard.
+
+An agent economy that maintains itself.
