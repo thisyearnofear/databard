@@ -166,6 +166,8 @@ export interface LeaderboardEntry {
   trend: "up" | "down" | "stable";
   lastMintedAt: string;
   wallets: string[];
+  /** Chronological health scores across mints — drives sparklines and movement */
+  healthHistory: number[];
 }
 
 /** Aggregate mints into a leaderboard sorted by latest health score */
@@ -182,7 +184,8 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
     const prev = sorted[1]?.healthScore ?? latest;
     const trend: "up" | "down" | "stable" = latest > prev ? "up" : latest < prev ? "down" : "stable";
     const wallets = [...new Set(mints.map((m) => m.walletAddress))];
-    return { schemaName, latestHealthScore: latest, mintCount: mints.length, trend, lastMintedAt: sorted[0].createdAt, wallets };
+    const healthHistory = [...sorted].reverse().map((m) => m.healthScore);
+    return { schemaName, latestHealthScore: latest, mintCount: mints.length, trend, lastMintedAt: sorted[0].createdAt, wallets, healthHistory };
   });
   return entries.sort((a, b) => b.latestHealthScore - a.latestHealthScore).slice(0, limit);
 }

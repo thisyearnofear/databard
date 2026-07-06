@@ -20,6 +20,8 @@ export interface InsightSummary {
   failingTests: number;
   untestedCount: number;
   ownerlessCount: number;
+  staleCount: number;
+  undocumentedCount: number;
   tableCount: number;
   criticalTables: { name: string; failingTests: number; downstreamCount: number; risk: string }[];
   lineageHotspots: { name: string; connections: number }[];
@@ -27,9 +29,25 @@ export interface InsightSummary {
   healthHistory: number[];
 }
 
+/** Aggregate cost-of-the-problem totals across all watched sources */
+export interface InsightTotals {
+  sources: number;
+  failingTests: number;
+  staleTables: number;
+  undocumentedTables: number;
+}
+
 export async function GET() {
   try {
-    const insights: InsightSummary[] = listSnapshots().map((snap) => ({
+    const snapshots = listSnapshots();
+    const totals: InsightTotals = {
+      sources: snapshots.length,
+      failingTests: snapshots.reduce((s, x) => s + x.insights.failingTests, 0),
+      staleTables: snapshots.reduce((s, x) => s + x.insights.staleTables.length, 0),
+      undocumentedTables: snapshots.reduce((s, x) => s + x.insights.undocumentedTables.length, 0),
+    };
+
+    const insights: InsightSummary[] = snapshots.map((snap) => ({
       schemaFqn: snap.schemaFqn,
       schemaName: snap.schemaName,
       recordedAt: snap.recordedAt,
@@ -41,6 +59,8 @@ export async function GET() {
       failingTests: snap.insights.failingTests,
       untestedCount: snap.insights.untestedTables.length,
       ownerlessCount: snap.insights.ownerlessTables.length,
+      staleCount: snap.insights.staleTables.length,
+      undocumentedCount: snap.insights.undocumentedTables.length,
       tableCount: snap.tableNames.length,
       criticalTables: snap.insights.criticalTables.slice(0, 5).map((ct) => ({
         name: ct.table.name,
@@ -53,7 +73,7 @@ export async function GET() {
     }));
 
     insights.sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
-    return NextResponse.json({ ok: true, insights });
+    return NextResponse.json({ ok: true, insights, totals });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
