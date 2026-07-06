@@ -1,12 +1,24 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useWizard } from "./wizard-context";
+import { track } from "@/lib/track";
+import { costHighlights } from "@/lib/cost-framing";
 import type { Episode } from "@/lib/types";
+import type { InsightTotals } from "@/app/api/insights/route";
 
 export function LandingStep() {
   const { state, dispatch, showConnect } = useWizard();
+  const [totals, setTotals] = useState<InsightTotals | null>(null);
+
+  // Live aggregate: the quantified cost of the problem across watched sources
+  useEffect(() => {
+    fetch("/api/insights")
+      .then((r) => r.json())
+      .then((d) => { if (d.ok && d.totals?.sources > 0) setTotals(d.totals); })
+      .catch(() => {});
+  }, []);
   
   // Handle checkout cancellation return
   useEffect(() => {
@@ -17,6 +29,7 @@ export function LandingStep() {
   }, []);
   
   async function handleDemo() {
+    track("demo_start", { persona: state.persona });
     dispatch({ type: "SET_STEP", step: "generating" });
     dispatch({ type: "SET_GEN_STEP", step: 0 });
     dispatch({ type: "SET_STATUS", status: "Loading demo…" });
@@ -113,7 +126,7 @@ export function LandingStep() {
           </button>
           <button
             data-testid="connect-button"
-            onClick={showConnect}
+            onClick={() => { track("connect_start", { persona: state.persona }); showConnect(); }}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
           >
             {state.persona === "enterprise" ? "Connect your data" : "Query your data"}
@@ -122,6 +135,19 @@ export function LandingStep() {
         
         <p className="text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
         
+        {/* Live problem-cost pill — the problem statement proving itself with real data */}
+        {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
+          <Link
+            href="/protocol"
+            className="mt-6 inline-flex items-center gap-2 text-xs bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 text-[var(--danger)] border border-[var(--danger)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
+          >
+            <span>🔥</span>
+            <span>
+              Right now, across {totals.sources} source{totals.sources !== 1 ? "s" : ""} DataBard watches: {costHighlights(totals)[0]}
+            </span>
+          </Link>
+        )}
+
         {/* On-chain social proof pill */}
         {state.persona === "web3" && state.mintStats && state.mintStats.total > 0 && (
           <Link

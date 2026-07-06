@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { ScriptSegment, Episode, TableMeta, LineageEdge, ResearchSession, MusicPlan } from "@/lib/types";
 import { analyzeSchema, generateActionItems, type ActionItem, type ActionPriority } from "@/lib/schema-analysis";
 import { buildResearchTrail } from "@/lib/research";
+import { track } from "@/lib/track";
+import { costLine } from "@/lib/cost-framing";
 import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
@@ -336,6 +338,11 @@ export function EpisodePlayer({
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PlayerTab>(currentEpisode.musicPlan ? "anthem" : "segments");
+  // Post-listen feedback prompt (discovery signal at the moment of value)
+  const [feedbackStage, setFeedbackStage] = useState<"hidden" | "ask" | "email" | "done">("hidden");
+  const [feedbackEmail, setFeedbackEmail] = useState("");
+  const listenStartedRef = useRef(false);
+  const isDemoEpisode = currentEpisode.schemaFqn === "analytics.ecommerce" || currentEpisode.schemaFqn === "dune.uniswap";
   const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -622,6 +629,14 @@ export function EpisodePlayer({
     return () => window.removeEventListener("keydown", onKey);
   }, [playing]);
 
+  /** Fire listen_start once per episode, on the first actual play — hooked on
+   * the <audio> element so every play path (button, segment, keyboard) counts. */
+  function markListenStart() {
+    if (listenStartedRef.current) return;
+    listenStartedRef.current = true;
+    track("listen_start", { schema: currentEpisode.schemaName });
+  }
+
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -720,6 +735,7 @@ export function EpisodePlayer({
 
   function shareVia(platform: string) {
     if (!shareUrl) return;
+    track("share", { platform, schema: currentEpisode.schemaName });
     const text = `🎙️ Listen to a DataBard episode on ${currentEpisode.schemaName}`;
     const encoded = encodeURIComponent(text);
     const encodedUrl = encodeURIComponent(shareUrl);
@@ -883,7 +899,7 @@ export function EpisodePlayer({
             </button>
             {onMint && (
               <button
-                onClick={onMint}
+                onClick={() => { track("mint_click", { schema: currentEpisode.schemaName }); onMint(); }}
                 disabled={minting}
                 className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 flex items-center gap-1 font-medium"
                 title={schemaMintCount > 0
@@ -957,7 +973,7 @@ export function EpisodePlayer({
             </button>
             {onMint && (
               <button
-                onClick={onMint}
+                onClick={() => { track("mint_click", { schema: currentEpisode.schemaName }); onMint(); }}
                 disabled={minting}
                 className="flex flex-col items-center gap-1 text-[var(--accent)] disabled:opacity-50"
               >
@@ -1058,7 +1074,10 @@ export function EpisodePlayer({
           ]).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === "insights") track("insights_view", { schema: currentEpisode.schemaName });
+              }}
               className={`flex-1 px-3 py-2.5 text-xs font-medium cursor-pointer transition-colors relative ${
                 activeTab === tab.id
                   ? "text-[var(--accent)] bg-[var(--accent-glow)]"
@@ -1239,7 +1258,13 @@ export function EpisodePlayer({
               <div className="flex-1">
                 <div className="text-sm font-medium">Health Score</div>
                 <div className="text-xs text-[var(--text-muted)]">
-                  {insights.healthLabel === "healthy" ? "Looking good" : insights.healthLabel === "at-risk" ? "Needs attention" : "Critical issues"}
+                  {costLine({
+                    failingTests: insights.failingTests,
+                    downstreamAtRisk: insights.criticalTables.reduce((s, c) => s + c.downstreamCount, 0),
+                    staleTables: insights.staleTables.length,
+                    undocumentedTables: insights.undocumentedTables.length,
+                    untestedTables: insights.untestedTables.length,
+                  }) ?? (insights.healthLabel === "healthy" ? "Looking good — no silent costs detected" : insights.healthLabel === "at-risk" ? "Needs attention" : "Critical issues")}
                 </div>
               </div>
             </div>
@@ -1394,7 +1419,11 @@ export function EpisodePlayer({
                   <button
                     onClick={() => {
                       if (isExpanded) { setExpandedSeg(null); }
-                      else { setExpandedSeg(i); seekToSegment(i); }
+                      else {
+                        setExpandedSeg(i);
+                        seekToSegment(i);
+                        track("drilldown_open", { schema: currentEpisode.schemaName, topic: currentEpisode.script[i]?.topic ?? "" });
+                      }
                     }}
                     className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
                       i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
@@ -1418,14 +1447,89 @@ export function EpisodePlayer({
         )}
       </div>
 
+      {/* Post-listen discovery prompt — feedback at the moment of value */}
+      {feedbackStage !== "hidden" && (
+        <div className="mt-3 bg-[var(--surface)] border border-[var(--accent)]/40 rounded-xl p-4 text-center animate-slide-up">
+          {feedbackStage === "ask" && (
+            <>
+              <p className="text-sm mb-3">Did this episode surface something you didn&apos;t already know?</p>
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => {
+                    track("feedback_yes", { schema: currentEpisode.schemaName });
+                    setFeedbackStage(isDemoEpisode ? "done" : "email");
+                  }}
+                  className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => {
+                    track("feedback_no", { schema: currentEpisode.schemaName });
+                    setFeedbackStage("done");
+                  }}
+                  className="border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-1.5 text-xs cursor-pointer"
+                >
+                  Not really
+                </button>
+              </div>
+            </>
+          )}
+          {feedbackStage === "email" && (
+            <>
+              <p className="text-sm mb-1">Want to go deeper?</p>
+              <p className="text-xs text-[var(--text-muted)] mb-3">
+                Leave your email — we&apos;ll schedule a 15-minute live deep-dive on your gnarliest schema.
+              </p>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetch("/api/leads", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: feedbackEmail, source: "discovery-call" }),
+                    });
+                  } catch { /* lead capture is best-effort */ }
+                  setFeedbackStage("done");
+                }}
+                className="flex gap-2 justify-center max-w-sm mx-auto"
+              >
+                <input
+                  type="email"
+                  required
+                  value={feedbackEmail}
+                  onChange={(e) => setFeedbackEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs focus:border-[var(--accent)] outline-none"
+                />
+                <button type="submit" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer">
+                  Book it
+                </button>
+              </form>
+            </>
+          )}
+          {feedbackStage === "done" && (
+            <p className="text-sm text-[var(--text-muted)]">
+              {isDemoEpisode ? "Thanks! Connect your own source to hear the real thing." : "Thanks — we'll be in touch."}
+            </p>
+          )}
+        </div>
+      )}
+
       {currentAudioUrl && (
         <audio
           ref={audioRef}
           src={currentAudioUrl}
+          onPlay={markListenStart}
           onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
           onLoadedMetadata={() => setBrowserDuration(audioRef.current?.duration ?? 0)}
           onDurationChange={() => setBrowserDuration(audioRef.current?.duration ?? 0)}
-          onEnded={() => setPlaying(false)}
+          onEnded={() => {
+            setPlaying(false);
+            track("listen_complete", { schema: currentEpisode.schemaName });
+            if (feedbackStage === "hidden") setFeedbackStage("ask");
+          }}
           onError={(e) => {
             console.error("Audio playback error:", (e.target as HTMLAudioElement).error);
           }}

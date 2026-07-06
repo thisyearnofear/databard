@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { MintRecord } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
+import { costLine } from "@/lib/cost-framing";
 import { HealthBar, TrendBadge, Sparkline, StatTile, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
 
 interface SourceCard {
@@ -194,6 +195,19 @@ export default function ProtocolDashboard() {
                         </span>
                       )}
                     </div>
+                    {/* The cost, not just the score */}
+                    {card.insight && (() => {
+                      const cost = costLine({
+                        failingTests: card.insight.failingTests,
+                        downstreamAtRisk: card.insight.criticalTables.reduce((s, ct) => s + ct.downstreamCount, 0),
+                        staleTables: card.insight.staleCount,
+                        undocumentedTables: card.insight.undocumentedCount,
+                        untestedTables: card.insight.untestedCount,
+                      });
+                      return cost ? (
+                        <div style={{ fontSize: 12, color: "var(--danger)", marginTop: "0.5rem" }}>🔥 {cost}</div>
+                      ) : null;
+                    })()}
                   </div>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     {card.recentMints.length > 0 && (
