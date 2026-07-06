@@ -223,9 +223,12 @@ Landing page → Connect Phantom/Solflare wallet
 - [x] Coral Integration — "Bring Your Own Source" escape hatch via SQL (long-tail connectors + cross-source joins)
 - [x] Coral graduation pipeline — track usage, promote popular sources to Tier 1
 - [x] Health analytics dashboard — trend sparklines + on-chain records per source
+- [x] Historical diff intros ("since last week, 2 new failures")
+- [x] Two-tier public leaderboard — 🔍 Scanned (engine) vs ⛓️ Verified (Solana attestation) + claim flow
+- [x] README health badges — `GET /api/badge/{schema}` SVG, embeddable anywhere
+- [x] Behavioral event ledger — anonymous listen/drill-down/share funnel at `GET /api/events`
 - [ ] Azure migration — inference on Azure OpenAI, hosting on Container Apps ([`docs/AZURE.md`](docs/AZURE.md))
 - [ ] Microsoft Purview Tier-1 adapter ([`docs/PURVIEW_ADAPTER.md`](docs/PURVIEW_ADAPTER.md))
-- [ ] Historical diff intros ("since last week, 2 new failures")
 - [ ] Custom Anchor program for richer on-chain PDA queries
 - [ ] Custom voice personalities
 
