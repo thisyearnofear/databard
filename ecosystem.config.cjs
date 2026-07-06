@@ -8,6 +8,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 42100,
+        NEXT_PUBLIC_URL: 'https://databard.persidian.com',
         DATABARD_DATA_DIR: '/opt/databard/data',
         CORAL_GATEWAY_URL: 'http://localhost:42101/query',
         // CORAL_GATEWAY_TOKEN: 'your-secret-token', // Set this on server or via env

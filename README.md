@@ -4,7 +4,7 @@
 
 Connect any metadata source — OpenMetadata, dbt, The Graph, Dune, or anything via SQL. DataBard's analysis engine computes health scores, critical-table rankings, coverage gaps, and PII flags, then renders the findings in the formats people actually consume: two-host AI podcast episodes, music anthems, visual dashboards, PDF reports, webhook alerts, and verifiable Solana attestations.
 
-> **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required · [🎵 Hear a demo anthem](https://databard.thisyearnofear.com)
+> **[▶ Listen to a demo episode](https://databard.persidian.com)** — no signup required · [🎵 Hear a demo anthem](https://databard.persidian.com)
 
 ---
 
@@ -84,7 +84,7 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 - **LLM-powered scripts** — any OpenAI-compatible endpoint (OpenAI, Azure OpenAI, Ollama — see [`docs/AZURE.md`](docs/AZURE.md)), GPT-4o-mini default, template fallback
 - **Interactive drill-down** — click any segment to see columns, tests, lineage, tags
 - **Health scoring** — 0-100 score based on test coverage, failures, documentation, freshness
-- **Health analytics dashboard** — engine insights (coverage, critical tables, lineage hotspots), trend sparklines, and on-chain audit records per data source at [/protocol](https://databard.thisyearnofear.com/protocol), backed by `GET /api/insights`
+- **Health analytics dashboard** — engine insights (coverage, critical tables, lineage hotspots), trend sparklines, and on-chain audit records per data source at [/protocol](https://databard.persidian.com/protocol), backed by `GET /api/insights`
 - **Streaming synthesis** — start listening while audio generates
 - **Multi-platform sharing** — WhatsApp, Telegram, Twitter, native share sheet, RSS feed
 - **MP3 download** — take episodes offline
@@ -160,7 +160,7 @@ DataBard uses Solana not just for minting receipts, but as a genuine utility lay
 | **Palm USD payments** | `POST /api/checkout/palmusd` | Pay for DataBard Pro ($29/mo) using Palm USD, a non-freezable Solana stablecoin. Server builds unsigned SPL transfer → wallet signs → `POST /api/checkout/palmusd/verify` confirms on-chain and activates Pro |
 | **On-chain audit trail** | `POST /api/onchain/mint-solana` | Every episode mint writes a memo + PDA record: `(schema_fqn, health_score, timestamp, episode_id, wallet, .sol domain)` — permanently queryable via RPC |
 | **Health alert subscriptions** | `POST /api/onchain/alerts` | Register a wallet + schema + threshold + webhook; `GET /api/onchain/check-alerts` fires Slack/webhook when health drops below threshold (cron-ready) |
-| **Public leaderboard** | `GET /api/onchain/leaderboard` | Ranked protocols by latest health score, trend (↑↓→), mint count, wallet count — live at [/leaderboard](https://databard.thisyearnofear.com/leaderboard) |
+| **Public leaderboard** | `GET /api/onchain/leaderboard` | Ranked protocols by latest health score, trend (↑↓→), mint count, wallet count — live at [/leaderboard](https://databard.persidian.com/leaderboard) |
 | **Team history** | `GET /api/onchain/team-history` | Cross-wallet mint history for a schema — shared ground truth for post-mortems and handoffs, surfaced in the EpisodePlayer "👥 Team" tab |
 | **Gated episode access** | `GET /api/onchain/access` | Episode replay checks wallet ownership of the mint record; non-holders see a wallet-connect nudge |
 | **SNS `.sol` identity** | `src/lib/sns.ts` | Wallet address resolved to `.sol` domain on connect; stored in on-chain memo at mint time |

@@ -5,7 +5,7 @@ import { getTeamHistory } from "@/lib/mint-stats";
 /**
  * GET /api/badge/{schema} — shields-style SVG health badge for READMEs and docs.
  *
- *   ![Data Health](https://databard.thisyearnofear.com/api/badge/analytics.ecommerce)
+ *   ![Data Health](https://databard.persidian.com/api/badge/analytics.ecommerce)
  *
  * Score comes from the latest engine snapshot, falling back to the latest
  * Solana mint (marked ⛓ verified). Every embedded badge is a live backlink.
