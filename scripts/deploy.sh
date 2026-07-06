@@ -83,14 +83,24 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo " 🎙️  Deploying DataBard to $REMOTE:$APP_PORT"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── 1. Local build ──────────────────────────────────────────────
+# ── 0. Record what we're deploying ──────────────────────────────
+GIT_SHA=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  echo ""
+  echo "⚠️  Working tree has uncommitted changes — deploying them anyway."
+  GIT_SHA="${GIT_SHA}-dirty"
+fi
+echo "   Commit: $GIT_SHA"
+
+# ── 1. Test + local build ───────────────────────────────────────
 echo ""
-echo "→ Building locally..."
-NEXT_DISABLE_ESLINT=1 npm run build
+echo "→ Running unit tests..."
+npm run test:unit
 
 echo ""
-echo "→ Preparing standalone output..."
-node scripts/prepare-standalone.mjs
+echo "→ Building locally..."
+# npm run build already runs prepare-standalone.mjs
+NEXT_DISABLE_ESLINT=1 npm run build
 
 # ── 2. Package the release (minimal footprint for space-constrained server) ──
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -160,14 +170,27 @@ ssh "$REMOTE" bash <<EOF
   # Ensure logs dir exists (shared across releases)
   mkdir -p "$DEPLOY_DIR/logs"
 
-  # Data directory for mint-stats, coral-graduation, leads — persists across deploys.
-  # The app reads DATABARD_DATA_DIR (set in ecosystem.config.cjs).
+  # Data directory — persists across deploys via DATABARD_DATA_DIR (ecosystem.config.cjs):
+  # JSON ledgers (mint-stats, coral-graduation, leads) AND the KV store under data/cache
+  # (schema snapshots, sessions, caches — see src/lib/store.ts).
   mkdir -p "$DEPLOY_DIR/data"
+
+  # One-time migration: carry the KV cache out of the old release dir into the
+  # persistent data dir. No-op once data/cache exists.
+  OLD_CACHE="$DEPLOY_DIR/current/.databard/cache"
+  if [ -d "\$OLD_CACHE" ] && [ ! -d "$DEPLOY_DIR/data/cache" ]; then
+    echo "   Migrating KV cache from old release to $DEPLOY_DIR/data/cache..."
+    mkdir -p "$DEPLOY_DIR/data/cache"
+    cp -rn "\$OLD_CACHE/." "$DEPLOY_DIR/data/cache/" 2>/dev/null || true
+  fi
 
   # Symlink persistent .env if it exists (API keys, secrets — not in git)
   if [ -f "$DEPLOY_DIR/.env" ] && [ ! -f "$RELEASE_DIR/.env" ]; then
     ln -sf "$DEPLOY_DIR/.env" "$RELEASE_DIR/.env"
   fi
+
+  # Record the deployed commit for prod↔git correlation
+  echo "$GIT_SHA" > "\$RELEASE_DIR/COMMIT"
 
   # Update current symlink
   ln -sfn "\$RELEASE_DIR" "$DEPLOY_DIR/current"
@@ -182,12 +205,24 @@ ssh "$REMOTE" bash <<EOF
   echo "   Cleaning up old releases..."
   ls -dt "$DEPLOY_DIR/releases/"* 2>/dev/null | tail -n +6 | xargs rm -rf || true
 
-  # Health check
-  sleep 3
+  # Health check — /api/insights exercises the server AND the KV store
+  # (fails if DATABARD_DATA_DIR/cache is unwritable). Gate the deploy on it.
   echo ""
   echo "   Health check..."
-  curl -s -o /dev/null -w "   HTTP %{http_code}" http://127.0.0.1:$APP_PORT/ || echo " (not responding yet — check pm2 logs)"
-  echo ""
+  HEALTH=""
+  for i in \$(seq 1 10); do
+    sleep 2
+    HEALTH=\$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$APP_PORT/api/insights" || echo "000")
+    if [ "\$HEALTH" = "200" ]; then break; fi
+  done
+  if [ "\$HEALTH" != "200" ]; then
+    echo "   ❌ Health check failed (HTTP \$HEALTH) — recent logs:"
+    /usr/local/bin/pm2 logs databard --lines 20 --nostream || true
+    echo ""
+    echo "   Release \$TIMESTAMP is live but unhealthy. Roll back with: ./scripts/rollback.sh"
+    exit 1
+  fi
+  echo "   ✓ HTTP 200 from /api/insights"
 EOF
 
 echo ""

@@ -12,7 +12,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from "fs";
 import { join } from "path";
 
-const STORE_DIR = join(process.cwd(), ".databard", "cache");
+// Prefer DATABARD_DATA_DIR so the store survives release-directory swaps in prod
+// (schema snapshots, sessions, caches); fall back to cwd for dev.
+const STORE_DIR = join(process.env.DATABARD_DATA_DIR ?? join(process.cwd(), ".databard"), "cache");
 
 interface StoreEntry<T> {
   data: T;
