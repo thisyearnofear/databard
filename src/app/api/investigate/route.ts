@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeGoal, getBestAgent } from "@/lib/agent";
+import { isOpenAIChatConfigured, openaiChat } from "@/lib/llm-providers";
 import type { ActionItem } from "@/lib/schema-analysis";
 
 /**
@@ -84,11 +85,8 @@ function buildSearchUrl(item: ActionItem, source?: string): string {
 /** LLM-generated guidance fallback when no browser agent is available */
 async function generateGuidance(item: ActionItem, schema: string, source?: string) {
   const platform = source === "dbt-cloud" || source === "dbt-local" ? "dbt" : "OpenMetadata";
-  const apiKey = process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-  if (!apiKey) {
+  if (!isOpenAIChatConfigured()) {
     return NextResponse.json({
       ok: true,
       investigation: {
@@ -101,30 +99,19 @@ async function generateGuidance(item: ActionItem, schema: string, source?: strin
   }
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: `You are a data engineering assistant. Give concise, actionable guidance for fixing data quality issues. Use ${platform} terminology. Include specific commands, API calls, or UI steps. Keep it under 300 words. Use markdown formatting.` },
-          { role: "user", content: `Schema: ${schema}\nIssue: ${item.title}\nDetails: ${item.description}\nCategory: ${item.category}\n\nHow do I fix this?` },
-        ],
-        temperature: 0.3,
-        max_tokens: 500,
-      }),
-      signal: AbortSignal.timeout(15000),
+    const content = await openaiChat({
+      system: `You are a data engineering assistant. Give concise, actionable guidance for fixing data quality issues. Use ${platform} terminology. Include specific commands, API calls, or UI steps. Keep it under 300 words. Use markdown formatting.`,
+      user: `Schema: ${schema}\nIssue: ${item.title}\nDetails: ${item.description}\nCategory: ${item.category}\n\nHow do I fix this?`,
+      temperature: 0.3,
+      maxTokens: 500,
+      timeoutMs: 15_000,
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (content) {
-        return NextResponse.json({
-          ok: true,
-          investigation: { summary: content, source: null, provider: "llm", actionItem: item.id },
-        });
-      }
+    if (content) {
+      return NextResponse.json({
+        ok: true,
+        investigation: { summary: content, source: null, provider: "llm", actionItem: item.id },
+      });
     }
   } catch { /* fall through to static */ }
 

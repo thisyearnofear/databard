@@ -7,6 +7,7 @@
 import type { SchemaMeta, ScriptSegment } from "./types";
 import type { ResearchTrail } from "./types";
 import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
+import { isOpenAIChatConfigured, openaiChat } from "./llm-providers";
 import { scriptCache } from "./store";
 import type { TableStatSummary } from "./dune-adapter";
 
@@ -126,32 +127,13 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?:
 }
 
 async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): Promise<ScriptSegment[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildUserPrompt(schema, insights, context) },
-      ],
-      temperature: 0.8,
-      response_format: { type: "json_object" },
-    }),
+  const content = await openaiChat({
+    system: SYSTEM_PROMPT,
+    user: buildUserPrompt(schema, insights, context),
+    temperature: 0.8,
+    json: true,
+    timeoutMs: 120_000,
   });
-
-  if (!res.ok) throw new Error(`LLM API error: ${res.status} ${res.statusText}`);
-
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Empty LLM response");
 
   const parsed = JSON.parse(content);
   const segments: ScriptSegment[] = Array.isArray(parsed) ? parsed : parsed.segments ?? parsed.script;
@@ -381,7 +363,7 @@ export async function generateScript(schema: SchemaMeta, context?: ScriptContext
   const insights = analyzeSchema(schema);
   let script: ScriptSegment[];
 
-  if (process.env.OPENAI_API_KEY) {
+  if (isOpenAIChatConfigured()) {
     try {
       script = await generateWithLLM(schema, insights, context);
     } catch (e) {

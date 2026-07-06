@@ -5,6 +5,7 @@
  * Alex: enthusiastic dev advocate. Morgan: skeptical code reviewer.
  */
 import type { ScriptSegment } from "@/lib/types";
+import { isOpenAIChatConfigured, openaiChat } from "@/lib/llm-providers";
 
 const BRIEFING_SYSTEM_PROMPT = `You are a script writer for a developer morning briefing podcast. Write a conversational two-host podcast script analyzing GitHub activity from the past 24 hours.
 
@@ -52,37 +53,18 @@ function buildBriefingPrompt(data: BriefingData): string {
 export async function generateBriefingScript(
   data: BriefingData,
 ): Promise<ScriptSegment[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
-
-  if (!apiKey) {
+  if (!isOpenAIChatConfigured()) {
     return generateBriefingTemplate(data);
   }
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: BRIEFING_SYSTEM_PROMPT },
-          { role: "user", content: buildBriefingPrompt(data) },
-        ],
-        temperature: 0.8,
-        response_format: { type: "json_object" },
-      }),
+    const content = await openaiChat({
+      system: BRIEFING_SYSTEM_PROMPT,
+      user: buildBriefingPrompt(data),
+      temperature: 0.8,
+      json: true,
+      timeoutMs: 120_000,
     });
-
-    if (!res.ok) throw new Error(`LLM API error: ${res.status}`);
-
-    const json = await res.json();
-    const content = json.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Empty LLM response");
 
     const parsed = JSON.parse(content);
     const segments: ScriptSegment[] = Array.isArray(parsed)

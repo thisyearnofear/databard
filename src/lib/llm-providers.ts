@@ -22,7 +22,11 @@ const DEFAULT_ORDER = ["venice", "nvidia", "anthropic"];
 export interface ChatInput {
   system: string;
   user: string;
-  maxTokens: number;
+  maxTokens?: number;
+  temperature?: number;
+  /** Request a JSON object response (OpenAI `response_format`) */
+  json?: boolean;
+  timeoutMs?: number;
 }
 
 interface ProviderConfig {
@@ -46,14 +50,15 @@ async function openaiCompatChat(
     },
     body: JSON.stringify({
       model,
-      max_tokens: input.maxTokens,
-      temperature: 0.4,
+      ...(input.maxTokens ? { max_tokens: input.maxTokens } : {}),
+      temperature: input.temperature ?? 0.4,
+      ...(input.json ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: input.system },
         { role: "user", content: input.user },
       ],
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(input.timeoutMs ?? 30_000),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -65,6 +70,26 @@ async function openaiCompatChat(
   const text = json.choices?.[0]?.message?.content ?? "";
   if (!text) throw new Error("empty response");
   return text;
+}
+
+/**
+ * Chat against the OPENAI_*-configured endpoint — the path used by the podcast,
+ * briefing, and investigate generators. Works with any OpenAI-compatible API:
+ *   - OpenAI:       OPENAI_BASE_URL=https://api.openai.com/v1 (default)
+ *   - Azure OpenAI: OPENAI_BASE_URL=https://RESOURCE.openai.azure.com/openai/v1
+ *                   OPENAI_MODEL=<your Azure deployment name>
+ *   - Ollama/local: OPENAI_BASE_URL=http://localhost:11434/v1
+ */
+export function isOpenAIChatConfigured(): boolean {
+  return Boolean(process.env.OPENAI_API_KEY);
+}
+
+export async function openaiChat(input: ChatInput): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
+  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  return openaiCompatChat(baseUrl, apiKey, model, input);
 }
 
 const PROVIDERS: Record<string, ProviderConfig> = {
@@ -102,7 +127,7 @@ const PROVIDERS: Record<string, ProviderConfig> = {
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const response = await client.messages.create({
         model: this.defaultModel,
-        max_tokens: input.maxTokens,
+        max_tokens: input.maxTokens ?? 1024,
         system: input.system,
         messages: [{ role: "user", content: input.user }],
       });
