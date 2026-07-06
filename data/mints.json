@@ -31,5 +31,38 @@
     "network": "devnet",
     "createdAt": "2026-07-02T22:47:19.801Z",
     "teamId": "persona:cascade"
+  },
+  {
+    "schemaName": "analytics.ecommerce",
+    "healthScore": 0,
+    "episodeId": "want_673b000d5f11",
+    "walletAddress": "FQo4VYfad2AUk8NyaF4PFWPxtdbFoMvainwv3fZQXwTX",
+    "reportHash": "0cb1d0ffb87fee4de5309751a831a2379e1986e8675c61224b2a9a4af41f2799",
+    "txSignature": "41TTyf33RFNQb5jmBCzvqTKV9KyTjAVMZfaxpwjgau6fnnwpyRHS1jtqpW5TaVJCcXaiRWxY51dwPsWCwT1DAbCK",
+    "network": "devnet",
+    "createdAt": "2026-07-03T18:52:11.464Z",
+    "teamId": "persona:newsroom"
+  },
+  {
+    "schemaName": "analytics.ecommerce",
+    "healthScore": 0,
+    "episodeId": "want_5186686554ba",
+    "walletAddress": "DQdrmDoT4xoSbTKXU3GxRYHpUd6Ed7qb4Dk1knA5GdPt",
+    "reportHash": "a150e1ad5e0520ff1304ba7e3fde65573a0ec6cc11a644d93f3e4db6aaff6124",
+    "txSignature": "4f3rWkACf9vkGLQqE6ngexNWoPxR1Pk9wEyN5L7RGbaGrMTmVBmN6vyFkrMnu47qfNG6m2gWxLbk5SA75bwffJzj",
+    "network": "devnet",
+    "createdAt": "2026-07-03T18:52:46.113Z",
+    "teamId": "persona:signal"
+  },
+  {
+    "schemaName": "analytics.ecommerce",
+    "healthScore": 0,
+    "episodeId": "want_c2fb30fb7cde",
+    "walletAddress": "DQdrmDoT4xoSbTKXU3GxRYHpUd6Ed7qb4Dk1knA5GdPt",
+    "reportHash": "8848f08433c70cf7f10f2fda9f665357433ec8f8a929505ecfe28e05bce9f57b",
+    "txSignature": "5qJwmtMaCMWFk2c32BRohZozAVccgEQbWB6wDfMgWvA6LqZZnwSKuQn3RzC9oJBCVvwkhQvtj2sfiD8xy7UXK1qR",
+    "network": "devnet",
+    "createdAt": "2026-07-03T18:52:46.115Z",
+    "teamId": "persona:signal"
   }
 ]
