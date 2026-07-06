@@ -224,8 +224,11 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case "SET_SEGMENT_OFFSETS": return { ...state, segmentOffsets: action.offsets };
     case "SET_AUDIO_DURATION": return { ...state, audioDuration: action.duration };
     case "SET_MINTING": return { ...state, minting: action.minting };
-    case "SET_SOLANA_ADDRESS": return { ...state, solanaAddress: action.address };
-    case "SET_SOLANA_SOL_DOMAIN": return { ...state, solanaSolDomain: action.domain };
+    // Bail out on unchanged values — wallet components re-fire these from effects,
+    // and returning a new state object each time creates an infinite render loop
+    // that starves React route transitions (navigation away from the episode step hangs).
+    case "SET_SOLANA_ADDRESS": return state.solanaAddress === action.address ? state : { ...state, solanaAddress: action.address };
+    case "SET_SOLANA_SOL_DOMAIN": return state.solanaSolDomain === action.domain ? state : { ...state, solanaSolDomain: action.domain };
     case "SET_CONNECTING": return { ...state, connecting: action.connecting };
     case "SET_CONNECTION_TESTED": return { ...state, connectionTested: action.tested };
     case "SET_SHOW_EMAIL_GATE": return { ...state, showEmailGate: action.show };
