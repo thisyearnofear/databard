@@ -43,14 +43,14 @@ test.describe("Persona Toggle", () => {
     await page.waitForLoadState("networkidle");
 
     // Default persona should be web3 (based on initialState)
-    const web3Toggle = page.getByText("Web3");
+    const web3Toggle = page.getByText("Onchain teams");
     await expect(web3Toggle).toBeVisible();
 
     // Switch to Enterprise
-    const enterpriseToggle = page.getByText("Enterprise");
+    const enterpriseToggle = page.getByText("Data teams");
     await enterpriseToggle.click();
 
     // Landing hero should update for enterprise persona
-    await expect(page.getByText(/as a podcast/i)).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText(/AI analyst/i)).toBeVisible({ timeout: 3_000 });
   });
 });

@@ -84,8 +84,8 @@ export function LandingStep() {
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
           {state.persona === "enterprise" ? (
             <>
-              Your data catalog,<br />
-              <span className="text-[var(--accent)]">as a podcast</span>
+              An AI analyst<br />
+              <span className="text-[var(--accent)]">for your data estate</span>
             </>
           ) : (
             <>
@@ -94,10 +94,10 @@ export function LandingStep() {
             </>
           )}
         </h1>
-        
+
         <p className="text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
-          {state.persona === "enterprise" 
-            ? "Two AI hosts debate your schema health — flag failing tests, trace lineage, call out PII gaps."
+          {state.persona === "enterprise"
+            ? "One engine computes health scores, lineage risk, and PII flags — two AI hosts debate the findings, delivered as podcasts, dashboards, and reports."
             : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
         
@@ -189,8 +189,8 @@ export function LandingStep() {
             <div className="text-2xl mb-2">{state.persona === "enterprise" ? "📤" : "⛓️"}</div>
             <h3 className="text-sm font-semibold mb-1">{state.persona === "enterprise" ? "Share" : "Mint"}</h3>
             <p className="text-xs text-[var(--text-muted)]">
-              {state.persona === "enterprise" 
-                ? "Listen, share MP3, or save to playlists"
+              {state.persona === "enterprise"
+                ? "Listen, share MP3, export reports, track trends on the dashboard"
                 : "Record on Solana, share with your community"}
             </p>
           </div>
@@ -259,6 +259,9 @@ export function LandingStep() {
             >
               GitHub
             </a>
+            <Link href="/protocol" className="hover:text-[var(--text)] transition-colors">
+              Dashboard
+            </Link>
             {state.persona === "web3" && (
               <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">
                 Leaderboard

@@ -1,8 +1,8 @@
 # 🎙️ DataBard
 
-**Turn your onchain data into AI podcasts and music anthems — then mint them on Solana.**
+**An AI analyst for your data estate — health scores, lineage risk, and governance flags, delivered as podcasts, dashboards, reports, and on-chain attestations.**
 
-Connect your Dune queries, subgraph, or data warehouse. Two AI hosts analyze the data, narrate the health story, and generate a shareable episode or a full Data Anthem (music track). Mint the result on Solana under your `.sol` identity.
+Connect any metadata source — OpenMetadata, dbt, The Graph, Dune, or anything via SQL. DataBard's analysis engine computes health scores, critical-table rankings, coverage gaps, and PII flags, then renders the findings in the formats people actually consume: two-host AI podcast episodes, music anthems, visual dashboards, PDF reports, webhook alerts, and verifiable Solana attestations.
 
 > **[▶ Listen to a demo episode](https://databard.thisyearnofear.com)** — no signup required · [🎵 Hear a demo anthem](https://databard.thisyearnofear.com)
 
@@ -14,7 +14,9 @@ Data catalogs have hundreds of tables. Nobody reads the docs. Quality tests fail
 
 ## The Solution
 
-DataBard generates podcast-style audio episodes from your OpenMetadata instance. Two AI hosts — Alex (the enthusiast) and Morgan (the skeptic) — have a natural conversation about your schemas, surfacing insights that matter:
+DataBard is built as **one analysis engine with many output formats**. The engine ingests metadata, computes health scores, critical-table rankings (failing tests × downstream dependents), coverage gaps, and lineage hotspots. Every output — audio, dashboard, report, alert, on-chain record — renders from that same analysis.
+
+The flagship format is the podcast: two AI hosts — Alex (the enthusiast) and Morgan (the skeptic) — have a natural conversation about your schemas, surfacing insights that matter:
 
 - 🔴 **"orders has 3 failing tests and 8 downstream dependents — if this breaks, it cascades"**
 - 🔒 **"Governance flag: customers has PII columns — email, phone_number"**
@@ -79,9 +81,10 @@ The analysis layer computes **health scores**, **critical table rankings** (fail
 - **Question-first analysis** — Zerve-aligned workflow that starts from a research prompt, not a blank script
 - **Research trail** — each answer now includes a plan, evidence, and recommended next actions
 - **Two-voice AI podcast** — Alex (advocate) and Morgan (auditor) via ElevenLabs
-- **LLM-powered scripts** — GPT-4o-mini generates natural dialogue (template fallback)
+- **LLM-powered scripts** — any OpenAI-compatible endpoint (OpenAI, Azure OpenAI, Ollama — see [`docs/AZURE.md`](docs/AZURE.md)), GPT-4o-mini default, template fallback
 - **Interactive drill-down** — click any segment to see columns, tests, lineage, tags
 - **Health scoring** — 0-100 score based on test coverage, failures, documentation, freshness
+- **Health analytics dashboard** — engine insights (coverage, critical tables, lineage hotspots), trend sparklines, and on-chain audit records per data source at [/protocol](https://databard.thisyearnofear.com/protocol), backed by `GET /api/insights`
 - **Streaming synthesis** — start listening while audio generates
 - **Multi-platform sharing** — WhatsApp, Telegram, Twitter, native share sheet, RSS feed
 - **MP3 download** — take episodes offline
@@ -139,7 +142,7 @@ NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
 | Web UI | Next.js 15, React 19, Tailwind CSS 4 |
 | Metadata (Tier 1) | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics |
 | Metadata (Tier 2) | Coral — "Bring Your Own Source" SQL layer for long-tail connectors + cross-source joins |
-| AI Scripts | OpenAI-compatible API (GPT-4o-mini default) |
+| AI Scripts | OpenAI-compatible API (GPT-4o-mini default; Azure OpenAI drop-in — [`docs/AZURE.md`](docs/AZURE.md)) |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
 | Payments | Stripe Checkout, Palm USD (Solana SPL stablecoin) |
@@ -219,6 +222,9 @@ Landing page → Connect Phantom/Solflare wallet
 - [x] Palm USD payments — non-freezable stablecoin checkout for Pro subscriptions
 - [x] Coral Integration — "Bring Your Own Source" escape hatch via SQL (long-tail connectors + cross-source joins)
 - [x] Coral graduation pipeline — track usage, promote popular sources to Tier 1
+- [x] Health analytics dashboard — trend sparklines + on-chain records per source
+- [ ] Azure migration — inference on Azure OpenAI, hosting on Container Apps ([`docs/AZURE.md`](docs/AZURE.md))
+- [ ] Microsoft Purview Tier-1 adapter ([`docs/PURVIEW_ADAPTER.md`](docs/PURVIEW_ADAPTER.md))
 - [ ] Historical diff intros ("since last week, 2 new failures")
 - [ ] Custom Anchor program for richer on-chain PDA queries
 - [ ] Custom voice personalities
