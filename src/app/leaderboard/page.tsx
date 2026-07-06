@@ -3,24 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { LeaderboardEntry } from "@/lib/mint-stats";
-
-function HealthBar({ score }: { score: number }) {
-  const color = score >= 80 ? "var(--success)" : score >= 50 ? "#f5c842" : "var(--danger)";
-  return (
-    <div className="flex items-center gap-2">
-      <div style={{ width: 80, height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
-        <div style={{ width: `${score}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.6s ease" }} />
-      </div>
-      <span style={{ color, fontWeight: 700, fontSize: 14 }}>{score}%</span>
-    </div>
-  );
-}
-
-function TrendBadge({ trend }: { trend: "up" | "down" | "stable" }) {
-  if (trend === "up") return <span style={{ color: "var(--success)", fontSize: 16 }}>↑</span>;
-  if (trend === "down") return <span style={{ color: "var(--danger)", fontSize: 16 }}>↓</span>;
-  return <span style={{ color: "var(--text-muted)", fontSize: 16 }}>→</span>;
-}
+import { HealthBar, TrendBadge } from "@/components/viz";
 
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -133,7 +116,7 @@ export default function LeaderboardPage() {
                 </div>
 
                 {/* Health bar */}
-                <HealthBar score={entry.latestHealthScore} />
+                <HealthBar score={entry.latestHealthScore} width={80} />
 
                 {/* Trend */}
                 <TrendBadge trend={entry.trend} />

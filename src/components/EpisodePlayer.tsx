@@ -1,9 +1,11 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import type { ScriptSegment, Episode, TableMeta, LineageEdge, ResearchSession, MusicPlan } from "@/lib/types";
 import { analyzeSchema, generateActionItems, type ActionItem, type ActionPriority } from "@/lib/schema-analysis";
 import { buildResearchTrail } from "@/lib/research";
+import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
 type PlayerTab = "segments" | "insights" | "actions" | "research" | "anthem" | "team";
@@ -1244,77 +1246,34 @@ export function EpisodePlayer({
 
             {/* Coverage bars */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[var(--text-muted)]">Test coverage</span>
-                  <span className="tabular-nums">{insights.testCoverage}%</span>
-                </div>
-                <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-[var(--accent)] rounded-full transition-all" style={{ width: `${insights.testCoverage}%` }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[var(--text-muted)]">Documentation</span>
-                  <span className="tabular-nums">{insights.docCoverage}%</span>
-                </div>
-                <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-[var(--success)] rounded-full transition-all" style={{ width: `${insights.docCoverage}%` }} />
-                </div>
-              </div>
+              <CoverageBar label="Test coverage" value={insights.testCoverage} />
+              <CoverageBar label="Documentation" value={insights.docCoverage} color="var(--success)" />
             </div>
 
             {/* Key stats */}
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-[var(--bg)] rounded-lg p-2">
-                <div className="text-lg font-semibold tabular-nums">{insights.failingTests}</div>
-                <div className="text-[10px] text-[var(--text-muted)]">Failing</div>
-              </div>
-              <div className="bg-[var(--bg)] rounded-lg p-2">
-                <div className="text-lg font-semibold tabular-nums">{insights.untestedTables.length}</div>
-                <div className="text-[10px] text-[var(--text-muted)]">Untested</div>
-              </div>
-              <div className="bg-[var(--bg)] rounded-lg p-2">
-                <div className="text-lg font-semibold tabular-nums">{insights.ownerlessTables.length}</div>
-                <div className="text-[10px] text-[var(--text-muted)]">No owner</div>
-              </div>
+            <div className="grid grid-cols-3 gap-2">
+              <MiniStat value={insights.failingTests} label="Failing" />
+              <MiniStat value={insights.untestedTables.length} label="Untested" />
+              <MiniStat value={insights.ownerlessTables.length} label="No owner" />
             </div>
 
-            {/* Critical tables */}
-            {insights.criticalTables.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">Critical Tables</h4>
-                <div className="space-y-1.5">
-                  {insights.criticalTables.slice(0, 5).map((ct) => (
-                    <div key={ct.table.name} className="flex items-center gap-2 text-xs bg-[var(--bg)] rounded-lg px-3 py-2">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${
-                        ct.risk === "critical" ? "bg-[var(--danger)]" : ct.risk === "high" ? "bg-yellow-400" : "bg-[var(--border)]"
-                      }`} />
-                      <span className="font-medium truncate">{ct.table.name}</span>
-                      <span className="text-[var(--text-muted)] ml-auto shrink-0">
-                        {ct.failingTests > 0 && `${ct.failingTests} failing`}
-                        {ct.failingTests > 0 && ct.downstreamCount > 0 && " · "}
-                        {ct.downstreamCount > 0 && `${ct.downstreamCount} dependents`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <CriticalTablesList
+              tables={insights.criticalTables.slice(0, 5).map((ct) => ({
+                name: ct.table.name,
+                failingTests: ct.failingTests,
+                downstreamCount: ct.downstreamCount,
+                risk: ct.risk,
+              }))}
+            />
 
-            {/* Lineage hotspots */}
-            {insights.lineageHotspots.length > 0 && (
-              <div>
-                <h4 className="text-xs font-medium text-[var(--text-muted)] mb-2">High-traffic tables</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {insights.lineageHotspots.map((h) => (
-                    <span key={h.name} className="text-xs px-2 py-1 rounded bg-[var(--bg)] text-[var(--text-muted)]">
-                      {h.name} <span className="text-[var(--accent)]">({h.connections})</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            <HotspotChips hotspots={insights.lineageHotspots} />
+
+            <Link
+              href="/protocol"
+              className="block text-center text-xs text-[var(--accent)] hover:underline pt-1"
+            >
+              📊 Track this schema over time on the dashboard →
+            </Link>
           </div>
         )}
 

@@ -44,3 +44,11 @@ export function getLatestSnapshot(schemaFqn: string): SchemaSnapshot | null {
 export function getSnapshotHistory(schemaFqn: string): SchemaSnapshot[] {
   return store.get<SchemaSnapshot[]>(historyKey(schemaFqn)) ?? [];
 }
+
+/** List the latest snapshot of every schema — powers the analytics dashboard */
+export function listSnapshots(): SchemaSnapshot[] {
+  return store
+    .keys("schema-snapshot:")
+    .map((k) => store.get<SchemaSnapshot>(k))
+    .filter((s): s is SchemaSnapshot => s !== null);
+}

@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
+import { HealthBar } from "@/components/viz";
 
 interface HistoryRecord {
   schemaName: string;
@@ -19,18 +20,6 @@ interface HistoryRecord {
   groveMetadataUrl: string | null;
   groveAudioUrl: string | null;
   solDomain: string | null;
-}
-
-function HealthBar({ score }: { score: number }) {
-  const color = score >= 80 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" }}>
-        <div style={{ width: `${score}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.6s ease" }} />
-      </div>
-      <span style={{ fontSize: 13, fontWeight: 600, color, minWidth: 36 }}>{score}%</span>
-    </div>
-  );
 }
 
 export default function HistoryPage() {
