@@ -9,14 +9,9 @@ const LINKS = [
   { href: "/history", icon: "📼", label: "History" },
 ];
 
-/** Slim global nav pill — sits beside the theme toggle on every page. */
-export function SiteNav() {
-  const pathname = usePathname();
+function NavLinks({ pathname }: { pathname: string }) {
   return (
-    <nav
-      aria-label="Site"
-      className="fixed z-50 flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8 bottom-4 left-1/2 -translate-x-1/2 shadow-lg sm:bottom-auto sm:left-auto sm:translate-x-0 sm:shadow-none sm:top-4 sm:right-14"
-    >
+    <>
       {LINKS.map((l) => (
         <Link
           key={l.href}
@@ -31,6 +26,32 @@ export function SiteNav() {
           <span className="hidden sm:inline"> {l.label}</span>
         </Link>
       ))}
-    </nav>
+    </>
+  );
+}
+
+/**
+ * Slim global nav. Desktop: a plain in-flow pill meant to sit inside
+ * HeaderBar alongside the wallet button and theme toggle. Mobile: a separate
+ * thumb-reachable pill floating at the bottom (nav links are the one thing
+ * worth a second, dedicated placement on small screens).
+ */
+export function SiteNav() {
+  const pathname = usePathname();
+  return (
+    <>
+      <nav
+        aria-label="Site"
+        className="hidden sm:flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8"
+      >
+        <NavLinks pathname={pathname} />
+      </nav>
+      <nav
+        aria-label="Site"
+        className="sm:hidden fixed z-50 flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8 bottom-4 left-1/2 -translate-x-1/2 shadow-lg"
+      >
+        <NavLinks pathname={pathname} />
+      </nav>
+    </>
   );
 }

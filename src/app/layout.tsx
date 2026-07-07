@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { AppProviders } from "@/components/AppProviders";
 import { ClientProviders } from "@/components/ClientProviders";
 import { ToastProvider } from "@/components/Toast";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { SiteNav } from "@/components/SiteNav";
+import { HeaderBar } from "@/components/HeaderBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,8 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AppProviders>
           <ClientProviders>
             <ToastProvider>
-              <ThemeToggle />
-              <SiteNav />
+              <HeaderBar />
               {children}
             </ToastProvider>
           </ClientProviders>
