@@ -55,6 +55,14 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+/* Clearance for the fixed mobile bottom tab bar (SiteNav) so page content
+   and floating CTAs never sit underneath it. Matches Tailwind's `sm` cutoff. */
+@media (max-width: 639px) {
+  body {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+  }
+}
+
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 20px rgba(124, 91, 245, 0.3); }
   50% { box-shadow: 0 0 40px rgba(124, 91, 245, 0.6); }

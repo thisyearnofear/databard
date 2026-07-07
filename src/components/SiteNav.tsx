@@ -9,9 +9,14 @@ const LINKS = [
   { href: "/history", icon: "📼", label: "History" },
 ];
 
-function NavLinks({ pathname }: { pathname: string }) {
+/** Desktop: compact horizontal pill, icon + label inline, meant to sit
+ * inside HeaderBar alongside the wallet button and theme toggle. */
+function DesktopNav({ pathname }: { pathname: string }) {
   return (
-    <>
+    <nav
+      aria-label="Site"
+      className="hidden sm:flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8"
+    >
       {LINKS.map((l) => (
         <Link
           key={l.href}
@@ -22,36 +27,57 @@ function NavLinks({ pathname }: { pathname: string }) {
               : "text-[var(--text-muted)] hover:text-[var(--text)]"
           }`}
         >
-          {l.icon}
-          <span className="hidden sm:inline"> {l.label}</span>
+          {l.icon} {l.label}
         </Link>
       ))}
-    </>
+    </nav>
   );
 }
 
-/**
- * Slim global nav. Desktop: a plain in-flow pill meant to sit inside
- * HeaderBar alongside the wallet button and theme toggle. Mobile: a separate
- * thumb-reachable pill floating at the bottom (nav links are the one thing
- * worth a second, dedicated placement on small screens).
- */
+/** Mobile: a full-width native-style bottom tab bar. Icon-over-label per tab,
+ * an accent background pill (not text color — emoji ignore CSS `color`, which
+ * silently broke the previous active-state indicator on mobile) marks the
+ * current tab, and Home is included so the bar is a complete destination set —
+ * previously the only way back was a small text link, not thumb-reachable. */
+function MobileTabBar({ pathname }: { pathname: string }) {
+  const tabs = [{ href: "/", icon: "🏠", label: "Home" }, ...LINKS];
+  return (
+    <nav
+      aria-label="Site"
+      className="sm:hidden fixed z-50 bottom-0 left-0 right-0 flex items-stretch justify-around bg-[var(--surface)] border-t border-[var(--border)]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {tabs.map((t) => {
+        const active = pathname === t.href;
+        return (
+          <Link
+            key={t.href}
+            href={t.href}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px]"
+          >
+            <span
+              className={`w-11 h-7 flex items-center justify-center rounded-full text-base transition-colors ${
+                active ? "bg-[var(--accent)]/15" : ""
+              }`}
+            >
+              {t.icon}
+            </span>
+            <span className={`text-[10px] leading-none ${active ? "text-[var(--accent)] font-medium" : "text-[var(--text-muted)]"}`}>
+              {t.label}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function SiteNav() {
   const pathname = usePathname();
   return (
     <>
-      <nav
-        aria-label="Site"
-        className="hidden sm:flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8"
-      >
-        <NavLinks pathname={pathname} />
-      </nav>
-      <nav
-        aria-label="Site"
-        className="sm:hidden fixed z-50 flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8 bottom-4 left-1/2 -translate-x-1/2 shadow-lg"
-      >
-        <NavLinks pathname={pathname} />
-      </nav>
+      <DesktopNav pathname={pathname} />
+      <MobileTabBar pathname={pathname} />
     </>
   );
 }
