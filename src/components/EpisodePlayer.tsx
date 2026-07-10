@@ -359,6 +359,7 @@ export function EpisodePlayer({
     if (listenStartedRef.current) return;
     listenStartedRef.current = true;
     track("listen_start", { schema: currentEpisode.schemaName });
+    if (isDemoEpisode) track("demo_play", { schema: currentEpisode.schemaName });
   }
 
   function togglePlay() {
@@ -516,6 +517,7 @@ export function EpisodePlayer({
       s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
     ) ?? currentEpisode.script[0];
     const highlightIdx = currentEpisode.script.indexOf(highlight);
+    track("clip_share", { schema: currentEpisode.schemaName, segment: String(highlightIdx) });
 
     // Build a deep link to the specific segment
     const baseUrl = shareUrl ?? window.location.origin + window.location.pathname;

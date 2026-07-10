@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useWizard } from "@/components/wizard";
+import { track } from "@/lib/track";
 
 export default function RoastPage() {
   const { dispatch } = useWizard();
+
+  useEffect(() => {
+    track("roast_page_view", {});
+  }, []);
 
   return (
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-2xl mx-auto">
@@ -48,7 +54,7 @@ export default function RoastPage() {
       {/* CTAs */}
       <div className="flex flex-col gap-3 w-full max-w-sm">
         <button
-          onClick={() => dispatch({ type: "SET_STEP", step: "connect" })}
+          onClick={() => { track("roast_cta_click", { cta: "roast" }); dispatch({ type: "SET_STEP", step: "connect" }); }}
           className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-6 py-3.5 text-base font-bold transition-all hover:scale-[1.02]"
         >
           🔥 Roast my data →

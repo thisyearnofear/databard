@@ -30,6 +30,7 @@ export function LandingStep() {
   }, []);
   
   async function handleDemo() {
+    track("landing_cta_click", { cta: "demo", persona: state.persona });
     track("demo_start", { persona: state.persona });
     dispatch({ type: "SET_STEP", step: "generating" });
     dispatch({ type: "SET_GEN_STEP", step: 0 });
@@ -119,7 +120,7 @@ export function LandingStep() {
         <div className="flex flex-wrap justify-center gap-3 mb-8">
           <button
             data-testid="connect-button"
-            onClick={() => { track("connect_start", { persona: state.persona }); showConnect(); }}
+            onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-6 py-3 font-medium cursor-pointer transition-all hover:scale-[1.02]"
           >
             <span>{state.persona === "enterprise" ? "Connect your data" : "Query your data"}</span>
@@ -353,6 +354,9 @@ export function LandingStep() {
             </Link>
             <Link href="/labs" className="hover:text-[var(--text)] transition-colors">
               Labs
+            </Link>
+            <Link href="/roast" className="hover:text-[var(--text)] transition-colors">
+              🔥 Roast my data
             </Link>
             {state.persona === "web3" && (
               <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">

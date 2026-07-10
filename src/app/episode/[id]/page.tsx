@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
+import { track } from "@/lib/track";
 import type { Episode } from "@/lib/types";
 
 // Lazy-load Solana wallet connect — avoids bundling Phantom/Solflare adapters
@@ -60,6 +61,7 @@ function SharedEpisodeInner() {
           }
 
           setEpisode(ep);
+          track("shared_episode_open", { schema: ep.schemaName, seg: segmentIdx ?? "" });
         } else {
           setError(data.error);
         }
@@ -193,10 +195,10 @@ function SharedEpisodeInner() {
           Every Monday morning, your team gets a fresh audio briefing on your data health — health scores, what changed, what to fix. No dashboard to check. No report to read. Just press play.
         </p>
         <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-          <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02]">
+          <a href="/" onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02]">
             Get this for your data →
           </a>
-          <a href="/protocol" className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
+          <a href="/protocol" onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
             See the dashboard
           </a>
         </div>

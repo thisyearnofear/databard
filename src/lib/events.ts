@@ -13,6 +13,7 @@ const MAX_EVENTS = 10_000; // rolling window — oldest dropped beyond this
 
 /** Whitelisted event types — reject anything else at the API boundary */
 export const EVENT_TYPES = [
+  // Legacy events
   "demo_start",
   "connect_start",
   "listen_start",
@@ -23,6 +24,18 @@ export const EVENT_TYPES = [
   "mint_click",
   "feedback_yes",
   "feedback_no",
+  // Funnel events (GTM instrumentation)
+  "landing_cta_click",        // which CTA: demo vs connect
+  "demo_play",                // zero-friction demo played
+  "persona_toggle",           // enterprise vs onchain switch
+  "generate_complete",        // analysis finished, landed on dashboard
+  "dashboard_listen_click",   // clicked "Listen to this analysis"
+  "schedule_setup",           // clicked "Set up weekly digest"
+  "clip_share",               // clicked "Share moment" (viral hook)
+  "shared_episode_open",      // someone opened a shared episode link
+  "shared_episode_cta_click", // clicked "Get this for your data" on shared page
+  "roast_page_view",          // visited /roast
+  "roast_cta_click",          // clicked "Roast my data" on /roast
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

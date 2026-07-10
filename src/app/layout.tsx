@@ -29,6 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="alternate" type="application/rss+xml" title="DataBard Podcast Feed" href="/api/feed" />
+        {/* Plausible analytics — only loads if NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set */}
+        {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
+          <script
+            defer
+            data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
+            src={process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "https://plausible.io/js/script.js"}
+          />
+        )}
       </head>
       <body>
         <AppProviders>

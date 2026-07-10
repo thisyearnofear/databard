@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useWizard } from "./wizard-context";
+import { track } from "@/lib/track";
 import type { Episode } from "@/lib/types";
 
 /**
@@ -39,6 +40,7 @@ export function useGeneration() {
         });
         const shareData = await shareRes.json();
         const episodeId = shareData.ok ? shareData.id : "";
+        track("generate_complete", { schema: episode.schemaName, tables: String(episode.tableCount), shareId: episodeId });
         router.push(episodeId ? `/protocol?episode=${episodeId}` : "/protocol");
       } catch {
         router.push("/protocol");

@@ -7,6 +7,7 @@ import type { MintRecord, AlertSubscription } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
 import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { costLine } from "@/lib/cost-framing";
+import { track } from "@/lib/track";
 import { HealthBar, TrendBadge, Sparkline, StatTile, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
 
 interface SourceCard {
@@ -191,6 +192,7 @@ function ProtocolDashboardInner() {
               </div>
               <Link
                 href={`/episode/${episodeId}`}
+                onClick={() => track("dashboard_listen_click", { schema: episodeMeta?.schemaName ?? "" })}
                 className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02] flex items-center gap-2 shrink-0"
               >
                 <span>▶</span>
@@ -205,6 +207,7 @@ function ProtocolDashboardInner() {
               </p>
               <Link
                 href={`/pro?setup=1&schema=${encodeURIComponent(episodeMeta.schemaName)}&episode=${episodeId}`}
+                onClick={() => track("schedule_setup", { schema: episodeMeta.schemaName, source: "dashboard_prompt" })}
                 className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
               >
                 Set up weekly digest →
