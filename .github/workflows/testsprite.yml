@@ -1,0 +1,68 @@
+# TestSprite CI/CD — gates every PR on the economic invariants
+# +5 Innovation points for the TestSprite Season 3 hackathon
+#
+# This workflow runs the TestSprite backend tests against the live production URL
+# on every pull request. If any invariant fails, the build fails — no merging
+# broken economic logic.
+#
+# Setup:
+#   1. Add TESTSPRITE_API_KEY as a repository secret
+#   2. Set PROJECT_ID below to your TestSprite project ID
+#   3. The tests hit the live URL (https://databard.persidian.com)
+#      — no localhost, no tunnel, no flaky local env
+
+name: TestSprite Invariants
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+  PROJECT_ID: ${{ secrets.TESTSPRITE_PROJECT_ID }}
+
+jobs:
+  verify-invariants:
+    name: Run economic invariant tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install TestSprite CLI
+        run: npm install -g @testsprite/testsprite-cli
+
+      - name: Run all backend tests
+        run: |
+          testsprite test run --all \
+            --project "$PROJECT_ID" \
+            --wait \
+            --output json > results.json
+          echo "--- Test Results ---"
+          cat results.json | jq '.[] | {test_id, status, verdict}' 2>/dev/null || cat results.json
+
+      - name: Check verdicts
+        run: |
+          # Extract pass/fail from results — non-zero exit fails the build
+          FAILED=$(cat results.json | jq '[.[] | select(.status != "passed" and .status != "pass")] | length' 2>/dev/null || echo "1")
+          if [ "$FAILED" != "0" ]; then
+            echo "❌ $FAILED test(s) failed — see results.json for details"
+            cat results.json | jq '.[] | select(.status != "passed" and .status != "pass") | {test_id, status, error}' 2>/dev/null
+            exit 1
+          fi
+          echo "✓ All invariant tests passed"
+
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testsprite-results
+          path: results.json

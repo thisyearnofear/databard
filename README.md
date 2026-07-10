@@ -227,6 +227,23 @@ Both voices use **context stitching** (`previous_text` / `next_text`) for natura
 ELEVENLABS_API_KEY=sk_your_key_here
 ```
 
+## TestSprite Verification Loop
+
+DataBard is submitted to [TestSprite Season 3](https://www.testsprite.com/hackathon-s3) — "CLI Launch & Loop Engineering."
+
+The loop defends **economic invariants** — properties that must hold or the market silently breaks:
+
+1. **Digest reseller must earn positive margin** on every settled deal
+2. **Cascade wins Quality briefs, Newsroom wins Freshness** — persona-focus fit
+3. **Escrow state machine rejects invalid transitions** (no release before commit)
+4. **Release cascade settles all sub-escrows** (Newsroom must get paid)
+
+Each invariant is a Python + `requests` test in [`tests/testsprite/`](tests/testsprite/). The loop ([`scripts/loop/loop.mjs`](scripts/loop/loop.mjs)) uploads them to TestSprite Cloud, runs them against the live URL, and on failure feeds the failure bundle to the coding agent to propose + apply + commit a minimal patch. Re-runs until green or hits the 4-iteration cap.
+
+**CI/CD:** The TestSprite checker is wired into GitHub Actions (`.github/workflows/testsprite.yml`) — every PR reruns the invariants and fails the build if something breaks. (+5 Innovation)
+
+See [`LOOP.md`](LOOP.md) for the full iteration audit trail — every run, every fix, every commit SHA.
+
 ## License
 
 MIT
