@@ -245,6 +245,35 @@ export function LandingStep() {
         </div>
       </section>
 
+      {/* Coral showcase — cross-source SQL */}
+      <section className="w-full max-w-2xl pb-12">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">🪸</span>
+            <h2 className="text-lg font-semibold">Query 50+ sources with SQL</h2>
+          </div>
+          <p className="text-sm text-[var(--text-muted)] mb-4">
+            Coral is an open-source SQL engine that joins APIs, databases, and files — no ETL, no data warehouse. DataBard uses it as the primary data layer for cross-source analysis.
+          </p>
+          <div className="bg-[var(--bg)] border border-[var(--border)] rounded-xl p-4 font-mono text-xs overflow-x-auto">
+            <div className="text-[var(--text-muted)] mb-1">-- Find stale PRs across your repos</div>
+            <div><span className="text-[var(--accent)]">SELECT</span> number, title, author, created_at</div>
+            <div><span className="text-[var(--accent)]">FROM</span> github.pulls</div>
+            <div><span className="text-[var(--accent)]">WHERE</span> state = <span className="text-yellow-400">'open'</span></div>
+            <div>&&nbsp;&nbsp;<span className="text-[var(--accent)]">AND</span> created_at &lt; <span className="text-yellow-400">NOW()</span> - <span className="text-yellow-400">INTERVAL '2 days'</span></div>
+            <div><span className="text-[var(--accent)]">ORDER BY</span> created_at <span className="text-[var(--accent)]">ASC</span></div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {["GitHub", "Slack", "Jira", "Linear", "Postgres", "Stripe", "Notion", "CSV files"].map((src) => (
+              <span key={src} className="text-[10px] bg-[var(--bg)] border border-[var(--border)] rounded-full px-2.5 py-1 text-[var(--text-muted)]">
+                {src}
+              </span>
+            ))}
+            <span className="text-[10px] text-[var(--accent)] font-medium">+ 40 more</span>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section className="w-full max-w-2xl pb-12">
         <h2 className="text-lg font-semibold text-center mb-5">FAQ</h2>
@@ -255,7 +284,7 @@ export function LandingStep() {
               <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-              No. Credentials are sent over HTTPS and never persisted on disk. Coral queries run locally on your machine — data never leaves it. Generated audio is ephemeral unless you explicitly save or mint it.
+              No. Credentials are sent over HTTPS and never persisted on disk. Coral queries run locally on your machine — data never leaves it. Generated audio is ephemeral unless you explicitly save or {state.persona === "enterprise" ? "attest" : "mint"} it.
             </p>
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">

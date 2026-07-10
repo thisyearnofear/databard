@@ -53,13 +53,12 @@ function OnChainWallContent() {
           ← Back to DataBard
         </Link>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-          {schemaFilter ? `The ${schemaFilter.split(".").pop()} Wall` : "On-Chain Health Wall"}
+          {schemaFilter ? `${schemaFilter.split(".").pop()} Attestations` : "Onchain Primitives"}
         </h1>
         <p className="text-[var(--text-muted)] max-w-xl mx-auto">
-          {schemaFilter 
-            ? `Verifiable data health attestations for ${schemaFilter}. Each record is a permanent anchor on the Solana blockchain.`
-            : "Every health report can be minted as a tamper-evident attestation. This is the live feed of our community's data quality."
-          }
+          {schemaFilter
+            ? `Verifiable health attestations for ${schemaFilter}. Each record is a permanent anchor on Solana.`
+            : "DataBard uses Solana as a verifiable audit trail. Every health report can be attested on-chain — a tamper-evident record your team and auditors can verify. This is the live feed."}
         </p>
 
         {stats && (
@@ -204,14 +203,33 @@ function OnChainWallContent() {
                 ))}
             </div>
 
-            <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-2xl p-5 space-y-3">
-              <h3 className="text-sm font-bold">What is a mint?</h3>
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                A mint is a permanent record of a DataBard health report. It includes the schema name, health score, and a cryptographic hash of the analysis.
-              </p>
-              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                By anchoring this on Solana, you create a <b>tamper-evident history</b> of your data quality that anyone can verify.
-              </p>
+            <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-bold">Onchain Primitives</h3>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text)]">🔐 Attestation</p>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
+                    Each health report is hashed and anchored on Solana via the Memo program. The hash proves the report existed at a specific time with a specific score.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text)]">✅ Verification</p>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
+                    Anyone can verify a report by comparing the on-chain hash against the current report. Mismatch = tampering detected.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text)]">📜 Audit Trail</p>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
+                    Multiple attestations over time create a permanent health history — auditors can track improvements and regressions without trusting DataBard's servers.
+                  </p>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-[var(--accent)]/20">
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  Powered by Solana Memo Program · No smart contracts · No gas for verification
+                </p>
+              </div>
             </div>
           </div>
         )}

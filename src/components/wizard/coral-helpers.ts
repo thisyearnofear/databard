@@ -43,6 +43,26 @@ ORDER BY num_members DESC
 LIMIT 15`,
   },
   {
+    label: "Stale PRs review",
+    description: "PRs open >2 days — review backlog",
+    query: `SELECT number, title, user__login as author, created_at
+FROM github.pulls
+WHERE owner = 'facebook' AND repo = 'react' AND state = 'open'
+  AND created_at < NOW() - INTERVAL '2 days'
+ORDER BY created_at ASC
+LIMIT 20`,
+  },
+  {
+    label: "Bug issues triage",
+    description: "Open issues labeled 'bug'",
+    query: `SELECT number, title, user__login as author, created_at
+FROM github.issues
+WHERE owner = 'facebook' AND repo = 'react' AND state = 'open'
+  AND labels::text LIKE '%bug%'
+ORDER BY created_at DESC
+LIMIT 15`,
+  },
+  {
     label: "All sources",
     description: "See everything Coral can query",
     query: `SELECT schema_name, table_name
