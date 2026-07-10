@@ -129,11 +129,12 @@ export async function POST(req: NextRequest) {
             : source === "coral"
               ? buildCoralTableStats(meta)
               : undefined;
-          const script = await generateScript(meta, { 
-            researchQuestion: normalizedResearchQuestion, 
-            researchTrail, 
+          const script = await generateScript(meta, {
+            researchQuestion: normalizedResearchQuestion,
+            researchTrail,
             tableStats,
-            source 
+            source,
+            format: body.outputFormat === "executive-summary" ? "executive-summary" : "podcast",
           });
           if (signal.aborted) { controller.close(); return; }
 

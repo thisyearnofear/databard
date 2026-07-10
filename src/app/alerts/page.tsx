@@ -236,6 +236,17 @@ export default function AlertsPage() {
             <strong className="text-[var(--text)]">How it works:</strong> DataBard checks your alert thresholds against the latest health snapshots. When a score drops below your threshold, it fires your webhook with the schema name, current health score, and a link to the episode. No wallet required — onchain attestation is an optional upgrade for teams that want a permanent audit trail.
           </p>
         </div>
+
+        {/* Cross-link to schedules */}
+        <div className="mt-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">📅 Scheduled digest podcasts</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">Automate weekly audio briefings for your team.</p>
+          </div>
+          <Link href="/pro" className="text-xs bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-1.5 font-medium shrink-0">
+            Set up in Pro →
+          </Link>
+        </div>
       </div>
     </div>
   );

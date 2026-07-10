@@ -76,6 +76,7 @@ export function useGeneration() {
         if (state.researchQuestion.trim()) {
           body.researchQuestion = state.researchQuestion.trim();
         }
+        body.outputFormat = state.outputFormat;
 
         // Pre-validate schema
         const validateRes = await fetch("/api/validate-schema", {

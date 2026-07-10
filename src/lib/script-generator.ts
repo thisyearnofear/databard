@@ -24,6 +24,7 @@ interface ScriptContext {
   researchTrail?: ResearchTrail;
   tableStats?: Record<string, TableStatSummary>;
   source?: string;
+  format?: "podcast" | "executive-summary";
 }
 
 /** Simple hash for cache keys */
@@ -65,6 +66,23 @@ RULES:
 - If the data source is "Coral", highlight that this is a "No ETL" unified view joining multiple sources (APIs, files, databases) in real-time.
 - No markdown, no code blocks — just the JSON array
 - If dataHighlights are present, narrate actual data findings. Reference specific numbers, ranges, and notable values. For numeric columns mention min/max/avg ranges. For categorical columns mention the most common values. Don't just list column names — tell the story the data reveals.`;
+
+const EXECUTIVE_SUMMARY_PROMPT = `You are a script writer for DataBard's Executive Summary mode. Write a concise 2-minute briefing for a busy executive who needs the bottom line on their data health.
+
+HOSTS:
+- Alex: Brief, professional delivery. States facts and recommendations clearly.
+- Morgan: Adds one critical risk call-out. Keeps it short.
+
+RULES:
+- Output ONLY a JSON array: [{"speaker":"Alex"|"Morgan","topic":"string","text":"string"}]
+- Open with the health score and one-sentence verdict (healthy / needs attention / critical)
+- Cover the top 3 issues only — failing tests, critical tables, or coverage gaps
+- End with 2-3 concrete recommended actions
+- Total script: 5-8 segments maximum
+- Each segment: 1-2 sentences, direct and actionable
+- No deep dives into individual tables — this is the executive overview
+- If a research question is provided, answer it in one sentence
+- No markdown, no code blocks — just the JSON array`;
 
 function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): string {
   const tables = schema.tables.map((t) => ({
@@ -127,8 +145,9 @@ function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?:
 }
 
 async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): Promise<ScriptSegment[]> {
+  const isExecutiveSummary = context?.format === "executive-summary";
   const content = await openaiChat({
-    system: SYSTEM_PROMPT,
+    system: isExecutiveSummary ? EXECUTIVE_SUMMARY_PROMPT : SYSTEM_PROMPT,
     user: buildUserPrompt(schema, insights, context),
     temperature: 0.8,
     json: true,
@@ -353,6 +372,73 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights, context?
   return segments;
 }
 
+/** Executive summary template — concise 5-8 segment briefing */
+function generateExecutiveSummaryTemplate(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): ScriptSegment[] {
+  const segments: ScriptSegment[] = [];
+  const verdict = insights.healthLabel === "healthy" ? "healthy"
+    : insights.healthLabel === "at-risk" ? "needs attention"
+    : "critical";
+
+  // 1. Health score + verdict
+  segments.push({
+    speaker: "Alex", topic: "verdict",
+    text: `Executive summary for ${schema.name}: health score ${insights.healthScore} out of 100 — ${verdict}.${context?.researchQuestion ? ` Regarding your question: ${context.researchTrail?.summary ?? "see details below."}` : ""}`,
+  });
+
+  // 2. Top issues
+  const issues: string[] = [];
+  if (insights.failingTests > 0) issues.push(`${insights.failingTests} failing test${insights.failingTests > 1 ? "s" : ""}`);
+  if (insights.criticalTables.length > 0) issues.push(`${insights.criticalTables.length} critical table${insights.criticalTables.length > 1 ? "s" : ""} with downstream risk`);
+  if (insights.testCoverage < 50) issues.push(`test coverage at ${insights.testCoverage}%`);
+  if (insights.staleTables.length > 0) issues.push(`${insights.staleTables.length} stale table${insights.staleTables.length > 1 ? "s" : ""}`);
+
+  if (issues.length > 0) {
+    segments.push({
+      speaker: "Morgan", topic: "issues",
+      text: `Top concerns: ${issues.slice(0, 3).join(", ")}.`,
+    });
+  }
+
+  // 3. Critical table call-out (if any)
+  if (insights.criticalTables.length > 0) {
+    const ct = insights.criticalTables[0];
+    segments.push({
+      speaker: "Morgan", topic: "critical",
+      text: `${ct.table.name} has ${ct.failingTests} failing test${ct.failingTests > 1 ? "s" : ""} with ${ct.downstreamCount} downstream dependents — highest cascade risk.`,
+    });
+  }
+
+  // 4. PII flag (if any)
+  if (insights.piiTables.length > 0) {
+    segments.push({
+      speaker: "Morgan", topic: "governance",
+      text: `${insights.piiTables.length} table${insights.piiTables.length > 1 ? "s contain" : " contains"} PII — ensure access policies are current.`,
+    });
+  }
+
+  // 5. Recommended actions
+  const actions: string[] = [];
+  if (insights.failingTests > 0) actions.push(`fix the ${insights.failingTests} failing test${insights.failingTests > 1 ? "s" : ""}`);
+  if (insights.testCoverage < 80) actions.push(`raise test coverage from ${insights.testCoverage}% to 80%+`);
+  if (insights.ownerlessTables.length > 0) actions.push(`assign owners to ${insights.ownerlessTables.length} unowned table${insights.ownerlessTables.length > 1 ? "s" : ""}`);
+  if (insights.undocumentedTables.length > 0 && insights.docCoverage < 80) actions.push(`document ${insights.undocumentedTables.length} table${insights.undocumentedTables.length > 1 ? "s" : ""} lacking descriptions`);
+
+  if (actions.length > 0) {
+    segments.push({
+      speaker: "Alex", topic: "actions",
+      text: `Recommended actions: ${actions.slice(0, 3).join("; ")}.`,
+    });
+  }
+
+  // 6. Close
+  segments.push({
+    speaker: "Alex", topic: "outro",
+    text: `Full analysis available in the dashboard. Health score ${insights.healthScore} — ${verdict}.`,
+  });
+
+  return segments;
+}
+
 export async function generateScript(schema: SchemaMeta, context?: ScriptContext): Promise<ScriptSegment[]> {
   // Check script cache — same schema content = same script
   const schemaHash = hashSchema(schema, context);
@@ -368,10 +454,14 @@ export async function generateScript(schema: SchemaMeta, context?: ScriptContext
       script = await generateWithLLM(schema, insights, context);
     } catch (e) {
       console.warn("LLM script generation failed, falling back to templates:", e);
-      script = generateTemplate(schema, insights, context);
+      script = context?.format === "executive-summary"
+        ? generateExecutiveSummaryTemplate(schema, insights, context)
+        : generateTemplate(schema, insights, context);
     }
   } else {
-    script = generateTemplate(schema, insights, context);
+    script = context?.format === "executive-summary"
+      ? generateExecutiveSummaryTemplate(schema, insights, context)
+      : generateTemplate(schema, insights, context);
   }
 
   scriptCache.set(cacheKey, script, 3600); // 1hr cache — regenerate picks up schema changes

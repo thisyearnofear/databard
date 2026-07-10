@@ -49,6 +49,7 @@ export default function ProSettings() {
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
   const [coralQuery, setCoralQuery] = useState("");
+  const [scheduleFormat, setScheduleFormat] = useState<"podcast" | "executive-summary">("podcast");
 
   useEffect(() => {
     fetch("/api/pro/auth/session")
@@ -90,7 +91,7 @@ export default function ProSettings() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schedule: { schemaFqn: effectiveFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral },
+          schedule: { schemaFqn: effectiveFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral, outputFormat: scheduleFormat },
         }),
       });
       const data = await res.json();
@@ -117,11 +118,13 @@ export default function ProSettings() {
           shareId: schedule.shareId,
           dune: schedule.dune,
           coral: schedule.coral,
+          outputFormat: schedule.outputFormat,
         }),
       });
       const data = await res.json();
       if (data.ok) {
-        setStatus(`✓ Episode generated — ${data.tableCount} tables, ${data.testsFailed} failing tests`);
+        const healthNote = data.healthScore != null ? `, health ${data.healthScore}%` : "";
+        setStatus(`✓ Episode generated — ${data.tableCount} tables, ${data.testsFailed} failing tests${healthNote}${walletAddress ? " · Ready to attest on-chain" : ""}`);
         setSchedules((prev) =>
           prev.map((s) =>
             s.id === schedule.id ? { ...s, lastRunAt: new Date().toISOString(), shareId: data.id } : s
@@ -354,7 +357,7 @@ export default function ProSettings() {
                 <span className="text-xs text-[var(--text-muted)]">
                   {s.frequency === "weekly" ? `Every ${DAYS[s.dayOfWeek ?? 1]}` : "Daily"} at {s.hour}:00 UTC
                 </span>
-                <span className="text-xs text-[var(--text-muted)]">Source: {s.source}</span>
+                <span className="text-xs text-[var(--text-muted)]">Source: {s.source}{s.outputFormat === "executive-summary" ? " · 📋 Exec Summary" : ""}</span>
                 {s.nextRunAt && (
                   <span className="text-xs text-[var(--text-muted)]">
                     Next: {new Date(s.nextRunAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
@@ -380,6 +383,14 @@ export default function ProSettings() {
                 >
                   Run now
                 </button>
+                {s.shareId && walletAddress && (
+                  <a
+                    href={`/episode/${s.shareId}`}
+                    className="text-xs text-[var(--accent)] hover:text-[var(--text)] cursor-pointer shrink-0"
+                  >
+                    ⛓️ Attest →
+                  </a>
+                )}
                 <button
                   onClick={() => handleDelete(s.id)}
                   className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] cursor-pointer shrink-0"
@@ -495,6 +506,18 @@ export default function ProSettings() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--text-muted)]">Output format</label>
+            <select
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm cursor-pointer"
+              value={scheduleFormat}
+              onChange={(e) => setScheduleFormat(e.target.value as "podcast" | "executive-summary")}
+            >
+              <option value="podcast">🎙️ Podcast (10-15 min full analysis)</option>
+              <option value="executive-summary">📋 Executive Summary (2-min briefing)</option>
+            </select>
           </div>
 
           <div className="flex flex-col gap-1">

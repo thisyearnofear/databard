@@ -208,6 +208,8 @@ export interface ScheduleConfig {
   /** Source-specific credentials (stored server-side for scheduled regeneration) */
   dune?: { apiKey: string; namespace?: string };
   coral?: { query: string };
+  /** Output format: "podcast" (default, 10-15 min) or "executive-summary" (2-min briefing) */
+  outputFormat?: "podcast" | "executive-summary";
 }
 
 export const proAccounts = {

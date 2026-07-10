@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     guardMutation(req);
 
     const body = await req.json();
-    const { schemaFqn, source = "openmetadata", shareId, researchQuestion } = body;
+    const { schemaFqn, source = "openmetadata", shareId, researchQuestion, outputFormat } = body;
 
     if (!schemaFqn) {
       return NextResponse.json({ ok: false, error: "schemaFqn required" }, { status: 400 });
@@ -81,17 +81,19 @@ export async function POST(req: NextRequest) {
     }
 
     const tableStats = source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
-    const script = await generateScript(meta, { 
-      researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined, 
-      researchTrail, 
+    const script = await generateScript(meta, {
+      researchQuestion: typeof effectiveResearchQuestion === "string" ? effectiveResearchQuestion : undefined,
+      researchTrail,
       tableStats,
-      source 
+      source,
+      format: outputFormat === "executive-summary" ? "executive-summary" : "podcast",
     });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);
 
     const totalTests = meta.tables.reduce((n, t) => n + t.qualityTests.length, 0);
     const failedTests = meta.tables.reduce((n, t) => n + t.qualityTests.filter((q) => q.status === "Failed").length, 0);
+    const healthScore = insights.healthScore;
 
     const episode: Episode & { audioBase64: string } = {
       schemaFqn: meta.fqn,
@@ -160,6 +162,7 @@ export async function POST(req: NextRequest) {
       tableCount: meta.tables.length,
       testsTotal: totalTests,
       testsFailed: failedTests,
+      healthScore,
       researchSessionId: episode.researchSessionId,
       segments: script.length,
       diff: diff ? { summary: diff.summary, newTables: diff.newTables, removedTables: diff.removedTables, newFailures: diff.newFailures, resolvedFailures: diff.resolvedFailures, healthScoreChange: diff.healthScoreChange } : undefined,

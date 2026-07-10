@@ -37,7 +37,7 @@ export interface WizardState {
     sources: string[];
     message?: string;
   } | null;
-  outputFormat: "podcast" | "anthem";
+  outputFormat: "podcast" | "anthem" | "executive-summary";
   
   // Schemas
   schemas: string[];
@@ -94,7 +94,7 @@ type WizardAction =
   | { type: "SET_CORAL_QUERY"; query: string }
   | { type: "SET_CORAL_SUB_STEP"; subStep: "query" | "configure" }
   | { type: "SET_CORAL_PREVIEW_DATA"; data: WizardState["coralPreviewData"] }
-  | { type: "SET_OUTPUT_FORMAT"; format: "podcast" | "anthem" }
+  | { type: "SET_OUTPUT_FORMAT"; format: "podcast" | "anthem" | "executive-summary" }
   | { type: "SET_SCHEMAS"; schemas: string[] }
   | { type: "SET_SELECTED_SCHEMA"; schema: string | null }
   | { type: "SET_SEARCH_QUERY"; query: string }
