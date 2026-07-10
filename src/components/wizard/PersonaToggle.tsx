@@ -15,17 +15,17 @@ export function PersonaToggle() {
             : "text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >
-        📊 Data teams
+        📊 Enterprise
       </button>
-      <button 
+      <button
         onClick={() => dispatch({ type: "SET_PERSONA", persona: "web3" })}
         className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${
-          state.persona === "web3" 
-            ? "bg-[var(--accent)] text-white shadow-sm" 
+          state.persona === "web3"
+            ? "bg-[var(--accent)] text-white shadow-sm"
             : "text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >
-        ⛓️ Onchain teams
+        ⛓️ Onchain
       </button>
     </div>
   );

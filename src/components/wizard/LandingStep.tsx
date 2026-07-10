@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useWizard } from "./wizard-context";
 import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
+import { StatTile } from "@/components/viz";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
 
@@ -91,7 +92,7 @@ export function LandingStep() {
   
   return (
     <>
-      {/* Hero */}
+      {/* Hero — analysis-first */}
       <section className="flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl">
         {/* Tagline */}
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
@@ -113,28 +114,29 @@ export function LandingStep() {
             ? "One engine computes health scores, lineage risk, and PII flags — two AI hosts debate the findings, delivered as podcasts, dashboards, and reports."
             : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
-        
-        {/* Primary CTA */}
+
+        {/* Primary CTA — connect is primary, demo is secondary */}
         <div className="flex flex-wrap justify-center gap-3 mb-8">
+          <button
+            data-testid="connect-button"
+            onClick={() => { track("connect_start", { persona: state.persona }); showConnect(); }}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-6 py-3 font-medium cursor-pointer transition-all hover:scale-[1.02]"
+          >
+            <span>{state.persona === "enterprise" ? "Connect your data" : "Query your data"}</span>
+            <span>→</span>
+          </button>
           <button
             data-testid="demo-button"
             onClick={handleDemo}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-6 py-3 font-medium cursor-pointer transition-all hover:scale-[1.02]"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
           >
             <span>▶</span>
             <span>Try the demo</span>
           </button>
-          <button
-            data-testid="connect-button"
-            onClick={() => { track("connect_start", { persona: state.persona }); showConnect(); }}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
-          >
-            {state.persona === "enterprise" ? "Connect your data" : "Query your data"}
-          </button>
         </div>
-        
+
         <p className="text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
-        
+
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
           <Link
@@ -159,7 +161,24 @@ export function LandingStep() {
           </Link>
         )}
       </section>
-      
+
+      {/* Live dashboard stats — proof the engine is running */}
+      {totals && totals.sources > 0 && (
+        <section className="w-full max-w-2xl pb-10">
+          <Link href="/protocol" className="block group">
+            <div className="flex flex-wrap gap-3 justify-center">
+              <StatTile icon="📊" value={totals.sources} label="Sources watched" />
+              <StatTile icon="⚠️" value={totals.failingTests} label="Failing tests" />
+              <StatTile icon="🕐" value={totals.staleTables} label="Stale tables" />
+              <StatTile icon="📖" value={totals.undocumentedTables} label="Undocumented" />
+            </div>
+            <p className="text-center text-xs text-[var(--text-muted)] mt-2 group-hover:text-[var(--accent)] transition-colors">
+              Live data from the dashboard →
+            </p>
+          </Link>
+        </section>
+      )}
+
       {/* Integrations bar */}
       <section className="w-full max-w-lg pb-10">
         <div className="flex flex-wrap justify-center gap-4 text-xs text-[var(--text-muted)]">
@@ -186,39 +205,42 @@ export function LandingStep() {
           )}
         </div>
       </section>
-      
-      {/* How it works */}
+
+      {/* Why DataBard — three pillars */}
       <section className="w-full max-w-2xl pb-12">
-        <h2 className="text-lg font-semibold text-center mb-4">
-          {state.persona === "enterprise" ? "How it works" : "How it works"}
-        </h2>
+        <h2 className="text-lg font-semibold text-center mb-4">Why DataBard</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Pillar 1: Health scoring */}
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-2xl mb-2">{state.persona === "enterprise" ? "🔌" : "🪸"}</div>
-            <h3 className="text-sm font-semibold mb-1">{state.persona === "enterprise" ? "Connect" : "Query"}</h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              {state.persona === "enterprise" 
-                ? "Link your OpenMetadata, dbt, or use Coral for cross-source SQL"
-                : "Join Dune, subgraphs, GitHub, Slack, and 50+ sources in one SQL query"}
-            </p>
-          </div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-2xl mb-2">🎙️</div>
-            <h3 className="text-sm font-semibold mb-1">Analyze</h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              {state.persona === "enterprise" 
-                ? "AI reviews table health, test coverage, lineage"
-                : "AI reviews indexer lag, freshness, entity relationships"}
-            </p>
-          </div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-2xl mb-2">{state.persona === "enterprise" ? "📤" : "⛓️"}</div>
-            <h3 className="text-sm font-semibold mb-1">{state.persona === "enterprise" ? "Share" : "Mint"}</h3>
+            <div className="text-2xl mb-2">📊</div>
+            <h3 className="text-sm font-semibold mb-1">Health scoring</h3>
             <p className="text-xs text-[var(--text-muted)]">
               {state.persona === "enterprise"
-                ? "Listen, share MP3, export reports, track trends on the dashboard"
-                : "Record on Solana, share with your community"}
+                ? "AI computes health scores from test coverage, lineage risk, PII flags, and freshness — across every table you own."
+                : "AI scores indexer lag, freshness, and entity relationships — across every subgraph you run."}
             </p>
+          </div>
+          {/* Pillar 2: Alerts that find you */}
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-2xl mb-2">🔔</div>
+            <h3 className="text-sm font-semibold mb-1">Alerts that find you</h3>
+            <p className="text-xs text-[var(--text-muted)]">
+              Get Slack or webhook alerts when health drops. Weekly digest podcasts keep your team informed without a dashboard tab open.
+            </p>
+            <Link href="/alerts" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
+          </div>
+          {/* Pillar 3: Verifiable by design */}
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-2xl mb-2">⛓️</div>
+            <h3 className="text-sm font-semibold mb-1">Verifiable by design</h3>
+            <p className="text-xs text-[var(--text-muted)]">
+              {state.persona === "enterprise"
+                ? "Every health report is attestable on-chain — a permanent audit trail your team and auditors can verify."
+                : "Every health report is mintable on Solana — a permanent, public record your community can verify."}
+            </p>
+            {state.persona === "web3" && (
+              <Link href="/onchain" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">See the showcase →</Link>
+            )}
           </div>
         </div>
       </section>
@@ -265,6 +287,15 @@ export function LandingStep() {
                 : "Listening is free. Minting a report on-chain costs a small SOL transaction fee (~0.01 SOL). No wallet needed just to generate and listen."}
             </p>
           </details>
+          <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
+              <span>Can I get alerts when something breaks?</span>
+              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+            </summary>
+            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+              Yes. DataBard monitors your connected sources and sends Slack or webhook alerts when health scores drop or tests start failing. You can also schedule weekly digest podcasts — your team gets a fresh audio briefing every Monday morning without anyone opening a dashboard.
+            </p>
+          </details>
         </div>
       </section>
 
@@ -287,6 +318,9 @@ export function LandingStep() {
             </a>
             <Link href="/protocol" className="hover:text-[var(--text)] transition-colors">
               Dashboard
+            </Link>
+            <Link href="/alerts" className="hover:text-[var(--text)] transition-colors">
+              Alerts
             </Link>
             {state.persona === "web3" && (
               <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">

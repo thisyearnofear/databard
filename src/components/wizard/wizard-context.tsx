@@ -128,7 +128,7 @@ const DEFAULT_OM_SANDBOX_URL = process.env.NEXT_PUBLIC_OM_SANDBOX_URL || "https:
 
 const initialState: WizardState = {
   step: "landing",
-  persona: "web3",
+  persona: "enterprise",
   source: "openmetadata",
   omMode: "sandbox",
   omUrl: "http://localhost:8585",
