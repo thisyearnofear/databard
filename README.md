@@ -139,7 +139,7 @@ NEXT_PUBLIC_OM_SANDBOX_URL=https://sandbox.open-metadata.org
 
 | Layer | Technology |
 |---|---|
-| Web UI | Next.js 15, React 19, Tailwind CSS 4 |
+| Web UI | Next.js 16, React 19, Tailwind CSS 4 |
 | Metadata (Tier 1) | OpenMetadata REST API, dbt manifest parsing, The Graph, Dune Analytics |
 | Metadata (Tier 2) | Coral — "Bring Your Own Source" SQL layer for long-tail connectors + cross-source joins |
 | AI Scripts | OpenAI-compatible API (GPT-4o-mini default; Azure OpenAI drop-in — [`docs/AZURE.md`](docs/AZURE.md)) |

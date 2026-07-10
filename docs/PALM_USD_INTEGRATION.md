@@ -149,7 +149,8 @@ PALM_USD_RECIPIENT=<your_treasury_solana_wallet>
   "@solana/web3.js": "^1.98.4",
   "@solana/spl-token": "^0.4.14",
   "@solana/wallet-adapter-react": "^0.15.39",
-  "@solana/wallet-adapter-wallets": "^0.19.38"
+  "@solana/wallet-adapter-phantom": "^0.9.24",
+  "@solana/wallet-adapter-solflare": "^0.6.23"
 }
 ```
 

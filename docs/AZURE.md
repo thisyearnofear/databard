@@ -12,7 +12,7 @@ Prepared for the Microsoft for Startups Azure Technical Advisory engagement.
 
 | Layer | Today | Notes |
 |---|---|---|
-| App | Next.js 15 (standalone) on a single VPS, PM2 (`ecosystem.config.cjs`) | Port 42100, `databard` process |
+| App | Next.js 16 (standalone) on a single VPS, PM2 (`ecosystem.config.cjs`) | Port 42100, `databard` process |
 | Sidecar | Coral bridge (`scripts/coral-bridge.mjs`) | Port 42101, brokers Tier-2 SQL sources |
 | LLM inference | OpenAI-compatible API (`OPENAI_BASE_URL`), GPT-4o-mini default | Script generation for podcasts, briefings, fix guidance |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects + Music API | Largest external dependency after LLM |

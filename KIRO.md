@@ -229,7 +229,7 @@ The project grew from an 800-line MVP to a 5,000-line production system (Pro tie
 
 **Live demo:** https://databard.vercel.app  
 **Repo:** https://github.com/thisyearnofear/databard  
-**Built with:** Next.js 15, ElevenLabs SDK, OpenMetadata API, Kiro spec-driven development
+**Built with:** Next.js 16, ElevenLabs SDK, OpenMetadata API, Kiro spec-driven development
 
 ### Social Post Template
 
