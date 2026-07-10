@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { MintRecord, AlertSubscription } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
+import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { costLine } from "@/lib/cost-framing";
 import { HealthBar, TrendBadge, Sparkline, StatTile, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
 
@@ -46,22 +48,56 @@ function trendOf(history: number[]): SourceCard["trend"] {
 }
 
 export default function ProtocolDashboard() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+      <ProtocolDashboardInner />
+    </Suspense>
+  );
+}
+
+function ProtocolDashboardInner() {
+  const searchParams = useSearchParams();
+  const episodeId = searchParams.get("episode");
   const [cards, setCards] = useState<SourceCard[]>([]);
   const [alerts, setAlerts] = useState<AlertSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [episodeMeta, setEpisodeMeta] = useState<{ schemaName: string; tableCount: number; testsFailed: number; testsTotal: number; segments: number } | null>(null);
+  const [trends, setTrends] = useState<TrendNarrative[]>([]);
 
   useEffect(() => {
     async function load() {
       try {
-        const [mintsRes, insightsRes, alertsRes] = await Promise.all([
+        const fetches: Promise<Response>[] = [
           fetch("/api/onchain/mints/stats?limit=200"),
           fetch("/api/insights"),
           fetch("/api/onchain/alerts"),
-        ]);
+          fetch("/api/insights/trends"),
+        ];
+        if (episodeId) {
+          fetches.push(fetch(`/api/share?id=${episodeId}`));
+        }
+        const responses = await Promise.all(fetches);
+        const [mintsRes, insightsRes, alertsRes, trendsRes, episodeRes] = responses;
         const mints: { ok: boolean; recent: MintRecord[] } = await mintsRes.json();
         const insightsData: { ok: boolean; insights: InsightSummary[] } = await insightsRes.json();
         const alertsData: { ok: boolean; alerts: AlertSubscription[] } = await alertsRes.json();
+        const trendsData: { ok: boolean; narratives: TrendNarrative[] } = await trendsRes.json();
         if (alertsData.ok) setAlerts(alertsData.alerts ?? []);
+        if (trendsData.ok) setTrends(trendsData.narratives ?? []);
+
+        if (episodeRes && episodeRes.ok) {
+          const epData = await episodeRes.json();
+          if (epData.ok && epData.episode) {
+            const ep = epData.episode;
+            setEpisodeMeta({
+              schemaName: ep.schemaName,
+              tableCount: ep.tableCount,
+              testsFailed: ep.qualitySummary?.failed ?? 0,
+              testsTotal: ep.qualitySummary?.total ?? 0,
+              segments: ep.script?.length ?? 0,
+            });
+          }
+        }
 
         // Group mints by source name
         const grouped: Record<string, MintRecord[]> = {};
@@ -143,6 +179,27 @@ export default function ProtocolDashboard() {
           </div>
         </div>
 
+        {/* Fresh episode banner — "Listen to this analysis" */}
+        {episodeId && episodeMeta && (
+          <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-2xl p-5 mb-6 animate-slide-up">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm font-semibold mb-1">✓ Analysis complete — {episodeMeta.schemaName}</p>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {episodeMeta.tableCount} tables · {episodeMeta.testsFailed} of {episodeMeta.testsTotal} tests failing · {episodeMeta.segments} segments
+                </p>
+              </div>
+              <Link
+                href={`/episode/${episodeId}`}
+                className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02] flex items-center gap-2 shrink-0"
+              >
+                <span>▶</span>
+                <span>Listen to this analysis</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
             Loading analytics…
@@ -169,6 +226,61 @@ export default function ProtocolDashboard() {
             />
             {analyzed.length > 0 && <StatTile icon="🧪" value={totalFailing} label="Failing tests" />}
             <StatTile icon="⛓️" value={cards.reduce((s, c) => s + c.mintCount, 0)} label="On-chain records" />
+          </div>
+        )}
+
+        {/* What changed this week — trend narratives */}
+        {!loading && trends.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <span>📈</span>
+              <span>What changed this week</span>
+            </h2>
+            <div className="flex flex-col gap-2">
+              {trends.slice(0, 5).map((t) => {
+                const isSignificant = Math.abs(t.healthScoreChange) >= 5;
+                const isImprovement = t.healthScoreChange > 0;
+                const isDecline = t.healthScoreChange < 0;
+                return (
+                  <div
+                    key={t.schemaFqn}
+                    className={`rounded-xl p-4 border flex items-start gap-3 ${
+                      isSignificant && isDecline
+                        ? "border-[var(--danger)]/30 bg-[var(--danger)]/5"
+                        : isSignificant && isImprovement
+                        ? "border-[var(--success)]/30 bg-[var(--success)]/5"
+                        : "border-[var(--border)] bg-[var(--surface)]"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium truncate">{t.schemaName}</span>
+                        {t.healthScoreChange !== 0 && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isImprovement
+                              ? "bg-[var(--success)]/10 text-[var(--success)]"
+                              : "bg-[var(--danger)]/10 text-[var(--danger)]"
+                          }`}>
+                            {isImprovement ? "↑" : "↓"} {Math.abs(t.healthScoreChange)}
+                          </span>
+                        )}
+                        {!t.hasHistory && (
+                          <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg)] px-1.5 py-0.5 rounded-full">new</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)] leading-relaxed">{t.narrative}</p>
+                    </div>
+                    <span className={`text-lg font-bold tabular-nums shrink-0 ${
+                      t.healthScore >= 80 ? "text-[var(--success)]"
+                      : t.healthScore >= 50 ? "text-yellow-400"
+                      : "text-[var(--danger)]"
+                    }`}>
+                      {t.healthScore}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -236,13 +348,22 @@ export default function ProtocolDashboard() {
                       ) : null;
                     })()}
                   </div>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                     {card.recentMints.length > 0 && (
                       <Link
                         href={`/episode/${card.recentMints[0].episodeId}`}
-                        className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                        className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5"
                       >
-                        Latest report →
+                        <span>▶</span>
+                        <span>Listen</span>
+                      </Link>
+                    )}
+                    {card.insight && (
+                      <Link
+                        href={`/episode/${card.recentMints[0]?.episodeId ?? ""}`}
+                        className="text-[var(--text-muted)] hover:text-[var(--accent)] text-xs transition-colors"
+                      >
+                        Full report →
                       </Link>
                     )}
                   </div>

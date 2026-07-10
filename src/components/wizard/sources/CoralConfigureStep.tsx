@@ -112,46 +112,32 @@ export function CoralConfigureStep({
       {/* Format picker */}
       <div>
         <label className="text-xs text-[var(--text-muted)] uppercase tracking-wide font-medium block mb-2">Output format</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => onFormatChange("podcast")}
-            className={`flex flex-col items-center justify-center rounded-xl border-2 px-2 py-3 cursor-pointer transition-all ${
+            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition-all ${
               outputFormat === "podcast"
                 ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm"
                 : "border-[var(--border)] hover:border-[var(--accent)]"
             }`}
           >
             <span className="text-lg mb-1">🎙️</span>
-            <span className="text-sm font-semibold text-[var(--text)]">Podcast</span>
+            <span className="text-sm font-semibold text-[var(--text)]">Full analysis</span>
             <span className="text-[10px] text-[var(--text-muted)] mt-0.5">Two AI hosts, 10-15 min</span>
           </button>
           <button
             type="button"
             onClick={() => onFormatChange("executive-summary")}
-            className={`flex flex-col items-center justify-center rounded-xl border-2 px-2 py-3 cursor-pointer transition-all ${
+            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition-all ${
               outputFormat === "executive-summary"
                 ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm"
                 : "border-[var(--border)] hover:border-[var(--accent)]"
             }`}
           >
             <span className="text-lg mb-1">📋</span>
-            <span className="text-sm font-semibold text-[var(--text)]">Exec Summary</span>
-            <span className="text-[10px] text-[var(--text-muted)] mt-0.5">2-min briefing, top 3 issues</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onFormatChange("anthem")}
-            className={`flex flex-col items-center justify-center rounded-xl border-2 px-2 py-3 cursor-pointer transition-all ${
-              outputFormat === "anthem"
-                ? "border-purple-500 bg-purple-500/5 shadow-sm"
-                : "border-[var(--border)] hover:border-purple-500"
-            }`}
-            style={outputFormat === "anthem" ? { borderColor: "#a855f7" } : {}}
-          >
-            <span className="text-lg mb-1">🎵</span>
-            <span className="text-sm font-semibold text-[var(--text)]">Anthem</span>
-            <span className="text-[10px] text-[var(--text-muted)] mt-0.5">Data-driven song</span>
+            <span className="text-sm font-semibold text-[var(--text)]">Executive briefing</span>
+            <span className="text-[10px] text-[var(--text-muted)] mt-0.5">2-min, top 3 issues + actions</span>
           </button>
         </div>
       </div>

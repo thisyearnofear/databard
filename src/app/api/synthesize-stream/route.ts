@@ -129,18 +129,11 @@ export async function POST(req: NextRequest) {
             : source === "coral"
               ? buildCoralTableStats(meta)
               : undefined;
-          const script = await generateScript(meta, {
-            researchQuestion: normalizedResearchQuestion,
-            researchTrail,
-            tableStats,
-            source,
-            format: body.outputFormat === "executive-summary" ? "executive-summary" : "podcast",
-          });
-          if (signal.aborted) { controller.close(); return; }
 
-          // Historical diff intro — what changed since the last episode?
+          // Compute diff BEFORE generating script so executive summary can include it
           const prevSnapshot = getLatestSnapshot(schemaFqn);
           let diffIntro: ScriptSegment | null = null;
+          let diffContext: { healthScoreChange: number; newFailures: string[]; resolvedFailures: string[]; summary: string } | undefined;
           if (prevSnapshot) {
             const diff = diffInsights(
               prevSnapshot.insights,
@@ -148,6 +141,12 @@ export async function POST(req: NextRequest) {
               prevSnapshot.tableNames,
               meta.tables.map((t) => t.name),
             );
+            diffContext = {
+              healthScoreChange: diff.healthScoreChange,
+              newFailures: diff.newFailures,
+              resolvedFailures: diff.resolvedFailures,
+              summary: diff.summary,
+            };
             if (diff.summary !== "no changes") {
               diffIntro = {
                 speaker: "Alex",
@@ -156,6 +155,16 @@ export async function POST(req: NextRequest) {
               };
             }
           }
+
+          const script = await generateScript(meta, {
+            researchQuestion: normalizedResearchQuestion,
+            researchTrail,
+            tableStats,
+            source,
+            format: body.outputFormat === "executive-summary" ? "executive-summary" : "podcast",
+            diff: diffContext,
+          });
+          if (signal.aborted) { controller.close(); return; }
 
           // Save snapshot for next time
           saveSnapshot({

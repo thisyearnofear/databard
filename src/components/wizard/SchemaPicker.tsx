@@ -136,7 +136,7 @@ export function SchemaPicker() {
     filteredSchemas, recommendedSchema, 
     questionPresets, sourceLabel, activeContext,
   } = useWizard();
-  const { generatePodcast, generateAnthem } = useGeneration();
+  const { generatePodcast } = useGeneration();
   
   // Group schemas by prefix
   const groupedSchemas = (() => {
@@ -374,27 +374,53 @@ export function SchemaPicker() {
             {!isCoral && !state.selectedSchema && (
               <p className="text-xs text-center text-[var(--text-muted)] italic">Select a schema to generate</p>
             )}
-            <div className={`grid gap-2 ${isCoral ? "grid-cols-1" : "grid-cols-2"}`}>
-              <button
-                type="button"
-                onClick={() => state.selectedSchema && generatePodcast(state.selectedSchema)}
-                disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
-                className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
-              >
-                <span>🎙️ Podcast</span>
-                <span className="text-xs opacity-75 font-normal mt-0.5">AI hosts · analysis</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => state.selectedSchema && generateAnthem(state.selectedSchema)}
-                disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
-                className={`flex flex-col items-center justify-center rounded-lg border-2 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"} px-3`}
-                style={{borderColor: "#a855f7", background: "linear-gradient(135deg, var(--surface), #a855f710)", color: "#a855f7"}}
-              >
-                <span>🎵 Anthem</span>
-                <span className="text-xs opacity-75 font-normal mt-0.5">Music · lyrics</span>
-              </button>
-            </div>
+
+            {/* Format picker for non-Coral sources */}
+            {!isCoral && (
+              <div>
+                <label className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium block mb-1.5">Output format</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "SET_OUTPUT_FORMAT", format: "podcast" })}
+                    className={`flex flex-col items-center justify-center rounded-lg border-2 px-2 py-2 cursor-pointer transition-all ${
+                      state.outputFormat === "podcast"
+                        ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                        : "border-[var(--border)] hover:border-[var(--accent)]"
+                    }`}
+                  >
+                    <span className="text-sm">🎙️</span>
+                    <span className="text-xs font-semibold">Full analysis</span>
+                    <span className="text-[9px] text-[var(--text-muted)]">10-15 min</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "SET_OUTPUT_FORMAT", format: "executive-summary" })}
+                    className={`flex flex-col items-center justify-center rounded-lg border-2 px-2 py-2 cursor-pointer transition-all ${
+                      state.outputFormat === "executive-summary"
+                        ? "border-[var(--accent)] bg-[var(--accent)]/5"
+                        : "border-[var(--border)] hover:border-[var(--accent)]"
+                    }`}
+                  >
+                    <span className="text-sm">📋</span>
+                    <span className="text-xs font-semibold">Exec briefing</span>
+                    <span className="text-[9px] text-[var(--text-muted)]">2 min</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => state.selectedSchema && generatePodcast(state.selectedSchema)}
+              disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
+              className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
+            >
+              <span>{state.outputFormat === "executive-summary" ? "📋 Generate briefing" : "🎙️ Generate analysis"}</span>
+              <span className="text-xs opacity-75 font-normal mt-0.5">
+                {state.outputFormat === "executive-summary" ? "2-min executive summary" : "AI hosts · full analysis"}
+              </span>
+            </button>
           </div>
         </div>
       </div>

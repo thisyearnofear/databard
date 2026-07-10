@@ -351,6 +351,9 @@ export function LandingStep() {
             <Link href="/alerts" className="hover:text-[var(--text)] transition-colors">
               Alerts
             </Link>
+            <Link href="/labs" className="hover:text-[var(--text)] transition-colors">
+              Labs
+            </Link>
             {state.persona === "web3" && (
               <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">
                 Leaderboard

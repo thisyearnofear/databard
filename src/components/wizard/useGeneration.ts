@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useWizard } from "./wizard-context";
 import type { Episode } from "@/lib/types";
 
@@ -10,12 +11,40 @@ import type { Episode } from "@/lib/types";
  */
 export function useGeneration() {
   const { state, dispatch, startGenerating, backToSchema } = useWizard();
+  const router = useRouter();
 
   const showError = useCallback(
     (message: string) => {
       dispatch({ type: "SET_STATUS", status: `Error: ${message}` });
     },
     [dispatch]
+  );
+
+  /** Save episode to backend and redirect to /protocol dashboard. */
+  const goToDashboard = useCallback(
+    async (episode: Episode, audioUrl: string | null) => {
+      try {
+        let shareBody: Record<string, unknown> = { ...episode };
+        if (audioUrl) {
+          const blob = await (await fetch(audioUrl)).blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          shareBody.audioBase64 = btoa(
+            String.fromCharCode(...new Uint8Array(arrayBuffer))
+          );
+        }
+        const shareRes = await fetch("/api/share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(shareBody),
+        });
+        const shareData = await shareRes.json();
+        const episodeId = shareData.ok ? shareData.id : "";
+        router.push(episodeId ? `/protocol?episode=${episodeId}` : "/protocol");
+      } catch {
+        router.push("/protocol");
+      }
+    },
+    [router]
   );
 
   /** Build the common request body fields for a given schema + source. */
@@ -250,7 +279,7 @@ export function useGeneration() {
                   type: "SET_STATUS",
                   status: "Transcript ready (no audio generated)",
                 });
-                dispatch({ type: "SET_STEP", step: "episode" });
+                void goToDashboard(metadata, null);
                 break;
               }
               const blob = new Blob(audioChunks, { type: "audio/mpeg" });
@@ -285,7 +314,7 @@ export function useGeneration() {
               }
 
               dispatch({ type: "SET_STATUS", status: "" });
-              dispatch({ type: "SET_STEP", step: "episode" });
+              void goToDashboard({ ...metadata, audioUrl: url }, url);
             } else if (data.type === "error") {
               showError(data.error);
             }
@@ -297,7 +326,7 @@ export function useGeneration() {
         dispatch({ type: "SET_GEN_STEP", step: -1 });
       }
     },
-    [buildBody, dispatch, showError, startGenerating, backToSchema, state.researchQuestion]
+    [buildBody, dispatch, showError, startGenerating, backToSchema, state.researchQuestion, goToDashboard]
   );
 
   /** Run anthem generation (non-streaming). */
@@ -355,14 +384,14 @@ export function useGeneration() {
         dispatch({ type: "SET_AUDIO_URL", url });
         dispatch({ type: "SET_GROVE_CID", cid: data.groveCid || null });
         dispatch({ type: "SET_STATUS", status: "" });
-        dispatch({ type: "SET_STEP", step: "episode" });
+        void goToDashboard({ ...anthemEpisode, audioUrl: url }, url);
       } catch (e: unknown) {
         showError(e instanceof Error ? e.message : "Unknown error");
       } finally {
         dispatch({ type: "SET_GEN_STEP", step: -1 });
       }
     },
-    [buildBody, dispatch, showError, startGenerating, state.persona]
+    [buildBody, dispatch, showError, startGenerating, state.persona, goToDashboard]
   );
 
   return { generatePodcast, generateAnthem };

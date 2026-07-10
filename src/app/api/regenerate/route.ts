@@ -87,6 +87,12 @@ export async function POST(req: NextRequest) {
       tableStats,
       source,
       format: outputFormat === "executive-summary" ? "executive-summary" : "podcast",
+      diff: diff ? {
+        healthScoreChange: diff.healthScoreChange,
+        newFailures: diff.newFailures,
+        resolvedFailures: diff.resolvedFailures,
+        summary: diff.summary,
+      } : undefined,
     });
     const audioBuffers = await synthesizeEpisode(script);
     const combined = Buffer.concat(audioBuffers);

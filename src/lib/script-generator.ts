@@ -25,6 +25,7 @@ interface ScriptContext {
   tableStats?: Record<string, TableStatSummary>;
   source?: string;
   format?: "podcast" | "executive-summary";
+  diff?: { healthScoreChange: number; newFailures: string[]; resolvedFailures: string[]; summary: string };
 }
 
 /** Simple hash for cache keys */
@@ -35,8 +36,10 @@ function hashSchema(schema: SchemaMeta, context?: ScriptContext): string {
   const questionSig = context?.researchQuestion?.trim() ? `|q:${context.researchQuestion.trim().toLowerCase()}` : "";
   const trailSig = context?.researchTrail?.summary ? `|r:${context.researchTrail.summary.toLowerCase()}` : "";
   const statsSig = context?.tableStats ? `|s:${Object.keys(context.tableStats).sort().join(",")}` : "";
+  const formatSig = context?.format ? `|f:${context.format}` : "";
+  const diffSig = context?.diff ? `|d:${context.diff.healthScoreChange}:${context.diff.newFailures.length}` : "";
   let h = 0;
-  const value = `${sig}${questionSig}${trailSig}${statsSig}`;
+  const value = `${sig}${questionSig}${trailSig}${statsSig}${formatSig}${diffSig}`;
   for (let i = 0; i < value.length; i++) h = ((h << 5) - h + value.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36);
 }
@@ -384,6 +387,17 @@ function generateExecutiveSummaryTemplate(schema: SchemaMeta, insights: SchemaIn
     speaker: "Alex", topic: "verdict",
     text: `Executive summary for ${schema.name}: health score ${insights.healthScore} out of 100 — ${verdict}.${context?.researchQuestion ? ` Regarding your question: ${context.researchTrail?.summary ?? "see details below."}` : ""}`,
   });
+
+  // 1b. What changed since last analysis (if diff available)
+  if (context?.diff && context.diff.summary !== "no changes") {
+    const changeText = context.diff.healthScoreChange !== 0
+      ? `Since last check: ${context.diff.summary}. ${context.diff.healthScoreChange < 0 ? "Investigate recent changes." : "Improvement trend — keep it up."}`
+      : `Since last check: ${context.diff.summary}.`;
+    segments.push({
+      speaker: "Morgan", topic: "trend",
+      text: changeText,
+    });
+  }
 
   // 2. Top issues
   const issues: string[] = [];
