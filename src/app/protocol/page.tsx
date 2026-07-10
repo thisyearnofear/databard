@@ -197,6 +197,19 @@ function ProtocolDashboardInner() {
                 <span>Listen to this analysis</span>
               </Link>
             </div>
+
+            {/* One-click schedule prompt */}
+            <div className="mt-4 pt-4 border-t border-[var(--accent)]/20 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs text-[var(--text-muted)]">
+                Want this every Monday? Set up a weekly digest for your team.
+              </p>
+              <Link
+                href={`/pro?setup=1&schema=${encodeURIComponent(episodeMeta.schemaName)}&episode=${episodeId}`}
+                className="text-xs font-semibold text-[var(--accent)] hover:underline flex items-center gap-1"
+              >
+                Set up weekly digest →
+              </Link>
+            </div>
           </div>
         )}
 

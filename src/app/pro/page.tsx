@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { ScheduleConfig } from "@/lib/store";
 import type { DataSource } from "@/lib/types";
@@ -28,6 +29,15 @@ type ProSession = {
 };
 
 export default function ProSettings() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+      <ProSettingsInner />
+    </Suspense>
+  );
+}
+
+function ProSettingsInner() {
+  const searchParams = useSearchParams();
   const [customerId, setCustomerId] = useState("");
   const [email, setEmail] = useState("");
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -50,6 +60,17 @@ export default function ProSettings() {
   const [duneNamespace, setDuneNamespace] = useState("");
   const [coralQuery, setCoralQuery] = useState("");
   const [scheduleFormat, setScheduleFormat] = useState<"podcast" | "executive-summary">("podcast");
+
+  // Pre-fill from query params (from dashboard "Set up weekly digest" link)
+  useEffect(() => {
+    const setup = searchParams.get("setup");
+    const schema = searchParams.get("schema");
+    if (setup === "1" && schema) {
+      setShowForm(true);
+      setSchemaFqn(schema);
+      setScheduleFormat("executive-summary");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetch("/api/pro/auth/session")

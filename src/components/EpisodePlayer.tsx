@@ -515,13 +515,18 @@ export function EpisodePlayer({
     const highlight = currentEpisode.script.find((s) =>
       s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
     ) ?? currentEpisode.script[0];
+    const highlightIdx = currentEpisode.script.indexOf(highlight);
 
-    const clipText = `🎙️ DataBard on ${currentEpisode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\n${shareUrl ?? window.location.origin}`;
+    // Build a deep link to the specific segment
+    const baseUrl = shareUrl ?? window.location.origin + window.location.pathname;
+    const clipUrl = baseUrl.includes("?") ? `${baseUrl}&seg=${highlightIdx}` : `${baseUrl}?seg=${highlightIdx}`;
+
+    const clipText = `🎙️ DataBard on ${currentEpisode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\nListen: ${clipUrl}`;
 
     // Try native share with the clip text
     if (navigator.share) {
       try {
-        await navigator.share({ title: `DataBard: ${currentEpisode.schemaName}`, text: clipText });
+        await navigator.share({ title: `DataBard: ${currentEpisode.schemaName}`, text: clipText, url: clipUrl });
         return;
       } catch { /* cancelled */ }
     }
@@ -608,10 +613,10 @@ export function EpisodePlayer({
             )}
             <button
               onClick={handleClip}
-              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
-              title="Copy highlight quote for social sharing"
+              className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-1.5 cursor-pointer font-medium transition-all"
+              title="Share the most critical moment — perfect for Slack and social"
             >
-              {clipCopied ? "✓ Clip" : "Clip"}
+              {clipCopied ? "✓ Copied!" : "🔥 Share moment"}
             </button>
             <button
               onClick={handleShare}

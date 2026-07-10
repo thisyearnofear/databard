@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
@@ -15,8 +15,18 @@ const SolanaWalletConnect = dynamic(
 );
 
 export default function SharedEpisode() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+      <SharedEpisodeInner />
+    </Suspense>
+  );
+}
+
+function SharedEpisodeInner() {
   const params = useParams();
   const id = params.id as string;
+  const searchParams = useSearchParams();
+  const segmentIdx = searchParams.get("seg");
   const { publicKey } = useWallet();
 
   const [episode, setEpisode] = useState<Episode | null>(null);
@@ -155,6 +165,15 @@ export default function SharedEpisode() {
         </div>
       )}
 
+      {/* "Shared moment" banner — when arriving via a clip deep link */}
+      {segmentIdx != null && episode && (
+        <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-2.5 text-center max-w-lg">
+          <p className="text-xs text-[var(--text-muted)]">
+            🔥 Someone shared this moment from the analysis — press play to hear the full briefing
+          </p>
+        </div>
+      )}
+
       <EpisodePlayer episode={episode} audioUrl={audioUrl} />
 
       {/* Wallet connect nudge for non-connected visitors */}
@@ -167,20 +186,23 @@ export default function SharedEpisode() {
         </div>
       )}
 
-      {/* CTA for shared episode visitors */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-md text-center">
-        <p className="text-sm font-medium mb-1">🎙️ This episode was made with DataBard</p>
-        <p className="text-xs text-[var(--text-muted)] mb-3">
-          Turn any data catalog into a podcast — flag quality issues, trace lineage, and keep your team informed.
+      {/* CTA for shared episode visitors — the viral conversion surface */}
+      <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--accent)]/30 rounded-2xl p-6 max-w-lg text-center space-y-3">
+        <p className="text-sm font-bold">This is DataBard.</p>
+        <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+          Every Monday morning, your team gets a fresh audio briefing on your data health — health scores, what changed, what to fix. No dashboard to check. No report to read. Just press play.
         </p>
-        <div className="flex gap-2 justify-center">
-          <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium">
-            Generate your own
+        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
+          <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02]">
+            Get this for your data →
           </a>
-          <a href="/leaderboard" className="bg-[var(--border)] hover:bg-[var(--text-muted)]/20 rounded-lg px-4 py-2 text-xs font-medium">
-            🏆 Leaderboard
+          <a href="/protocol" className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
+            See the dashboard
           </a>
         </div>
+        <p className="text-[10px] text-[var(--text-muted)] pt-1">
+          Free to try · No signup for demo · Connect any data source in 30 seconds
+        </p>
       </div>
     </main>
   );
