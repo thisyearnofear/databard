@@ -93,7 +93,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 3) DELIVER (mock — use canned audio + episode, commit its hash on-chain)
-    if (deal.state === "deposited") {
+    //    Only advance when deliver is explicitly requested ("deliver" or "all").
+    //    Previously this ran whenever the deal was 'deposited', which meant a
+    //    direct phase:"release" call auto-delivered and then released — breaking
+    //    the "cannot release before deliver" invariant.
+    if ((phase === "deliver" || phase === "all") && deal.state === "deposited") {
       const audio = await getDemoAudio(fixtureId);
       const episode = await getDemoEpisode(fixtureId);
       const audioHash = sha256(audio).hex;
@@ -121,8 +125,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4) RELEASE
-    if (deal.state === "delivered") {
+    // 4) RELEASE (only when explicitly requested, or as part of "all")
+    if ((phase === "release" || phase === "all") && deal.state === "delivered") {
       const released = await releaseDeal(wantId!);
       deal = released.deal;
     }

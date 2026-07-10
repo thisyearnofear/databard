@@ -25,8 +25,8 @@ export interface PickResult {
 const FIT_WEIGHTS: Record<string, Partial<Record<string, number>>> = {
   // How well each persona serves each focus (0..1). Missing = neutral (0.5).
   signal:   { overview: 0.9, governance: 0.7, freshness: 0.5, quality: 0.4, coverage: 0.4, lineage: 0.4 },
-  cascade:  { quality: 0.40, lineage: 0.9, coverage: 0.85, governance: 0.7, overview: 0.6, freshness: 0.5 },
-  newsroom: { freshness: 0.95, quality: 0.7, overview: 0.5, governance: 0.4, coverage: 0.4, lineage: 0.5 },
+  cascade:  { quality: 0.95, lineage: 0.9, coverage: 0.85, governance: 0.7, overview: 0.6, freshness: 0.5 },
+  newsroom: { freshness: 0.95, quality: 0.45, overview: 0.5, governance: 0.4, coverage: 0.4, lineage: 0.5 },
 };
 
 function fitScore(personaId: string, focus: string): number {
