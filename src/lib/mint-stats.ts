@@ -45,7 +45,8 @@ export interface MintRecord {
 }
 
 export interface AlertSubscription {
-  walletAddress: string;
+  walletAddress?: string;
+  email?: string;
   schemaName: string;
   threshold: number;
   webhook: string;
@@ -204,8 +205,9 @@ async function readAlerts(): Promise<AlertSubscription[]> {
 
 export async function registerAlert(sub: AlertSubscription): Promise<void> {
   const all = await readAlerts();
-  // Upsert by wallet+schema
-  const idx = all.findIndex((a) => a.walletAddress === sub.walletAddress && a.schemaName === sub.schemaName);
+  // Upsert by (wallet or email)+schema
+  const key = sub.walletAddress ?? sub.email;
+  const idx = all.findIndex((a) => (a.walletAddress === key || a.email === key) && a.schemaName === sub.schemaName);
   if (idx >= 0) all[idx] = sub; else all.push(sub);
   await fs.writeFile(ALERTS_FILE, JSON.stringify(all, null, 2), "utf-8");
 }

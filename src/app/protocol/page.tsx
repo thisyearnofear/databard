@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { MintRecord } from "@/lib/mint-stats";
+import type { MintRecord, AlertSubscription } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
 import { costLine } from "@/lib/cost-framing";
 import { HealthBar, TrendBadge, Sparkline, StatTile, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
@@ -47,17 +47,21 @@ function trendOf(history: number[]): SourceCard["trend"] {
 
 export default function ProtocolDashboard() {
   const [cards, setCards] = useState<SourceCard[]>([]);
+  const [alerts, setAlerts] = useState<AlertSubscription[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [mintsRes, insightsRes] = await Promise.all([
+        const [mintsRes, insightsRes, alertsRes] = await Promise.all([
           fetch("/api/onchain/mints/stats?limit=200"),
           fetch("/api/insights"),
+          fetch("/api/onchain/alerts"),
         ]);
         const mints: { ok: boolean; recent: MintRecord[] } = await mintsRes.json();
         const insightsData: { ok: boolean; insights: InsightSummary[] } = await insightsRes.json();
+        const alertsData: { ok: boolean; alerts: AlertSubscription[] } = await alertsRes.json();
+        if (alertsData.ok) setAlerts(alertsData.alerts ?? []);
 
         // Group mints by source name
         const grouped: Record<string, MintRecord[]> = {};
@@ -132,6 +136,11 @@ export default function ProtocolDashboard() {
             Live health scores, coverage, and trends for every data source DataBard analyzes — warehouses,
             catalogs, subgraphs, and Dune queries. On-chain sources carry permanent Solana records.
           </p>
+          <div style={{ marginTop: "0.75rem" }}>
+            <Link href="/alerts" style={{ color: "var(--accent)", fontSize: 13, textDecoration: "none" }}>
+              🔔 Manage alerts →
+            </Link>
+          </div>
         </div>
 
         {loading && (
@@ -179,6 +188,24 @@ export default function ProtocolDashboard() {
                       <span style={{ fontSize: 11, color: "var(--text-muted)", background: "var(--bg)", borderRadius: 6, padding: "2px 8px" }}>
                         {sourceLabel(card)}
                       </span>
+                      {(() => {
+                        const cardAlerts = alerts.filter((a) => groupName(a.schemaName) === card.name);
+                        if (cardAlerts.length === 0) return null;
+                        const firing = cardAlerts.some((a) => card.latestHealth < a.threshold);
+                        return (
+                          <Link
+                            href="/alerts"
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${
+                              firing
+                                ? "bg-[var(--danger)]/20 text-[var(--danger)] hover:bg-[var(--danger)]/30"
+                                : "bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20"
+                            }`}
+                            title={firing ? "Alert firing — health below threshold" : `${cardAlerts.length} alert${cardAlerts.length !== 1 ? "s" : ""} configured`}
+                          >
+                            {firing ? "🔴 Alert firing" : `🔔 ${cardAlerts.length} alert${cardAlerts.length !== 1 ? "s" : ""}`}
+                          </Link>
+                        );
+                      })()}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                       <HealthBar score={card.latestHealth} width={64} />
