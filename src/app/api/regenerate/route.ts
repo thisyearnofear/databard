@@ -10,6 +10,7 @@ import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/
 import { analyzeSchema, diffInsights } from "@/lib/schema-analysis";
 import type { ConnectionConfig, Episode } from "@/lib/types";
 import { getDuneTableStats } from "@/lib/dune-adapter";
+import { sendDigestEmail } from "@/lib/notifications";
 
 /**
  * Regeneration endpoint — generates a fresh episode from a saved config.
@@ -159,6 +160,24 @@ export async function POST(req: NextRequest) {
           generatedAt: new Date().toISOString(),
         }),
       }).catch((e) => console.warn("[Webhook] Failed:", e));
+    }
+
+    // Email notification for scheduled digests
+    const emailRecipients: string[] = body.emailRecipients ?? [];
+    if (emailRecipients.length > 0) {
+      const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
+      const summaryText = diff
+        ? `Health ${healthScore}/100 (${diff.healthScoreChange > 0 ? "up" : "down"} ${Math.abs(diff.healthScoreChange)}). ${diff.summary}.`
+        : `Health ${healthScore}/100. ${failedTests} of ${totalTests} tests failing.`;
+      sendDigestEmail({
+        schemaName: meta.name,
+        healthScore,
+        healthScoreChange: diff?.healthScoreChange,
+        episodeUrl: `${baseUrl}/episode/${id}`,
+        dashboardUrl: `${baseUrl}/protocol`,
+        recipients: emailRecipients,
+        summary: summaryText,
+      }).catch((e) => console.warn("[Email] Failed:", e));
     }
 
     return NextResponse.json({

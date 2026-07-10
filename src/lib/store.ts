@@ -210,6 +210,8 @@ export interface ScheduleConfig {
   coral?: { query: string };
   /** Output format: "podcast" (default, 10-15 min) or "executive-summary" (2-min briefing) */
   outputFormat?: "podcast" | "executive-summary";
+  /** Email recipients for weekly digest delivery (comma-separated in UI, array in store) */
+  emailRecipients?: string[];
 }
 
 export const proAccounts = {

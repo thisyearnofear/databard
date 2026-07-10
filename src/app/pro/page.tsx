@@ -55,6 +55,7 @@ function ProSettingsInner() {
   const [dayOfWeek, setDayOfWeek] = useState(1);
   const [hour, setHour] = useState(9);
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [emailRecipients, setEmailRecipients] = useState("");
   const [source, setSource] = useState<DataSource>("openmetadata");
   const [duneApiKey, setDuneApiKey] = useState("");
   const [duneNamespace, setDuneNamespace] = useState("");
@@ -112,7 +113,7 @@ function ProSettingsInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          schedule: { schemaFqn: effectiveFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral, outputFormat: scheduleFormat },
+          schedule: { schemaFqn: effectiveFqn, frequency, dayOfWeek, hour, webhookUrl: webhookUrl || undefined, source, dune, coral, outputFormat: scheduleFormat, emailRecipients: emailRecipients ? emailRecipients.split(",").map((e) => e.trim()).filter(Boolean) : undefined },
         }),
       });
       const data = await res.json();
@@ -140,6 +141,7 @@ function ProSettingsInner() {
           dune: schedule.dune,
           coral: schedule.coral,
           outputFormat: schedule.outputFormat,
+          emailRecipients: schedule.emailRecipients,
         }),
       });
       const data = await res.json();
@@ -379,6 +381,9 @@ function ProSettingsInner() {
                   {s.frequency === "weekly" ? `Every ${DAYS[s.dayOfWeek ?? 1]}` : "Daily"} at {s.hour}:00 UTC
                 </span>
                 <span className="text-xs text-[var(--text-muted)]">Source: {s.source}{s.outputFormat === "executive-summary" ? " · 📋 Exec Summary" : ""}</span>
+                {s.emailRecipients && s.emailRecipients.length > 0 && (
+                  <span className="text-xs text-[var(--text-muted)]">📧 {s.emailRecipients.length} recipient{s.emailRecipients.length > 1 ? "s" : ""}</span>
+                )}
                 {s.nextRunAt && (
                   <span className="text-xs text-[var(--text-muted)]">
                     Next: {new Date(s.nextRunAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
@@ -549,6 +554,17 @@ function ProSettingsInner() {
               onChange={(e) => setWebhookUrl(e.target.value)}
               placeholder="https://hooks.slack.com/..."
             />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--text-muted)]">Email recipients (optional, comma-separated)</label>
+            <input
+              className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm"
+              value={emailRecipients}
+              onChange={(e) => setEmailRecipients(e.target.value)}
+              placeholder="team@company.com, lead@company.com"
+            />
+            <p className="text-[10px] text-[var(--text-muted)]">Each Monday, recipients get an email with the health score and a link to the 2-minute briefing.</p>
           </div>
 
           <div className="flex gap-2">
