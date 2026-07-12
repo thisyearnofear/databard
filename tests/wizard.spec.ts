@@ -8,10 +8,10 @@ test.describe("Wizard Flow", () => {
     await page.getByTestId("connect-button").click();
 
     // Connect step should show its heading
-    await expect(page.getByText("Connect a data source")).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText("Connect your data")).toBeVisible({ timeout: 3_000 });
 
     // Step indicator should highlight "Connect"
-    await expect(page.getByText("Connect").first()).toBeVisible();
+    await expect(page.getByText("Connect", { exact: true }).first()).toBeVisible();
   });
 
   test("should show all four step labels in the step indicator", async ({ page }) => {
@@ -22,10 +22,10 @@ test.describe("Wizard Flow", () => {
 
     // All four step labels should be present in the nav
     const nav = page.locator("nav[aria-label='Progress']");
-    await expect(nav.getByText("Connect")).toBeVisible();
-    await expect(nav.getByText("Pick dataset")).toBeVisible();
-    await expect(nav.getByText("Generate")).toBeVisible();
-    await expect(nav.getByText("Listen")).toBeVisible();
+    await expect(nav.getByText("Connect", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Pick dataset", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Generate", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Listen", { exact: true })).toBeVisible();
   });
 
   test("should allow navigating back from schema picker", async ({ page }) => {
@@ -38,31 +38,51 @@ test.describe("Wizard Flow", () => {
 });
 
 test.describe("Schema Picker", () => {
-  test("should show search input when schemas are loaded", async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto("/");
+    // Mock /api/connect so the sandbox path can reach the schema picker
+    await page.route("**/api/connect", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          source: "openmetadata",
+          omMode: "sandbox",
+          schemas: [
+            "shop.orders",
+            "shop.customers",
+            "shop.products",
+            "shop.inventory",
+            "shop.events",
+            "shop.carts",
+            "shop.reviews",
+            "shop.sessions",
+            "shop.promos",
+            "shop.returns",
+          ],
+        }),
+      });
+    });
     await page.getByTestId("connect-button").click();
+    await page.getByRole("button", { name: /Connect & Continue/i }).click();
+    await page.waitForSelector("[data-tour='research-question']", { timeout: 5_000 });
+  });
 
-    // Search input uses data-testid; visibility depends on having >5 schemas
+  test("should show search input when schemas are loaded", async ({ page }) => {
+    // Search input uses data-testid; it appears when there are more than 5 schemas
     const searchInput = page.getByTestId("schema-search");
-    // Assert it's either visible or absent (not a flaky "maybe" assertion)
-    const count = await searchInput.count();
-    expect(count).toBeLessThanOrEqual(1);
+    await expect(searchInput).toBeVisible();
   });
 
   test("should display research question guidance", async ({ page }) => {
-    await page.goto("/");
-    await page.getByTestId("connect-button").click();
-
     // The guidance panel should be present
     await expect(page.getByText(/Good questions are specific/i)).toBeVisible();
   });
 
   test("should show question presets", async ({ page }) => {
-    await page.goto("/");
-    await page.getByTestId("connect-button").click();
-
     // At least one preset should be visible
-    await expect(page.getByRole("button", { name: /failing tests/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /What tables are most likely to break downstream/i })).toBeVisible();
   });
 });
 
@@ -72,7 +92,7 @@ test.describe("Episode Player", () => {
     await page.getByTestId("demo-button").click();
 
     // Wait for the episode step
-    await expect(page.getByText("Listen")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Play button should be present (uses data-testid)
     await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 5_000 });
@@ -82,10 +102,10 @@ test.describe("Episode Player", () => {
     await page.goto("/");
     await page.getByTestId("demo-button").click();
 
-    await expect(page.getByText("Listen")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Share button should be visible in the episode card header
-    await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Share", exact: true })).toBeVisible();
   });
 
   test("should show mobile action bar on small viewports", async ({ page }) => {
@@ -93,7 +113,7 @@ test.describe("Episode Player", () => {
     await page.goto("/");
     await page.getByTestId("demo-button").click();
 
-    await expect(page.getByText("Listen")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Mobile action bar uses stable data-testid
     await expect(page.getByTestId("mobile-action-bar")).toBeAttached();

@@ -82,7 +82,7 @@ export function AuctionStage({
               <div
                 key={b.id}
                 className={[
-                  "transition-all duration-500",
+                  "transition duration-500",
                   i < bidsRevealed ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
                 ].join(" ")}
               >

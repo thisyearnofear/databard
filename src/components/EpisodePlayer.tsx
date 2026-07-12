@@ -7,7 +7,7 @@ import { analyzeSchema, generateActionItems, type ActionItem } from "@/lib/schem
 import { buildResearchTrail } from "@/lib/research";
 import { track } from "@/lib/track";
 import { costLine } from "@/lib/cost-framing";
-import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
+import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips, resolveColor, rgbToHsl } from "@/components/viz";
 import { HealthBadge } from "@/components/player/HealthBadge";
 import { TableDetail } from "@/components/player/TableDetail";
 import { PriorityBadge } from "@/components/player/PriorityBadge";
@@ -66,6 +66,14 @@ export function EpisodePlayer({
   const [feedbackStage, setFeedbackStage] = useState<"hidden" | "ask" | "email" | "done">("hidden");
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const listenStartedRef = useRef(false);
+  const accentRef = useRef<{ h: number; s: number; l: number } | null>(null);
+
+  function resolveAccent() {
+    if (accentRef.current) return;
+    const rgb = resolveColor("var(--accent)");
+    accentRef.current = rgb ? rgbToHsl(rgb.r, rgb.g, rgb.b) : { h: 258, s: 80, l: 65 };
+  }
+
   const isDemoEpisode = currentEpisode.schemaFqn === "analytics.ecommerce" || currentEpisode.schemaFqn === "dune.uniswap";
   const [investigations, setInvestigations] = useState<Record<string, { loading: boolean; result?: string; provider?: string }>>({});
   const [checkedActions, setCheckedActions] = useState<Set<string>>(() => {
@@ -224,9 +232,15 @@ export function EpisodePlayer({
     return () => observer.disconnect();
   }, []);
 
+  // Resolve the accent CSS token into HSL for canvas drawing
+  useEffect(() => {
+    resolveAccent();
+  }, []);
+
   // Draw static waveform preview when not playing
   useEffect(() => {
     if (playing) return;
+    resolveAccent();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -239,6 +253,7 @@ export function EpisodePlayer({
     const bars = 128;
     const barW = w / bars;
     const mid = h / 2;
+    const accent = accentRef.current ?? { h: 258, s: 80, l: 65 };
 
     // Seeded pseudo-random for consistent look
     let seed = 42;
@@ -251,13 +266,14 @@ export function EpisodePlayer({
       const noise = rand() * 0.5 + 0.5;
       const barH = envelope * noise * mid;
       const alpha = 0.25 + envelope * 0.35;
-      ctx.fillStyle = `hsla(258, 80%, 65%, ${alpha})`;
+      ctx.fillStyle = `hsla(${accent.h}, ${accent.s}%, ${accent.l}%, ${alpha})`;
       ctx.fillRect(i * barW, mid - barH, barW - 1, barH * 2);
     }
   }, [playing]);
 
   // Waveform animation
   const drawWaveform = useCallback(() => {
+    resolveAccent();
     const canvas = canvasRef.current;
     const analyser = analyserRef.current;
     if (!canvas || !analyser) return;
@@ -271,10 +287,11 @@ export function EpisodePlayer({
     ctx.clearRect(0, 0, w, h);
     const barW = w / data.length;
     const mid = h / 2;
+    const accent = accentRef.current ?? { h: 258, s: 80, l: 65 };
 
     for (let i = 0; i < data.length; i++) {
       const barH = (data[i] / 255) * mid;
-      ctx.fillStyle = `hsl(258, 80%, ${50 + (data[i] / 255) * 30}%)`;
+      ctx.fillStyle = `hsl(${accent.h}, ${accent.s}%, ${Math.min(100, Math.round(accent.l + (data[i] / 255) * 30))}%)`;
       ctx.fillRect(i * barW, mid - barH, barW - 1, barH * 2);
     }
 
@@ -615,7 +632,7 @@ export function EpisodePlayer({
             )}
             <button
               onClick={handleClip}
-              className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-1.5 cursor-pointer font-medium transition-all"
+              className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-1.5 cursor-pointer font-medium transition-colors"
               title="Share the most critical moment — perfect for Slack and social"
             >
               {clipCopied ? "✓ Copied!" : "🔥 Share moment"}
@@ -728,15 +745,14 @@ export function EpisodePlayer({
           <>
             <canvas
               ref={canvasRef}
-              className="w-full rounded-lg bg-[var(--bg)] mb-4"
-              style={{ height: "80px" }}
+              className="w-full h-20 rounded-lg bg-[var(--bg)] mb-4"
             />
 
             <div className="flex items-center gap-3 sm:gap-4">
               <button
                 data-testid="play-button"
                 onClick={togglePlay}
-                className="bg-[var(--accent)] hover:brightness-110 text-white rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
+                className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
                 aria-label={playing ? "Pause" : "Play"}
               >
                 {playing ? "⏸" : "▶"}
@@ -818,7 +834,7 @@ export function EpisodePlayer({
               {tab.label}
               {tab.count && (
                 <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                  activeTab === tab.id ? "bg-[var(--accent)] text-white" : "bg-[var(--border)] text-[var(--text-muted)]"
+                  activeTab === tab.id ? "bg-[var(--accent)] text-[var(--bg)]" : "bg-[var(--border)] text-[var(--text-muted)]"
                 }`}>
                   {tab.count}
                 </span>
@@ -884,7 +900,7 @@ export function EpisodePlayer({
                   <button
                     onClick={handleFollowUpBranch}
                     disabled={!currentEpisode.researchSessionId || branching || !followUpQuestion.trim()}
-                    className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 py-2 text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {branching ? "Asking…" : "Ask follow-up"}
                   </button>
@@ -1056,7 +1072,7 @@ export function EpisodePlayer({
                   </span>
                   <div className="h-1 flex-1 mx-3 bg-[var(--border)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[var(--success)] rounded-full transition-all"
+                      className="h-full bg-[var(--success)] rounded-full transition-[width]"
                       style={{ width: `${actionItems.length > 0 ? (checkedActions.size / actionItems.length) * 100 : 0}%` }}
                     />
                   </div>
@@ -1067,7 +1083,7 @@ export function EpisodePlayer({
                   return (
                     <div
                       key={item.id}
-                      className={`text-xs rounded-lg px-3 py-2.5 transition-all ${
+                      className={`text-xs rounded-lg px-3 py-2.5 transition-colors ${
                         checked ? "bg-[var(--bg)] opacity-60" : "bg-[var(--bg)]"
                       }`}
                     >
@@ -1156,7 +1172,7 @@ export function EpisodePlayer({
                         track("drilldown_open", { schema: currentEpisode.schemaName, topic: currentEpisode.script[i]?.topic ?? "" });
                       }
                     }}
-                    className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
+                    className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition ${
                       i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
                     }`}
                   >
@@ -1190,7 +1206,7 @@ export function EpisodePlayer({
                     track("feedback_yes", { schema: currentEpisode.schemaName });
                     setFeedbackStage(isDemoEpisode ? "done" : "email");
                   }}
-                  className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer"
+                  className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer"
                 >
                   Yes
                 </button>
@@ -1234,7 +1250,7 @@ export function EpisodePlayer({
                   placeholder="you@company.com"
                   className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs focus:border-[var(--accent)] outline-none"
                 />
-                <button type="submit" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer">
+                <button type="submit" className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer">
                   Book it
                 </button>
               </form>

@@ -272,7 +272,7 @@ export function ConnectStep() {
             <button
               type="button"
               onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
-              className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition-all ${
+              className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition ${
                 state.source === "coral"
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
                   : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -295,7 +295,7 @@ export function ConnectStep() {
                       key={ds.value}
                       type="button"
                       onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
-                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-colors ${
                         state.source === ds.value
                           ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
                           : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
@@ -328,7 +328,7 @@ export function ConnectStep() {
                 dispatch({ type: "SET_SOURCE", source: "openmetadata" });
                 dispatch({ type: "SET_OM_MODE", omMode: "sandbox" });
               }}
-              className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition-all ${
+              className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition ${
                 state.source === "openmetadata"
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
                   : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -351,7 +351,7 @@ export function ConnectStep() {
                       key={ds.value}
                       type="button"
                       onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
-                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-colors ${
                         state.source === ds.value
                           ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
                           : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
@@ -365,7 +365,7 @@ export function ConnectStep() {
                   <button
                     type="button"
                     onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
-                    className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-all ${
+                    className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-colors ${
                       state.source === "coral"
                         ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
                         : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
@@ -406,9 +406,9 @@ export function ConnectStep() {
             <button
               onClick={handleCoralRunQuery}
               disabled={state.connecting || !validateCoralSql(state.coralQuery).valid}
-              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition ease-out hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
             >
-              {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--bg)]/30 border-t-[var(--bg)] rounded-full animate-spin" />}
               {state.connecting ? "Running query…" : "Run Query →"}
             </button>
           </>
@@ -434,9 +434,9 @@ export function ConnectStep() {
             <button
               onClick={handleConnect}
               disabled={state.connecting}
-              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition ease-out hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
             >
-              {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {state.connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--bg)]/30 border-t-[var(--bg)] rounded-full animate-spin" />}
               {state.connecting ? "Connecting…" : "Connect & Continue →"}
             </button>
 

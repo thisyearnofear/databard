@@ -57,20 +57,20 @@ export default function PlaylistsPage() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <Link href="/" style={{ color: "var(--text-muted)", fontSize: 14, textDecoration: "none" }}>
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8">
+      <div className="max-w-[700px] mx-auto">
+        <Link href="/" className="text-sm text-[var(--text-muted)] no-underline">
           ← Back to DataBard
         </Link>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: "1rem", marginBottom: "0.5rem" }}>
+        <h1 className="text-[28px] font-extrabold mt-4 mb-2">
           📼 Episode Playlists
         </h1>
-        <p style={{ color: "var(--text-muted)", fontSize: 15, marginBottom: "2rem" }}>
+        <p className="text-[15px] text-[var(--text-muted)] mb-8">
           Queue multiple schemas to generate a full database series — perfect for onboarding or catalog reviews.
         </p>
 
         {/* Create */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "2rem" }}>
+        <div className="flex gap-2 mb-8">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -81,13 +81,13 @@ export default function PlaylistsPage() {
           <button
             onClick={create}
             disabled={!newName.trim()}
-            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-40"
+            className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-40"
           >
             Create
           </button>
         </div>
 
-        {loading && <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "2rem" }}>Loading…</p>}
+        {loading && <p className="text-[var(--text-muted)] text-center p-8">Loading…</p>}
 
         {!loading && playlists.length === 0 && (
           <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
@@ -98,7 +98,7 @@ export default function PlaylistsPage() {
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <div className="flex flex-col gap-3">
           {playlists.map((pl) => (
             <div key={pl.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl overflow-hidden">
               <div
@@ -119,7 +119,7 @@ export default function PlaylistsPage() {
                   >
                     Delete
                   </button>
-                  <span className="text-[var(--text-muted)] text-sm" style={{ transform: expanded.has(pl.id) ? "rotate(90deg)" : "" }}>→</span>
+                  <span className={`text-[var(--text-muted)] text-sm ${expanded.has(pl.id) ? "rotate-90" : ""}`}>→</span>
                 </div>
               </div>
 
@@ -130,7 +130,7 @@ export default function PlaylistsPage() {
                       No episodes added yet. Generate an episode from the home page to add it here.
                     </p>
                   ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    <div className="flex flex-col gap-2">
                       {pl.items.map((item, i) => (
                         <div key={item.id} className="flex items-center gap-3 bg-[var(--bg)] rounded-lg px-3 py-2">
                           <span className="text-xs text-[var(--text-muted)] tabular-nums w-4">{i + 1}.</span>
@@ -139,10 +139,8 @@ export default function PlaylistsPage() {
                             <p className="text-[10px] text-[var(--text-muted)]">{item.schemaFqn}</p>
                           </div>
                           <div
-                            style={{
-                              width: 8, height: 8, borderRadius: 4,
-                              background: itemStatusColor(item.status),
-                            }}
+                            className="w-2 h-2 rounded"
+                            style={{ background: itemStatusColor(item.status) }}
                             title={item.status}
                           />
                           {item.episodeId && (
@@ -164,8 +162,8 @@ export default function PlaylistsPage() {
         </div>
       </div>
 
-      <footer style={{ textAlign: "center", paddingTop: "3rem" }}>
-        <Link href="/" style={{ color: "var(--text-muted)", fontSize: 12, textDecoration: "none" }}>
+      <footer className="text-center pt-12">
+        <Link href="/" className="text-xs text-[var(--text-muted)] no-underline">
           Generate episodes →
         </Link>
       </footer>

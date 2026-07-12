@@ -164,9 +164,9 @@ export default function AlertsPage() {
             <button
               type="submit"
               disabled={submitting || !schemaName || !webhook}
-              className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+              className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition ease-out"
             >
-              {submitting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {submitting && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--bg)]/30 border-t-[var(--bg)] rounded-full animate-spin" />}
               {submitting ? "Registering…" : "Register alert →"}
             </button>
 
@@ -243,7 +243,7 @@ export default function AlertsPage() {
             <p className="text-sm font-medium">📅 Scheduled digest podcasts</p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">Automate weekly audio briefings for your team.</p>
           </div>
-          <Link href="/pro" className="text-xs bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-1.5 font-medium shrink-0">
+          <Link href="/pro" className="text-xs bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 py-1.5 font-medium shrink-0">
             Set up in Pro →
           </Link>
         </div>

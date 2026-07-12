@@ -17,7 +17,7 @@ const SolanaWalletConnect = dynamic(
 
 export default function SharedEpisode() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
       <SharedEpisodeInner />
     </Suspense>
   );
@@ -114,7 +114,7 @@ function SharedEpisodeInner() {
         <p className="text-[var(--danger)]">{error || "Episode not found or expired"}</p>
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center">
           <p className="text-sm mb-3">Shared episodes expire after 24 hours. Want to hear what DataBard sounds like?</p>
-          <a href="/" className="inline-block bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium">
+          <a href="/" className="inline-block bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium">
             ▶ Listen to a demo
           </a>
         </div>
@@ -143,7 +143,7 @@ function SharedEpisodeInner() {
           href={`https://explorer.solana.com/tx/${mintTxSignature}${process.env.NEXT_PUBLIC_SOLANA_NETWORK !== "mainnet-beta" ? `?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet"}` : ""}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)] hover:brightness-110 transition-all"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)] hover:brightness-110 transition ease-out"
         >
           <span>⛓️</span>
           <span className="font-medium">Verified on Solana</span>
@@ -154,12 +154,11 @@ function SharedEpisodeInner() {
       {/* On-chain ownership badge */}
       {walletConnected && accessChecked && !checkingAccess && (
         <div
-          className="text-xs px-3 py-1.5 rounded-lg border"
-          style={
+          className={`text-xs px-3 py-1.5 rounded-lg border ${
             isMinted
-              ? { background: "rgba(91,245,140,0.08)", borderColor: "var(--success)", color: "var(--success)" }
-              : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-muted)" }
-          }
+              ? "bg-[var(--success)]/8 border-[var(--success)] text-[var(--success)]"
+              : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
+          }`}
         >
           {isMinted
             ? "✓ You minted this episode — on-chain record verified"
@@ -195,7 +194,7 @@ function SharedEpisodeInner() {
           Every Monday morning, your team gets a fresh audio briefing on your data health — health scores, what changed, what to fix. No dashboard to check. No report to read. Just press play.
         </p>
         <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-          <a href="/" onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02]">
+          <a href="/" onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-5 py-2.5 text-sm font-semibold transition ease-out hover:scale-[1.02]">
             Get this for your data →
           </a>
           <a href="/protocol" onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">

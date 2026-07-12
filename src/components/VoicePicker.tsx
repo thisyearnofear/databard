@@ -123,7 +123,7 @@ export function VoicePicker() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <p className="text-sm font-semibold flex items-center gap-1.5">
-                <span style={{ color: "#a855f7" }}>Morgan</span>
+                <span className="text-[var(--accent)]">Morgan</span>
                 <span className="text-[10px] text-[var(--text-muted)] font-normal">Quality auditor</span>
               </p>
               {config.current.morgan && (

@@ -34,7 +34,7 @@ export function AnimatedSol({
     <div
       className={[
         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent)]/20 border border-[var(--accent)]/40",
-        "transition-all duration-1000 ease-in-out",
+        "transition duration-1000 ease-in-out",
         running ? (fromRight ? "-translate-x-40" : "translate-x-40") : "translate-x-0",
         running ? "opacity-100" : "opacity-70",
       ].join(" ")}

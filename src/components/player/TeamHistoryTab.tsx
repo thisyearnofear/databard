@@ -34,7 +34,7 @@ export function TeamHistoryTab({ schemaName }: { schemaName: string }) {
       </p>
       {history.map((m) => {
         const health = m.healthScore;
-        const color = health >= 80 ? "var(--success)" : health >= 50 ? "#f5c842" : "var(--danger)";
+        const color = health >= 80 ? "var(--success)" : health >= 50 ? "var(--warning)" : "var(--danger)";
         const net = m.network === "mainnet-beta" ? "" : `?cluster=${m.network}`;
         return (
           <div key={m.txSignature} className="bg-[var(--bg)] rounded-lg p-3 border border-[var(--border)] flex items-center gap-3">
@@ -45,7 +45,7 @@ export function TeamHistoryTab({ schemaName }: { schemaName: string }) {
               </div>
               <div className="text-[10px] text-[var(--text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
             </div>
-            <span style={{ color, fontWeight: 700, fontSize: 13 }}>{health}%</span>
+            <span className="font-bold text-[13px]" style={{ color }}>{health}%</span>
             <a
               href={`https://explorer.solana.com/tx/${m.txSignature}${net}`}
               target="_blank"

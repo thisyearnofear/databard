@@ -198,11 +198,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         {/* Pay button */}
         <button
           onClick={handleCheckout}
-          className="w-full relative overflow-hidden rounded-lg px-5 py-3 text-sm font-semibold text-white cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg"
-          style={{
-            background: "linear-gradient(135deg, var(--palm), var(--palm-light))",
-            boxShadow: "0 4px 20px var(--palm-glow), 0 1px 3px rgba(0,0,0,0.2)",
-          }}
+          className="w-full relative overflow-hidden rounded-lg px-5 py-3 text-sm font-semibold text-white cursor-pointer transition-transform ease-out hover:scale-[1.01] active:scale-[0.99] shadow-lg bg-gradient-to-br from-[var(--palm)] to-[var(--palm-light)]"
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
             <PalmIcon size={16} />
@@ -233,11 +229,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
     <div className={`flex flex-col gap-3 ${compact ? "" : "py-2"}`}>
       <button
         onClick={() => setVisible(true)}
-        className="w-full relative overflow-hidden rounded-lg px-5 py-3 text-sm font-semibold text-white cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg"
-        style={{
-          background: "linear-gradient(135deg, var(--palm), var(--palm-light))",
-          boxShadow: "0 4px 20px var(--palm-glow), 0 1px 3px rgba(0,0,0,0.2)",
-        }}
+        className="w-full relative overflow-hidden rounded-lg px-5 py-3 text-sm font-semibold text-white cursor-pointer transition-transform ease-out hover:scale-[1.01] active:scale-[0.99] shadow-lg bg-gradient-to-br from-[var(--palm)] to-[var(--palm-light)]"
       >
         <span className="relative z-10 flex items-center justify-center gap-2">
           <PalmIcon size={16} />

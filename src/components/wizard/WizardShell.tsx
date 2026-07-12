@@ -29,11 +29,11 @@ export function StepIndicator({ current }: { current: WizardStep }) {
                 />
               )}
               <div
-                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${
+                className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm transition ${
                   isComplete 
-                    ? "bg-[var(--accent)] text-white" 
+                    ? "bg-[var(--accent)] text-[var(--bg)]" 
                     : isActive 
-                      ? "bg-[var(--accent)] text-white ring-4 ring-[var(--accent)]/20 scale-110" 
+                      ? "bg-[var(--accent)] text-[var(--bg)] ring-4 ring-[var(--accent)]/20 scale-110" 
                       : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]"
                 }`}
               >

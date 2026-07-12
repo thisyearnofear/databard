@@ -44,11 +44,10 @@ export function HashFingerprint({
       {cells.map((c, i) => (
         <div
           key={i}
-          className="transition-all duration-300"
+          className="transition-colors duration-300 rounded-[1px]"
           style={{
             width: size,
             height: size,
-            borderRadius: 1,
             backgroundColor: filled && hashHex
               ? `hsl(${c.hue} ${c.sat}% ${c.light}%)`
               : "var(--border)",

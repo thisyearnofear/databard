@@ -44,8 +44,7 @@ function MobileTabBar({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Site"
-      className="sm:hidden fixed z-50 bottom-0 left-0 right-0 flex items-stretch justify-around bg-[var(--surface)] border-t border-[var(--border)]"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="sm:hidden fixed z-50 bottom-0 left-0 right-0 flex items-stretch justify-around bg-[var(--surface)] border-t border-[var(--border)] pb-[env(safe-area-inset-bottom)]"
     >
       {tabs.map((t) => {
         const active = pathname === t.href;

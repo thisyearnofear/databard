@@ -55,7 +55,7 @@ export default function RoastPage() {
       <div className="flex flex-col gap-3 w-full max-w-sm">
         <button
           onClick={() => { track("roast_cta_click", { cta: "roast" }); dispatch({ type: "SET_STEP", step: "connect" }); }}
-          className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-6 py-3.5 text-base font-bold transition-all hover:scale-[1.02]"
+          className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-6 py-3.5 text-base font-bold transition ease-out hover:scale-[1.02]"
         >
           🔥 Roast my data →
         </button>

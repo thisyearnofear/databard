@@ -100,14 +100,14 @@ export function BriefingPlayer({
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4 animate-slide-up">
       {/* Header card */}
-      <div className="bg-[#112130] border border-[#d4af37]/20 rounded-xl p-6">
+      <div className="bg-[var(--briefing-surface)] border border-[var(--briefing-gold)]/20 rounded-xl p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-[#d4af37] mb-1">
+            <h2 className="text-xl font-bold text-[var(--briefing-gold)] mb-1">
               🏴‍☠️ Morning Briefing
             </h2>
-            <p className="text-[#93a1a1] text-sm">{repo}</p>
-            <p className="text-xs text-[#586e75] mt-1">
+            <p className="text-[var(--briefing-muted)] text-sm">{repo}</p>
+            <p className="text-xs text-[var(--briefing-dim)] mt-1">
               Powered by Coral · GitHub activity from the last 24 hours
             </p>
           </div>
@@ -115,7 +115,7 @@ export function BriefingPlayer({
             {audioUrl && (
               <button
                 onClick={handleDownload}
-                className="px-3 py-1.5 rounded-lg border border-[#d4af37]/30 text-[#d4af37] text-xs hover:bg-[#d4af37]/10 cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-[var(--briefing-gold)]/30 text-[var(--briefing-gold)] text-xs hover:bg-[var(--briefing-gold)]/10 cursor-pointer"
               >
                 ↓ MP3
               </button>
@@ -123,7 +123,7 @@ export function BriefingPlayer({
             <button
               onClick={onRegenerate}
               disabled={generating}
-              className="px-3 py-1.5 rounded-lg border border-[#2aa198]/30 text-[#2aa198] text-xs hover:bg-[#2aa198]/10 cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg border border-[var(--briefing-teal)]/30 text-[var(--briefing-teal)] text-xs hover:bg-[var(--briefing-teal)]/10 cursor-pointer disabled:opacity-50"
             >
               {generating ? "…" : "⟳ Refresh"}
             </button>
@@ -133,7 +133,7 @@ export function BriefingPlayer({
         {/* Audio player */}
         {audioUrl && (
           <>
-            <div className="bg-[#001e26] rounded-lg h-16 mb-4 flex items-center px-4">
+            <div className="bg-[var(--briefing-surface-2)] rounded-lg h-16 mb-4 flex items-center px-4">
               <div className="flex gap-0.5 w-full items-end h-10">
                 {Array.from({ length: 64 }).map((_, i) => {
                   const pos = i / 63;
@@ -143,13 +143,12 @@ export function BriefingPlayer({
                   return (
                     <div
                       key={i}
-                      className="flex-1 rounded-sm transition-colors"
-                      style={{
-                        height: `${h}px`,
-                        backgroundColor: isActive
-                          ? "#d4af37"
-                          : "rgba(212, 175, 55, 0.2)",
-                      }}
+                      className={`flex-1 rounded-sm transition-colors ${
+                        isActive
+                          ? "bg-[var(--briefing-gold)]"
+                          : "bg-[var(--briefing-gold)]/20"
+                      }`}
+                      style={{ height: `${h}px` }}
                     />
                   );
                 })}
@@ -159,7 +158,7 @@ export function BriefingPlayer({
             <div className="flex items-center gap-4">
               <button
                 onClick={togglePlay}
-                className="bg-[#d4af37] hover:brightness-110 text-[#002b36] rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
+                className="bg-[var(--briefing-gold)] hover:brightness-110 text-[var(--briefing-bg)] rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
               >
                 {playing ? "⏸" : "▶"}
               </button>
@@ -170,22 +169,22 @@ export function BriefingPlayer({
                 step={0.1}
                 value={currentTime}
                 onChange={seek}
-                className="flex-1 accent-[#d4af37]"
+                className="flex-1 accent-[var(--briefing-gold)]"
               />
-              <span className="text-xs text-[#93a1a1] tabular-nums shrink-0">
+              <span className="text-xs text-[var(--briefing-muted)] tabular-nums shrink-0">
                 {fmt(currentTime)} / {duration > 0 ? fmt(duration) : "--"}
               </span>
             </div>
 
-            <p className="text-[10px] text-[#586e75] mt-3 text-center">
+            <p className="text-[10px] text-[var(--briefing-dim)] mt-3 text-center">
               Click any segment to jump · Space to play/pause
             </p>
           </>
         )}
 
         {audioError && (
-          <div className="bg-[#dc322f]/10 border border-[#dc322f]/30 rounded-lg p-3 mt-3">
-            <p className="text-xs text-[#dc322f]">
+          <div className="bg-[var(--briefing-danger)]/10 border border-[var(--briefing-danger)]/30 rounded-lg p-3 mt-3">
+            <p className="text-xs text-[var(--briefing-danger)]">
               Audio synthesis failed: {audioError}
             </p>
           </div>
@@ -193,8 +192,8 @@ export function BriefingPlayer({
       </div>
 
       {/* Tabs */}
-      <div className="bg-[#112130] border border-[#d4af37]/20 rounded-xl overflow-hidden">
-        <div className="flex border-b border-[#d4af37]/10">
+      <div className="bg-[var(--briefing-surface)] border border-[var(--briefing-gold)]/20 rounded-xl overflow-hidden">
+        <div className="flex border-b border-[var(--briefing-gold)]/10">
           {[
             { id: "transcript" as const, label: "🎙️ Transcript", count: script.length },
             { id: "data" as const, label: "📊 Raw Data", count: sections.length },
@@ -204,12 +203,12 @@ export function BriefingPlayer({
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 px-4 py-2.5 text-xs font-medium cursor-pointer transition-colors ${
                 activeTab === tab.id
-                  ? "text-[#d4af37] border-b-2 border-[#d4af37]"
-                  : "text-[#586e75] hover:text-[#93a1a1]"
+                  ? "text-[var(--briefing-gold)] border-b-2 border-[var(--briefing-gold)]"
+                  : "text-[var(--briefing-dim)] hover:text-[var(--briefing-muted)]"
               }`}
             >
               {tab.label}
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[#001e26] text-[#586e75]">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--briefing-surface-2)] text-[var(--briefing-dim)]">
                 {tab.count}
               </span>
             </button>
@@ -227,32 +226,32 @@ export function BriefingPlayer({
                     else setExpandedSeg(i);
                     seekToSegment(i);
                   }}
-                  className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-all ${
+                  className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition-colors ${
                     i === activeIdx
-                      ? "bg-[#d4af37]/10 border-l-2 border-[#d4af37]"
-                      : "hover:bg-[#001e26] border-l-2 border-transparent"
+                      ? "bg-[var(--briefing-gold)]/10 border-l-2 border-[var(--briefing-gold)]"
+                      : "hover:bg-[var(--briefing-surface-2)] border-l-2 border-transparent"
                   }`}
                 >
                   <span
                     className={`font-medium shrink-0 text-xs ${
-                      seg.speaker === "Alex" ? "text-[#2aa198]" : "text-[#b58900]"
+                      seg.speaker === "Alex" ? "text-[var(--briefing-teal)]" : "text-[var(--briefing-code)]"
                     }`}
                   >
                     {seg.speaker}
                   </span>
-                  <span className="text-[#93a1a1]">{seg.text}</span>
+                  <span className="text-[var(--briefing-muted)]">{seg.text}</span>
                 </button>
                 {expandedSeg === i && seg.dataItems && seg.dataItems.length > 0 && (
-                  <div className="ml-8 mt-1 mb-2 p-3 bg-[#001e26] rounded-lg border border-[#d4af37]/10 animate-slide-up">
-                    <p className="text-[10px] text-[#586e75] mb-2">Related data:</p>
+                  <div className="ml-8 mt-1 mb-2 p-3 bg-[var(--briefing-surface-2)] rounded-lg border border-[var(--briefing-gold)]/10 animate-slide-up">
+                    <p className="text-[10px] text-[var(--briefing-dim)] mb-2">Related data:</p>
                     {seg.dataItems.map((item, j) => (
-                      <div key={j} className="text-xs text-[#93a1a1] py-0.5">
+                      <div key={j} className="text-xs text-[var(--briefing-muted)] py-0.5">
                         {Object.entries(item)
                           .filter(([k]) => k !== "url" && k !== "id")
                           .map(([k, v]) => (
                             <span key={k} className="mr-3">
-                              <span className="text-[#586e75]">{k}:</span>{" "}
-                              <span className="text-[#d4af37]">
+                              <span className="text-[var(--briefing-dim)]">{k}:</span>{" "}
+                              <span className="text-[var(--briefing-gold)]">
                                 {JSON.stringify(v) ?? ""}
                               </span>
                             </span>
@@ -262,7 +261,7 @@ export function BriefingPlayer({
                             href={String(item.url)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#2aa198] hover:underline ml-2"
+                            className="text-[var(--briefing-teal)] hover:underline ml-2"
                           >
                             ↗ link
                           </a>
@@ -282,21 +281,21 @@ export function BriefingPlayer({
             {sections.map((section) => (
               <div key={section.category}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-[#d4af37]">
+                  <h3 className="text-sm font-medium text-[var(--briefing-gold)]">
                     {section.label}
                   </h3>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#001e26] text-[#586e75]">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--briefing-surface-2)] text-[var(--briefing-dim)]">
                     {section.count} items
                   </span>
                 </div>
                 {section.items.length === 0 ? (
-                  <p className="text-xs text-[#586e75] italic">No {section.label.toLowerCase()} in the last 24 hours</p>
+                  <p className="text-xs text-[var(--briefing-dim)] italic">No {section.label.toLowerCase()} in the last 24 hours</p>
                 ) : (
                   <div className="space-y-2">
                     {section.items.slice(0, 5).map((item, i) => (
                       <div
                         key={i}
-                        className="bg-[#001e26] rounded-lg p-3 border border-[#d4af37]/10"
+                        className="bg-[var(--briefing-surface-2)] rounded-lg p-3 border border-[var(--briefing-gold)]/10"
                       >
                         {Object.entries(item).map(([k, v]) => {
                           if (k === "url") return null;
@@ -306,7 +305,7 @@ export function BriefingPlayer({
                                 {v.map((label: string) => (
                                   <span
                                     key={label}
-                                    className="inline-block px-1.5 py-0.5 rounded bg-[#d4af37]/10 text-[#d4af37] text-[10px] mr-1"
+                                    className="inline-block px-1.5 py-0.5 rounded bg-[var(--briefing-gold)]/10 text-[var(--briefing-gold)] text-[10px] mr-1"
                                   >
                                     {label}
                                   </span>
@@ -316,8 +315,8 @@ export function BriefingPlayer({
                           }
                           return (
                             <div key={k} className="text-xs">
-                              <span className="text-[#586e75]">{k}:</span>{" "}
-                              <span className="text-[#93a1a1]">
+                              <span className="text-[var(--briefing-dim)]">{k}:</span>{" "}
+                              <span className="text-[var(--briefing-muted)]">
                                 {JSON.stringify(v) ?? ""}
                               </span>
                             </div>
@@ -328,7 +327,7 @@ export function BriefingPlayer({
                             href={String(item.url)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[10px] text-[#2aa198] hover:underline mt-1 inline-block"
+                            className="text-[10px] text-[var(--briefing-teal)] hover:underline mt-1 inline-block"
                           >
                             Open on GitHub ↗
                           </a>

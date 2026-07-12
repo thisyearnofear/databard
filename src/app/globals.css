@@ -7,12 +7,32 @@
   --text: #e4e4ef;
   --text-muted: #8888a0;
   --accent: #7c5bf5;
+  --accent-vivid: #a855f7;
+  --accent-light: #a78bfa;
   --accent-glow: #7c5bf540;
   --danger: #f55b5b;
   --success: #5bf58c;
+  --warning: #f5c842;
   --palm: #3f6b4a;
   --palm-light: #5a9b68;
   --palm-glow: #3f6b4a40;
+
+  /* Briefing (solarized dark) — used by /briefing and BriefingPlayer */
+  --briefing-bg: #002b36;
+  --briefing-surface: #112130;
+  --briefing-surface-2: #001e26;
+  --briefing-gold: #d4af37;
+  --briefing-teal: #2aa198;
+  --briefing-muted: #93a1a1;
+  --briefing-dim: #586e75;
+  --briefing-text: #fdf6e3;
+  --briefing-code: #b58900;
+  --briefing-danger: #dc322f;
+
+  /* Motion curves */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Light theme */
@@ -23,9 +43,12 @@
   --text: #18181b;
   --text-muted: #71717a;
   --accent: #6d4de6;
+  --accent-vivid: #a855f7;
+  --accent-light: #a78bfa;
   --accent-glow: #6d4de640;
   --danger: #dc2626;
   --success: #16a34a;
+  --warning: #ca8a04;
   --palm: #3f6b4a;
   --palm-light: #4d8a5c;
   --palm-glow: #3f6b4a30;
@@ -40,9 +63,12 @@
     --text: #18181b;
     --text-muted: #71717a;
     --accent: #6d4de6;
+    --accent-vivid: #a855f7;
+    --accent-light: #a78bfa;
     --accent-glow: #6d4de640;
     --danger: #dc2626;
     --success: #16a34a;
+    --warning: #ca8a04;
     --palm: #3f6b4a;
     --palm-light: #4d8a5c;
     --palm-glow: #3f6b4a30;
@@ -64,8 +90,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(124, 91, 245, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(124, 91, 245, 0.6); }
+  0%, 100% { box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent); }
+  50% { box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 60%, transparent); }
 }
 
 .animate-pulse-glow {
@@ -88,6 +114,15 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.4s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
 }
 
 @keyframes palm-shimmer {

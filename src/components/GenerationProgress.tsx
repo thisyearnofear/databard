@@ -47,7 +47,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
         {steps.map((step, i) => (
           <div key={i} className="flex items-center gap-4">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition ${
                 step.status === "complete"
                   ? "bg-[var(--success)] scale-100"
                   : step.status === "active"
@@ -59,7 +59,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
             </div>
             <div className="flex-1">
               <p
-                className={`text-sm font-medium transition-all ${
+                className={`text-sm font-medium transition-colors ${
                   step.status === "active" ? "text-[var(--text)]" : "text-[var(--text-muted)]"
                 }`}
               >
@@ -69,7 +69,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
                 <div className="mt-2">
                   <div className="h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[var(--accent)] rounded-full transition-all duration-500"
+                      className="h-full bg-[var(--accent)] rounded-full transition-[width] duration-500"
                       style={{ width: `${Math.max(2, progress)}%` }}
                     />
                   </div>
@@ -81,7 +81,7 @@ export function GenerationProgress({ currentStep, segmentsComplete = 0, segments
               )}
               {step.status === "active" && (i < 2 || segmentsTotal === 0) && (
                 <div className="mt-2 h-1 bg-[var(--border)] rounded-full overflow-hidden">
-                  <div className="h-full bg-[var(--accent)] rounded-full animate-pulse" style={{ width: "60%" }}></div>
+                  <div className="h-full bg-[var(--accent)] rounded-full animate-pulse w-[60%]"></div>
                 </div>
               )}
             </div>

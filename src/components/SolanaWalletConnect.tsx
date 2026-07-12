@@ -44,7 +44,7 @@ export function SolanaWalletConnect({ onAddressChange, onSolDomainChange }: Sola
     return (
       <button
         onClick={() => setVisible(true)}
-        className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+        className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
       >
         Connect Solana Wallet
       </button>
@@ -60,7 +60,7 @@ export function SolanaWalletConnect({ onAddressChange, onSolDomainChange }: Sola
         <div className="flex gap-2">
           <button
             onClick={() => connect().catch(() => {})}
-            className="flex-1 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+            className="flex-1 bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
           >
             Connect
           </button>

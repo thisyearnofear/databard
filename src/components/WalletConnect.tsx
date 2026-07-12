@@ -75,7 +75,7 @@ function WalletConnectInner({ onAddressChange, onSessionChange }: WalletConnectP
         <button
           onClick={handleWalletAuth}
           disabled={isSigning}
-          className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-60"
+          className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-60"
         >
           {isSigning ? "Signing…" : "Sign in with wallet"}
         </button>

@@ -30,7 +30,7 @@ type ProSession = {
 
 export default function ProSettings() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
       <ProSettingsInner />
     </Suspense>
   );
@@ -260,7 +260,7 @@ function ProSettingsInner() {
           ) : showCreateFirstScheduleCta ? (
             <button
               onClick={() => setShowForm(true)}
-              className="text-xs bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-1.5 cursor-pointer"
+              className="text-xs bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 py-1.5 cursor-pointer"
             >
               Create first schedule
             </button>
@@ -299,7 +299,7 @@ function ProSettingsInner() {
           <button
             onClick={handleStripeIdentitySubmit}
             disabled={loading || (!customerId && !email)}
-            className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in with Email/Stripe"}
           </button>
@@ -310,7 +310,7 @@ function ProSettingsInner() {
       <div className="w-full bg-[var(--surface)] border border-[var(--palm)]/40 rounded-xl p-5 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--palm), var(--palm-light))" }}>
+            <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[var(--palm)] to-[var(--palm-light)]">
               <span className="text-white text-xs font-bold">$</span>
             </div>
             <label className="text-sm font-medium">Pay with Palm USD</label>
@@ -363,7 +363,7 @@ function ProSettingsInner() {
             <h2 className="text-sm font-semibold">Scheduled Episodes</h2>
             <button
               onClick={() => setShowForm(true)}
-              className="text-xs bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-1.5 cursor-pointer"
+              className="text-xs bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 py-1.5 cursor-pointer"
             >
               + Add schedule
             </button>
@@ -571,7 +571,7 @@ function ProSettingsInner() {
             <button
               onClick={handleSaveSchedule}
               disabled={loading || !schemaFqn}
-              className="flex-1 bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+              className="flex-1 bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
             >
               {loading ? "Saving…" : "Save schedule"}
             </button>

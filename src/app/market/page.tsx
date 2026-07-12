@@ -332,7 +332,7 @@ export default function MarketPage() {
             className={[
               "px-3 py-1.5 rounded text-sm border",
               track === "watchdog"
-                ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
                 : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
             ].join(" ")}
           >
@@ -343,7 +343,7 @@ export default function MarketPage() {
             className={[
               "px-3 py-1.5 rounded text-sm border",
               track === "graph"
-                ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
                 : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
             ].join(" ")}
           >
@@ -354,7 +354,7 @@ export default function MarketPage() {
             className={[
               "px-3 py-1.5 rounded text-sm border",
               track === "head-to-head"
-                ? "bg-[var(--accent)] text-white border-[var(--accent)]"
+                ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
                 : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
             ].join(" ")}
           >

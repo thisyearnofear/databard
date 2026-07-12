@@ -55,8 +55,7 @@ function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id
     <div
       aria-live="polite"
       aria-label="Notifications"
-      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
-      style={{ maxWidth: "420px" }}
+      className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-[420px]"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />
@@ -78,7 +77,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   const bg = toast.type === "error"
     ? "bg-[var(--danger)]"
     : toast.type === "success"
-    ? "bg-emerald-600"
+    ? "bg-[var(--success)]"
     : "bg-[var(--accent)]";
 
   const icon = toast.type === "error" ? "!" : toast.type === "success" ? "\u2713" : "i";
@@ -88,17 +87,17 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       role="alert"
       onClick={() => onDismiss(toast.id)}
       className={`
-        ${bg} text-white text-sm px-4 py-3 rounded-lg shadow-lg
-        pointer-events-auto cursor-pointer transition-all duration-300
+        ${bg} text-[var(--bg)] text-sm px-4 py-3 rounded-lg shadow-lg
+        pointer-events-auto cursor-pointer transition duration-300
         ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}
         flex items-start gap-3
       `}
     >
-      <span className="font-bold text-base leading-none mt-0.5 shrink-0 w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">
+      <span className="font-bold text-base leading-none mt-0.5 shrink-0 w-5 h-5 rounded-full bg-[var(--bg)]/20 flex items-center justify-center text-xs">
         {icon}
       </span>
       <span className="flex-1">{toast.message}</span>
-      <span className="text-white/60 text-xs leading-none mt-0.5 shrink-0">\u00d7</span>
+      <span className="text-[var(--bg)]/60 text-xs leading-none mt-0.5 shrink-0">\u00d7</span>
     </div>
   );
 }

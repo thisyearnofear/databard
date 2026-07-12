@@ -46,8 +46,7 @@ export function Skeleton({ className = "", lines = 1, variant = "text" }: Skelet
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className={`h-4 ${baseClasses} rounded`}
-          style={{ width: i === lines - 1 && lines > 1 ? "60%" : "100%" }}
+          className={`h-4 ${baseClasses} ${i === lines - 1 && lines > 1 ? "w-[60%]" : "w-full"}`}
         />
       ))}
     </div>

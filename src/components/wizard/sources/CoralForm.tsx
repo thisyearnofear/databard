@@ -152,7 +152,6 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
                 ? "border-yellow-500/50 focus:border-yellow-500"
                 : "border-[var(--border)] focus:border-[var(--accent)]"
             }`}
-            style={{ WebkitTextFillColor: "transparent" }}
           />
         </div>
         {!validation.valid && query.trim() && validation.hint && (

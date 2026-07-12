@@ -101,7 +101,7 @@ function OnChainWallContent() {
           {stats?.recent.length === 0 ? (
             <div className="p-12 text-center bg-[var(--surface)] border border-[var(--border)] rounded-2xl border-dashed">
               <p className="text-[var(--text-muted)] mb-4">No mints found yet.</p>
-              <Link href="/" className="bg-[var(--accent)] text-white px-6 py-2 rounded-lg text-sm font-medium">
+              <Link href="/" className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium">
                 Be the first to mint
               </Link>
             </div>
@@ -110,7 +110,7 @@ function OnChainWallContent() {
               {stats?.recent.map((record) => (
                 <div 
                   key={record.txSignature} 
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-all group animate-slide-up"
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors group animate-slide-up"
                 >
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div className="min-w-0">
@@ -256,7 +256,7 @@ function OnChainWallContent() {
                )}
                <Link 
                 href="/" 
-                className="block w-full text-center bg-[var(--accent)] text-white py-3 rounded-xl text-sm font-bold hover:brightness-110 transition-all"
+                className="block w-full text-center bg-[var(--accent)] text-[var(--bg)] py-3 rounded-xl text-sm font-bold hover:brightness-110 transition ease-out"
                >
                  Mint New Snapshot
                </Link>

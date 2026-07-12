@@ -44,7 +44,7 @@ export default async function DemoPage() {
         <p className="text-xs text-[var(--text-muted)] mb-3">
           Pre-loaded server-side for instant playback. Connect your own data source to generate a custom episode.
         </p>
-        <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium inline-block">
+        <a href="/" className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-xs font-medium inline-block">
           Generate your own →
         </a>
       </div>

@@ -6,7 +6,7 @@ import type { ConnectionConfig, ScriptSegment, Episode } from "@/lib/types";
 import { buildResearchTrail } from "@/lib/research";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { analyzeSchema } from "@/lib/schema-analysis";
-import { ValidationError, guardMutation, validateResearchQuestion } from "@/lib/validation";
+import { ValidationError, guardMutation, validateResearchQuestion, validateSchemaFqn } from "@/lib/validation";
 import { getDuneTableStats } from "@/lib/dune-adapter";
 import { generateMusicPlan } from "@/lib/music-generator";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
 
     // Normal mode — fetch metadata and generate
     const { schemaFqn, source = "openmetadata", researchQuestion } = body;
+    validateSchemaFqn(schemaFqn);
     const normalizedResearchQuestion = typeof researchQuestion === "string" && researchQuestion.trim()
       ? researchQuestion.trim()
       : undefined;

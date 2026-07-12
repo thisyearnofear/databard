@@ -37,7 +37,7 @@ export default async function ResearchSessionDetailPage({ params }: { params: Pr
             </Link>
             <Link
               href="/"
-              className="inline-flex items-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:brightness-110"
+              className="inline-flex items-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg)] hover:brightness-110"
             >
               New episode
             </Link>
@@ -86,7 +86,7 @@ export default async function ResearchSessionDetailPage({ params }: { params: Pr
           {session.latestEpisodeId && (
             <Link
               href={`/episode/${session.latestEpisodeId}`}
-              className="mt-4 inline-flex items-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:brightness-110"
+              className="mt-4 inline-flex items-center rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--bg)] hover:brightness-110"
             >
               Open latest episode
             </Link>

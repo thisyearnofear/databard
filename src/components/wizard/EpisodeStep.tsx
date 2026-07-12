@@ -173,7 +173,7 @@ export function EpisodeStep() {
             </p>
             <button 
               onClick={handleCheckout} 
-              className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-xs font-medium cursor-pointer"
+              className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-xs font-medium cursor-pointer"
             >
               Start Pro trial
             </button>

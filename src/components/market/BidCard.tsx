@@ -24,7 +24,7 @@ export function BidCard({
   return (
     <div
       className={[
-        "rounded-lg border-2 p-4 space-y-2 transition-all",
+        "rounded-lg border-2 p-4 space-y-2 transition",
         style.color,
         isWinner ? "bg-[var(--surface)] scale-[1.02] shadow-lg" : "bg-[var(--surface)]",
         dimmed && !isWinner ? "opacity-50" : "",

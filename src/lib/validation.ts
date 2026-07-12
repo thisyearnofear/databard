@@ -94,7 +94,7 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 export function rateLimit(
   req: { headers: { get(name: string): string | null } },
   { maxRequests = 5, windowMs = 3600000 } = {}
-): void {
+): { remaining: number; resetAt: number } {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || req.headers.get("x-real-ip")
     || "unknown";
@@ -103,14 +103,17 @@ export function rateLimit(
   const entry = rateLimitMap.get(ip);
 
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + windowMs });
-    return;
+    const resetAt = now + windowMs;
+    rateLimitMap.set(ip, { count: 1, resetAt });
+    return { remaining: maxRequests - 1, resetAt };
   }
 
   entry.count++;
   if (entry.count > maxRequests) {
     throw new ValidationError(`Rate limit exceeded — max ${maxRequests} episodes per hour. Try again later.`);
   }
+
+  return { remaining: maxRequests - entry.count, resetAt: entry.resetAt };
 }
 
 /**

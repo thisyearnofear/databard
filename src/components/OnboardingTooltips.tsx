@@ -184,9 +184,8 @@ export function OnboardingTooltip({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40"
+        className="fixed inset-0 bg-black/50 z-40 backdrop-blur-[2px]"
         onClick={handleSkip}
-        style={{ backdropFilter: "blur(2px)" }}
       />
 
       {/* Highlight ring around target */}
@@ -205,11 +204,8 @@ export function OnboardingTooltip({
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="fixed z-50 w-80 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-2xl animate-slide-up"
-        style={{
-          ...getTooltipStyle(),
-          maxWidth: "calc(100vw - 32px)",
-        }}
+        className="fixed z-50 w-80 max-w-[calc(100vw-32px)] bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-2xl animate-slide-up"
+        style={getTooltipStyle()}
       >
         <div className="p-4">
           <div className="flex items-center justify-between mb-2">
@@ -229,7 +225,7 @@ export function OnboardingTooltip({
           </button>
           <button
             onClick={handleNext}
-            className="text-xs bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 py-1.5 cursor-pointer font-medium"
+            className="text-xs bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 py-1.5 cursor-pointer font-medium"
           >
             {currentStep < steps.length - 1 ? "Next" : "Get started"}
           </button>

@@ -116,7 +116,7 @@ export function CoralConfigureStep({
           <button
             type="button"
             onClick={() => onFormatChange("podcast")}
-            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition-all ${
+            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition ${
               outputFormat === "podcast"
                 ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm"
                 : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -129,7 +129,7 @@ export function CoralConfigureStep({
           <button
             type="button"
             onClick={() => onFormatChange("executive-summary")}
-            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition-all ${
+            className={`flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 cursor-pointer transition ${
               outputFormat === "executive-summary"
                 ? "border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm"
                 : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -173,9 +173,9 @@ export function CoralConfigureStep({
       <button
         onClick={onGenerate}
         disabled={connecting}
-        className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-3.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
+        className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-3.5 text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition ease-out hover:scale-[1.01] shadow-md shadow-[var(--accent)]/10"
       >
-        {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+        {connecting && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--bg)]/30 border-t-[var(--bg)] rounded-full animate-spin" />}
         {connecting
           ? "Generating…"
           : outputFormat === "anthem"

@@ -12,10 +12,22 @@ export async function POST(req: NextRequest) {
   let resolvedOmUrl: string | undefined;
   let resolvedOmToken: string | undefined;
 
+  const isSandbox = source === "openmetadata" && omMode === "sandbox";
+  let remaining = 0;
+  let resetAt = 0;
+
+  function withRateLimitHeaders(response: NextResponse) {
+    response.headers.set("X-RateLimit-Remaining", String(remaining));
+    response.headers.set("X-RateLimit-Reset", String(resetAt));
+    return response;
+  }
+
   try {
     // Apply rate limiting — stricter for sandbox (shared token) to prevent abuse
-    const isSandbox = source === "openmetadata" && omMode === "sandbox";
-    rateLimit(req, isSandbox ? { maxRequests: 10, windowMs: 60000 } : { maxRequests: 20, windowMs: 3600000 });
+    const rateLimitResult = rateLimit(req, isSandbox ? { maxRequests: 10, windowMs: 60000 } : { maxRequests: 20, windowMs: 3600000 });
+    remaining = rateLimitResult.remaining;
+    resetAt = rateLimitResult.resetAt;
+
     // Validate input based on source
     if (source === "openmetadata") {
       if (omMode === "sandbox") {
@@ -94,21 +106,25 @@ export async function POST(req: NextRequest) {
     }
     
     if (schemas.length === 0) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { ok: false, error: "No schemas found. Check your connection settings." },
         { status: 404 }
-      );
+      ));
     }
 
     // Create server-side session — credentials stored server-side only
     await createSession(config, schemas);
     
-    return NextResponse.json({ ok: true, schemas, source, omMode });
+    return withRateLimitHeaders(NextResponse.json({ ok: true, schemas, source, omMode }));
   } catch (e: unknown) {
+    if (remaining === 0 && resetAt === 0) {
+      // Rate limit was triggered before a successful rateLimit() return
+      resetAt = Date.now() + (isSandbox ? 60000 : 3600000);
+    }
     if (e instanceof ValidationError) {
-      return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+      return withRateLimitHeaders(NextResponse.json({ ok: false, error: e.message }, { status: e.message.includes("Unauthorized") ? 401 : 400 }));
     }
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    return withRateLimitHeaders(NextResponse.json({ ok: false, error: msg }, { status: 500 }));
   }
 }

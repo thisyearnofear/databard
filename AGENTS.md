@@ -7,7 +7,10 @@ DataBard is a weekly data health briefing tool. The core product is a scheduled 
 - `npm run dev` — start dev server on localhost:3000
 - `npm run build` — production build (71 static pages)
 - `npx tsc --noEmit` — type check only
-- No test framework configured
+- `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
+- `npm run test:unit` — `tsx tests/rate-limit.unit.ts`
+- `npx playwright install` — install required browsers
+- `npx playwright test --project=chromium` — run a single browser project
 
 ## Analytics
 Two-layer analytics system:

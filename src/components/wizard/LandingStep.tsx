@@ -121,7 +121,7 @@ export function LandingStep() {
           <button
             data-testid="connect-button"
             onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-white px-6 py-3 font-medium cursor-pointer transition-all hover:scale-[1.02]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 font-medium cursor-pointer transition ease-out hover:scale-[1.02]"
           >
             <span>{state.persona === "enterprise" ? "Connect your data" : "Query your data"}</span>
             <span>→</span>

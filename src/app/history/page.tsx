@@ -51,10 +51,7 @@ function WalletGate() {
   return (
     <div className="relative">
       <HistoryGhostPreview />
-      <div
-        className="absolute inset-0 flex items-center justify-center px-4"
-        style={{ background: "linear-gradient(to bottom, transparent, var(--bg) 40%)" }}
-      >
+      <div className="absolute inset-0 flex items-center justify-center px-4 bg-gradient-to-b from-transparent to-[var(--bg)]">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 text-center max-w-sm shadow-lg">
           <div className="text-4xl mb-3">🔗</div>
           <p className="text-base font-semibold mb-2">Your episodes, permanently yours</p>
@@ -64,7 +61,7 @@ function WalletGate() {
           </p>
           <button
             onClick={() => setVisible(true)}
-            className="w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-5 py-2.5 text-sm font-medium cursor-pointer transition-all"
+            className="w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-5 py-2.5 text-sm font-medium cursor-pointer transition ease-out"
           >
             👛 Connect Wallet
           </button>
@@ -105,13 +102,13 @@ export default function HistoryPage() {
       : `https://explorer.solana.com/tx/${sig}?cluster=${network}`;
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", padding: "40px 20px" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-5 py-10">
+      <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
-          <Link href="/" style={{ color: "var(--accent)", textDecoration: "none", fontSize: 14 }}>← Back to DataBard</Link>
-          <h1 style={{ fontSize: 28, fontWeight: 700, margin: "12px 0 4px" }}>📼 Episode History</h1>
-          <p style={{ color: "var(--text-muted)", fontSize: 15, margin: 0 }}>
+        <div className="mb-8">
+          <Link href="/" className="text-[var(--accent)] text-sm no-underline">← Back to DataBard</Link>
+          <h1 className="text-[28px] font-bold mt-3 mb-1">📼 Episode History</h1>
+          <p className="text-[var(--text-muted)] text-[15px]">
             Your past episodes — permanently stored on IPFS via Grove, anchored on Solana.
           </p>
         </div>
@@ -121,28 +118,31 @@ export default function HistoryPage() {
 
         {/* Loading */}
         {publicKey && loading && (
-          <div style={{ textAlign: "center", padding: 48, color: "var(--text-muted)" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+          <div className="text-center p-12 text-[var(--text-muted)]">
+            <div className="text-[32px] mb-3">⏳</div>
             Loading your episode history…
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div style={{ background: "color-mix(in srgb, var(--danger) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)", borderRadius: 8, padding: 16, color: "var(--danger)", fontSize: 14 }}>
+          <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg p-4 text-[var(--danger)] text-sm">
             {error}
           </div>
         )}
 
         {/* Empty state */}
         {publicKey && !loading && !error && records.length === 0 && (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 32, textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🎙️</div>
-            <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No episodes minted yet</p>
-            <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 20 }}>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-8 text-center">
+            <div className="text-[40px] mb-3">🎙️</div>
+            <p className="text-base font-semibold mb-2">No episodes minted yet</p>
+            <p className="text-[var(--text-muted)] text-sm mb-5">
               Generate an episode and mint it on Solana — it will appear here permanently.
             </p>
-            <Link href="/" style={{ background: "var(--accent)", color: "#fff", padding: "10px 20px", borderRadius: 8, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+            <Link
+              href="/"
+              className="inline-block bg-[var(--accent)] text-[var(--bg)] px-5 py-2.5 rounded-lg text-sm font-semibold no-underline"
+            >
               Generate an episode →
             </Link>
           </div>
@@ -150,37 +150,37 @@ export default function HistoryPage() {
 
         {/* Records list */}
         {records.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ color: "var(--text-muted)", fontSize: 13, margin: "0 0 4px" }}>
+          <div className="flex flex-col gap-4">
+            <p className="text-[var(--text-muted)] text-[13px] mb-1">
               {records.length} episode{records.length !== 1 ? "s" : ""} found
             </p>
             {records.map((r, i) => (
-              <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 20 }}>
+              <div key={i} className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5">
                 {/* Title row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 12 }}>
+                <div className="flex justify-between items-start gap-3 mb-3">
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{r.schemaName}</div>
+                    <div className="font-bold text-base">{r.schemaName}</div>
                     {r.solDomain && (
-                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>🌐 {r.solDomain}</div>
+                      <div className="text-xs text-[var(--text-muted)] mt-0.5">🌐 {r.solDomain}</div>
                     )}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                  <div className="text-xs text-[var(--text-muted)] whitespace-nowrap">
                     {new Date(r.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 </div>
 
                 {/* Health bar */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Health Score</div>
+                <div className="mb-3.5">
+                  <div className="text-xs text-[var(--text-muted)] mb-1">Health Score</div>
                   <HealthBar score={r.healthScore} />
                 </div>
 
                 {/* Links */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div className="flex flex-wrap gap-2">
                   {r.episodeId && (
                     <Link
                       href={`/episode/${r.episodeId}`}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "color-mix(in srgb, var(--accent) 15%, transparent)", color: "var(--accent)", textDecoration: "none", fontWeight: 600 }}
+                      className="text-xs px-3 py-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
                     >
                       🎙️ View Episode
                     </Link>
@@ -190,7 +190,7 @@ export default function HistoryPage() {
                       href={r.groveMetadataUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "rgba(139,92,246,0.15)", color: "#a78bfa", textDecoration: "none", fontWeight: 600 }}
+                      className="text-xs px-3 py-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
                     >
                       🌿 Grove Metadata
                     </a>
@@ -200,7 +200,7 @@ export default function HistoryPage() {
                       href={r.groveAudioUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "rgba(139,92,246,0.15)", color: "#a78bfa", textDecoration: "none", fontWeight: 600 }}
+                      className="text-xs px-3 py-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
                     >
                       🎵 Grove Audio
                     </a>
@@ -209,7 +209,7 @@ export default function HistoryPage() {
                     href={explorerUrl(r.txSignature, r.network)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, background: "var(--bg)", color: "var(--text-muted)", textDecoration: "none" }}
+                    className="text-xs px-3 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)] no-underline"
                   >
                     ◎ Solana Explorer
                   </a>
@@ -217,7 +217,7 @@ export default function HistoryPage() {
 
                 {/* Grove CID */}
                 {r.groveCid && (
-                  <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace", wordBreak: "break-all" }}>
+                  <div className="mt-2.5 text-[11px] text-[var(--text-muted)] font-mono break-all">
                     IPFS: {r.groveCid}
                   </div>
                 )}
@@ -227,9 +227,9 @@ export default function HistoryPage() {
         )}
 
         {/* Footer */}
-        <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid var(--border)", display: "flex", gap: 20, fontSize: 13, color: "var(--text-muted)" }}>
-          <Link href="/leaderboard" style={{ color: "var(--text-muted)", textDecoration: "none" }}>🏆 Leaderboard</Link>
-          <Link href="/" style={{ color: "var(--text-muted)", textDecoration: "none" }}>← Home</Link>
+        <div className="mt-12 pt-6 border-t border-[var(--border)] flex gap-5 text-[13px] text-[var(--text-muted)]">
+          <Link href="/leaderboard" className="text-[var(--text-muted)] no-underline">🏆 Leaderboard</Link>
+          <Link href="/" className="text-[var(--text-muted)] no-underline">← Home</Link>
         </div>
       </div>
     </main>

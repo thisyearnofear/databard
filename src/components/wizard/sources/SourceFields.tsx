@@ -94,7 +94,7 @@ export function SourceFields() {
             type="file"
             accept=".json,application/json"
             onChange={(e) => dispatch({ type: "SET_MANIFEST_FILE", file: e.target.files?.[0] ?? null })}
-            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm w-full file:mr-3 file:rounded file:border-0 file:bg-[var(--accent)] file:text-white file:px-3 file:py-1 file:text-xs file:cursor-pointer"
+            className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2 text-sm w-full file:mr-3 file:rounded file:border-0 file:bg-[var(--accent)] file:text-[var(--bg)] file:px-3 file:py-1 file:text-xs file:cursor-pointer"
           />
           {state.manifestFile && (
             <p className="text-xs text-[var(--success)]">✓ {state.manifestFile.name} ({(state.manifestFile.size / 1024).toFixed(0)} KB)</p>

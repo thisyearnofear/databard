@@ -26,52 +26,43 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8">
+      <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div style={{ marginBottom: "2rem" }}>
-          <Link href="/" style={{ color: "var(--text-muted)", fontSize: 14, textDecoration: "none" }}>
+        <div className="mb-8">
+          <Link href="/" className="text-[var(--text-muted)] text-sm no-underline">
             ← Back to DataBard
           </Link>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: "1rem", marginBottom: "0.25rem" }}>
+          <h1 className="text-[28px] font-extrabold mt-4 mb-1">
             🏆 Data Health Leaderboard
           </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: 15 }}>
+          <p className="text-[var(--text-muted)] text-[15px]">
             The public index of data-source health. <b>🔍 Scanned</b> scores come from DataBard&apos;s analysis
             engine; <b>⛓️ Verified</b> scores were attested on Solana by the team behind the source.
           </p>
         </div>
 
         {loading && (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
+          <div className="text-center p-12 text-[var(--text-muted)]">
             Loading leaderboard…
           </div>
         )}
 
         {error && (
-          <div style={{ color: "var(--danger)", padding: "1rem", background: "var(--surface)", borderRadius: 8 }}>
+          <div className="text-[var(--danger)] p-4 bg-[var(--surface)] rounded-lg">
             {error}
           </div>
         )}
 
         {!loading && !error && entries.length === 0 && (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
-            <p style={{ fontSize: 18, marginBottom: "0.5rem" }}>No sources indexed yet.</p>
-            <p style={{ fontSize: 14 }}>
+          <div className="text-center p-12 text-[var(--text-muted)]">
+            <p className="text-lg mb-2">No sources indexed yet.</p>
+            <p className="text-sm">
               Every source DataBard analyzes appears here automatically — mint on Solana to verify yours.
             </p>
             <Link
               href="/"
-              style={{
-                display: "inline-block",
-                marginTop: "1rem",
-                padding: "0.6rem 1.4rem",
-                background: "var(--accent)",
-                color: "#fff",
-                borderRadius: 8,
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
+              className="inline-block mt-4 px-6 py-2.5 bg-[var(--accent)] text-[var(--bg)] rounded-lg no-underline font-semibold"
             >
               Generate an episode →
             </Link>
@@ -82,62 +73,41 @@ export default function LeaderboardPage() {
           const bestDelta = Math.max(...entries.map(delta));
           const mostImproved = bestDelta > 0 ? entries.find((e) => delta(e) === bestDelta)?.schemaName : null;
           return (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div className="flex flex-col gap-3">
               {entries.map((entry, i) => (
                 <div
                   key={entry.schemaName}
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: "1rem 1.25rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "1rem",
-                    flexWrap: "wrap",
-                  }}
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-4 flex items-center gap-4 flex-wrap"
                 >
                   {/* Rank */}
                   <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      background: i < 3 ? "var(--accent)" : "var(--border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 800,
-                      fontSize: 14,
-                      flexShrink: 0,
-                    }}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-sm shrink-0 ${
+                      i < 3 ? "bg-[var(--accent)] text-[var(--bg)]" : "bg-[var(--border)] text-[var(--text-muted)]"
+                    }`}
                   >
                     {i + 1}
                   </div>
 
                   {/* Schema name + tier + activity */}
-                  <div style={{ flex: 1, minWidth: 180 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2, flexWrap: "wrap" }}>
-                      <span style={{ fontWeight: 700, fontSize: 15 }}>{entry.schemaName}</span>
+                  <div className="flex-1 min-w-[180px]">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className="font-bold text-[15px]">{entry.schemaName}</span>
                       <span
-                        style={{
-                          fontSize: 10,
-                          padding: "2px 8px",
-                          borderRadius: 999,
-                          background: entry.tier === "verified" ? "var(--accent)" : "var(--border)",
-                          color: entry.tier === "verified" ? "#fff" : "var(--text-muted)",
-                          fontWeight: 600,
-                        }}
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                          entry.tier === "verified"
+                            ? "bg-[var(--accent)] text-[var(--bg)]"
+                            : "bg-[var(--border)] text-[var(--text-muted)]"
+                        }`}
                       >
                         {entry.tier === "verified" ? "⛓️ Verified" : "🔍 Scanned"}
                       </span>
                       {entry.schemaName === mostImproved && (
-                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "var(--success)", color: "#fff", fontWeight: 600 }}>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--success)] text-[var(--bg)] font-semibold">
                           ▲ Most improved
                         </span>
                       )}
                     </div>
-                    <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                    <div className="text-[var(--text-muted)] text-xs">
                       {entry.tier === "verified" ? (
                         <>
                           {entry.wallets.length} wallet{entry.wallets.length !== 1 ? "s" : ""} · {entry.mintCount} mint{entry.mintCount !== 1 ? "s" : ""} · last{" "}
@@ -146,7 +116,7 @@ export default function LeaderboardPage() {
                       ) : (
                         <>
                           scanned {new Date(entry.lastMintedAt).toLocaleDateString()} ·{" "}
-                          <Link href="/" style={{ color: "var(--accent)", textDecoration: "none" }}>
+                          <Link href="/" className="text-[var(--accent)] no-underline">
                             Claim your protocol →
                           </Link>
                         </>
@@ -168,8 +138,8 @@ export default function LeaderboardPage() {
           );
         })()}
 
-        <p style={{ marginTop: "2rem", color: "var(--text-muted)", fontSize: 12, textAlign: "center" }}>
-          Scores sourced from on-chain Solana mints via DataBard · <Link href="/api/onchain/leaderboard" style={{ color: "var(--accent)" }}>JSON API</Link>
+        <p className="mt-8 text-[var(--text-muted)] text-xs text-center">
+          Scores sourced from on-chain Solana mints via DataBard · <Link href="/api/onchain/leaderboard" className="text-[var(--accent)]">JSON API</Link>
         </p>
       </div>
     </main>

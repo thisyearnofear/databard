@@ -238,9 +238,9 @@ export function SchemaPicker() {
                             key={s}
                             type="button"
                             onClick={() => dispatch({ type: "SET_SELECTED_SCHEMA", schema: s })}
-                            className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all cursor-pointer ${
+                            className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition cursor-pointer ${
                               isSelected
-                                ? "bg-[var(--accent)] text-white shadow-sm"
+                                ? "bg-[var(--accent)] text-[var(--bg)] shadow-sm"
                                 : "hover:bg-[var(--bg)]"
                             }`}
                           >
@@ -250,7 +250,7 @@ export function SchemaPicker() {
                                 <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
                                 {isRecommended && !isSelected && <span className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full shrink-0">⭐</span>}
                               </div>
-                              <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-white/70" : "text-[var(--text-muted)]"}`}>{s}</p>
+                              <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-[var(--bg)]/70" : "text-[var(--text-muted)]"}`}>{s}</p>
                             </div>
                           </button>
                         );
@@ -266,9 +266,9 @@ export function SchemaPicker() {
                         key={s}
                         type="button"
                         onClick={() => dispatch({ type: "SET_SELECTED_SCHEMA", schema: s })}
-                        className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all cursor-pointer ${
+                        className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition cursor-pointer ${
                           isSelected
-                            ? "bg-[var(--accent)] text-white shadow-sm"
+                            ? "bg-[var(--accent)] text-[var(--bg)] shadow-sm"
                             : "hover:bg-[var(--bg)]"
                         }`}
                       >
@@ -278,7 +278,7 @@ export function SchemaPicker() {
                             <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
                             {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐</span>}
                           </div>
-                          <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-white/70" : "text-[var(--text-muted)]"}`}>{s}</p>
+                          <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-[var(--bg)]/70" : "text-[var(--text-muted)]"}`}>{s}</p>
                         </div>
                       </button>
                     );
@@ -351,7 +351,7 @@ export function SchemaPicker() {
           </div>
           
           {/* Selected schema + generate CTA */}
-          <div className={`border rounded-xl p-4 flex flex-col gap-3 transition-all overflow-hidden ${
+          <div className={`border rounded-xl p-4 flex flex-col gap-3 transition-colors overflow-hidden ${
             state.selectedSchema
               ? "border-[var(--accent)] bg-[var(--accent)]/5"
               : "border-[var(--border)] bg-[var(--surface)]"
@@ -383,7 +383,7 @@ export function SchemaPicker() {
                   <button
                     type="button"
                     onClick={() => dispatch({ type: "SET_OUTPUT_FORMAT", format: "podcast" })}
-                    className={`flex flex-col items-center justify-center rounded-lg border-2 px-2 py-2 cursor-pointer transition-all ${
+                    className={`flex flex-col items-center justify-center rounded-lg border-2 px-2 py-2 cursor-pointer transition-colors ${
                       state.outputFormat === "podcast"
                         ? "border-[var(--accent)] bg-[var(--accent)]/5"
                         : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -396,7 +396,7 @@ export function SchemaPicker() {
                   <button
                     type="button"
                     onClick={() => dispatch({ type: "SET_OUTPUT_FORMAT", format: "executive-summary" })}
-                    className={`flex flex-col items-center justify-center rounded-lg border-2 px-2 py-2 cursor-pointer transition-all ${
+                    className={`flex flex-col items-center justify-center rounded-lg border-2 px-2 py-2 cursor-pointer transition-colors ${
                       state.outputFormat === "executive-summary"
                         ? "border-[var(--accent)] bg-[var(--accent)]/5"
                         : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -414,7 +414,7 @@ export function SchemaPicker() {
               type="button"
               onClick={() => state.selectedSchema && generatePodcast(state.selectedSchema)}
               disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
-              className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
+              className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition ease-out hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
             >
               <span>{state.outputFormat === "executive-summary" ? "📋 Generate briefing" : "🎙️ Generate analysis"}</span>
               <span className="text-xs opacity-75 font-normal mt-0.5">

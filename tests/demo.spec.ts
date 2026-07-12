@@ -19,7 +19,7 @@ test.describe("Demo Mode", () => {
     await page.getByTestId("demo-button").click();
 
     // Step indicator should advance to "Listen"
-    await expect(page.getByText("Listen")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Episode card heading should appear (schema name from sample data)
     await expect(page.locator("h2")).toBeVisible({ timeout: 10_000 });
@@ -42,15 +42,14 @@ test.describe("Persona Toggle", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Default persona should be web3 (based on initialState)
-    const web3Toggle = page.getByText("Onchain teams");
-    await expect(web3Toggle).toBeVisible();
+    // Default persona should be enterprise
+    await expect(page.getByText("Enterprise", { exact: false })).toBeVisible();
 
-    // Switch to Enterprise
-    const enterpriseToggle = page.getByText("Data teams");
-    await enterpriseToggle.click();
+    // Switch to Onchain
+    const onchainToggle = page.getByText("Onchain", { exact: false });
+    await onchainToggle.click();
 
-    // Landing hero should update for enterprise persona
-    await expect(page.getByText(/AI analyst/i)).toBeVisible({ timeout: 3_000 });
+    // Landing hero should update for web3 persona
+    await expect(page.getByRole("heading", { name: /on-chain reports/i })).toBeVisible({ timeout: 3_000 });
   });
 });

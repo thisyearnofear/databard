@@ -50,7 +50,7 @@ function trendOf(history: number[]): SourceCard["trend"] {
 
 export default function ProtocolDashboard() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
       <ProtocolDashboardInner />
     </Suspense>
   );
@@ -160,21 +160,21 @@ function ProtocolDashboardInner() {
   const totalFailing = analyzed.reduce((s, c) => s + (c.insight?.failingTests ?? 0), 0);
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ marginBottom: "2rem" }}>
-          <Link href="/" style={{ color: "var(--text-muted)", fontSize: 14, textDecoration: "none" }}>
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8">
+      <div className="max-w-[900px] mx-auto">
+        <div className="mb-8">
+          <Link href="/" className="text-[var(--text-muted)] text-sm no-underline">
             ← Back to DataBard
           </Link>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: "1rem", marginBottom: "0.25rem" }}>
+          <h1 className="text-[28px] font-extrabold mt-4 mb-1">
             📊 Data Health Analytics
           </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: 15 }}>
+          <p className="text-[var(--text-muted)] text-[15px]">
             Live health scores, coverage, and trends for every data source DataBard analyzes — warehouses,
             catalogs, subgraphs, and Dune queries. On-chain sources carry permanent Solana records.
           </p>
-          <div style={{ marginTop: "0.75rem" }}>
-            <Link href="/alerts" style={{ color: "var(--accent)", fontSize: 13, textDecoration: "none" }}>
+          <div className="mt-3">
+            <Link href="/alerts" className="text-[var(--accent)] text-[13px] no-underline">
               🔔 Manage alerts →
             </Link>
           </div>
@@ -193,7 +193,7 @@ function ProtocolDashboardInner() {
               <Link
                 href={`/episode/${episodeId}`}
                 onClick={() => track("dashboard_listen_click", { schema: episodeMeta?.schemaName ?? "" })}
-                className="bg-[var(--accent)] hover:brightness-110 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:scale-[1.02] flex items-center gap-2 shrink-0"
+                className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-5 py-2.5 text-sm font-semibold transition ease-out hover:scale-[1.02] flex items-center gap-2 shrink-0"
               >
                 <span>▶</span>
                 <span>Listen to this analysis</span>
@@ -217,7 +217,7 @@ function ProtocolDashboardInner() {
         )}
 
         {loading && (
-          <div style={{ textAlign: "center", color: "var(--text-muted)", padding: "3rem" }}>
+          <div className="text-center p-12 text-[var(--text-muted)]">
             Loading analytics…
           </div>
         )}
@@ -225,7 +225,7 @@ function ProtocolDashboardInner() {
         {!loading && cards.length === 0 && (
           <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
             <p className="text-[var(--text-muted)] mb-4 text-sm">No data sources analyzed yet.</p>
-            <Link href="/" className="bg-[var(--accent)] text-white px-6 py-2 rounded-lg text-sm font-medium inline-block">
+            <Link href="/" className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block">
               Generate your first health report
             </Link>
           </div>
@@ -233,7 +233,7 @@ function ProtocolDashboardInner() {
 
         {/* Summary counters */}
         {!loading && cards.length > 0 && (
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+          <div className="flex flex-wrap gap-4 mb-8">
             <StatTile icon="📡" value={cards.length} label="Sources tracked" />
             <StatTile
               icon="💚"
@@ -288,7 +288,7 @@ function ProtocolDashboardInner() {
                     </div>
                     <span className={`text-lg font-bold tabular-nums shrink-0 ${
                       t.healthScore >= 80 ? "text-[var(--success)]"
-                      : t.healthScore >= 50 ? "text-yellow-400"
+                      : t.healthScore >= 50 ? "text-[var(--warning)]"
                       : "text-[var(--danger)]"
                     }`}>
                       {t.healthScore}%
@@ -302,18 +302,18 @@ function ProtocolDashboardInner() {
 
         {/* Source cards */}
         {!loading && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div className="flex flex-col gap-4">
             {cards.map((card) => (
               <div
                 key={card.name}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-all"
+                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors"
               >
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                      <span style={{ fontSize: 20 }}>{sourceIcon(card)}</span>
-                      <h3 style={{ fontSize: 18, fontWeight: 700 }}>{card.name}</h3>
-                      <span style={{ fontSize: 11, color: "var(--text-muted)", background: "var(--bg)", borderRadius: 6, padding: "2px 8px" }}>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-xl">{sourceIcon(card)}</span>
+                      <h3 className="text-lg font-bold">{card.name}</h3>
+                      <span className="text-[11px] text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-2 py-0.5">
                         {sourceLabel(card)}
                       </span>
                       {(() => {
@@ -335,17 +335,17 @@ function ProtocolDashboardInner() {
                         );
                       })()}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                    <div className="flex items-center gap-6 flex-wrap mt-2">
                       <HealthBar score={card.latestHealth} width={64} />
                       <TrendBadge trend={card.trend} showLabel />
                       <Sparkline values={card.healthHistory} />
                       {card.insight && (
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        <span className="text-xs text-[var(--text-muted)]">
                           {card.insight.tableCount} table{card.insight.tableCount !== 1 ? "s" : ""}
                         </span>
                       )}
                       {card.mintCount > 0 && (
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                        <span className="text-xs text-[var(--text-muted)]">
                           {card.mintCount} mint{card.mintCount !== 1 ? "s" : ""} · {card.wallets} wallet{card.wallets !== 1 ? "s" : ""}
                         </span>
                       )}
@@ -360,15 +360,15 @@ function ProtocolDashboardInner() {
                         untestedTables: card.insight.untestedCount,
                       });
                       return cost ? (
-                        <div style={{ fontSize: 12, color: "var(--danger)", marginTop: "0.5rem" }}>🔥 {cost}</div>
+                        <div className="text-xs text-[var(--danger)] mt-2">🔥 {cost}</div>
                       ) : null;
                     })()}
                   </div>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <div className="flex gap-2 items-center">
                     {card.recentMints.length > 0 && (
                       <Link
                         href={`/episode/${card.recentMints[0].episodeId}`}
-                        className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5"
+                        className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5"
                       >
                         <span>▶</span>
                         <span>Listen</span>
@@ -387,7 +387,7 @@ function ProtocolDashboardInner() {
 
                 {/* Engine analysis detail — coverage, critical tables, hotspots */}
                 {card.insight && (
-                  <details className="group" style={{ borderTop: "1px solid var(--border)", marginTop: "1rem", paddingTop: "0.75rem" }}>
+                  <details className="group border-t border-[var(--border)] mt-4 pt-3">
                     <summary className="text-xs font-medium text-[var(--text-muted)] cursor-pointer list-none flex items-center gap-1.5 hover:text-[var(--text)]">
                       <span className="group-open:rotate-90 transition-transform inline-block">▸</span>
                       Engine analysis · {new Date(card.insight.recordedAt).toLocaleDateString()}
@@ -410,11 +410,11 @@ function ProtocolDashboardInner() {
 
                 {/* Recent mint signatures */}
                 {card.recentMints.length > 0 && (
-                  <div style={{ borderTop: "1px solid var(--border)", marginTop: "1rem", paddingTop: "1rem" }}>
-                    <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+                  <div className="border-t border-[var(--border)] mt-4 pt-4">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">
                       Recent on-chain records
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                    <div className="flex flex-col gap-1">
                       {card.recentMints.slice(0, 3).map((m) => (
                         <a
                           key={m.txSignature}
@@ -425,19 +425,9 @@ function ProtocolDashboardInner() {
                           }
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            fontSize: 11,
-                            padding: "4px 8px",
-                            borderRadius: 6,
-                            background: "var(--bg)",
-                            color: "var(--text-muted)",
-                            textDecoration: "none",
-                          }}
+                          className="flex items-center justify-between text-[11px] px-2 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)] no-underline"
                         >
-                          <span style={{ fontFamily: "monospace" }}>
+                          <span className="font-mono">
                             {m.txSignature.slice(0, 10)}…{m.txSignature.slice(-6)}
                           </span>
                           <span>{new Date(m.createdAt).toLocaleDateString()}</span>
@@ -452,8 +442,8 @@ function ProtocolDashboardInner() {
         )}
       </div>
 
-      <footer style={{ textAlign: "center", paddingTop: "3rem", paddingBottom: "1rem" }}>
-        <Link href="/leaderboard" style={{ color: "var(--text-muted)", fontSize: 12, textDecoration: "none" }}>
+      <footer className="text-center pt-12 pb-4">
+        <Link href="/leaderboard" className="text-[var(--text-muted)] text-xs no-underline">
           🏆 View leaderboard →
         </Link>
       </footer>

@@ -50,7 +50,7 @@ export default function SolanaFeatures({
           <button
             onClick={onMint}
             disabled={minting}
-            className="mt-2 w-full bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-6 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
+            className="mt-2 w-full bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-6 py-2 text-sm font-medium cursor-pointer disabled:opacity-50"
           >
             {minting ? "Minting…" : "Mint on Solana"}
           </button>

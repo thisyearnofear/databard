@@ -28,7 +28,7 @@ export function WatchdogMonitor({
       className={[
         "rounded-lg border-2 bg-[var(--surface)] p-5 space-y-4 transition-colors",
         state === "idle" ? "border-[var(--border)]" : "",
-        state === "detected" ? "border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)]" : "",
+        state === "detected" ? "border-[var(--warning)] shadow-[0_0_20px_var(--warning)]" : "",
         state === "in-cycle" ? "border-[var(--accent)]" : "",
       ].join(" ")}
     >
@@ -52,7 +52,7 @@ export function WatchdogMonitor({
             </>
           )}
           {state === "detected" && (
-            <div className="text-yellow-400 text-sm font-semibold animate-pulse">
+            <div className="text-[var(--warning)] text-sm font-semibold animate-pulse">
               catalog drift detected
             </div>
           )}
@@ -79,8 +79,8 @@ export function WatchdogMonitor({
           {/* Filled portion */}
           <div
             className={[
-              "absolute top-0 left-0 bottom-0 transition-all duration-1000",
-              deltaScore >= THRESHOLD ? "bg-yellow-500" : "bg-[var(--accent)]",
+              "absolute top-0 left-0 bottom-0 transition-[width,background-color] duration-1000",
+              deltaScore >= THRESHOLD ? "bg-[var(--warning)]" : "bg-[var(--accent)]",
             ].join(" ")}
             style={{ width: `${deltaPct}%` }}
           />

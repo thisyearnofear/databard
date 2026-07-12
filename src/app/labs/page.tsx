@@ -44,7 +44,7 @@ export default function LabsPage() {
         {!state.selectedSchema ? (
           <Link
             href="/"
-            className="text-center bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-medium transition-all"
+            className="text-center bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-sm font-medium transition ease-out"
           >
             Connect a data source first →
           </Link>
@@ -55,8 +55,7 @@ export default function LabsPage() {
             </div>
             <button
               onClick={() => generateAnthem(state.selectedSchema!)}
-              className="bg-[var(--accent)] hover:brightness-110 text-white rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:scale-[1.01]"
-              style={{ background: "linear-gradient(135deg, var(--accent), #a855f7)" }}
+              className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-sm font-semibold transition ease-out hover:scale-[1.01]"
             >
               🎵 Generate Anthem
             </button>
