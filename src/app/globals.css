@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Bridge DataBard's design tokens to the shadcn-style semantic utilities the
+   dither-kit chart chrome uses (text-muted-foreground, bg-popover, …).
+   `inline` keeps the var() reference live so theme switching still works. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-muted-foreground: var(--text-muted);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-border: var(--border);
+}
+
 :root {
   --bg: #0a0a0f;
   --surface: #14141f;
