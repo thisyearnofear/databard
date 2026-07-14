@@ -1,7 +1,7 @@
 # Palm USD × DataBard Integration
 
 > **Submission for:** Palm USD x Superteam UAE — Solana Builders Hackathon  
-> **Live demo:** [databard.thisyearnofear.com](https://databard.thisyearnofear.com)  
+> **Live demo:** [databard.persidian.com](https://databard.persidian.com)  
 > **Prize track:** Frontier Hackathon
 
 ---
