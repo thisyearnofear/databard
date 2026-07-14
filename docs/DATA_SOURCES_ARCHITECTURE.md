@@ -100,3 +100,37 @@ As Coral matures and gains richer metadata introspection, the line between tiers
 - **Migration path**: If a source starts in Coral and accumulates usage, graduate it to Tier 1 with a dedicated adapter
 
 This keeps the product stable and reliable for the 80% case (Tier 1 adapters) while giving power users unlimited reach (Coral).
+
+## Field-Sales Allocation Discovery: Future Source Model
+
+The field-sales allocation hypothesis in [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) requires a domain model that is different from `SchemaMeta`. It is not a current DataBard capability.
+
+The initial pilot should prefer reviewed imports over broad connectors:
+
+| Data class | Minimum data | Role in the analysis | Access default |
+| --- | --- | --- | --- |
+| Account master | Canonical school/account, location, segment, owner, potential inputs | Defines what can be prioritised | Scoped file export |
+| Activity history | Account, rep, date, type, outcome, next step | Measures coverage and engagement | Scoped file export from the real activity system |
+| Commercial outcomes | Account/customer, order/invoice/payment/credit status, amount, date | Validates whether recommendations correspond with outcomes | Read-only, minimum-field export |
+| Message evidence | Authorised account-related messages and timestamps | Optional enrichment, not a default activity source of truth | Explicit opt-in and retention boundary |
+
+### Connector graduation criteria
+
+Potential future connectors include CRM, calendar, email, messaging, and accounting systems such as Xero or QuickBooks. They should only graduate from a controlled import when a pilot shows repeated demand and the connector can provide a stable, reviewable outcome link.
+
+A dedicated commercial connector must provide:
+
+1. **Source provenance:** connection identity, extraction timestamp, reporting period, and a snapshot fingerprint.
+2. **Least privilege:** read-only scopes and only fields needed for the agreed decision.
+3. **Entity reconciliation:** a reviewable mapping from source customer/contact to canonical account; ambiguous matches remain unresolved.
+4. **Outcome semantics:** explicit distinction between orders, invoices, payments, renewals, refunds, and credit notes.
+5. **Auditability:** the evidence view can show the source records and transformation version behind a recommendation.
+6. **Lifecycle controls:** revocation, retention, export/deletion, and access logs.
+
+### Accounting-system trust boundary
+
+Accounting integrations should start as an outcome-reconciliation layer rather than a general-ledger ingestion layer. A Xero or QuickBooks API response is useful input, but it is not by itself a privacy-preserving proof for another party.
+
+A content hash or an on-chain attestation can establish that DataBard analysed a particular snapshot without later alteration. It cannot establish that the underlying accounting records were truthful. That requires source provenance, a trusted connector or auditor, and a clear scope for what is being asserted.
+
+Zero-knowledge proofs may later help a customer prove a narrowly defined aggregate or benchmark without revealing every invoice. They are only appropriate after the customer has identified that exact verification need; a transparent evidence trail and least-privilege access are the first trust mechanisms.

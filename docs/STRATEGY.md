@@ -28,6 +28,8 @@ The data observability problem. We have a version of this (health scores, alerts
 
 The onchain attestation use case. Real but narrow. For most enterprises, this is "nice to have." For web3-native teams, it's a differentiator. Keep it for the Onchain persona, don't lead with it.
 
+The claim is now backed by product, not just copy: every report's SHA-256 is written on-chain via the Memo program, and `/verify` recomputes the hash from the report and checks it against the memo — anyone can audit a report without trusting our servers.
+
 ## Competitive Positioning
 
 | Positioning | Competitor | Our edge |
@@ -51,10 +53,21 @@ The onchain attestation use case. Real but narrow. For most enterprises, this is
 ### Onchain (secondary)
 - **Who:** Web3 protocol operators, DAO data teams
 - **Pain:** "I need publicly verifiable protocol health"
-- **Wedge:** Onchain attestation + leaderboard
+- **Wedge:** Onchain attestation + `/verify` + leaderboard
 - **Expansion:** Same analysis engine, different output emphasis
 - **Terminology:** Subgraphs, indexers, entities, attestations
 - **Onchain:** Core feature, not afterthought
+- **Entry point:** `/?persona=onchain` opens the site in this persona (used for the Solana accelerator demo — see [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md))
+
+### Field-sales allocation (discovery hypothesis)
+- **Who:** Field-sales leaders with fragmented account, activity, and commercial data; initial hypothesis: publishers selling to schools.
+- **Pain:** "I do not know whether my best salespeople are assigned to the best opportunities, or where scarce field time will create the most revenue."
+- **Wedge:** An evidence-backed allocation briefing: high-potential accounts that are under-covered, capacity mismatches, and recommended next actions.
+- **Required proof:** Recommendations must connect to independent commercial outcomes such as orders, invoices, payments, credits, or renewals—not activity data alone.
+- **Product boundary:** This is not a CRM replacement or a committed pivot. Validate it as a distinct vertical while preserving the data-health product.
+- **Trust:** Start with scoped, read-only exports and transparent evidence trails; do not lead with zero-knowledge technology before a customer has a concrete privacy-preserving verification need.
+
+See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decision model, trust architecture, pilot, and non-goals.
 
 ## Product Principles
 
@@ -64,7 +77,7 @@ The onchain attestation use case. Real but narrow. For most enterprises, this is
 
 3. **Trend narratives are the moat.** Not just "health score is 72%" but "your health score dropped 8 points this week because test coverage fell in the payments schema after the Friday deploy." This is what LLMs are actually good at and traditional tools can't do.
 
-4. **Onchain is a persona, not a pillar.** Solana attestation is valuable for the Onchain persona. Don't contaminate the enterprise pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care — not a core feature for everyone.
+4. **Onchain is a persona, not a pillar.** Solana attestation is valuable for the Onchain persona. Don't contaminate the enterprise pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care — not a core feature for everyone. The inverse also holds: for a Solana-native audience (accelerators, protocol teams), lead with the Onchain persona and the verification story — enterprise becomes the TAM-expansion slide, not the demo.
 
 5. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analysis-first positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
 
@@ -80,3 +93,5 @@ The onchain attestation use case. Real but narrow. For most enterprises, this is
 - [`docs/GTM.md`](GTM.md) — Viral hooks, engagement loops, user interview plan
 - [`docs/PLAN.md`](PLAN.md) — Development roadmap and phases
 - [`docs/DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) — Tiered source architecture
+- [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) — Solana accelerator demo: talk track, click path, preflight
+- [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) — Field-sales vertical discovery hypothesis

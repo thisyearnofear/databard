@@ -18,7 +18,7 @@ ATTENTION
   ▼
 CONVERSION (first "wow" moment)
   │
-  ├─ Demo: hears AI hosts discuss sample schema (zero friction)
+  ├─ Demo: lands on a live dashboard — what changed, downstream risk — with the audio briefing one click away (zero friction)
   ├─ Connects own data → sees health score → hears personal analysis
   ├─ "Roast my data" emotional trigger → shares result
   │
@@ -75,39 +75,26 @@ This is the most important retention-to-viral loop. When a data lead sets up a w
 
 ---
 
-## What's Missing in Each Loop
+## Loop Status (all previously-missing pieces shipped)
 
-### Attention → Conversion: mostly works
-- The demo is zero-friction ✓
+### Attention → Conversion
+- The demo is zero-friction and dashboard-first: it seeds deterministic data and lands on /protocol with the briefing one click away ✓
 - The landing page tells the story ✓
-- **Missing:** The "share this moment" clip feature. Right now you can only share a full episode link, not a 15-second highlight.
-- **Missing:** The "roast my data" framing isn't in the copy. The landing page says "AI analyst" when it should also say "AI roasts your data quality."
+- "Share this moment" clip feature (15-second highlight + shareable link) ✓
+- "Roast my data" framing lives at `/roast` and in the footer ✓
 
-### Conversion → Retention: weakest link
-- After generation, we now land on the dashboard ✓
-- **Missing:** There's no prompt to set up a weekly schedule after the first generation. The user generates, sees the dashboard, and... then what? There's no "Want this every Monday?" CTA on the dashboard.
-- **Missing:** Email delivery for scheduled digests. Right now it's RSS only. Most people don't use podcast apps for work content. Email is the delivery mechanism that would actually create the habit.
-- **Missing:** The "first generation to schedule" funnel is too many steps. You generate → go to dashboard → navigate to /pro → sign in → create schedule. It should be one click from the dashboard.
+### Conversion → Retention
+- After generation (and the demo), we land on the dashboard ✓
+- "Want this every Monday?" one-click schedule prompt on the dashboard, pre-filled schema ✓
+- Email delivery for scheduled digests ✓
+- Verification loop: every on-chain record links to `/verify`, which recomputes the report hash against the memo — the trust surface that makes attestation worth returning to ✓
 
-### Retention → Viral: partially works
-- Shared episode links exist ✓
-- **Missing:** The shared episode page (`/episode/[id]`) doesn't have a "Get this for your data" CTA. It's just a player. This is the biggest missed viral surface.
-- **Missing:** Health score badge/sharing feature. No way to publicly display your score.
-- **Missing:** Team email recipients for scheduled digests. The data lead can't add their team to the distribution list.
+### Retention → Viral
+- Shared episode links exist, with a "Get this for your data" CTA on `/episode/[id]` ✓
+- Health score badge (embeddable SVG, `/api/badge/[schema]`) ✓
+- Team email recipients for scheduled digests ✓
 
----
-
-## Build Priorities (in order)
-
-1. **"Get this for your data" CTA on shared episode pages** — highest-leverage viral surface. Every shared Slack link becomes a conversion opportunity. 1-2 hours.
-
-2. **"Want this every Monday?" prompt on the dashboard** — after the first generation, show a one-click schedule setup. Pre-fill the schema and source. 2-3 hours.
-
-3. **"Share this moment" clip feature** — let users share a 15-second audio clip of the most critical segment. This is the social media viral hook. 3-4 hours (needs audio clipping + shareable link).
-
-4. **Email delivery for scheduled digests** — add an email recipients field to ScheduleConfig and send the episode link + 1-line summary via email. This is what makes the weekly digest actually work as a habit. 4-6 hours (needs email sending integration).
-
-5. **"Roast my data" landing page variant** — a playful alternate landing page that frames the product as "let AI roast your data quality." Test it against the current "AI analyst" framing. 1-2 hours.
+**What's genuinely still missing:** benchmarking ("your score vs. teams your size"), A/B testing the CTA order, and real funnel numbers — see Phase 7 in [`docs/PLAN.md`](PLAN.md).
 
 ---
 
@@ -170,9 +157,46 @@ Validate (or invalidate) the repositioning before investing more in building. We
 
 ---
 
+## Field-Sales Allocation Discovery
+
+### Status and scope
+
+A founder interview at a school publisher surfaced a separate, high-value hypothesis: fragmented sales emails and activity records can reveal that high-potential schools are under-covered, reps are allocated to mismatched portfolios, and observed top performance is partly explained by account quality rather than rep behaviour.
+
+This is not evidence to pivot DataBard into generic sales analytics. It is evidence to test a tightly scoped workflow: an evidence-backed allocation briefing for field-sales leaders. See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the product hypothesis and trust model.
+
+### Pilot interview questions
+
+- "Which school/account allocation or visit-prioritisation decision would you make differently if the evidence were reliable?"
+- "What determines a school's realistic revenue potential, and who can correct that estimate?"
+- "Where do reps actually record visits and follow-ups: CRM, email, WhatsApp, calendar, manager reports, or elsewhere?"
+- "Which accounting outcomes are authoritative for this decision: order, invoice, payment, renewal, credit note, or another metric?"
+- "What account, activity, or accounting data would you permit on a read-only basis? What must never leave your environment?"
+- "What evidence would make you trust a recommendation to change coverage or reassign an account?"
+- "Which recommendation would be too consequential to automate, even with strong evidence?"
+
+### What validates the opportunity
+
+| Hypothesis | Evidence that supports it | Evidence that weakens it |
+|---|---|---|
+| Allocation is a recurring, expensive decision | Managers regularly change territories, account ownership, or visit plans | Allocation is fixed by policy and rarely revisited |
+| Account potential and activity can be linked to outcomes | A usable account identifier connects activity, orders, invoices, or payments | No reliable account matching or outcome history exists |
+| The briefing changes operating behaviour | A manager adopts or challenges a specific recommendation with its evidence | The output is interesting but does not change a decision |
+| The workflow can earn trust | The customer accepts scoped exports and requests recurring analysis | The customer requires opaque full access or cannot define acceptable evidence |
+
+### Pilot boundaries
+
+- Start with reviewed exports: account master, activity history, and a limited commercial outcome extract.
+- Use accounting data as an independent reconciliation layer, not as a reason to ingest a full general ledger.
+- Compare like with like; never rank reps by raw revenue or visit counts alone.
+- Require manager approval for any account reassignment or performance-sensitive action.
+- Do not build a live Xero/QuickBooks connector or zero-knowledge system until the pilot proves the repeated decision workflow.
+
+---
+
 ## Analytics & Instrumentation
 
-### What to track (once PostHog/Plausible is added)
+### What we track (Plausible script + custom events via `src/lib/track.ts`)
 
 | Event | Where | What it tells us |
 |---|---|---|

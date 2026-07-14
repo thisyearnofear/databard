@@ -59,24 +59,48 @@ Data teams produce findings nobody reads. Dashboards have 47 rows of test result
 - [x] Coral showcase section on landing page
 - [x] Coral presets expanded (stale PRs, bug triage)
 
-### Phase 5: Viral Hooks & Retention — Next
-- [ ] "Get this for your data" CTA on shared episode pages
-- [ ] "Want this every Monday?" one-click schedule from dashboard
-- [ ] "Share this moment" clip feature (15-second audio highlight)
-- [ ] Email delivery for scheduled digests
-- [ ] "Roast my data" landing page variant
-- [ ] Health score badge (embeddable SVG for README/team page)
-- [ ] Team email recipients for scheduled digests
-- [ ] PostHog/Plausible analytics on landing page funnels
+### Phase 5: Viral Hooks & Retention — Done
+- [x] "Get this for your data" CTA on shared episode pages
+- [x] "Want this every Monday?" one-click schedule from dashboard
+- [x] "Share this moment" clip feature (15-second audio highlight)
+- [x] Email delivery for scheduled digests
+- [x] "Roast my data" landing page variant (`/roast`)
+- [x] Health score badge (embeddable SVG, `/api/badge/[schema]`)
+- [x] Team email recipients for scheduled digests
+- [x] Plausible analytics + funnel event tracking
 
-### Phase 6: Validation & GTM
+### Phase 6: Solana Accelerator Demo — Done
+See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, and preflight checklist.
+
+- [x] Dashboard redesigned on dither-kit: fleet-health chart (scrub + legend spotlight), generative source avatars, dithered CTAs
+- [x] Dashboard-first demo: "Try the demo" seeds deterministic data (`POST /api/demo/seed`) and lands on /protocol; audio is a CTA there
+- [x] `/verify` page + `/api/onchain/verify`: decode the SPL-memo attestation, recompute the report hash, show match/mismatch (also renders marketplace settlement receipts)
+- [x] `/?persona=onchain` URL param; persona persists across visits
+- [x] Onboarding tour moved off the landing hero; decision-support copy
+- [x] Leaderboard backfills zero-score mint rows from engine snapshots
+
+### Phase 7: Validation & GTM
 - [ ] 5 user interviews with data team leads
 - [ ] A/B test CTA ordering (demo vs connect first)
-- [ ] Instrument the funnel: landing → demo → connect → generate → schedule
+- [ ] Review funnel numbers against targets in [`docs/GTM.md`](GTM.md)
 - [ ] Blog post: "We replaced our weekly data report with a podcast"
 - [ ] Social content: "AI roasted my database" clips
 
-### Phase 7: Future
+### Phase 8: Field-Sales Allocation Discovery — Validate Before Building
+
+See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md). This is a separate vertical experiment, not a replacement for the data-health roadmap.
+
+- [ ] Run one controlled pilot with a field-sales organisation; start with reviewed account, activity, and commercial outcome exports
+- [ ] Define the canonical account, representative, activity, opportunity, and accounting-outcome model with the pilot customer
+- [ ] Build a reviewable account-identity matching workflow; surface uncertain matches instead of silently merging records
+- [ ] Back-test coverage and allocation hypotheses against historical orders, invoices, payments, credits, renewals, or another agreed outcome
+- [ ] Produce a manager-reviewable allocation briefing: under-covered high-potential accounts, capacity mismatches, recommended action, evidence, and confidence
+- [ ] Track recommendation adoption and outcome against a pre-agreed baseline or comparable cohort
+- [ ] Validate the actual activity source before building an integration: CRM, email, WhatsApp, calendar, manager report, or another system
+- [ ] Define data-access, retention, deletion, audit-log, and performance-decision safeguards with the pilot customer
+- [ ] Defer live Xero/QuickBooks integrations and zero-knowledge proofs until a pilot demonstrates a specific, recurring need
+
+### Phase 9: Future
 - [ ] Azure migration — inference on Azure OpenAI, hosting on Container Apps ([`docs/AZURE.md`](docs/AZURE.md))
 - [ ] Microsoft Purview Tier-1 adapter ([`docs/PURVIEW_ADAPTER.md`](docs/PURVIEW_ADAPTER.md))
 - [ ] Custom voice personalities
