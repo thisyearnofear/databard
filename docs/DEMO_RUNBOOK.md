@@ -72,6 +72,50 @@ economically trivial. Enterprise is the TAM-expansion story, not something to hi
 - Don't say "auditors verify" beyond what `/verify` shows — that page is the proof;
   let it speak.
 
+## Delight beats (sprinkle, don't stack)
+
+1. **Self-audit loop (the peak):** mint live → paste the tx into `/verify` → green
+   "Verified". Line: *"Claim made, commitment published, self-audited — thirty seconds,
+   nothing but an RPC call."* Upgrade: let the reviewer pick which record to verify.
+2. **The dashboard as taste signal:** scrub the fleet chart, spotlight a series via the
+   legend, point at the avatars — deterministic pixel identity per source, ~1.5 trillion
+   possibilities. Line: *"identity from hashing — same trick as the attestations."*
+3. **Audio at its cruelest moment:** scrub to the harshest finding, 20 seconds, back to
+   the dashboard. The restraint says audio is a format, not the gimmick.
+4. **Customer-insight pause (on the trend narrative):** *"Tools say 'anomaly in table X'
+   — nobody acts on that. People act on 'dropped 11 points, two new failures after
+   Friday's deploy, here's the owner.' Narratives get acted on; dashboards get skimmed."*
+5. **Back pocket:** `/roast` — "when we want people to share it, we let the AI roast
+   their data." Use if energy dips; exit on the laugh.
+
+**Founding insight, said out loud:** data reports don't fail on accuracy — they fail on
+distribution to human attention. We didn't build a better report; we built a report that
+travels.
+
+## The distribution question (Thiel frame)
+
+- **Integration with product:** our user's pain is "nobody consumes my report," so the
+  product's success event — forwarding the Monday briefing to 5–20 stakeholders — IS the
+  acquisition event. Shared episode pages carry a "Get this for your data" CTA; clips,
+  badges, and on-chain records are three more self-distributing artifact shapes. A
+  briefing nobody forwards has failed as a product: usage and distribution are the same
+  act.
+- **One channel:** the forwarded briefing in Slack/email. Instrumented end-to-end
+  (`shared_episode_open` → `shared_episode_cta_click`; targets in GTM.md). Everything
+  else is subordinate to that loop converting.
+- **Dead zone (name it first):** $29–299/mo data tooling is exactly Thiel's dead zone —
+  too cheap for a sales team, too niche for mass marketing. Product-led virality is the
+  only coherent escape at this price, which is why the product is its own distribution
+  vehicle.
+- **Solana kicker:** the chain is a distribution surface. Attestations are public by
+  construction; the leaderboard is a public registry of protocol health. Protocols WANT
+  to publicize verified health — their marketing is our distribution, and the memos are
+  composable. Cold start: this accelerator's ecosystem intros seed the registry flywheel.
+- **CLV > CAC:** weekly-habit product at $29/mo, CAC → 0 on forwarded acquisition; the
+  economics only require activation to convert, which the funnel measures.
+- **Pre-empt the eye-roll:** this isn't invite-a-friend virality bolted on — the thing
+  being shared IS the thing being sold. The report is the referral.
+
 ## Likely Q&A
 
 - **"Why does this need a blockchain?"** Public protocols make public claims about
