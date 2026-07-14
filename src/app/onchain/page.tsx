@@ -217,6 +217,9 @@ function OnChainWallContent() {
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
                     Anyone can verify a report by comparing the on-chain hash against the current report. Mismatch = tampering detected.
                   </p>
+                  <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1 inline-block">
+                    Verify an attestation →
+                  </Link>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-[var(--text)]">📜 Audit Trail</p>

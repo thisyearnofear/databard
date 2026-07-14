@@ -1,17 +1,33 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { MintRecord, AlertSubscription } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
 import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { costLine } from "@/lib/cost-framing";
 import { track } from "@/lib/track";
-import { HealthBar, TrendBadge, Sparkline, StatTile, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
+import { HealthBar, TrendBadge, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
+import {
+  LineChart,
+  Line,
+  Grid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  Sparkline as DitherSparkline,
+  DitherAvatar,
+  DitherButton,
+  DitherGradient,
+  type DitherColor,
+} from "@/components/dither-kit";
 
 interface SourceCard {
   name: string;
+  /** Human label — engine schemaName when known, else the group name */
+  displayName: string;
   source: "the-graph" | "dune" | "unknown";
   latestHealth: number;
   trend: "up" | "down" | "stable";
@@ -31,12 +47,6 @@ function sourceLabel(card: SourceCard) {
   return card.mintCount > 0 ? "Onchain" : "Warehouse / catalog";
 }
 
-function sourceIcon(card: SourceCard) {
-  if (card.source === "the-graph") return "🕸️";
-  if (card.source === "dune") return "📊";
-  return card.mintCount > 0 ? "⛓️" : "🗄️";
-}
-
 function groupName(schemaName: string): string {
   return schemaName.split(".")[0] || schemaName;
 }
@@ -48,6 +58,68 @@ function trendOf(history: number[]): SourceCard["trend"] {
   return latest > prev ? "up" : latest < prev ? "down" : "stable";
 }
 
+/** Map a 0–100 health score onto the dither palette. */
+function healthDitherColor(score: number): DitherColor {
+  return score >= 80 ? "green" : score >= 50 ? "orange" : "red";
+}
+
+const SERIES_COLORS: DitherColor[] = ["purple", "green", "orange", "blue", "pink"];
+
+/** Fleet health — one dithered area series per tracked source, scrub to compare. */
+function FleetHealthChart({ cards }: { cards: SourceCard[] }) {
+  const { rows, config } = useMemo(() => {
+    const series = cards.filter((c) => c.healthHistory.length >= 2).slice(0, 4);
+    if (series.length === 0) return { rows: [], config: {} };
+
+    const maxLen = Math.min(8, Math.max(...series.map((s) => s.healthHistory.length)));
+    const rows = Array.from({ length: maxLen }, (_, i) => {
+      const row: Record<string, number | string> = {
+        t: i === maxLen - 1 ? "now" : `T-${maxLen - 1 - i}`,
+      };
+      for (const s of series) {
+        const tail = s.healthHistory.slice(-maxLen);
+        // Left-pad short series with their first reading so every line spans the window
+        row[s.name] = tail[i - (maxLen - tail.length)] ?? tail[0];
+      }
+      return row;
+    });
+
+    const config = Object.fromEntries(
+      series.map((s, i) => [s.name, { label: s.displayName, color: SERIES_COLORS[i % SERIES_COLORS.length] }])
+    );
+    return { rows, config };
+  }, [cards]);
+
+  const seriesKeys = Object.keys(config);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6 overflow-hidden">
+      <DitherGradient from="purple" direction="down" cell={3} opacity={0.14} className="absolute inset-x-0 top-0 h-20" />
+      <div className="relative flex items-baseline justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Fleet health</div>
+          <h2 className="text-sm font-semibold mt-0.5">Every source, last {rows.length} snapshots</h2>
+        </div>
+        <span className="font-mono text-[10px] text-[var(--text-muted)]">scrub to compare · hover a legend entry to spotlight</span>
+      </div>
+      <div className="relative h-56 w-full pt-4">
+        {/* Line variant, not area — four overlapping dither fills flood the plot */}
+        <LineChart data={rows} config={config} animate bloom="low" margins={{ top: 18, right: 8, bottom: 22, left: 30 }}>
+          <Grid />
+          <XAxis dataKey="t" />
+          <YAxis tickFormatter={(v) => `${v}`} />
+          {seriesKeys.map((key) => (
+            <Line key={key} dataKey={key} />
+          ))}
+          <Legend />
+          <Tooltip labelKey="t" valueFormatter={(v) => `${Math.round(v)}%`} variant="frosted-glass" />
+        </LineChart>
+      </div>
+    </div>
+  );
+}
+
 export default function ProtocolDashboard() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[var(--bg)]" />}>
@@ -57,6 +129,7 @@ export default function ProtocolDashboard() {
 }
 
 function ProtocolDashboardInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const episodeId = searchParams.get("episode");
   const [cards, setCards] = useState<SourceCard[]>([]);
@@ -64,6 +137,7 @@ function ProtocolDashboardInner() {
   const [loading, setLoading] = useState(true);
   const [episodeMeta, setEpisodeMeta] = useState<{ schemaName: string; tableCount: number; testsFailed: number; testsTotal: number; segments: number } | null>(null);
   const [trends, setTrends] = useState<TrendNarrative[]>([]);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -133,6 +207,7 @@ function ProtocolDashboardInner() {
 
           return {
             name,
+            displayName: insight?.schemaName ?? name,
             source,
             latestHealth,
             trend: trendOf(healthHistory),
@@ -154,54 +229,71 @@ function ProtocolDashboardInner() {
       }
     }
     load();
-  }, []);
+  }, [episodeId]);
 
   const analyzed = cards.filter((c) => c.insight);
   const totalFailing = analyzed.reduce((s, c) => s + (c.insight?.failingTests ?? 0), 0);
+  const avgHealth = cards.length > 0 ? Math.round(cards.reduce((s, c) => s + c.latestHealth, 0) / cards.length) : 0;
+  const totalMints = cards.reduce((s, c) => s + c.mintCount, 0);
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8">
-      <div className="max-w-[900px] mx-auto">
+    <main className="relative min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8 overflow-hidden">
+      {/* Page-top dither wash — reads as a signal rising off the header */}
+      <DitherGradient from="purple" direction="down" cell={4} opacity={0.16} className="absolute inset-x-0 top-0 h-44 pointer-events-none" />
+
+      <div className="relative max-w-[900px] mx-auto">
         <div className="mb-8">
-          <Link href="/" className="text-[var(--text-muted)] text-sm no-underline">
-            ← Back to DataBard
+          <Link href="/" className="font-mono text-[11px] text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
+            ← DataBard
           </Link>
-          <h1 className="text-[28px] font-extrabold mt-4 mb-1">
-            📊 Data Health Analytics
-          </h1>
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--accent)] mt-4">
+            Data health · weekly signal
+          </div>
+          <h1 className="text-[28px] font-extrabold mt-1 mb-1">Analytics</h1>
           <p className="text-[var(--text-muted)] text-[15px]">
-            Live health scores, coverage, and trends for every data source DataBard analyzes — warehouses,
+            Live health scores, coverage, and trends for every source DataBard analyzes — warehouses,
             catalogs, subgraphs, and Dune queries. On-chain sources carry permanent Solana records.
           </p>
-          <div className="mt-3">
-            <Link href="/alerts" className="text-[var(--accent)] text-[13px] no-underline">
+          <div className="mt-3 flex items-center gap-4 font-mono text-[12px]">
+            <Link href="/alerts" className="text-[var(--accent)] no-underline hover:underline">
               🔔 Manage alerts →
+            </Link>
+            <Link href="/verify" className="text-[var(--accent)] no-underline hover:underline">
+              ⛓ Verify an attestation →
             </Link>
           </div>
         </div>
 
         {/* Fresh episode banner — "Listen to this analysis" */}
         {episodeId && episodeMeta && (
-          <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-2xl p-5 mb-6 animate-slide-up">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-sm font-semibold mb-1">✓ Analysis complete — {episodeMeta.schemaName}</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {episodeMeta.tableCount} tables · {episodeMeta.testsFailed} of {episodeMeta.testsTotal} tests failing · {episodeMeta.segments} segments
-                </p>
+          <div className="relative bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-2xl p-5 mb-6 animate-slide-up overflow-hidden">
+            <DitherGradient from="purple" direction="left" cell={3} opacity={0.12} className="absolute inset-y-0 right-0 w-1/2 pointer-events-none" />
+            <div className="relative flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <DitherAvatar name={episodeMeta.schemaName} size={40} className="rounded-lg shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold mb-1">✓ Analysis complete — {episodeMeta.schemaName}</p>
+                  <p className="text-xs text-[var(--text-muted)] font-mono">
+                    {episodeMeta.tableCount} tables · {episodeMeta.testsFailed}/{episodeMeta.testsTotal} tests failing · {episodeMeta.segments} segments
+                  </p>
+                </div>
               </div>
-              <Link
-                href={`/episode/${episodeId}`}
-                onClick={() => track("dashboard_listen_click", { schema: episodeMeta?.schemaName ?? "" })}
-                className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-5 py-2.5 text-sm font-semibold transition ease-out hover:scale-[1.02] flex items-center gap-2 shrink-0"
+              <DitherButton
+                color="purple"
+                variant="gradient"
+                bloom="low"
+                onClick={() => {
+                  track("dashboard_listen_click", { schema: episodeMeta?.schemaName ?? "" });
+                  router.push(`/episode/${episodeId}`);
+                }}
+                className="px-5 py-2.5 text-sm font-semibold shrink-0"
               >
-                <span>▶</span>
-                <span>Listen to this analysis</span>
-              </Link>
+                ▶ Listen to this analysis
+              </DitherButton>
             </div>
 
             {/* One-click schedule prompt */}
-            <div className="mt-4 pt-4 border-t border-[var(--accent)]/20 flex items-center justify-between gap-3 flex-wrap">
+            <div className="relative mt-4 pt-4 border-t border-[var(--accent)]/20 flex items-center justify-between gap-3 flex-wrap">
               <p className="text-xs text-[var(--text-muted)]">
                 Want this every Monday? Set up a weekly digest for your team.
               </p>
@@ -217,7 +309,7 @@ function ProtocolDashboardInner() {
         )}
 
         {loading && (
-          <div className="text-center p-12 text-[var(--text-muted)]">
+          <div className="text-center p-12 text-[var(--text-muted)] font-mono text-sm">
             Loading analytics…
           </div>
         )}
@@ -231,25 +323,45 @@ function ProtocolDashboardInner() {
           </div>
         )}
 
-        {/* Summary counters */}
+        {/* Summary counters — dithered sparks over mono labels */}
         {!loading && cards.length > 0 && (
-          <div className="flex flex-wrap gap-4 mb-8">
-            <StatTile icon="📡" value={cards.length} label="Sources tracked" />
-            <StatTile
-              icon="💚"
-              value={`${Math.round(cards.reduce((s, c) => s + c.latestHealth, 0) / cards.length)}%`}
-              label="Avg health"
-            />
-            {analyzed.length > 0 && <StatTile icon="🧪" value={totalFailing} label="Failing tests" />}
-            <StatTile icon="⛓️" value={cards.reduce((s, c) => s + c.mintCount, 0)} label="On-chain records" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+              <div className="text-2xl font-extrabold tabular-nums">{cards.length}</div>
+              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Sources tracked</div>
+            </div>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+              <div className="flex items-end justify-between gap-2">
+                <div className="text-2xl font-extrabold tabular-nums" style={{ color: `var(--${avgHealth >= 80 ? "success" : avgHealth >= 50 ? "warning" : "danger"})` }}>{avgHealth}%</div>
+                <div className="w-16 h-7 mb-0.5">
+                  <DitherSparkline
+                    data={cards[0]?.healthHistory.slice(-8) ?? []}
+                    color={healthDitherColor(avgHealth)}
+                    bloom="aura"
+                  />
+                </div>
+              </div>
+              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Avg health</div>
+            </div>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+              <div className="text-2xl font-extrabold tabular-nums" style={totalFailing > 0 ? { color: "var(--danger)" } : undefined}>{totalFailing}</div>
+              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Failing tests</div>
+            </div>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+              <div className="text-2xl font-extrabold tabular-nums">{totalMints}</div>
+              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">⛓ On-chain records</div>
+            </div>
           </div>
         )}
+
+        {/* Fleet health chart — the differentiated centerpiece */}
+        {!loading && <FleetHealthChart cards={cards} />}
 
         {/* What changed this week — trend narratives */}
         {!loading && trends.length > 0 && (
           <div className="mb-6">
             <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <span>📈</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent)]">▚▚</span>
               <span>What changed this week</span>
             </h2>
             <div className="flex flex-col gap-2">
@@ -268,11 +380,12 @@ function ProtocolDashboardInner() {
                         : "border-[var(--border)] bg-[var(--surface)]"
                     }`}
                   >
+                    <DitherAvatar name={groupName(t.schemaFqn)} size={28} className="rounded-md shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium truncate">{t.schemaName}</span>
                         {t.healthScoreChange !== 0 && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                             isImprovement
                               ? "bg-[var(--success)]/10 text-[var(--success)]"
                               : "bg-[var(--danger)]/10 text-[var(--danger)]"
@@ -281,7 +394,7 @@ function ProtocolDashboardInner() {
                           </span>
                         )}
                         {!t.hasHistory && (
-                          <span className="text-[10px] text-[var(--text-muted)] bg-[var(--bg)] px-1.5 py-0.5 rounded-full">new</span>
+                          <span className="font-mono text-[10px] text-[var(--text-muted)] bg-[var(--bg)] px-1.5 py-0.5 rounded-full">new</span>
                         )}
                       </div>
                       <p className="text-xs text-[var(--text-muted)] leading-relaxed">{t.narrative}</p>
@@ -306,14 +419,16 @@ function ProtocolDashboardInner() {
             {cards.map((card) => (
               <div
                 key={card.name}
+                onMouseEnter={() => setHoveredCard(card.name)}
+                onMouseLeave={() => setHoveredCard(null)}
                 className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-xl">{sourceIcon(card)}</span>
-                      <h3 className="text-lg font-bold">{card.name}</h3>
-                      <span className="text-[11px] text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-2 py-0.5">
+                    <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+                      <DitherAvatar name={card.name} size={36} className="rounded-lg shrink-0" bloom="low" />
+                      <h3 className="text-lg font-bold">{card.displayName}</h3>
+                      <span className="font-mono text-[10px] text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-2 py-0.5 uppercase tracking-wide">
                         {sourceLabel(card)}
                       </span>
                       {(() => {
@@ -338,14 +453,24 @@ function ProtocolDashboardInner() {
                     <div className="flex items-center gap-6 flex-wrap mt-2">
                       <HealthBar score={card.latestHealth} width={64} />
                       <TrendBadge trend={card.trend} showLabel />
-                      <Sparkline values={card.healthHistory} />
+                      {card.healthHistory.length >= 2 && (
+                        <div className="w-28 h-8">
+                          <DitherSparkline
+                            data={card.healthHistory.slice(-12)}
+                            color={healthDitherColor(card.latestHealth)}
+                            hovered={hoveredCard === card.name}
+                            bloom="low"
+                            bloomOnHover
+                          />
+                        </div>
+                      )}
                       {card.insight && (
-                        <span className="text-xs text-[var(--text-muted)]">
+                        <span className="text-xs text-[var(--text-muted)] font-mono">
                           {card.insight.tableCount} table{card.insight.tableCount !== 1 ? "s" : ""}
                         </span>
                       )}
                       {card.mintCount > 0 && (
-                        <span className="text-xs text-[var(--text-muted)]">
+                        <span className="text-xs text-[var(--text-muted)] font-mono">
                           {card.mintCount} mint{card.mintCount !== 1 ? "s" : ""} · {card.wallets} wallet{card.wallets !== 1 ? "s" : ""}
                         </span>
                       )}
@@ -365,23 +490,29 @@ function ProtocolDashboardInner() {
                     })()}
                   </div>
                   <div className="flex gap-2 items-center">
-                    {card.recentMints.length > 0 && (
-                      <Link
-                        href={`/episode/${card.recentMints[0].episodeId}`}
-                        className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5"
-                      >
-                        <span>▶</span>
-                        <span>Listen</span>
-                      </Link>
-                    )}
-                    {card.insight && (
-                      <Link
-                        href={`/episode/${card.recentMints[0]?.episodeId ?? ""}`}
-                        className="text-[var(--text-muted)] hover:text-[var(--accent)] text-xs transition-colors"
-                      >
-                        Full report →
-                      </Link>
-                    )}
+                    {(() => {
+                      // Latest episode for this source — engine snapshot first, mint ledger fallback
+                      const episodeId = card.insight?.episodeId ?? card.recentMints[0]?.episodeId;
+                      if (!episodeId) return null;
+                      return (
+                        <>
+                          <DitherButton
+                            color="purple"
+                            variant="gradient"
+                            onClick={() => router.push(`/episode/${episodeId}`)}
+                            className="px-4 py-2 text-sm font-medium"
+                          >
+                            ▶ Listen
+                          </DitherButton>
+                          <Link
+                            href={`/episode/${episodeId}`}
+                            className="text-[var(--text-muted)] hover:text-[var(--accent)] text-xs transition-colors"
+                          >
+                            Full report →
+                          </Link>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -411,27 +542,37 @@ function ProtocolDashboardInner() {
                 {/* Recent mint signatures */}
                 {card.recentMints.length > 0 && (
                   <div className="border-t border-[var(--border)] mt-4 pt-4">
-                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                    <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">
                       Recent on-chain records
                     </div>
                     <div className="flex flex-col gap-1">
                       {card.recentMints.slice(0, 3).map((m) => (
-                        <a
+                        <div
                           key={m.txSignature}
-                          href={
-                            m.network === "mainnet-beta"
-                              ? `https://explorer.solana.com/tx/${m.txSignature}`
-                              : `https://explorer.solana.com/tx/${m.txSignature}?cluster=${m.network}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between text-[11px] px-2 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)] no-underline"
+                          className="flex items-center justify-between gap-2 text-[11px] px-2 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)]"
                         >
-                          <span className="font-mono">
+                          <a
+                            href={
+                              m.network === "mainnet-beta"
+                                ? `https://explorer.solana.com/tx/${m.txSignature}`
+                                : `https://explorer.solana.com/tx/${m.txSignature}?cluster=${m.network}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono truncate no-underline hover:text-[var(--text)]"
+                          >
                             {m.txSignature.slice(0, 10)}…{m.txSignature.slice(-6)}
+                          </a>
+                          <span className="flex items-center gap-3 shrink-0">
+                            <Link
+                              href={`/verify?tx=${m.txSignature}`}
+                              className="text-[var(--accent)] no-underline hover:underline font-mono"
+                            >
+                              ⛓ Verify
+                            </Link>
+                            <span className="font-mono">{new Date(m.createdAt).toLocaleDateString()}</span>
                           </span>
-                          <span>{new Date(m.createdAt).toLocaleDateString()}</span>
-                        </a>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -442,8 +583,8 @@ function ProtocolDashboardInner() {
         )}
       </div>
 
-      <footer className="text-center pt-12 pb-4">
-        <Link href="/leaderboard" className="text-[var(--text-muted)] text-xs no-underline">
+      <footer className="relative text-center pt-12 pb-4">
+        <Link href="/leaderboard" className="font-mono text-[var(--text-muted)] text-xs no-underline hover:text-[var(--text)]">
           🏆 View leaderboard →
         </Link>
       </footer>

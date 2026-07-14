@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/protocol", icon: "📊", label: "Dashboard" },
   { href: "/leaderboard", icon: "🏆", label: "Leaderboard" },
+  { href: "/verify", icon: "⛓️", label: "Verify" },
   { href: "/history", icon: "📼", label: "History" },
 ];
 
@@ -21,13 +22,16 @@ function DesktopNav({ pathname }: { pathname: string }) {
         <Link
           key={l.href}
           href={l.href}
+          title={l.label}
           className={`text-xs px-2 py-1 rounded transition-colors ${
             pathname === l.href
               ? "text-[var(--accent)] font-medium"
               : "text-[var(--text-muted)] hover:text-[var(--text)]"
           }`}
         >
-          {l.icon} {l.label}
+          {/* Labels collapse to icons on mid-size viewports so the header row
+              never collides with the centered persona toggle. */}
+          {l.icon} <span className="hidden min-[1400px]:inline">{l.label}</span>
         </Link>
       ))}
     </nav>
