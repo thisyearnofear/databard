@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { proAccounts, type ScheduleConfig } from "@/lib/store";
 import { requireProAccess } from "@/lib/pro-auth";
+import { computeNextRun } from "@/lib/schedules";
 
 /**
  * Schedule management for Pro accounts.
@@ -83,19 +84,3 @@ export async function DELETE(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-function computeNextRun(schedule: Omit<ScheduleConfig, "id">): string {
-  const now = new Date();
-  const next = new Date(now);
-  next.setUTCHours(schedule.hour ?? 9, 0, 0, 0);
-
-  if (schedule.frequency === "daily") {
-    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
-  } else {
-    // weekly — find next occurrence of dayOfWeek
-    const targetDay = schedule.dayOfWeek ?? 1; // default Monday
-    const daysUntil = (targetDay - now.getUTCDay() + 7) % 7 || 7;
-    next.setUTCDate(now.getUTCDate() + daysUntil);
-  }
-
-  return next.toISOString();
-}
