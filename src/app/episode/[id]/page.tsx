@@ -53,11 +53,14 @@ function SharedEpisodeInner() {
           const ep = data.episode;
           if (data.expiresIn != null) setExpiresIn(data.expiresIn);
 
-          // Reconstruct audio from base64 if available
+          // Reconstruct audio from base64 if available, else fall back to a
+          // static audio URL (seeded demo episodes ship pre-rendered MP3s)
           if (ep.audioBase64) {
             const bytes = Uint8Array.from(atob(ep.audioBase64), (c) => c.charCodeAt(0));
             const blob = new Blob([bytes], { type: "audio/mpeg" });
             setAudioUrl(URL.createObjectURL(blob));
+          } else if (ep.audioUrl) {
+            setAudioUrl(ep.audioUrl);
           }
 
           setEpisode(ep);

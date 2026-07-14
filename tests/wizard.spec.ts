@@ -17,8 +17,8 @@ test.describe("Wizard Flow", () => {
   test("should show all four step labels in the step indicator", async ({ page }) => {
     await page.goto("/");
 
-    // Enter demo mode to reach the step indicator
-    await page.getByTestId("demo-button").click();
+    // Enter the connect step to reach the step indicator (demo now leaves the wizard)
+    await page.getByTestId("connect-button").click();
 
     // All four step labels should be present in the nav
     const nav = page.locator("nav[aria-label='Progress']");
@@ -87,35 +87,25 @@ test.describe("Schema Picker", () => {
 });
 
 test.describe("Episode Player", () => {
-  test("should render player controls after demo load", async ({ page }) => {
-    await page.goto("/");
-    await page.getByTestId("demo-button").click();
+  // The demo is dashboard-first now — seed the demo episode and open its page directly
+  test.beforeEach(async ({ page }) => {
+    await page.request.post("/api/demo/seed");
+    await page.goto("/episode/demo");
+  });
 
-    // Wait for the episode step
-    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
-
-    // Play button should be present (uses data-testid)
-    await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 5_000 });
+  test("should render player controls for the demo episode", async ({ page }) => {
+    await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 10_000 });
   });
 
   test("should show share button in episode card", async ({ page }) => {
-    await page.goto("/");
-    await page.getByTestId("demo-button").click();
-
-    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
-
-    // Share button should be visible in the episode card header
-    await expect(page.getByRole("button", { name: "Share", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Share", exact: true })).toBeVisible({ timeout: 10_000 });
   });
 
   test("should show mobile action bar on small viewports", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto("/");
-    await page.getByTestId("demo-button").click();
-
-    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await page.reload();
 
     // Mobile action bar uses stable data-testid
-    await expect(page.getByTestId("mobile-action-bar")).toBeAttached();
+    await expect(page.getByTestId("mobile-action-bar")).toBeAttached({ timeout: 10_000 });
   });
 });

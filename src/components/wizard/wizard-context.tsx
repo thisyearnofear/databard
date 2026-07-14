@@ -318,6 +318,35 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     if (state.persona === "web3") loadMintStats();
   }, [state.persona, loadMintStats]);
   
+  // Persona: URL param wins (?persona=web3|onchain|enterprise — the accelerator
+  // demo opens at /?persona=onchain), otherwise restore from localStorage.
+  // Runs in a client effect to avoid hydration mismatch.
+  useEffect(() => {
+    try {
+      const param = new URLSearchParams(window.location.search).get("persona");
+      if (param === "web3" || param === "onchain") {
+        dispatch({ type: "SET_PERSONA", persona: "web3" });
+        return;
+      }
+      if (param === "enterprise") {
+        dispatch({ type: "SET_PERSONA", persona: "enterprise" });
+        return;
+      }
+      const saved = localStorage.getItem("databard:persona");
+      if (saved === "web3" || saved === "enterprise") {
+        dispatch({ type: "SET_PERSONA", persona: saved });
+      }
+    } catch { /* ignore — SSR-safe by construction, storage may be unavailable */ }
+  }, []);
+
+  // Persist persona whenever it changes (declared after the restore effect so
+  // the initial default never clobbers a saved preference before it's read)
+  useEffect(() => {
+    try {
+      localStorage.setItem("databard:persona", state.persona);
+    } catch { /* quota exceeded or private mode */ }
+  }, [state.persona]);
+
   // Restore connection config from localStorage
   useEffect(() => {
     try {

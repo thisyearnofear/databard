@@ -13,36 +13,36 @@ interface TooltipStep {
 const DEFAULT_STEPS: TooltipStep[] = [
   {
     id: "welcome",
-    title: "Welcome to DataBard",
-    content: "Transform your data catalog into audio podcasts. Start by connecting a data source, then generate and share insights.",
+    title: "Your data, explained",
+    content: "DataBard tells you what changed in your data, why it matters, and what to fix first — as a dashboard, a briefing, and an on-chain attestation.",
     position: "bottom",
   },
   {
     id: "schema-picker",
     target: "[data-tour='schema-picker']",
     title: "Choose Your Schema",
-    content: "Pick the schema with the most tables for the richest episode. The recommended schema is highlighted.",
+    content: "Pick the schema you care about most. DataBard scores its health, flags failing tests and stale tables, and ranks what to fix first.",
     position: "right",
   },
   {
     id: "coral-query",
     target: "[data-tour='schema-picker']",
     title: "Coral SQL Editor",
-    content: "Write cross-source SQL queries here — join GitHub, Slack, Jira, Postgres and 50+ sources in a single query. Use the template chips to start quickly, then customize.",
+    content: "Join GitHub, Slack, Jira, Postgres and 50+ sources in a single SQL query — DataBard analyzes the results and turns them into decisions, not just rows.",
     position: "right",
   },
   {
     id: "research-question",
     target: "[data-tour='research-question']",
     title: "Ask Your Question",
-    content: "A specific question surfaces actionable insights. \"Which tables have failing tests?\" works great.",
+    content: "A specific question focuses the analysis. \"Which tables have failing tests?\" returns a prioritized fix list, not just charts.",
     position: "top",
   },
   {
     id: "player",
     target: "[data-tour='episode-player']",
-    title: "Interactive Player",
-    content: "Click any segment to drill into actual columns, tests, and lineage. Use the tabs to explore insights and actions.",
+    title: "Your Briefing",
+    content: "Every claim is backed by evidence — click any segment to drill into the columns, tests, and lineage behind it. Tabs surface insights, prioritized actions, and the on-chain attestation.",
     position: "top",
   },
 ];

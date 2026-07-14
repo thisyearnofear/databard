@@ -12,28 +12,37 @@ test.describe("Demo Mode", () => {
     await expect(page.getByTestId("connect-button")).toBeVisible();
   });
 
-  test("should enter demo mode and reach episode player", async ({ page }) => {
+  test("should enter demo mode dashboard-first, then reach the episode player", async ({ page }) => {
     await page.goto("/");
 
-    // Click demo button using stable testid
+    // Click demo button using stable testid — demo is dashboard-first now
     await page.getByTestId("demo-button").click();
+    await page.waitForURL("**/protocol**", { timeout: 15_000 });
 
-    // Step indicator should advance to "Listen"
-    await expect(page.getByText("Listen", { exact: true })).toBeVisible({ timeout: 10_000 });
+    // The fresh-episode banner offers the audio as a CTA on the dashboard
+    const listenCta = page.getByText("Listen to this analysis");
+    await expect(listenCta).toBeVisible({ timeout: 10_000 });
+    await listenCta.click();
 
-    // Episode card heading should appear (schema name from sample data)
-    await expect(page.locator("h2")).toBeVisible({ timeout: 10_000 });
+    // Episode player page with the demo episode
+    await page.waitForURL("**/episode/demo**", { timeout: 15_000 });
+    await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("should show onboarding tooltips for first-time visitors", async ({ page }) => {
+  test("should show onboarding tooltips once inside the wizard (not on landing)", async ({ page }) => {
     await page.goto("/");
 
     // Clear onboarding state to simulate first visit
     await page.evaluate(() => localStorage.removeItem("databard:onboarding-complete"));
     await page.reload();
 
-    // Welcome tooltip should appear after the 1.5s delay
-    await expect(page.getByText("Welcome to DataBard")).toBeVisible({ timeout: 5_000 });
+    // Landing must stay unobscured — no welcome overlay here
+    await page.waitForTimeout(2_500);
+    await expect(page.getByText("Your data, explained")).not.toBeVisible();
+
+    // Entering the wizard surfaces the tour
+    await page.getByTestId("connect-button").click();
+    await expect(page.getByText("Your data, explained")).toBeVisible({ timeout: 5_000 });
   });
 });
 

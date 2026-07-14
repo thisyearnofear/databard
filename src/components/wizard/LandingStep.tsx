@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWizard } from "./wizard-context";
 import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
@@ -11,6 +12,7 @@ import type { InsightTotals } from "@/app/api/insights/route";
 
 export function LandingStep() {
   const { state, dispatch, showConnect } = useWizard();
+  const router = useRouter();
   const [totals, setTotals] = useState<InsightTotals | null>(null);
 
   // Live aggregate: the quantified cost of the problem across watched sources
@@ -32,30 +34,45 @@ export function LandingStep() {
   async function handleDemo() {
     track("landing_cta_click", { cta: "demo", persona: state.persona });
     track("demo_start", { persona: state.persona });
+    dispatch({ type: "SET_STATUS", status: "Loading demo…" });
+
+    // Dashboard-first: seed deterministic demo data server-side, then land on
+    // the dashboard with the demo episode queued up.
+    try {
+      const res = await fetch("/api/demo/seed", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Demo seed failed");
+      dispatch({ type: "SET_STATUS", status: "" });
+      router.push(`/protocol?episode=${state.persona === "web3" ? "demo" : "demo-enterprise"}&demo=1`);
+      return;
+    } catch {
+      // Fall back to the in-wizard episode demo below
+    }
+
     dispatch({ type: "SET_STEP", step: "generating" });
     dispatch({ type: "SET_GEN_STEP", step: 0 });
     dispatch({ type: "SET_STATUS", status: "Loading demo…" });
-    
+
     try {
       const isWeb3 = state.persona === "web3";
       const sampleUrl = isWeb3 ? "/sample-episode-dune.json" : "/sample-episode.json";
       const audioFile = isWeb3 ? "/demo-episode-dune.mp3" : "/demo-episode.mp3";
-      
+
       const res = await fetch(sampleUrl);
       const demo: Episode = await res.json();
       dispatch({ type: "SET_GEN_STEP", step: 2 });
       dispatch({ type: "SET_EPISODE", episode: demo });
-      
+
       // Clear any prior demo audio
       dispatch({ type: "SET_AUDIO_URL", url: null });
-      
+
       const audioCheck = await fetch(audioFile, { method: "HEAD" });
       if (audioCheck.ok) {
         dispatch({ type: "SET_AUDIO_URL", url: audioFile });
       } else {
         dispatch({ type: "SET_STATUS", status: "Demo loaded (audio requires ElevenLabs API key to generate)" });
       }
-      
+
       dispatch({ type: "SET_STATUS", status: "" });
       dispatch({ type: "SET_STEP", step: "episode" });
     } catch (e: unknown) {
@@ -239,8 +256,10 @@ export function LandingStep() {
                 ? "Every health report is attestable on-chain — a permanent audit trail your team and auditors can verify."
                 : "Every health report is mintable on Solana — a permanent, public record your community can verify."}
             </p>
-            {state.persona === "web3" && (
+            {state.persona === "web3" ? (
               <Link href="/onchain" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">See the showcase →</Link>
+            ) : (
+              <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
             )}
           </div>
         </div>

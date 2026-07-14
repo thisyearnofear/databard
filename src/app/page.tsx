@@ -6,7 +6,8 @@ import { OnboardingTooltip } from "@/components/OnboardingTooltips";
 function WizardContent() {
   const { state } = useWizard();
   
-  // Show landing step when on landing page
+  // Show landing step when on landing page — no onboarding overlay here so it
+  // never covers the hero or a demo
   if (state.step === "landing") {
     return (
       <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
@@ -68,6 +69,9 @@ function WizardContent() {
       {!isCoral && state.step === "pick-schema" && <SchemaPicker />}
       {state.step === "generating" && <GenerationStep />}
       {state.step === "episode" && <EpisodeStep />}
+
+      {/* Onboarding tour — only once the user is past the landing step */}
+      <OnboardingTooltip />
     </main>
   );
 }
@@ -81,11 +85,8 @@ export default function Home() {
           <PersonaToggle />
         </div>
         
-        {/* Wizard content */}
+        {/* Wizard content (renders the onboarding tour past the landing step) */}
         <WizardContent />
-        
-        {/* Onboarding tooltips for new users */}
-        <OnboardingTooltip />
       </div>
     </WizardProvider>
   );
