@@ -230,6 +230,10 @@ These are guesses. The interviews and analytics will tell us the real numbers.
 
 ## Content & Social
 
+> Full post drafts, UGC engines, and the 4-week cadence live in
+> [`docs/CONTENT_PLAYBOOK.md`](CONTENT_PLAYBOOK.md) — headline concept: the
+> Protocol Data-Health League Table (public subgraph scores, attested on-chain).
+
 ### Blog posts (priority order)
 1. "We replaced our weekly data report with a podcast" — the founding story
 2. "AI roasted my database — and it was right" — the viral angle
