@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listResearchSessions } from "@/lib/research-session";
 import { CopyLinkChip } from "@/components/CopyLinkChip";
+import { formatDate } from "@/lib/utils";
 
 type SessionSearchParams = Record<string, string | string[] | undefined>;
 
@@ -29,13 +30,6 @@ function buildHref(baseParams: SessionSearchParams, overrides: SessionSearchPara
 
   const queryString = nextParams.toString();
   return queryString ? `/research/sessions?${queryString}` : "/research/sessions";
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
 }
 
 export default async function ResearchSessionsPage({ searchParams }: { searchParams: Promise<SessionSearchParams> }) {

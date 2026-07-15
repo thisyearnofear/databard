@@ -7,7 +7,7 @@ import path from "path";
 
 export function getDataDir(): string {
   if (process.env.DATABARD_DATA_DIR) return process.env.DATABARD_DATA_DIR;
-  return path.join(process.cwd(), "data");
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), "data");
 }
 
 export function getDataPath(filename: string): string {

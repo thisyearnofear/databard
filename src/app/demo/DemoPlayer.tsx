@@ -1,8 +1,17 @@
 "use client";
 
-import { EpisodePlayer } from "@/components/EpisodePlayer";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { Episode } from "@/lib/types";
+
+const EpisodePlayer = dynamic(() => import("@/components/EpisodePlayer").then(m => ({ default: m.EpisodePlayer })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[200px] text-[var(--text-muted)] text-sm">
+      Loading player…
+    </div>
+  ),
+});
 
 interface DemoPlayerProps {
   episode: Episode;

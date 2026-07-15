@@ -88,7 +88,7 @@ All colors live as CSS custom properties in `src/app/globals.css` and are access
 
 - **Primary:** `system-ui, -apple-system, sans-serif`
 - **Monospace:** `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` for hashes, code, wallet addresses, and small technical labels.
-- **Scale:** Tailwind defaults. Use `text-sm`, `text-xs`, `text-[10px]` for data-dense UI.
+- **Scale:** Tailwind defaults. Use `text-sm`, `text-xs` for data-dense UI.
 - **Weights:** `font-medium` for labels, `font-semibold` for section headings, `font-bold` for hero numbers.
 - **Uppercase tracking:** Use `uppercase tracking-wider` sparingly for section labels and metadata captions.
 
@@ -259,7 +259,7 @@ Key rules:
 ### A metadata label
 
 ```tsx
-<span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+<span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
   {label}
 </span>
 ```

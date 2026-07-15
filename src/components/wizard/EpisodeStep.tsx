@@ -5,10 +5,17 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWizard } from "./wizard-context";
-import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { useToast } from "@/components/Toast";
 
-// Lazy-load Solana features
+// Lazy-load heavy components
+const EpisodePlayer = dynamic(() => import("@/components/EpisodePlayer").then(m => ({ default: m.EpisodePlayer })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[200px] text-[var(--text-muted)] text-sm">
+      Loading player…
+    </div>
+  ),
+});
 const SolanaFeatures = dynamic(() => import("@/components/SolanaFeatures"), { ssr: false });
 
 export function EpisodeStep() {

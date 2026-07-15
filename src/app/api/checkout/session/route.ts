@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { getStripe } from "@/lib/stripe";
 
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get("session_id");
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const stripe = new Stripe(key);
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
 

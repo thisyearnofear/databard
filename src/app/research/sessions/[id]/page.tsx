@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getResearchSession } from "@/lib/research-session";
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
+import { formatDate } from "@/lib/utils";
 
 export default async function ResearchSessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

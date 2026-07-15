@@ -1,10 +1,10 @@
 import { cp, mkdir, access } from 'fs/promises';
 import { existsSync } from 'fs';
 
-async function copyIfExists(source, destination) {
+async function copyIfExists(source, destination, options = {}) {
   try {
     await access(source);
-    await cp(source, destination, { recursive: true });
+    await cp(source, destination, { recursive: true, ...options });
   } catch {
     // ignore missing optional assets
   }
@@ -17,7 +17,16 @@ async function main() {
 
   await mkdir('.next/standalone/.next', { recursive: true });
   await copyIfExists('.next/static', '.next/standalone/.next/static');
-  await copyIfExists('public', '.next/standalone/public');
+
+  // Copy public/ but exclude large binary assets that bloat the serverless
+  // function bundle — MP3s and PDFs are served from the CDN/static layer,
+  // not from the serverless function itself.
+  await copyIfExists('public', '.next/standalone/public', {
+    filter: (src) => {
+      // Skip MP3s, PDFs, and other large binaries
+      return !/\.(mp3|pdf|webm|mp4|wav)$/i.test(src);
+    },
+  });
 }
 
 main().catch((error) => {

@@ -10,6 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { getStripe } from "@/lib/stripe";
 import { activateStripePro, cancelStripePro } from "@/lib/settlement/backends/stripe";
 
 export async function POST(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Stripe not configured" }, { status: 503 });
   }
 
-  const stripe = new Stripe(stripeKey);
+  const stripe = getStripe();
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
   if (!sig) return NextResponse.json({ ok: false, error: "Missing stripe-signature" }, { status: 400 });
