@@ -9,7 +9,6 @@ import { costHighlights } from "@/lib/cost-framing";
 import { StatTile } from "@/components/viz";
 import { LeadCapture } from "@/components/LeadCapture";
 import { CountUp } from "@/components/CountUp";
-import { TiltCard } from "@/components/TiltCard";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
 
@@ -115,7 +114,7 @@ export function LandingStep() {
     <>
       {/* Hero — analysis-first, with mouse-tracking spotlight */}
       <section
-        className="spotlight-host enter-up relative flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl"
+        className="spotlight-host enter-up relative flex flex-col items-center text-center pt-24 sm:pt-28 pb-8 max-w-2xl"
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           e.currentTarget.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
@@ -144,27 +143,27 @@ export function LandingStep() {
             : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
 
-        {/* Primary CTA — connect is primary, demo is secondary */}
-        <div className="relative z-10 flex flex-wrap justify-center gap-3 mb-8">
-          <button
-            data-testid="connect-button"
-            onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 font-medium cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97]"
-          >
-            <span>{state.persona === "enterprise" ? "Connect your data" : "Query your data"}</span>
-            <span>→</span>
-          </button>
+        {/* Primary CTA — demo is primary (zero friction), connect is secondary */}
+        <div className="relative z-10 flex flex-col items-center gap-3 mb-8">
           <button
             data-testid="demo-button"
             onClick={handleDemo}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors duration-200 active:scale-[0.97]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
           >
             <span>▶</span>
-            <span>Try the demo</span>
+            <span>Hear a 30-second demo</span>
+          </button>
+          <button
+            data-testid="connect-button"
+            onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
+            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-colors duration-200 active:scale-[0.97]"
+          >
+            <span>{state.persona === "enterprise" ? "or connect your own data" : "or query your own data"}</span>
+            <span className="text-[var(--accent)]">→</span>
           </button>
         </div>
 
-        <p className="relative z-10 text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
+        <p className="relative z-10 text-xs text-[var(--text-muted)]">No signup · No wallet · Just press play</p>
 
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
@@ -191,35 +190,37 @@ export function LandingStep() {
         )}
       </section>
 
-      {/* The problem — quantified pain, not vague claims */}
+      {/* The problem — quantified pain, inline (no cards) */}
       <section className="enter-up enter-delay-1 w-full max-w-2xl pb-10">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-[var(--danger)] mb-1">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
+          <div className="text-center">
+            <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
               <CountUp value={61} suffix="%" />
             </div>
-            <p className="text-xs text-[var(--text-muted)] leading-snug">
-              of dashboards are never opened in 6 months
+            <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
+              of dashboards never opened in 6 months
             </p>
-          </TiltCard>
-          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-[var(--danger)] mb-1">
+          </div>
+          <div className="hidden sm:block w-px h-12 bg-[var(--border)]" />
+          <div className="text-center">
+            <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
               <CountUp value={2.3} decimals={1} suffix="%" />
             </div>
-            <p className="text-xs text-[var(--text-muted)] leading-snug">
-              of dashboards are actually used for decisions
+            <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
+              of dashboards used for decisions
             </p>
-          </TiltCard>
-          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-[var(--danger)] mb-1">
+          </div>
+          <div className="hidden sm:block w-px h-12 bg-[var(--border)]" />
+          <div className="text-center">
+            <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
               <CountUp value={12} suffix="%" />
             </div>
-            <p className="text-xs text-[var(--text-muted)] leading-snug">
-              open rate on the average data quality report
+            <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
+              open rate on data quality reports
             </p>
-          </TiltCard>
+          </div>
         </div>
-        <p className="text-center text-[10px] text-[var(--text-muted)] mt-3">
+        <p className="text-center text-[10px] text-[var(--text-muted)] mt-4">
           Sources: dashboard audit (1,847 dashboards, Medium 2024) · founder confession (5 hrs/week, 12% open rate)
         </p>
       </section>
@@ -268,34 +269,34 @@ export function LandingStep() {
         </div>
       </section>
 
-      {/* Why DataBard — three pillars */}
+      {/* Why DataBard — three pillars, minimal (no cards) */}
       <section className="enter-up enter-delay-2 w-full max-w-2xl pb-12">
-        <h2 className="text-lg font-semibold text-center mb-4">Why DataBard</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <h2 className="text-lg font-semibold text-center mb-6">Why DataBard</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
           {/* Pillar 1: Health scoring */}
-          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <div className="text-center">
             <div className="text-2xl mb-2">📊</div>
             <h3 className="text-sm font-semibold mb-1">Health scoring</h3>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               {state.persona === "enterprise"
                 ? "AI computes health scores from test coverage, lineage risk, PII flags, and freshness — across every table you own."
                 : "AI scores indexer lag, freshness, and entity relationships — across every subgraph you run."}
             </p>
-          </TiltCard>
+          </div>
           {/* Pillar 2: Alerts that find you */}
-          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <div className="text-center">
             <div className="text-2xl mb-2">🔔</div>
             <h3 className="text-sm font-semibold mb-1">Alerts that find you</h3>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               Get Slack or webhook alerts when health drops. Weekly digest podcasts keep your team informed without a dashboard tab open.
             </p>
             <Link href="/alerts" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
-          </TiltCard>
+          </div>
           {/* Pillar 3: Verifiable by design */}
-          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <div className="text-center">
             <div className="text-2xl mb-2">⛓️</div>
             <h3 className="text-sm font-semibold mb-1">Verifiable by design</h3>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               {state.persona === "enterprise"
                 ? "Every health report is attestable on-chain — a permanent audit trail your team and auditors can verify."
                 : "Every health report is mintable on Solana. Insights settle through on-chain escrow — the seller commits what they delivered, the buyer releases funds only after that commitment."}
@@ -308,7 +309,7 @@ export function LandingStep() {
             ) : (
               <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
             )}
-          </TiltCard>
+          </div>
         </div>
       </section>
 

@@ -2,6 +2,7 @@
 
 import { WizardProvider, useWizard, PersonaToggle, LandingStep, ConnectStep, SchemaPicker, GenerationStep, EpisodeStep } from "@/components/wizard";
 import { OnboardingTooltip } from "@/components/OnboardingTooltips";
+import { SiteNav } from "@/components/SiteNav";
 
 function WizardContent() {
   const { state } = useWizard();
@@ -80,11 +81,12 @@ export default function Home() {
   return (
     <WizardProvider>
       <div className="min-h-screen">
-        {/* Persona toggle - always visible */}
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40">
+        {/* Centered nav stack: SiteNav above PersonaToggle */}
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2">
+          <SiteNav />
           <PersonaToggle />
         </div>
-        
+
         {/* Wizard content (renders the onboarding tour past the landing step) */}
         <WizardContent />
       </div>

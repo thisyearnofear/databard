@@ -7,7 +7,7 @@ export function PersonaToggle() {
   const { state, dispatch } = useWizard();
 
   return (
-    <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] mb-8 animate-fade-in">
+    <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] animate-fade-in">
       <button
         onClick={() => { track("persona_toggle", { from: state.persona, to: "enterprise" }); dispatch({ type: "SET_PERSONA", persona: "enterprise" }); }}
         className={`px-4 py-2 text-xs font-medium rounded-lg transition ${
