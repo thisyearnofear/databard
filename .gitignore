@@ -46,3 +46,4 @@ blob-report/
 data/events.json
 data/alerts.json
 .claude/settings.local.json
+demo-assets/
