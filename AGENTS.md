@@ -56,7 +56,8 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 
 ## Docs
 - `docs/STRATEGY.md` — north star, competitive positioning, product principles
-- `docs/GTM.md` — viral hooks, engagement loops, user interview plan
+- `docs/GTM.md` — viral hooks, engagement loops, user interview plan, manual outreach target list
+- `docs/UNIT_ECONOMICS.md` — cost-per-briefing, pricing, margin analysis
 - `docs/PLAN.md` — development roadmap (Phases 1-7)
 - `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture
 - `docs/AZURE.md` — Azure OpenAI migration guide

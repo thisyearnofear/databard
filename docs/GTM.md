@@ -251,3 +251,70 @@ These are guesses. The interviews and analytics will tell us the real numbers.
 - Local Data Engineering meetups
 - Hacker News (launch post)
 - Twitter/X (data engineering community)
+
+---
+
+## Manual outreach: first 10 users (PG approach)
+
+> *"Get users manually. Go to them. Don't wait for them to come to you."*
+> — Paul Graham
+
+The email capture forms on shared episodes, verify, leaderboard, and landing
+page are passive — they wait for the user. The first 10 users come from us
+going to them. This is the list.
+
+### How to do it
+
+1. Find the person who cares about data quality (usually an analytics engineer
+   or data lead, not the founder)
+2. Say: *"I'll run a free data health report on your subgraph/Dune dashboard
+   and send you the audio briefing. No setup, no commitment. If it surfaces
+   something you didn't know, tell me. If it doesn't, tell me that too."*
+3. Run the report on their actual data
+4. Send them the briefing link
+5. Ask: *"Did this surface something you didn't already know?"*
+6. If yes: ask for a 15-minute call. If no: ask what would have been useful.
+
+### Target list: 5 Solana protocol teams
+
+These are teams we already have seeded data for. They have public Dune
+dashboards or subgraphs we can analyze without any integration.
+
+| # | Protocol | Why them | Data surface | Who to find |
+|---|----------|----------|--------------|-------------|
+| 1 | **Jupiter** | Largest Solana DEX aggregator. Routing data quality directly affects user outcomes. | `jupiter.swap_metrics` (already seeded, score 92) | Analytics engineer or data lead in their Discord |
+| 2 | **Marinade Finance** | Largest Solana liquid staking protocol. TVL and validator data health is core to trust. | `marinade.staking` (already seeded, score 71, declining) | Data/infra team — mSOL price feed freshness is a known risk |
+| 3 | **Raydium** | Major AMM. Pool reserve and farm reward data quality affects yield calculations. | `raydium.amm` (already seeded, score 88) | Backend/data engineer in their Discord or GitHub |
+| 4 | **Orca** | Concentrated liquidity DEX. Tick data health is critical — bad ticks = bad quotes. | `orca.whirlpools` (already seeded, score 68, degrading) | Their docs/Dune analytics contributor — the degradation story is the hook |
+| 5 | **Pyth Network** | Oracle protocol. Data quality IS their product. If their own internal data health is bad, that's a story. | Not yet seeded — would need to analyze their internal dashboards | Their data infra team — the pitch is "you sell data quality, do you monitor your own?" |
+
+### Backup list (if the first 5 don't respond)
+
+6. **Helius** — RPC/infrastructure provider, they understand data quality deeply
+7. **Tensor** — NFT marketplace, analytics-heavy, active Discord
+8. **Kamino Finance** — lending protocol, health factor calculations depend on data quality
+9. **Drift Protocol** — perps DEX, oracle and pricing data is critical
+10. **Mango Markets** — legacy but still has data infrastructure worth analyzing
+
+### The pitch for each outreach
+
+> *"Hey — I'm building DataBard, a tool that turns data health into a weekly
+> audio briefing. I ran a report on [protocol]'s public Dune dashboard and
+> it surfaced [specific finding, e.g. 'your tick data has 2 failing tests
+> and hasn't refreshed in 72 hours']. Here's the 2-minute briefing:
+> [link]. Did this surface something you didn't already know? If yes, I'd
+> love 15 minutes to hear what's useful. If no, tell me what would have been."*
+
+### What we're testing
+
+- **Does the briefing surface something they didn't know?** (value validation)
+- **Would they pay $49/month for this every week?** (price validation)
+- **How many schemas does a real protocol team track?** (unit economics)
+- **Who is the buyer?** (data lead? eng lead? founder?)
+- **What's the alternative?** (manual dashboard checking? Datadog? nothing?)
+
+### Tracking
+
+Every lead captured from manual outreach should be tagged with
+`source: "manual_outreach:<protocol>"` in `data/leads.json` so we can
+distinguish organic leads from outreach leads.
