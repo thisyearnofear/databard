@@ -230,8 +230,126 @@ button:active {
 /* Respect reduced motion — disable all entrance + hover animations */
 @media (prefers-reduced-motion: reduce) {
   .enter-up, .enter-delay-1, .enter-delay-2, .enter-delay-3,
-  .enter-delay-4, .enter-delay-5, .count-up, .hover-depth {
+  .enter-delay-4, .enter-delay-5, .count-up, .hover-depth,
+  .aurora, .shimmer-text, .spotlight {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ── Bold visual upgrades — wow or die ───────────────────────────────── */
+
+/* Aurora — slow-moving gradient mesh behind the hero.
+   Three large radial gradients in accent colors, drifting at different
+   speeds. Sits behind all content, very low opacity. */
+@keyframes aurora-drift {
+  0%, 100% {
+    background-position:
+      0% 0%,
+      100% 100%,
+      50% 50%;
+  }
+  33% {
+    background-position:
+      30% 20%,
+      70% 80%,
+      60% 40%;
+  }
+  66% {
+    background-position:
+      70% 60%,
+      30% 40%,
+      40% 60%;
+  }
+}
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%, color-mix(in srgb, var(--accent) 15%, transparent), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 20%, color-mix(in srgb, var(--accent-vivid) 12%, transparent), transparent),
+    radial-gradient(ellipse 70% 50% at 50% 80%, color-mix(in srgb, var(--accent-light) 8%, transparent), transparent);
+  background-size: 200% 200%, 200% 200%, 200% 200%;
+  animation: aurora-drift 20s ease-in-out infinite;
+}
+
+/* Shimmer text — animated gradient on the accent headline.
+   background-clip: text with a moving gradient. The accent color
+   shimmers between three shades. */
+@keyframes shimmer-move {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--accent-vivid) 25%,
+    var(--accent-light) 50%,
+    var(--accent-vivid) 75%,
+    var(--accent) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer-move 4s linear infinite;
+}
+
+/* Spotlight — radial glow that follows the cursor.
+   Uses --mouse-x / --mouse-y CSS variables set by JS. */
+.spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 400ms var(--ease-out);
+  z-index: 1;
+}
+
+.spotlight-host:hover .spotlight {
+  opacity: 1;
+}
+
+/* 3D tilt card — perspective container + inner transform.
+   Uses --tilt-x / --tilt-y set by JS. Subtle: max 3deg. */
+.tilt-card {
+  transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform 200ms var(--ease-out);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.tilt-card:hover {
+  transition: transform 100ms var(--ease-out);
+}
+
+/* Glow ring — accent glow that appears on tilt cards on hover */
+.tilt-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle 200px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    color-mix(in srgb, var(--accent) 12%, transparent),
+    transparent
+  );
+  transition: opacity 300ms var(--ease-out);
+  z-index: 0;
+}
+
+.tilt-card:hover .tilt-glow {
+  opacity: 1;
 }

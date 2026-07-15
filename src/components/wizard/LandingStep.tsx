@@ -9,6 +9,7 @@ import { costHighlights } from "@/lib/cost-framing";
 import { StatTile } from "@/components/viz";
 import { LeadCapture } from "@/components/LeadCapture";
 import { CountUp } from "@/components/CountUp";
+import { TiltCard } from "@/components/TiltCard";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
 
@@ -112,31 +113,42 @@ export function LandingStep() {
   
   return (
     <>
-      {/* Hero — analysis-first */}
-      <section className="enter-up flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl">
+      {/* Aurora — slow-moving gradient mesh behind everything */}
+      <div className="aurora" aria-hidden />
+
+      {/* Hero — analysis-first, with mouse-tracking spotlight */}
+      <section
+        className="spotlight-host enter-up relative flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl"
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          e.currentTarget.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+          e.currentTarget.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
+        }}
+      >
+        <div className="spotlight" aria-hidden />
         {/* Tagline */}
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
+        <h1 className="relative z-10 text-4xl sm:text-5xl font-bold tracking-tight mb-4">
           {state.persona === "enterprise" ? (
             <>
               An AI analyst<br />
-              <span className="text-[var(--accent)]">for your data estate</span>
+              <span className="shimmer-text">for your data estate</span>
             </>
           ) : (
             <>
               On-chain data,<br />
-              <span className="text-[var(--accent)]">on-chain reports</span>
+              <span className="shimmer-text">on-chain reports</span>
             </>
           )}
         </h1>
 
-        <p className="text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
+        <p className="relative z-10 text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
           {state.persona === "enterprise"
             ? "One engine computes health scores, lineage risk, and PII flags — two AI hosts debate the findings, delivered as podcasts, dashboards, and reports."
             : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
         </p>
 
         {/* Primary CTA — connect is primary, demo is secondary */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
+        <div className="relative z-10 flex flex-wrap justify-center gap-3 mb-8">
           <button
             data-testid="connect-button"
             onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
@@ -155,13 +167,13 @@ export function LandingStep() {
           </button>
         </div>
 
-        <p className="text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
+        <p className="relative z-10 text-xs text-[var(--text-muted)]">No signup required · 30 seconds to hear it</p>
 
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
           <Link
             href="/protocol"
-            className="mt-6 inline-flex items-center gap-2 text-xs bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 text-[var(--danger)] border border-[var(--danger)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
+            className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 text-[var(--danger)] border border-[var(--danger)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
           >
             <span>🔥</span>
             <span>
@@ -174,7 +186,7 @@ export function LandingStep() {
         {state.persona === "web3" && state.mintStats && state.mintStats.total > 0 && (
           <Link
             href="/onchain"
-            className="mt-6 inline-flex items-center gap-2 text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
+            className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
           >
             <span>⛓️</span>
             <span><b>{state.mintStats.total.toLocaleString()}</b> reports minted on Solana</span>
@@ -185,30 +197,30 @@ export function LandingStep() {
       {/* The problem — quantified pain, not vague claims */}
       <section className="enter-up enter-delay-1 w-full max-w-2xl pb-10">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-3xl font-bold text-[var(--danger)] mb-1">
               <CountUp value={61} suffix="%" />
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug">
               of dashboards are never opened in 6 months
             </p>
-          </div>
-          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          </TiltCard>
+          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-3xl font-bold text-[var(--danger)] mb-1">
               <CountUp value={2.3} decimals={1} suffix="%" />
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug">
               of dashboards are actually used for decisions
             </p>
-          </div>
-          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          </TiltCard>
+          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-3xl font-bold text-[var(--danger)] mb-1">
               <CountUp value={12} suffix="%" />
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug">
               open rate on the average data quality report
             </p>
-          </div>
+          </TiltCard>
         </div>
         <p className="text-center text-[10px] text-[var(--text-muted)] mt-3">
           Sources: dashboard audit (1,847 dashboards, Medium 2024) · founder confession (5 hrs/week, 12% open rate)
@@ -264,7 +276,7 @@ export function LandingStep() {
         <h2 className="text-lg font-semibold text-center mb-4">Why DataBard</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Pillar 1: Health scoring */}
-          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-2xl mb-2">📊</div>
             <h3 className="text-sm font-semibold mb-1">Health scoring</h3>
             <p className="text-xs text-[var(--text-muted)]">
@@ -272,18 +284,18 @@ export function LandingStep() {
                 ? "AI computes health scores from test coverage, lineage risk, PII flags, and freshness — across every table you own."
                 : "AI scores indexer lag, freshness, and entity relationships — across every subgraph you run."}
             </p>
-          </div>
+          </TiltCard>
           {/* Pillar 2: Alerts that find you */}
-          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-2xl mb-2">🔔</div>
             <h3 className="text-sm font-semibold mb-1">Alerts that find you</h3>
             <p className="text-xs text-[var(--text-muted)]">
               Get Slack or webhook alerts when health drops. Weekly digest podcasts keep your team informed without a dashboard tab open.
             </p>
             <Link href="/alerts" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
-          </div>
+          </TiltCard>
           {/* Pillar 3: Verifiable by design */}
-          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <TiltCard className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-2xl mb-2">⛓️</div>
             <h3 className="text-sm font-semibold mb-1">Verifiable by design</h3>
             <p className="text-xs text-[var(--text-muted)]">
@@ -299,7 +311,7 @@ export function LandingStep() {
             ) : (
               <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
             )}
-          </div>
+          </TiltCard>
         </div>
       </section>
 
