@@ -314,6 +314,18 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
       }
     } catch { /* swallow — stats are decorative */ }
   }, []);
+
+  // A direct handoff from a sample briefing opens the real-data flow.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("start") === "connect") {
+        dispatch({ type: "SET_SOURCE", source: "openmetadata" });
+        dispatch({ type: "SET_OM_MODE", omMode: "custom" });
+        dispatch({ type: "SET_STEP", step: "connect" });
+      }
+    } catch { /* ignore — SSR-safe by construction */ }
+  }, []);
   
   useEffect(() => {
     if (state.persona === "web3") loadMintStats();

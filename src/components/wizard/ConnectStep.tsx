@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useGeneration } from "./useGeneration";
 import { useToast } from "@/components/Toast";
@@ -22,6 +23,7 @@ export function ConnectStep() {
   const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp } = useWizard();
   const { generatePodcast, generateAnthem } = useGeneration();
   const { toast } = useToast();
+  const [showOtherSources, setShowOtherSources] = useState(false);
 
   function showError(message: string) {
     toast(message, "error");
@@ -241,8 +243,16 @@ export function ConnectStep() {
       <p className="text-sm text-[var(--text-muted)] mb-5">
         {state.source === "coral"
           ? "Write SQL to join any sources — DataBard will narrate the results."
-          : "Paste a URL or API key and you're generating in 30 seconds."}
+          : "Start with one source. Your first findings appear while DataBard prepares the briefing."}
       </p>
+
+      {state.source !== "coral" && (
+        <div className="mb-5 grid grid-cols-3 border-y border-[var(--border)] py-3 text-center font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <span><b className="block text-[var(--accent)] text-xs mb-1">1</b>Connect</span>
+          <span><b className="block text-[var(--text)] text-xs mb-1">2</b>Review findings</span>
+          <span><b className="block text-[var(--text)] text-xs mb-1">3</b>Get briefing</span>
+        </div>
+      )}
 
       {/* Smart paste bar — auto-detects source */}
       {state.source !== "coral" && (
@@ -326,7 +336,6 @@ export function ConnectStep() {
               type="button"
               onClick={() => {
                 dispatch({ type: "SET_SOURCE", source: "openmetadata" });
-                dispatch({ type: "SET_OM_MODE", omMode: "sandbox" });
               }}
               className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition ${
                 state.source === "openmetadata"
@@ -342,50 +351,36 @@ export function ConnectStep() {
               {state.source === "openmetadata" && <span className="text-[var(--accent)] text-sm">✓</span>}
             </button>
 
-            {state.source !== "openmetadata" && (
-              <>
-                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Or try another source</p>
+            {state.source === "openmetadata" && !showOtherSources && (
+              <button
+                type="button"
+                onClick={() => setShowOtherSources(true)}
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
+              >
+                Use another connection
+              </button>
+            )}
+            {(showOtherSources || state.source !== "openmetadata") && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Choose another connection</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {MAIN_SOURCES.filter((ds) => ds.value !== "openmetadata").map((ds) => (
-                    <button
-                      key={ds.value}
-                      type="button"
-                      onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
-                      className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-colors ${
-                        state.source === ds.value
-                          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
-                          : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
-                      }`}
-                    >
-                      <span>{ds.emoji}</span>
-                      <span>{ds.label}</span>
-                    </button>
-                  ))}
-                  {/* Coral as cross-source option */}
+                {DATA_SOURCES.filter((ds) => ds.value !== "openmetadata").map((ds) => (
                   <button
+                    key={ds.value}
                     type="button"
-                    onClick={() => dispatch({ type: "SET_SOURCE", source: "coral" })}
+                    onClick={() => dispatch({ type: "SET_SOURCE", source: ds.value })}
                     className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1.5 text-xs cursor-pointer transition-colors ${
-                      state.source === "coral"
+                      state.source === ds.value
                         ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)] font-medium"
                         : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
                     }`}
                   >
-                    <span>🪸</span>
-                    <span>Coral (cross-source SQL)</span>
+                    <span>{ds.emoji}</span>
+                    <span>{ds.label}</span>
                   </button>
+                ))}
                 </div>
-              </>
-            )}
-
-            {state.source === "openmetadata" && (
-              <button
-                type="button"
-                onClick={() => dispatch({ type: "SET_SOURCE", source: "dbt-cloud" })}
-                className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
-              >
-                ← Use dbt, Dune, or Coral instead
-              </button>
+              </div>
             )}
           </>
         )}

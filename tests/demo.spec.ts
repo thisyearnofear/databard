@@ -24,6 +24,10 @@ test.describe("Demo Mode", () => {
     await expect(page.getByRole("link", { name: "Market", exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Verify", exact: true })).toHaveCount(0);
 
+    // A sample dashboard must say so and offer an explicit path to real data.
+    await expect(page.getByRole("region", { name: "Sample briefing" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /analyse my data/i })).toHaveAttribute("href", "/?start=connect&workspace=teams");
+
     // The fresh-episode banner offers the audio as a CTA on the dashboard
     const listenCta = page.getByText("Listen to this analysis");
     await expect(listenCta).toBeVisible({ timeout: 10_000 });
@@ -32,6 +36,15 @@ test.describe("Demo Mode", () => {
     // Episode player page with the demo episode
     await page.waitForURL("**/episode/demo**", { timeout: 15_000 });
     await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("takes a sample viewer straight into the real-data connection flow", async ({ page }) => {
+    await page.goto("/protocol?episode=demo-enterprise&demo=1&workspace=teams");
+
+    await page.getByRole("link", { name: /analyse my data/i }).click();
+    await page.waitForURL("**/?start=connect&workspace=teams");
+    await expect(page.getByRole("heading", { name: "Connect your data" })).toBeVisible();
+    await expect(page.getByText("Your instance", { exact: true })).toBeVisible();
   });
 
   test("should show onboarding tooltips once inside the wizard (not on landing)", async ({ page }) => {

@@ -98,6 +98,7 @@ function ProtocolDashboardInner() {
   const episodeId = searchParams.get("episode");
   const workspace = workspaceFromSearch(searchParams.toString());
   const isProtocols = workspace === "protocols";
+  const isDemo = searchParams.get("demo") === "1";
   const [cards, setCards] = useState<SourceCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [episodeMeta, setEpisodeMeta] = useState<BriefingEpisodeMeta | null>(null);
@@ -202,6 +203,23 @@ function ProtocolDashboardInner() {
 
       <div className="relative max-w-[900px] mx-auto">
         <DashboardHeader isProtocols={isProtocols} />
+
+        {isDemo && (
+          <section className="mb-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3" aria-label="Sample briefing">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]">Sample briefing</p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">This is example data. Connect your source to see the risks and next actions in your own data.</p>
+              </div>
+              <Link
+                href={workspaceHref("/?start=connect", workspace)}
+                className="shrink-0 bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110"
+              >
+                Analyse my data →
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Fresh episode banner — "Listen to this analysis" */}
         {episodeId && episodeMeta && <PriorityBriefingCard

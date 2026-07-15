@@ -134,27 +134,33 @@ export function LandingStep() {
           {workspaceCopy.description}
         </p>
 
-        {/* Primary CTA — demo is primary (zero friction), connect is secondary */}
+        {/* A sample is useful context, but it must not masquerade as a user's workspace. */}
         <div className="relative z-10 flex flex-col items-center gap-3 mb-8">
+          <button
+            data-testid="connect-button"
+            onClick={() => {
+              track("landing_cta_click", { cta: "connect", persona: state.persona });
+              track("connect_start", { persona: state.persona });
+              dispatch({ type: "SET_SOURCE", source: "openmetadata" });
+              dispatch({ type: "SET_OM_MODE", omMode: "custom" });
+              showConnect();
+            }}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
+          >
+            <span>Analyse my data</span>
+            <span aria-hidden>→</span>
+          </button>
           <button
             data-testid="demo-button"
             onClick={handleDemo}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
-          >
-            <span>▶</span>
-            <span>{workspaceCopy.demoLabel}</span>
-          </button>
-          <button
-            data-testid="connect-button"
-            onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
             className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-colors duration-200 active:scale-[0.97]"
           >
-            <span>or {workspaceCopy.connectLabel.toLowerCase()}</span>
+            <span>See a sample briefing first</span>
             <span className="text-[var(--accent)]">→</span>
           </button>
         </div>
 
-        <p className="relative z-10 text-xs text-[var(--text-muted)]">2-minute briefing · No signup for the demo</p>
+        <p className="relative z-10 text-xs text-[var(--text-muted)]">Read-only setup · First findings appear while your briefing is prepared</p>
 
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
