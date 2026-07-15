@@ -84,12 +84,13 @@ export default function Home() {
     <WizardProvider>
       <div className="min-h-screen">
         {/* Centered nav stack: SiteNav on top, persona toggle + utility chrome below */}
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 w-full max-w-md px-4">
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 w-full max-w-lg px-4">
           <SiteNav />
-          {/* Persona row: toggle centered, wallet + theme at right edge */}
-          <div className="relative w-full flex items-center justify-center">
+          {/* Persona row: toggle centered, wallet + theme side by side at right */}
+          <div className="w-full flex items-center gap-3">
+            <div className="flex-1" />
             <PersonaToggle />
-            <div className="absolute right-0 flex items-center gap-1.5">
+            <div className="flex-1 flex items-center justify-end gap-1.5">
               <WalletButton />
               <ThemeToggle />
             </div>
