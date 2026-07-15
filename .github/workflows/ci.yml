@@ -25,6 +25,33 @@ jobs:
       - name: Lint
         run: npx eslint .
 
+  bundle-size:
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build + bundle size check
+        run: npm run build
+        env:
+          DATABARD_DATA_DIR: /tmp/databard-data
+
+      - name: Report bundle size
+        if: always()
+        run: |
+          if [ -d .next/standalone ]; then
+            SIZE=$(du -sh .next/standalone | cut -f1)
+            echo "## Bundle size: $SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "Threshold: 120MB (warn at 90MB)" >> $GITHUB_STEP_SUMMARY
+          fi
+
   e2e:
     runs-on: ubuntu-latest
     needs: lint-and-typecheck

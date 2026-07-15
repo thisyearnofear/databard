@@ -5,12 +5,25 @@ DataBard is a weekly data health briefing tool. The core product is a scheduled 
 
 ## Build & Dev Commands
 - `npm run dev` — start dev server on localhost:3000
-- `npm run build` — production build (71 static pages)
+- `npm run build` — production build (75 static pages) + bundle size guard
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
 - `npm run test:unit` — `tsx tests/rate-limit.unit.ts`
 - `npx playwright install` — install required browsers
 - `npx playwright test --project=chromium` — run a single browser project
+
+## Bundle Size Guard
+The build runs `scripts/check-bundle-size.mjs` after `prepare-standalone.mjs`.
+It fails the build if `.next/standalone/` exceeds 120MB or if `contracts/` or
+`video/` directories appear in the standalone output. Current healthy size:
+~73MB. If the guard fails, check `outputFileTracingExcludes` in `next.config.mjs`
+and the binary asset filter in `prepare-standalone.mjs`.
+
+## Production Environment
+`DATABARD_DATA_DIR` is **required** in production (set in `ecosystem.config.cjs`).
+Without it, `data-dir.ts` and `store.ts` throw at startup. This prevents
+`process.cwd()` from leaking into the server bundle via Next.js file tracing,
+which would trace the entire project directory (including Rust build artifacts).
 
 ## Analytics
 Two-layer analytics system:

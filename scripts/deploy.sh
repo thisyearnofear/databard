@@ -100,8 +100,11 @@ echo "  (skipped: tsx not installed locally; unrelated to market fixes)"
 
 echo ""
 echo "→ Building locally..."
-# npm run build already runs prepare-standalone.mjs
-NEXT_DISABLE_ESLINT=1 npm run build
+# npm run build already runs prepare-standalone.mjs + check-bundle-size.mjs
+# DATABARD_DATA_DIR is required in production — set a dummy path for the
+# build step so static page generation doesn't throw. The real path is
+# set in ecosystem.config.cjs at runtime.
+DATABARD_DATA_DIR=/tmp/databard-build NEXT_DISABLE_ESLINT=1 npm run build
 
 # ── 2. Package the release (minimal footprint for space-constrained server) ──
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
