@@ -8,6 +8,47 @@ Data health monitoring tools (Monte Carlo, Bigeye, Soda, dbt tests) tell you *wh
 
 DataBard's real problem is not "data observability" (we'd lose to better-funded competitors). It's **data communication** — a category with no incumbent. Audio briefings are a new format for an old pain: "I built a report and nobody read it."
 
+## The Problem, Quantified
+
+The pain is not a feeling. It's a number. Several numbers, actually:
+
+| Statistic | Source | What it means |
+|-----------|--------|---------------|
+| **61% of dashboards are never opened in 6 months** | Dashboard audit (1,847 dashboards), Medium 2024 | The majority of data work is invisible. Teams build dashboards that literally never get viewed. |
+| **Only 2.3% of dashboards are used for decisions** | Same audit (43 of 1,847) | Even when dashboards are opened, almost none drive action. The other 97.7% are decoration. |
+| **54% of teams say reporting has inefficiencies** | Databox Time to Insight survey | Over half of teams know their reporting process is broken. |
+| **11.2 hours/month per client on manual reporting** | AgencyAnalytics 2025 State of Agency Reporting | For agencies alone, reporting is a full-time job that produces no strategy. |
+| **12% open rate on a data quality report** | Founder confession (DataBard origin) | We spent 5 hours/week writing a report that 12% of people opened. That's why DataBard exists. |
+
+### What these numbers say
+
+The problem isn't that data tools can't detect issues. The problem is that the
+findings don't reach the people who need to act on them. The data exists. The
+dashboards exist. The tests exist. What doesn't exist is **consumption**.
+
+DataBard doesn't compete with observability tools — it competes with the
+status quo of "I built a report and nobody read it." The audio briefing is the
+format that solves the consumption problem, because:
+
+1. **Audio gets consumed.** 12% open rate on a report vs. a 2-minute podcast
+   you can listen to on your commute. The format is the fix.
+2. **Synthesis gets acted on.** "Your health dropped 8 points because test
+   coverage fell in payments after Friday's deploy" gets acted on. "47 rows
+   of test results" gets skimmed.
+3. **Distribution is built in.** Shared episodes, embeddable badges, on-chain
+   attestations — every artifact is a distribution surface. The report
+   travels; it doesn't sit in a dashboard graveyard.
+
+### Where these numbers appear in the product
+
+The landing page shows three of these statistics (61%, 2.3%, 12%) as a
+quantified problem section before any solution copy. The roast page uses
+specific findings ("test coverage at 23%?") as emotional hooks. The dashboard
+shows the live cost of the problem via `costHighlights()` — "3 tests failing
+silently, cascading to 8 downstream tables."
+
+The pain is not a claim. It's a number on the landing page.
+
 ## The Three Problems, Ranked by GTM Urgency
 
 ### Problem 1: "My data team writes reports nobody reads" (the wedge)

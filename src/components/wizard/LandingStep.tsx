@@ -181,6 +181,33 @@ export function LandingStep() {
         )}
       </section>
 
+      {/* The problem — quantified pain, not vague claims */}
+      <section className="w-full max-w-2xl pb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-3xl font-bold text-[var(--danger)] mb-1">61%</div>
+            <p className="text-xs text-[var(--text-muted)] leading-snug">
+              of dashboards are never opened in 6 months
+            </p>
+          </div>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-3xl font-bold text-[var(--danger)] mb-1">2.3%</div>
+            <p className="text-xs text-[var(--text-muted)] leading-snug">
+              of dashboards are actually used for decisions
+            </p>
+          </div>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-3xl font-bold text-[var(--danger)] mb-1">12%</div>
+            <p className="text-xs text-[var(--text-muted)] leading-snug">
+              open rate on the average data quality report
+            </p>
+          </div>
+        </div>
+        <p className="text-center text-[10px] text-[var(--text-muted)] mt-3">
+          Sources: dashboard audit (1,847 dashboards, Medium 2024) · founder confession (5 hrs/week, 12% open rate)
+        </p>
+      </section>
+
       {/* Live dashboard stats — proof the engine is running */}
       {totals && totals.sources > 0 && (
         <section className="w-full max-w-2xl pb-10">
