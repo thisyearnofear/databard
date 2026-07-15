@@ -19,6 +19,11 @@ test.describe("Demo Mode", () => {
     await page.getByTestId("demo-button").click();
     await page.waitForURL("**/protocol**", { timeout: 15_000 });
 
+    // Teams is intentionally free of protocol/wallet chrome.
+    await expect(page.getByRole("button", { name: /connect wallet/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Market", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Verify", exact: true })).toHaveCount(0);
+
     // The fresh-episode banner offers the audio as a CTA on the dashboard
     const listenCta = page.getByText("Listen to this analysis");
     await expect(listenCta).toBeVisible({ timeout: 10_000 });
@@ -46,19 +51,16 @@ test.describe("Demo Mode", () => {
   });
 });
 
-test.describe("Persona Toggle", () => {
-  test("should switch persona and update landing content", async ({ page }) => {
+test.describe("Workspace switch", () => {
+  test("should switch to the protocol presentation and update landing content", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Default persona should be enterprise
-    await expect(page.getByText("Enterprise", { exact: false })).toBeVisible();
+    // Teams is the default workspace.
+    await expect(page.getByText("Teams", { exact: true })).toBeVisible();
 
-    // Switch to Onchain
-    const onchainToggle = page.getByText("Onchain", { exact: false });
-    await onchainToggle.click();
+    await page.getByText("Protocols", { exact: true }).click();
 
-    // Landing hero should update for web3 persona
-    await expect(page.getByRole("heading", { name: /on-chain reports/i })).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByRole("heading", { name: /protocol health, explained and provable/i })).toBeVisible({ timeout: 3_000 });
   });
 });

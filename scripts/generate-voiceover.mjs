@@ -1,16 +1,23 @@
-import "dotenv/config";
+import { readFileSync } from "fs";
 import { mkdirSync, existsSync, writeFileSync } from "fs";
 import path from "path";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 
+// Load .env manually
+const envFile = readFileSync(path.join(process.cwd(), ".env"), "utf8");
+envFile.split("\n").forEach((line) => {
+  const match = line.match(/^([A-Z_]+)=(.*)$/);
+  if (match && !process.env[match[1]]) process.env[match[1]] = match[2];
+});
+
 const OUT = path.join(process.cwd(), "demo-assets", "voiceover");
 if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
 
-// Narration script — each segment is a scene
+// Updated narration — honest framing, Solana is optional not foundational
 const segments = [
   {
     file: "01-landing.mp3",
-    text: "DataBard connects to any data catalog and turns data health into a two-minute audio briefing — anchored on Solana, so every report is publicly verifiable.",
+    text: "DataBard turns data health into something people actually consume — a two-minute audio briefing. Sixty-one percent of dashboards are never opened. Only two point three percent drive decisions. We built a report that travels.",
   },
   {
     file: "02-dashboard.mp3",
@@ -18,7 +25,7 @@ const segments = [
   },
   {
     file: "03-what-changed.mp3",
-    text: "The trend narrative tells you what changed and what to fix first. Tools say 'anomaly in table X' — nobody acts on that. People act on 'dropped eleven points, two new failures after Friday's deploy, here's the owner.'",
+    text: "The trend narrative tells you what changed and what to fix first. Tools say 'anomaly in table X' — nobody acts on that. People act on 'dropped eleven points, two new failures after Friday's deploy, here's the owner.' Narratives get acted on. Dashboards get skimmed.",
   },
   {
     file: "04-listen.mp3",
@@ -26,11 +33,11 @@ const segments = [
   },
   {
     file: "05-attestation.mp3",
-    text: "One click attests the report on Solana. The SHA-256 is written via Memo program — costs about five ten-thousandths of a cent. Anyone can verify the hash against the report with one RPC call. No trust in our servers required.",
+    text: "For teams that need public trust, every report can be attested on Solana. The SHA-256 is written via Memo program — costs about five ten-thousandths of a cent. Anyone can verify the hash against the report with one RPC call. It's optional — most teams keep reports internal. But for protocols making public health claims, verifiable is worth more than claimed.",
   },
   {
     file: "06-leaderboard.mp3",
-    text: "This is the public registry. Protocols want to be on it because verified health is marketing — and their marketing is our distribution channel.",
+    text: "This is the public registry. Protocols that want to be on it — their verified health is marketing. Their marketing is our distribution.",
   },
 ];
 
@@ -43,8 +50,8 @@ async function main() {
 
   const client = new ElevenLabsClient({ apiKey });
 
-  // Use a professional, confident voice — "Adam" is a good default
-  const voiceId = "pNInz6obpgDQGcFmaJgB"; // Adam — deep, professional
+  // Adam — deep, professional male voice
+  const voiceId = "pNInz6obpgDQGcFmaJgB";
   const modelId = "eleven_multilingual_v2";
 
   for (const segment of segments) {
@@ -70,7 +77,7 @@ async function main() {
     console.log(`  ✓ Saved to ${outPath}`);
   }
 
-  console.log("\nAll voiceover segments generated!");
+  console.log("\nAll voiceover segments regenerated!");
 }
 
 main().catch((e) => {

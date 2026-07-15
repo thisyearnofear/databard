@@ -7,11 +7,15 @@
 
 ### "Why does this need a blockchain?"
 
-> "Public protocols make public claims about their data. A protocol saying 'our data quality is 92' is marketing unless it's verifiable. A hash commitment on Solana makes the report tamper-evident and independently checkable — trust in the analysis without trust in our servers. One RPC call, zero contract risk."
+> "Honestly, the core product doesn't. It's a communication layer for data teams — audio briefings, dashboards, trend narratives. That works without Solana. But for a specific audience — web3 protocols making public claims about their infrastructure — verifiable health is worth more than unverifiable health. Solana makes the report tamper-evident and independently checkable. It's an optional layer for teams that need public trust, not the reason the product exists."
+
+### "If the core product doesn't need Solana, why are you pitching here?"
+
+> "Because the web3 ecosystem is our wedge. Protocols already produce health metrics, they need them verifiable, and the leaderboard is a public registry they want to be on. The accelerator's ecosystem intros cold-start that registry. Enterprise is the bigger market, but web3 is where we start — and Solana's fee structure makes per-report attestation economically trivial, about five ten-thousandths of a cent."
 
 ### "A memo transaction is trivial — is that really the on-chain feature?"
 
-> "Deliberately. Hash commitment is the right primitive — zero contract risk, about five ten-thousandths of a cent per attestation, verify with one RPC call. But we also built an Anchor escrow program on devnet where data insights settle through on-chain escrow — deposit, commit delivery hash, release funds. That shows we go deeper where the use case demands it."
+> "Deliberately. Hash commitment is the right primitive — zero contract risk, about five ten-thousandths of a cent per attestation, verify with one RPC call. We also built an Anchor escrow program on devnet where data insights can settle through on-chain escrow — that's experimental, but it shows we can go deeper where the use case demands it."
 
 ### "Why Solana specifically and not Ethereum or another chain?"
 
@@ -19,7 +23,7 @@
 
 ### "Is the escrow marketplace on mainnet?"
 
-> "Devnet now. Mainnet is a config flip — `NEXT_PUBLIC_SOLANA_NETWORK` environment variable. We want to validate the marketplace dynamics on devnet first: do buyers actually want to pay for data insights? The attestation layer is ready for mainnet today."
+> "Devnet, and honestly it's experimental. There's no existing market for 'data insights as on-chain goods' — we're testing whether that demand exists. The attestation layer is ready for mainnet today. The escrow marketplace is a hypothesis we're validating."
 
 ### "What's on-chain exactly? The full report?"
 
@@ -39,7 +43,7 @@
 
 ### "What's the distribution strategy? How do you get users?"
 
-> "The product is its own distribution channel. Every shared episode is a mini-landing page with a 'Get this for your data' CTA. Every dashboard has an embeddable health badge for READMEs. Every on-chain attestation is a public artifact. The success event — forwarding the Monday briefing to 20 stakeholders — IS the acquisition event. Usage and distribution are the same act."
+> "The product is its own distribution channel. Every shared episode is a mini-landing page with a 'Get this for your data' CTA. Every dashboard has an embeddable health badge for READMEs. The success event — forwarding the Monday briefing to 20 stakeholders — IS the acquisition event. Usage and distribution are the same act."
 
 ### "What if ElevenLabs goes down or raises prices?"
 
@@ -51,7 +55,11 @@
 
 ### "What's the roadmap?"
 
-> "Three priorities. First: validate with 10 paying teams — that's the only metric that matters right now. Second: mainnet attestation and the escrow marketplace. Third: benchmarking — 'your health score vs teams your size' — which creates a network effect. The roadmap is customer-driven, not feature-driven."
+> "Three priorities. First: validate with 10 paying teams — that's the only metric that matters right now. Second: mainnet attestation for the teams that want it. Third: benchmarking — 'your health score vs teams your size' — which creates a network effect. The roadmap is customer-driven, not feature-driven."
+
+### "Would enterprises actually want their data health public?"
+
+> "Most wouldn't — and we don't push it on them. The attestation is optional. Enterprise teams use DataBard for internal communication: the Monday briefing, the dashboard, the trend narratives. Public verifiability is for the subset that benefits from it — protocols, DAOs, open-source data teams. We're not trying to put every enterprise's dirty laundry on-chain."
 
 ---
 
@@ -65,7 +73,7 @@
 
 ## If They Challenge the Solana Angle
 
-> "Fair challenge. The enterprise product works without Solana — it's a communication layer. But for web3 protocols, health claims are public claims, and verifiable claims are worth more than unverifiable ones. Solana is the trust layer that turns a report into evidence. We lead with it because we're pitching to a Solana audience, but the engine is chain-agnostic — we could attest on any chain. Solana's fees just make it economically viable per-report."
+> "Fair challenge. The core product works without Solana — it's a communication layer. But for web3 protocols, health claims are public claims, and verifiable claims are worth more than unverifiable ones. Solana is a trust layer for that audience, not the foundation of the product. We're pitching here because the web3 ecosystem is our wedge — it's where we start, not where we end."
 
 ---
 

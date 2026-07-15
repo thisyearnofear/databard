@@ -14,6 +14,7 @@ __pycache__/
 
 # Video build artefacts (final MP4 lives in docs/ and IS tracked)
 /video/
+videos/
 
 # Rust / Anchor build artifacts
 contracts/escrow/target/

@@ -7,7 +7,7 @@ export function PersonaToggle() {
   const { state, dispatch } = useWizard();
 
   return (
-    <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] animate-fade-in">
+    <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] animate-fade-in" aria-label="Choose a workspace">
       <button
         onClick={() => { track("persona_toggle", { from: state.persona, to: "enterprise" }); dispatch({ type: "SET_PERSONA", persona: "enterprise" }); }}
         className={`px-4 py-2 text-xs font-medium rounded-lg transition ${
@@ -16,7 +16,7 @@ export function PersonaToggle() {
             : "text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >
-        📊 Enterprise
+        Teams
       </button>
       <button
         onClick={() => { track("persona_toggle", { from: state.persona, to: "web3" }); dispatch({ type: "SET_PERSONA", persona: "web3" }); }}
@@ -26,7 +26,7 @@ export function PersonaToggle() {
             : "text-[var(--text-muted)] hover:text-[var(--text)]"
         }`}
       >
-        ⛓️ Onchain
+        Protocols
       </button>
     </div>
   );

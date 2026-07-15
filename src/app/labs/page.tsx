@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useWizard } from "@/components/wizard";
+import { useWizard, WizardProvider } from "@/components/wizard";
 import { useGeneration } from "@/components/wizard/useGeneration";
 
 export default function LabsPage() {
+  return (
+    <WizardProvider>
+      <LabsPageInner />
+    </WizardProvider>
+  );
+}
+
+function LabsPageInner() {
   const { state, dispatch } = useWizard();
   const { generateAnthem } = useGeneration();
 

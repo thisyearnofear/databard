@@ -323,8 +323,9 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   // Runs in a client effect to avoid hydration mismatch.
   useEffect(() => {
     try {
-      const param = new URLSearchParams(window.location.search).get("persona");
-      if (param === "web3" || param === "onchain") {
+      const params = new URLSearchParams(window.location.search);
+      const param = params.get("workspace") ?? params.get("persona");
+      if (param === "web3" || param === "onchain" || param === "protocols") {
         dispatch({ type: "SET_PERSONA", persona: "web3" });
         return;
       }
@@ -345,6 +346,18 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     try {
       localStorage.setItem("databard:persona", state.persona);
     } catch { /* quota exceeded or private mode */ }
+  }, [state.persona]);
+
+  // Keep the workspace explicit and let the app shell mount wallet code only
+  // when someone intentionally selects Protocols.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.pathname !== "/") return;
+    const params = new URLSearchParams(window.location.search);
+    const workspace = state.persona === "web3" ? "protocols" : "teams";
+    if (params.get("workspace") === workspace) return;
+    params.set("workspace", workspace);
+    window.history.replaceState({}, "", `/?${params.toString()}`);
+    window.dispatchEvent(new Event("databard:workspacechange"));
   }, [state.persona]);
 
   // Restore connection config from localStorage

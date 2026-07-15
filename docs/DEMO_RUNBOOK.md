@@ -1,40 +1,40 @@
 # Accelerator Demo Runbook (Solana)
 
-The audience is a Solana accelerator: their first filter question is **"why does this
-need Solana?"** The demo answers it directly — public protocols making public health
-claims need trust-minimized attestation, and Solana's fees make per-report attestation
-economically trivial. Enterprise is the TAM-expansion story, not something to hide.
+The audience is a Solana accelerator, but the product should not pretend every data
+team needs a chain. The demo answers the blockchain question directly: the core
+product is the briefing and dashboard; Solana is the optional trust layer for protocols
+making public health claims. That framing works for both the accelerator's enterprise
+and web3 arms.
 
 ## The 90-second talk track
 
-> Protocol teams already produce health metrics nobody reads. DataBard turns them into
-> a two-minute, decision-ready briefing — and anchors every report on Solana, so
-> protocol health is publicly verifiable, not just claimed.
+> DataBard turns data health into something people actually consume: a two-minute,
+> decision-ready briefing anchored by a dashboard with the evidence.
 >
 > Here's this week's briefing: Uniswap analytics health dropped 11 points because new
 > test failures hit the whale-trades pipeline; here's what's downstream and what to fix
 > first.
 >
-> One click attests the report on-chain — anyone can verify the hash against the
-> report, without trusting our servers.
+> For protocol teams that need public trust, one click attests the report on-chain.
+> Anyone can verify the hash against the report without trusting our servers.
 >
 > Next: a public registry of protocol data-health, and a marketplace where data
 > insights settle through on-chain escrow.
 >
-> The same engine sells into web2 data teams — that's the expansion market. Solana is
-> the trust layer that makes the reports worth believing.
+> The same engine serves internal data teams without crypto in the interface. Solana is
+> a trust layer for the subset of teams that need public verifiability.
 
 ## The click path
 
-1. Open **`/?persona=onchain`** — Onchain persona hero.
-2. Click **Try the demo** → lands on **`/protocol`** (dashboard-first):
+1. Open **`/?workspace=protocols`** for the Solana demo, or **`/`** for the Teams-first demo.
+2. Click **Open a protocol briefing** → lands on **`/protocol?workspace=protocols`** (dashboard-first):
    - Fleet health chart — scrub it, hover a legend entry to spotlight a series.
    - "What changed this week" — Uniswap Analytics decline narrative.
    - Open the Uniswap card → critical tables, coverage, downstream risk.
 3. Click **▶ Listen to this analysis** → play 20–30 s of the audio briefing. Audio is
    the format, not the pitch — come back to the dashboard.
 4. **Attestation moment** (wallet pre-connected, devnet):
-   - Mint the report from the episode page (Onchain persona + connected wallet shows
+   - Mint the report from the episode page (Protocols workspace + connected wallet shows
      the mint CTA), OR use a pre-minted record on a dashboard card.
    - Click **⛓ Verify** on the record → `/verify` recomputes the SHA-256 of the report
      and matches it against the on-chain memo. Show the green check, then the Explorer
@@ -57,9 +57,11 @@ economically trivial. Enterprise is the TAM-expansion story, not something to hi
 
 - [ ] `npm run build && npm start` (or the deployed URL) — no dev-mode jank.
 - [ ] Hit `POST /api/demo/seed` once (the demo button does this too) and load
-      `/protocol` — 6 sources, trends populated, no `0%` scores anywhere.
+      `/protocol?workspace=protocols` — 6 sources, trends populated, no `0%` scores anywhere.
       Then load `/leaderboard` — 6 entries (Uniswap, Jupiter, Marinade, Raydium,
       Orca, E-commerce), badges inline, "Claim your protocol" on scanned entries.
+- [ ] Load `/protocol` separately and confirm the Teams view has no wallet button,
+      Market, Verify, or leaderboard navigation in the header.
 - [ ] Phantom installed, set to **devnet**, wallet funded (≥ 0.05 devnet SOL —
       `solana airdrop 1 <pubkey> -u devnet` the day before; faucets rate-limit).
 - [ ] Wallet pre-connected to the site; auto-connect is on.
@@ -130,7 +132,7 @@ travels.
   too cheap for a sales team, too niche for mass marketing. Product-led virality is the
   only coherent escape at this price, which is why the product is its own distribution
   vehicle.
-- **Solana kicker:** the chain is a distribution surface. Attestations are public by
+- **Solana kicker:** the chain is a distribution surface for Protocols. Attestations are public by
   construction; the leaderboard is a public registry of protocol health. Protocols WANT
   to publicize verified health — their marketing is our distribution, and the memos are
   composable. Cold start: this accelerator's ecosystem intros seed the registry flywheel.
@@ -141,13 +143,14 @@ travels.
 
 ## Likely Q&A
 
-- **"Why does this need a blockchain?"** Public protocols make public claims about
-  their data. A hash commitment on Solana makes the report tamper-evident and
-  independently checkable — trust in the analysis without trust in our servers.
+- **"Why does this need a blockchain?"** The Teams product does not. Public protocols
+  make public claims about their data, and a hash commitment on Solana makes those
+  claims tamper-evident and independently checkable.
 - **"A memo tx is trivial."** Deliberately. Hash commitment is the right primitive —
   zero contract risk, ~$0.000005 per attestation, verify with one RPC call. The
   Anchor escrow program shows we go deeper where the use case demands it.
-- **"Devnet?"** Yes — mainnet at launch is a config flip (`NEXT_PUBLIC_SOLANA_NETWORK`).
+- **"Devnet?"** Attestation can move to mainnet via config. The escrow marketplace is
+  experimental and should be described as devnet-only until customer demand is proven.
 - **"What's on-chain exactly?"** Schema name, health score, episode id, SHA-256 of the
   report script, author wallet, timestamp — the report itself stays private; only the
   commitment is public.

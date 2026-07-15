@@ -75,7 +75,10 @@ See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, an
 - [x] Dashboard redesigned on dither-kit: fleet-health chart (scrub + legend spotlight), generative source avatars, dithered CTAs
 - [x] Dashboard-first demo: "Try the demo" seeds deterministic data (`POST /api/demo/seed`) and lands on /protocol; audio is a CTA there
 - [x] `/verify` page + `/api/onchain/verify`: decode the SPL-memo attestation, recompute the report hash, show match/mismatch (also renders marketplace settlement receipts)
-- [x] `/?persona=onchain` URL param; persona persists across visits
+- [x] Teams/Protocols workspace model: `/protocol` defaults to Teams; `/protocol?workspace=protocols` exposes attestation, verification, and explorer navigation
+- [x] Wallet provider loads only for Protocols and on-chain routes, keeping the Teams dashboard free of wallet chrome and Solana dependencies
+- [x] Dashboard broken into briefing components (`DashboardHeader`, `PriorityBriefingCard`, `DashboardSummary`, `ChangeNarratives`, `SourceHealthList`) with shared health logic in `src/lib/briefing-health.ts`
+- [x] `/?workspace=protocols` URL param; legacy `?persona=onchain` still maps to Protocols
 - [x] Onboarding tour moved off the landing hero; decision-support copy
 - [x] Leaderboard backfills zero-score mint rows from engine snapshots
 

@@ -1,7 +1,13 @@
-import "dotenv/config";
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+
+// Load .env manually
+const envFile = readFileSync(path.join(process.cwd(), ".env"), "utf8");
+envFile.split("\n").forEach((line) => {
+  const match = line.match(/^([A-Z_]+)=(.*)$/);
+  if (match && !process.env[match[1]]) process.env[match[1]] = match[2];
+});
 
 const OUT = path.join(process.cwd(), "demo-assets", "bgm.mp3");
 

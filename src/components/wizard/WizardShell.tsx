@@ -9,14 +9,21 @@ const WIZARD_STEPS: { key: WizardStep; label: string; icon: string }[] = [
   { key: "episode", label: "Listen / Play", icon: "🎧" },
 ];
 
-export function StepIndicator({ current }: { current: WizardStep }) {
+export function StepIndicator({ current, coral = false }: { current: WizardStep; coral?: boolean }) {
   if (current === "landing") return null;
-  const currentIdx = WIZARD_STEPS.findIndex((s) => s.key === current);
+  const steps = coral
+    ? [
+        { key: "connect" as const, label: "Query & ask", icon: "●" },
+        { key: "generating" as const, label: "Generate", icon: "●" },
+        { key: "episode" as const, label: "Briefing", icon: "●" },
+      ]
+    : WIZARD_STEPS;
+  const currentIdx = steps.findIndex((s) => s.key === current);
   
   return (
     <nav className="w-full max-w-lg mx-auto mb-6 animate-fade-in" aria-label="Progress">
       <ol className="flex items-center justify-between">
-        {WIZARD_STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const isComplete = i < currentIdx;
           const isActive = i === currentIdx;
           return (

@@ -11,11 +11,11 @@
 **Visual:** DataBard logo, tagline: "An AI analyst for your data estate"
 
 **Speaker:**
-> "DataBard is an AI analyst that turns data health into something people actually consume — a two-minute audio briefing, anchored on Solana, so protocol health is publicly verifiable, not just claimed."
+> "DataBard is an AI analyst that turns data health into something people actually consume — a two-minute audio briefing. For teams that need public trust, every report is anchored on Solana."
 
 ---
 
-## Slide 2: The Problem (45 seconds)
+## Slide 2: The Problem (50 seconds)
 
 **Visual:** Three stats, large text:
 - 61% of dashboards are never opened
@@ -31,7 +31,7 @@
 
 ---
 
-## Slide 3: The Solution (45 seconds)
+## Slide 3: The Solution (50 seconds)
 
 **Visual:** DataBard dashboard screenshot + audio waveform side by side. Arrow showing the flow: Connect → Analyze → Synthesize → Deliver
 
@@ -44,18 +44,16 @@
 
 ---
 
-## Slide 4: Why Solana (60 seconds)
+## Slide 4: The Business (40 seconds)
 
-**Visual:** Diagram showing: Report → SHA-256 hash → Solana Memo → /verify page → green check
+**Visual:** Two columns:
+- **The core product:** $49/month per team, up to 5 schemas, unlimited listeners
+- **Unit economics:** $0.80/briefing, default alive at 10 teams
 
 **Speaker:**
-> "For web3 protocols, health claims are public claims. A protocol saying 'our data quality is 92' is marketing — unless it's verifiable."
+> "The business is straightforward. $49 a month per team, up to 5 schemas, unlimited listeners. Cost per briefing is about 80 cents — ElevenLabs TTS is 95% of variable cost. We're default alive at 10 paying teams."
 >
-> "Every DataBard report is attested on Solana via a Memo program transaction. The SHA-256 of the report is written on-chain. Anyone can verify the hash against the report without trusting our servers — one RPC call, zero contract risk, costs about five ten-thousandths of a cent per attestation."
->
-> "We also built an on-chain escrow marketplace on Anchor — devnet now — where data insights settle through trust-minimized escrow. Seller commits a deliverable hash, buyer releases funds, the whole lifecycle is on-chain."
->
-> "Solana isn't a bolt-on. It's the trust layer that makes the reports worth believing."
+> "The price is deliberately below the procurement threshold — no IT approval needed. The first 10 users come from us going to them manually. The first paying team validates the price. The 10th validates the business."
 
 ---
 
@@ -66,22 +64,22 @@
 **Speaker (during video):**
 > "Let me show you the product."
 
-*(Video shows: Onchain persona landing → dashboard → fleet health chart → "what changed" narrative → play 20s of audio briefing → mint attestation → /verify green check → leaderboard)*
+*(Video shows: landing → dashboard → fleet health chart → "what changed" narrative → play 20s of audio briefing → mint attestation → /verify green check → leaderboard)*
 
 ---
 
-## Slide 6: Market & Business Model (45 seconds)
+## Slide 6: Where Solana Fits (45 seconds)
 
-**Visual:** Two columns:
-- **Web3 wedge:** Protocol teams need verifiable health → leaderboard as public registry
-- **Enterprise TAM:** Every data team with 50+ tables → $49/month per team
+**Visual:** Diagram showing: Report → SHA-256 hash → Solana Memo → /verify page → green check. Small text: "Optional — for teams that need public trust"
 
 **Speaker:**
-> "The wedge is web3 protocols. They already produce health metrics, they need them verifiable, and the leaderboard is a public registry they want to be on. Their marketing is our distribution."
+> "The core product works without Solana — it's a communication layer for data teams. But for a specific audience, public trust matters."
 >
-> "The expansion market is every data team with 50+ tables. Same engine, different output. $49 a month per team, up to 5 schemas, unlimited listeners. Cost per briefing is about 80 cents — ElevenLabs TTS is 95% of variable cost."
+> "Web3 protocols make public claims about their infrastructure health. A protocol saying 'our data quality is 92' is marketing — unless it's verifiable. So we added an optional attestation layer: every report's SHA-256 is written to Solana via a Memo program transaction. Anyone can verify the hash against the report with one RPC call. About five ten-thousandths of a cent per attestation."
 >
-> "We're default alive at 10 paying teams. The price is deliberately below the procurement threshold — no IT approval needed."
+> "We also built an Anchor escrow program on devnet where data insights can settle through on-chain escrow — that's experimental, but the attestation layer is ready for mainnet today."
+>
+> "Solana isn't the reason DataBard exists. It's a trust layer for the subset of teams that need public verifiability — and it's the entry point into the web3 ecosystem."
 
 ---
 
@@ -90,9 +88,7 @@
 **Visual:** Loop diagram: Briefing → Forward to Slack → Shared episode page → "Get this for your data" CTA → New user → Their briefing → Forward again
 
 **Speaker:**
-> "The product is its own distribution channel. Every shared episode is a mini-landing page with a 'Get this for your data' CTA. Every dashboard has an embeddable health badge. Every on-chain attestation is a public artifact."
->
-> "The success event — forwarding the Monday briefing to 20 stakeholders — IS the acquisition event. Usage and distribution are the same act."
+> "The product is its own distribution channel. Every shared episode is a mini-landing page with a 'Get this for your data' CTA. Every dashboard has an embeddable health badge. The success event — forwarding the Monday briefing to 20 stakeholders — IS the acquisition event. Usage and distribution are the same act."
 
 ---
 
@@ -104,7 +100,7 @@
 - Visibility for the first 10 paying teams
 
 **Speaker:**
-> "We need three things from this accelerator: ecosystem intros to protocol teams to cold-start the registry, feedback on the escrow marketplace, and visibility to land our first 10 paying teams."
+> "We need three things: ecosystem intros to protocol teams to cold-start the registry, feedback on the escrow marketplace, and visibility to land our first 10 paying teams."
 >
 > "DataBard. Data reports don't fail on accuracy — they fail on distribution to human attention. We built a report that travels."
 
@@ -115,15 +111,15 @@
 | Slide | Time | Running |
 |-------|------|---------|
 | 1. Title | 10s | 0:10 |
-| 2. Problem | 45s | 0:55 |
-| 3. Solution | 45s | 1:40 |
-| 4. Why Solana | 60s | 2:40 |
-| 5. Demo video | 90s | 4:10 |
-| 6. Market & Model | 45s | 4:55 |
-| 7. Distribution | 30s | 5:25 |
-| 8. The Ask | 15s | 5:40 |
+| 2. Problem | 50s | 1:00 |
+| 3. Solution | 50s | 1:50 |
+| 4. Business | 40s | 2:30 |
+| 5. Demo video | 90s | 4:00 |
+| 6. Where Solana Fits | 45s | 4:45 |
+| 7. Distribution | 30s | 5:15 |
+| 8. The Ask | 15s | 5:30 |
 
-**Total: ~5:25** — leaves buffer for transitions. Trim slide 6 or 7 if you need to hit 5:00 sharp.
+**Total: ~5:30** — trim slide 6 or 7 if you need to hit 5:00 sharp.
 
 ---
 
@@ -132,7 +128,7 @@
 1. **Opening:** "DataBard is an AI analyst that turns data health into something people actually consume"
 2. **Problem:** "61% of dashboards are never opened. Only 2.3% drive decisions."
 3. **Moat:** "The synthesis is the moat. You can't read 47 rows aloud — you have to distill."
-4. **Solana:** "Every report is attested on Solana. Anyone can verify the hash without trusting our servers."
+4. **Solana (honest):** "The core product works without Solana. But for teams that need public trust, every report is anchored on-chain."
 5. **Closing:** "Data reports don't fail on accuracy — they fail on distribution to human attention. We built a report that travels."
 
 ---
@@ -141,6 +137,8 @@
 
 - Don't say "AI podcast" — say "audio briefing" or "decision-ready briefing"
 - Don't say "NFT" — say "Memo program hash commitment"
-- Don't claim the escrow marketplace is on mainnet — say "devnet, mainnet is a config flip"
-- Don't lead with enterprise — lead with the Solana/web3 angle, enterprise is the expansion
+- Don't claim the escrow marketplace is production — say "devnet, experimental"
+- Don't say "Solana is the trust layer that makes reports worth believing" — that's overclaiming. Say "Solana is a trust layer for teams that need public verifiability"
+- Don't say "every report needs to be on-chain" — most don't. The attestation is optional.
 - Don't say "auditors verify" beyond what /verify shows — let the product speak
+- Don't lead with Solana — lead with the communication problem, Solana is slide 6

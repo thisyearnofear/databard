@@ -2,10 +2,18 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useWizard } from "@/components/wizard";
+import { useWizard, WizardProvider } from "@/components/wizard";
 import { track } from "@/lib/track";
 
 export default function RoastPage() {
+  return (
+    <WizardProvider>
+      <RoastPageInner />
+    </WizardProvider>
+  );
+}
+
+function RoastPageInner() {
   const { dispatch } = useWizard();
 
   useEffect(() => {

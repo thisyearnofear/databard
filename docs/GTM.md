@@ -201,7 +201,7 @@ This is not evidence to pivot DataBard into generic sales analytics. It is evide
 | Event | Where | What it tells us |
 |---|---|---|
 | `landing_cta_click` | Landing page | Which CTA (demo vs connect) converts better |
-| `persona_toggle` | Landing page | How many users switch from enterprise to onchain |
+| `persona_toggle` | Landing page | How many users switch between Teams and Protocols |
 | `demo_play` | Landing page | Zero-friction conversion rate |
 | `connect_start` | Connect step | Funnel: landing → connect |
 | `connect_complete` | Connect step | Funnel: connect → schema selection |

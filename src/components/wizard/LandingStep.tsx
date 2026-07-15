@@ -11,10 +11,13 @@ import { LeadCapture } from "@/components/LeadCapture";
 import { CountUp } from "@/components/CountUp";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
+import { WORKSPACES } from "@/lib/product/workspaces";
 
 export function LandingStep() {
   const { state, dispatch, showConnect } = useWizard();
   const router = useRouter();
+  const workspace = state.persona === "web3" ? "protocols" : "teams";
+  const workspaceCopy = WORKSPACES[workspace].landing;
   const [totals, setTotals] = useState<InsightTotals | null>(null);
 
   // Live aggregate: the quantified cost of the problem across watched sources
@@ -45,7 +48,7 @@ export function LandingStep() {
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Demo seed failed");
       dispatch({ type: "SET_STATUS", status: "" });
-      router.push(`/protocol?episode=${state.persona === "web3" ? "demo" : "demo-enterprise"}&demo=1`);
+      router.push(`/protocol?episode=${state.persona === "web3" ? "demo" : "demo-enterprise"}&demo=1&workspace=${workspace}`);
       return;
     } catch {
       // Fall back to the in-wizard episode demo below
@@ -122,25 +125,13 @@ export function LandingStep() {
         }}
       >
         <div className="spotlight" aria-hidden />
-        {/* Tagline */}
+        <div className="relative z-10 mb-3 font-mono text-[10px] font-medium tracking-[0.2em] text-[var(--accent)]">{workspaceCopy.eyebrow}</div>
         <h1 className="relative z-10 text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-          {state.persona === "enterprise" ? (
-            <>
-              An AI analyst<br />
-              <span className="shimmer-text">for your data estate</span>
-            </>
-          ) : (
-            <>
-              On-chain data,<br />
-              <span className="shimmer-text">on-chain reports</span>
-            </>
-          )}
+          {workspaceCopy.title}
         </h1>
 
         <p className="relative z-10 text-base sm:text-lg text-[var(--text-muted)] mb-8 max-w-md">
-          {state.persona === "enterprise"
-            ? "One engine computes health scores, lineage risk, and PII flags — two AI hosts debate the findings, delivered as podcasts, dashboards, and reports."
-            : "Two AI hosts analyze your on-chain data — join Dune, subgraphs, GitHub, and Slack in one query. Mint on Solana."}
+          {workspaceCopy.description}
         </p>
 
         {/* Primary CTA — demo is primary (zero friction), connect is secondary */}
@@ -151,19 +142,19 @@ export function LandingStep() {
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
           >
             <span>▶</span>
-            <span>Hear a 30-second demo</span>
+            <span>{workspaceCopy.demoLabel}</span>
           </button>
           <button
             data-testid="connect-button"
             onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
             className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-colors duration-200 active:scale-[0.97]"
           >
-            <span>{state.persona === "enterprise" ? "or connect your own data" : "or query your own data"}</span>
+            <span>or {workspaceCopy.connectLabel.toLowerCase()}</span>
             <span className="text-[var(--accent)]">→</span>
           </button>
         </div>
 
-        <p className="relative z-10 text-xs text-[var(--text-muted)]">No signup · No wallet · Just press play</p>
+        <p className="relative z-10 text-xs text-[var(--text-muted)]">2-minute briefing · No signup for the demo</p>
 
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (

@@ -65,7 +65,7 @@ The data observability problem. We have a version of this (health scores, alerts
 
 **Why this retains:** Once a team is getting weekly digests, alerts and trend narratives create a pull-back effect. Health dropped → alert fires → you check the dashboard → you hear what changed. The audio + dashboard combination is stickier than either alone.
 
-### Problem 3: "I can't prove my data quality history to auditors" (niche)
+### Problem 3: "I can't prove my data quality history publicly" (niche)
 
 The onchain attestation use case. Real but narrow. For most enterprises, this is "nice to have." For web3-native teams, it's a differentiator. Keep it for the Onchain persona, don't lead with it.
 
@@ -81,24 +81,27 @@ The claim is now backed by product, not just copy: every report's SHA-256 is wri
 
 **The key insight:** We're not competing with observability tools. We're a communication layer that sits on top of any data source and makes findings consumable. The observability tools can be inputs to DataBard, not competitors.
 
-## Persona Strategy
+## Workspace Strategy
 
-### Enterprise (default)
+The product now presents this split as workspaces, not as separate products. Both workspaces use the same briefing engine, health scoring, trend narratives, and dashboard composition. The difference is disclosure: Teams hides crypto mechanics by default; Protocols exposes attestation, verification, and registry surfaces.
+
+### Teams (default)
 - **Who:** Data team leads at companies with 50+ tables
 - **Pain:** "I spend hours building reports nobody reads"
 - **Wedge:** Weekly executive briefing (2-min audio)
 - **Expansion:** Alerts, trend narratives, team email delivery
 - **Terminology:** Health score, test coverage, critical tables, downstream risk
 - **Onchain:** Not mentioned. Enterprise data teams don't want Solana in their stack.
+- **Entry point:** `/` and `/protocol` default to Teams. Wallet providers and on-chain navigation are not mounted in this workspace.
 
-### Onchain (secondary)
+### Protocols (secondary)
 - **Who:** Web3 protocol operators, DAO data teams
 - **Pain:** "I need publicly verifiable protocol health"
-- **Wedge:** Onchain attestation + `/verify` + leaderboard
+- **Wedge:** Onchain attestation + `/verify` + leaderboard/explorer
 - **Expansion:** Same analysis engine, different output emphasis
 - **Terminology:** Subgraphs, indexers, entities, attestations
 - **Onchain:** Core feature, not afterthought
-- **Entry point:** `/?persona=onchain` opens the site in this persona (used for the Solana accelerator demo — see [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md))
+- **Entry point:** `/?workspace=protocols` or `/protocol?workspace=protocols` opens the Protocols workspace. Legacy `?persona=onchain` links still map to this mode for compatibility.
 
 ### Field-sales allocation (discovery hypothesis)
 - **Who:** Field-sales leaders with fragmented account, activity, and commercial data; initial hypothesis: publishers selling to schools.
@@ -118,7 +121,7 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 
 3. **Trend narratives are the moat.** Not just "health score is 72%" but "your health score dropped 8 points this week because test coverage fell in the payments schema after the Friday deploy." This is what LLMs are actually good at and traditional tools can't do.
 
-4. **Onchain is a persona, not a pillar.** Solana attestation is valuable for the Onchain persona. Don't contaminate the enterprise pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care — not a core feature for everyone. The inverse also holds: for a Solana-native audience (accelerators, protocol teams), lead with the Onchain persona and the verification story — enterprise becomes the TAM-expansion slide, not the demo.
+4. **Protocols is a workspace, not a pillar.** Solana attestation is valuable for Protocols. Don't contaminate the Teams pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care, not a core feature for everyone. The inverse also holds: for a Solana-native audience, open the Protocols workspace and show verification as the trust layer, while making clear the same engine serves Teams.
 
 5. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analysis-first positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
 
@@ -127,7 +130,7 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 - **Not a data observability platform.** We don't compete with Monte Carlo. We're a communication layer that can ingest observability data.
 - **Not a data catalog.** We don't replace OpenMetadata or dbt. We read from them and make their findings consumable.
 - **Not a podcast tool.** The audio is a format, not the product. The product is the analysis + synthesis.
-- **Not a web3 product (for enterprise).** Onchain is a persona-specific feature, not a core pillar.
+- **Not a web3 product for Teams.** Onchain is a workspace-specific feature, not a core pillar.
 
 ## Operating Principles (Paul Graham framework)
 
