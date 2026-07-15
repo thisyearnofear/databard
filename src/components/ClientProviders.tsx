@@ -16,15 +16,19 @@ const SolanaProvider = dynamic(
 const SOLANA_PATHS = new Set(["/onchain", "/verify", "/leaderboard", "/history"]);
 
 function needsSolanaProvider(pathname: string, search = ""): boolean {
-  // Shared episode pages still offer ownership verification. The Enterprise
-  // landing, dashboard, and standard wizard do not pay for wallet hydration.
-  return pathname.startsWith("/episode/") || SOLANA_PATHS.has(pathname) || workspaceFromSearch(search) === "protocols";
+  // The landing switch is a product-mode choice, not a wallet interaction.
+  // Mounting a provider around it would replace the wizard subtree mid-switch
+  // and reset its local state. Wallet code belongs on actual on-chain surfaces.
+  return pathname.startsWith("/episode/")
+    || SOLANA_PATHS.has(pathname)
+    || (pathname === "/protocol" && workspaceFromSearch(search) === "protocols");
 }
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  // Path-only modes are known during SSR. Query-selected Protocols mode is
-  // promoted after hydration so landing HTML remains deterministic.
+  // Path-only modes are known during SSR. The protocol dashboard is promoted
+  // after hydration when its workspace is query-selected; landing mode never
+  // needs a wallet provider.
   const [solanaEnabled, setSolanaEnabled] = useState(() => needsSolanaProvider(pathname));
 
   useEffect(() => {

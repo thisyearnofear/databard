@@ -291,6 +291,7 @@ interface WizardProviderProps {
 
 export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }: WizardProviderProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
+  const [personaReady, setPersonaReady] = useState(false);
   
   // Auto-switch source when persona changes
   // web3 → Coral (cross-source SQL is the hero)
@@ -327,17 +328,16 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
       const param = params.get("workspace") ?? params.get("persona");
       if (param === "web3" || param === "onchain" || param === "protocols") {
         dispatch({ type: "SET_PERSONA", persona: "web3" });
-        return;
-      }
-      if (param === "enterprise") {
+      } else if (param === "enterprise" || param === "teams") {
         dispatch({ type: "SET_PERSONA", persona: "enterprise" });
-        return;
-      }
-      const saved = localStorage.getItem("databard:persona");
-      if (saved === "web3" || saved === "enterprise") {
-        dispatch({ type: "SET_PERSONA", persona: saved });
+      } else {
+        const saved = localStorage.getItem("databard:persona");
+        if (saved === "web3" || saved === "enterprise") {
+          dispatch({ type: "SET_PERSONA", persona: saved });
+        }
       }
     } catch { /* ignore — SSR-safe by construction, storage may be unavailable */ }
+    finally { setPersonaReady(true); }
   }, []);
 
   // Persist persona whenever it changes (declared after the restore effect so
@@ -351,14 +351,14 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   // Keep the workspace explicit and let the app shell mount wallet code only
   // when someone intentionally selects Protocols.
   useEffect(() => {
-    if (typeof window === "undefined" || window.location.pathname !== "/") return;
+    if (!personaReady || typeof window === "undefined" || window.location.pathname !== "/") return;
     const params = new URLSearchParams(window.location.search);
     const workspace = state.persona === "web3" ? "protocols" : "teams";
     if (params.get("workspace") === workspace) return;
     params.set("workspace", workspace);
     window.history.replaceState({}, "", `/?${params.toString()}`);
     window.dispatchEvent(new Event("databard:workspacechange"));
-  }, [state.persona]);
+  }, [personaReady, state.persona]);
 
   // Restore connection config from localStorage
   useEffect(() => {
