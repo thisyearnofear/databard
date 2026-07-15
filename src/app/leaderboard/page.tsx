@@ -130,6 +130,13 @@ export default function LeaderboardPage() {
                   {/* Health bar */}
                   <HealthBar score={entry.latestHealthScore} width={80} />
 
+                  {/* Badge — live embeddable SVG */}
+                  <img
+                    src={`/api/badge/${encodeURIComponent(entry.schemaName)}`}
+                    alt={`Health badge for ${entry.schemaName}`}
+                    className="h-5"
+                  />
+
                   {/* Trend */}
                   <TrendBadge trend={entry.trend} />
                 </div>

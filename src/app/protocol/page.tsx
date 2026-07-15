@@ -9,6 +9,7 @@ import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { costLine } from "@/lib/cost-framing";
 import { track } from "@/lib/track";
 import { HealthBar, TrendBadge, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
+import { BadgePanel } from "@/components/BadgePanel";
 import {
   LineChart,
   Line,
@@ -577,6 +578,9 @@ function ProtocolDashboardInner() {
                     </div>
                   </div>
                 )}
+
+                {/* Embeddable badge — distribution surface */}
+                <BadgePanel schemaName={card.displayName} />
               </div>
             ))}
           </div>

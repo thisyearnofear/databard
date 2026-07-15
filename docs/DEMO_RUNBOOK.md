@@ -57,7 +57,9 @@ economically trivial. Enterprise is the TAM-expansion story, not something to hi
 
 - [ ] `npm run build && npm start` (or the deployed URL) — no dev-mode jank.
 - [ ] Hit `POST /api/demo/seed` once (the demo button does this too) and load
-      `/protocol` — 4 sources, trends populated, no `0%` scores anywhere.
+      `/protocol` — 6 sources, trends populated, no `0%` scores anywhere.
+      Then load `/leaderboard` — 6 entries (Uniswap, Jupiter, Marinade, Raydium,
+      Orca, E-commerce), badges inline, "Claim your protocol" on scanned entries.
 - [ ] Phantom installed, set to **devnet**, wallet funded (≥ 0.05 devnet SOL —
       `solana airdrop 1 <pubkey> -u devnet` the day before; faucets rate-limit).
 - [ ] Wallet pre-connected to the site; auto-connect is on.
@@ -77,8 +79,8 @@ economically trivial. Enterprise is the TAM-expansion story, not something to hi
   OpenMetadata; it invites an integration discussion we don't need.
 - Don't claim NFTs — attestation is a Memo-program hash commitment (say exactly that;
   it's a feature: no contract risk, verifiable with nothing but an RPC call).
-- Don't claim the escrow marketplace is live — it's a built Anchor program pending
-  our redeploy.
+- Don't claim the escrow marketplace is in production — it's live on **devnet**
+  (program `ErwrNVN…`), verified end-to-end. Say "devnet" explicitly.
 - Don't say "auditors verify" beyond what `/verify` shows — that page is the proof;
   let it speak.
 
@@ -97,6 +99,17 @@ economically trivial. Enterprise is the TAM-expansion story, not something to hi
    Friday's deploy, here's the owner.' Narratives get acted on; dashboards get skimmed."*
 5. **Back pocket:** `/roast` — "when we want people to share it, we let the AI roast
    their data." Use if energy dips; exit on the laugh.
+6. **The viral loop (GTM built into the product):** on the dashboard, expand
+   "📛 Embeddable badge" → show the live SVG + copy the Markdown embed code.
+   Line: *"Every dashboard has an embeddable badge. A protocol puts this in
+   their README — every visitor sees DataBard."* Then click "Share moment" on
+   the episode player → open the deep link → show the branded player with OG
+   image + "Get this for your data" CTA. Line: *"Every shared episode is a
+   mini-landing page. The product is its own distribution channel."*
+7. **The leaderboard as registry:** load `/leaderboard` — 6 protocols, badges
+   inline, "Claim your protocol" on scanned entries. Line: *"This is the public
+   registry. Protocols want to be on it because verified health is marketing.
+   Their marketing is our acquisition channel."*
 
 **Founding insight, said out loud:** data reports don't fail on accuracy — they fail on
 distribution to human attention. We didn't build a better report; we built a report that

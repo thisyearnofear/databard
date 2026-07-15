@@ -417,6 +417,19 @@ function VerifyPageInner() {
             </li>
           </ol>
         </div>
+
+        {/* Conversion CTA — turn verifiers into users */}
+        <div className="mt-6 bg-[var(--accent)]/5 border border-[var(--accent)]/30 rounded-2xl p-6 text-center">
+          <p className="text-sm text-[var(--text)] mb-3">
+            Want this for your protocol?
+          </p>
+          <Link
+            href="/?demo=1"
+            className="inline-block text-sm font-medium text-[var(--accent)] hover:underline"
+          >
+            Get a verified data health report →
+          </Link>
+        </div>
       </div>
     </main>
   );

@@ -298,6 +298,42 @@ function marinadeMeta(asOf: number, failing: Set<string>): SchemaMeta {
   return { fqn, name: "Marinade Staking", tables, lineage };
 }
 
+// ── raydium.amm — healthy, slight wobble ─────────────────────────────────────
+
+function raydiumMeta(asOf: number, failing: Set<string>): SchemaMeta {
+  const fqn = "raydium.amm";
+  const tables: TableMeta[] = [
+    tbl(fqn, "pool_reserves", asOf, { desc: "Liquidity reserves per AMM pool.", owner: "raydium-team", freshHoursAgo: 1, rows: 12_000, tests: [test("not_null_pool", "Success"), test("reserve_positive", "Success")] }),
+    tbl(fqn, "swap_events", asOf, { desc: "Every swap routed through Raydium AMM.", owner: "raydium-team", freshHoursAgo: 1, rows: 240_000, tests: [test("not_null_tx", "Success"), test("amount_positive", "Success")] }),
+    tbl(fqn, "farm_rewards", asOf, { desc: "Yield farming reward distributions.", owner: "raydium-team", freshHoursAgo: 3, rows: 8_900, tests: [test("not_null_farm", "Success"), test("reward_positive", failing.has("farm_rewards") ? "Failed" : "Success")] }),
+    tbl(fqn, "concentrated_liquidity", asOf, { owner: "raydium-team", freshHoursAgo: 2, rows: 5_400, tests: [test("not_null_position", "Success")] }),
+    tbl(fqn, "fee_tiers", asOf, { desc: "Fee configuration per pool tier.", owner: "raydium-team", freshHoursAgo: 48, rows: 120, tests: [] }),
+  ];
+  const lineage = [
+    { fromTable: `${fqn}.pool_reserves`, toTable: `${fqn}.swap_events` },
+    { fromTable: `${fqn}.swap_events`, toTable: `${fqn}.farm_rewards` },
+  ];
+  return { fqn, name: "Raydium AMM", tables, lineage };
+}
+
+// ── orca.whirlpools — recently degraded ──────────────────────────────────────
+
+function orcaMeta(asOf: number, failing: Set<string>): SchemaMeta {
+  const fqn = "orca.whirlpools";
+  const tables: TableMeta[] = [
+    tbl(fqn, "whirlpool_positions", asOf, { desc: "Concentrated liquidity positions.", owner: "orca-team", freshHoursAgo: 2, rows: 18_000, tests: [test("not_null_position", "Success"), test("liquidity_positive", "Success")] }),
+    tbl(fqn, "tick_data", asOf, { desc: "Tick-level liquidity and price data.", owner: "orca-team", freshHoursAgo: 1, rows: 92_000, tests: [test("not_null_tick", "Success"), test("price_within_bounds", failing.has("tick_data") ? "Failed" : "Success")] }),
+    tbl(fqn, "collect_fees", asOf, { owner: "orca-team", freshHoursAgo: 4, rows: 31_000, tests: [test("not_null_position", "Success")] }),
+    tbl(fqn, "swap_quotes", asOf, { desc: "Simulated swap quotes for routing.", owner: "orca-team", freshHoursAgo: failing.has("swap_quotes") ? 72 : 2, rows: 15_000, tests: [test("not_null_quote", "Success"), test("quote_freshness", failing.has("swap_quotes") ? "Failed" : "Success")] }),
+    tbl(fqn, "pool_config", asOf, { desc: "Whirlpool initialization parameters.", owner: "orca-team", freshHoursAgo: 12, rows: 340, tests: [test("not_null_pool", "Success")] }),
+  ];
+  const lineage = [
+    { fromTable: `${fqn}.whirlpool_positions`, toTable: `${fqn}.collect_fees` },
+    { fromTable: `${fqn}.tick_data`, toTable: `${fqn}.swap_quotes` },
+  ];
+  return { fqn, name: "Orca Whirlpools", tables, lineage };
+}
+
 // ── Seeding ──────────────────────────────────────────────────────────────────
 
 function seedSnapshots(now: number): void {
@@ -353,6 +389,30 @@ function seedSnapshots(now: number): void {
   for (const s of marinadeArc) {
     const asOf = now - s.days * DAY;
     saveSnapshot(buildSnapshot("marinade.staking", "Marinade Staking", marinadeMeta(asOf, new Set(s.failing)), s.score, s.days, now));
+  }
+
+  // 5. raydium.amm — 4 snapshots, healthy with a slight wobble 85→87→84→88.
+  const raydiumArc: Array<{ days: number; score: number; failing: string[] }> = [
+    { days: 21, score: 85, failing: [] },
+    { days: 14, score: 87, failing: [] },
+    { days: 7, score: 84, failing: ["farm_rewards"] },
+    { days: 0, score: 88, failing: [] },
+  ];
+  for (const s of raydiumArc) {
+    const asOf = now - s.days * DAY;
+    saveSnapshot(buildSnapshot("raydium.amm", "Raydium AMM", raydiumMeta(asOf, new Set(s.failing)), s.score, s.days, now));
+  }
+
+  // 6. orca.whirlpools — 4 snapshots, recent degradation 83→82→75→68.
+  const orcaArc: Array<{ days: number; score: number; failing: string[] }> = [
+    { days: 21, score: 83, failing: [] },
+    { days: 14, score: 82, failing: ["tick_data"] },
+    { days: 7, score: 75, failing: ["tick_data", "swap_quotes"] },
+    { days: 0, score: 68, failing: ["tick_data", "swap_quotes"] },
+  ];
+  for (const s of orcaArc) {
+    const asOf = now - s.days * DAY;
+    saveSnapshot(buildSnapshot("orca.whirlpools", "Orca Whirlpools", orcaMeta(asOf, new Set(s.failing)), s.score, s.days, now));
   }
 }
 
