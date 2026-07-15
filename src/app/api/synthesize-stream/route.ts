@@ -110,6 +110,34 @@ export async function POST(req: NextRequest) {
           if (signal.aborted) { controller.close(); return; }
 
           const insights = analyzeSchema(meta);
+
+          // Give the user a material signal before slower research and script work.
+          // The audio remains a richer explanation of this same evidence.
+          const primaryRisk = insights.criticalTables[0];
+          const initialFindings: string[] = [];
+          if (primaryRisk?.failingTests) {
+            const downstream = primaryRisk.downstreamCount > 0
+              ? ` affecting ${primaryRisk.downstreamCount} downstream table${primaryRisk.downstreamCount === 1 ? "" : "s"}`
+              : "";
+            initialFindings.push(`${primaryRisk.failingTests} failing test${primaryRisk.failingTests === 1 ? "" : "s"} on ${primaryRisk.table.name}${downstream}`);
+          } else if (insights.staleTables[0]) {
+            initialFindings.push(`${insights.staleTables[0].name} is stale by ${insights.staleTables[0].hoursAgo} hours`);
+          } else if (insights.untestedTables.length > 0) {
+            initialFindings.push(`${insights.untestedTables.length} table${insights.untestedTables.length === 1 ? " has" : "s have"} no quality tests`);
+          } else if (insights.piiTables.length > 0) {
+            const piiColumns = insights.piiTables.reduce((total, table) => total + table.columns.length, 0);
+            initialFindings.push(`${piiColumns} PII column${piiColumns === 1 ? "" : "s"} need governance review`);
+          } else {
+            initialFindings.push(`Health score: ${insights.healthScore}/100`);
+          }
+          initialFindings.push(`${meta.tables.length} tables scanned · ${insights.totalTests} quality tests reviewed`);
+          send(controller, {
+            type: "initial_signal",
+            healthScore: insights.healthScore,
+            healthLabel: insights.healthLabel,
+            findings: initialFindings,
+          });
+
           const evidenceContext = buildEvidenceContext(config);
           const researchTrail = await enrichResearchTrail(
             buildResearchTrail(meta, insights, normalizedResearchQuestion),

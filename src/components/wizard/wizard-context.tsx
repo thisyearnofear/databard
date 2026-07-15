@@ -9,6 +9,13 @@ export type WizardStep = "landing" | "connect" | "pick-schema" | "generating" | 
 
 export type OMMode = "sandbox" | "custom";
 
+export interface LiveBriefingSignal {
+  healthScore: number;
+  healthLabel: "healthy" | "at-risk" | "critical";
+  primaryFinding: string;
+  supportingFindings: string[];
+}
+
 export interface WizardState {
   // Core flow
   step: WizardStep;
@@ -53,6 +60,7 @@ export interface WizardState {
   genTotal: number;
   genStartedAt: number;
   genFindings: string[];
+  liveSignal: LiveBriefingSignal | null;
   status: string;
   
   // Episode
@@ -107,6 +115,7 @@ type WizardAction =
   | { type: "SET_GEN_STARTED_AT"; time: number }
   | { type: "ADD_GEN_FINDING"; finding: string }
   | { type: "SET_GEN_FINDINGS"; findings: string[] }
+  | { type: "SET_LIVE_SIGNAL"; signal: LiveBriefingSignal | null }
   | { type: "SET_STATUS"; status: string }
   | { type: "SET_EPISODE"; episode: Episode | null }
   | { type: "SET_GROVE_CID"; cid: string | null }
@@ -161,6 +170,7 @@ ORDER BY g.merged_at DESC`,
   genTotal: 0,
   genStartedAt: 0,
   genFindings: [],
+  liveSignal: null,
   status: "",
   episode: null,
   groveCid: null,
@@ -217,6 +227,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case "SET_GEN_STARTED_AT": return { ...state, genStartedAt: action.time };
     case "ADD_GEN_FINDING": return { ...state, genFindings: [...state.genFindings, action.finding] };
     case "SET_GEN_FINDINGS": return { ...state, genFindings: action.findings };
+    case "SET_LIVE_SIGNAL": return { ...state, liveSignal: action.signal };
     case "SET_STATUS": return { ...state, status: action.status };
     case "SET_EPISODE": return { ...state, episode: action.episode };
     case "SET_GROVE_CID": return { ...state, groveCid: action.cid };
@@ -241,6 +252,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       genTotal: 0,
       genStartedAt: 0,
       genFindings: [],
+      liveSignal: null,
     };
     case "RESET": return {
       ...initialState,

@@ -103,6 +103,23 @@ The product now presents this split as workspaces, not as separate products. Bot
 - **Onchain:** Core feature, not afterthought
 - **Entry point:** `/?workspace=protocols` or `/protocol?workspace=protocols` opens the Protocols workspace. Legacy `?persona=onchain` links still map to this mode for compatibility.
 
+### Presentation Discipline
+
+The briefing engine is one product. Its presentation must earn trust with each
+audience without splitting the underlying experience.
+
+| Shared core | Teams | Protocols |
+|---|---|---|
+| Decision flow | Health, change, impact, recommended next step | The same, plus evidence and verification |
+| Live analysis | "Initial assessment" and "What needs attention" | "Live protocol briefing" and "Protocol signal" |
+| Audio | Optional executive explanation | Optional briefing with an attestable record |
+| Trust surface | Read-only access, data handling clarity, source provenance | Attestation, wallet, and public verification |
+
+**Rule:** Teams gets confidence and clarity. Protocols gets confidence,
+clarity, and proof. Do not introduce wallet, attestation, or crypto language
+to Teams. Do not make Protocols navigate a different analytical model. The
+distinction is disclosure and trust context, not a separate product.
+
 ### Field-sales allocation (discovery hypothesis)
 - **Who:** Field-sales leaders with fragmented account, activity, and commercial data; initial hypothesis: publishers selling to schools.
 - **Pain:** "I do not know whether my best salespeople are assigned to the best opportunities, or where scarce field time will create the most revenue."

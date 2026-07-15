@@ -100,6 +100,7 @@ export function useGeneration() {
       dispatch({ type: "SET_GEN_TOTAL", total: 0 });
       dispatch({ type: "SET_GEN_STARTED_AT", time: 0 });
       dispatch({ type: "SET_GEN_FINDINGS", findings: [] });
+      dispatch({ type: "SET_LIVE_SIGNAL", signal: null });
       dispatch({ type: "SET_STATUS", status: "Checking your data\u2026" });
 
       try {
@@ -198,7 +199,21 @@ export function useGeneration() {
               continue;
             }
 
-            if (data.type === "metadata") {
+            if (data.type === "initial_signal") {
+              dispatch({ type: "SET_GEN_STEP", step: 1 });
+              dispatch({ type: "SET_GEN_FINDINGS", findings: data.findings ?? [] });
+              const [primaryFinding = "Health signal ready", ...supportingFindings] = data.findings ?? [];
+              dispatch({
+                type: "SET_LIVE_SIGNAL",
+                signal: {
+                  healthScore: data.healthScore,
+                  healthLabel: data.healthLabel,
+                  primaryFinding,
+                  supportingFindings,
+                },
+              });
+              dispatch({ type: "SET_STATUS", status: "First finding ready — preparing your briefing…" });
+            } else if (data.type === "metadata") {
               dispatch({ type: "SET_GEN_STEP", step: 1 });
               metadata = {
                 schemaFqn: data.schemaFqn,
@@ -215,21 +230,6 @@ export function useGeneration() {
                 researchTrail: data.researchTrail,
                 researchSessionId: data.researchSessionId,
               };
-              const findings: string[] = [];
-              if (data.tableCount)
-                findings.push(`\ud83d\udcca Found ${data.tableCount} tables`);
-              if (data.testsFailed > 0)
-                findings.push(
-                  `\u26a0\ufe0f ${data.testsFailed} failing test${data.testsFailed > 1 ? "s" : ""} detected`
-                );
-              if (data.testsTotal === 0)
-                findings.push("\ud83d\udd0d No quality tests configured");
-              if (data.schemaMeta?.lineage?.length > 0)
-                findings.push(
-                  `\ud83d\udd17 Analyzing lineage for ${data.schemaMeta.lineage.length} edges`
-                );
-              if (findings.length > 0)
-                dispatch({ type: "SET_GEN_FINDINGS", findings });
             } else if (data.type === "schema_rejected") {
               dispatch({ type: "SET_STATUS", status: `\u274c ${data.message}` });
               backToSchema();

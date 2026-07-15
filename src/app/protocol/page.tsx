@@ -11,6 +11,7 @@ import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/work
 import { briefingSourceName, healthTrend } from "@/lib/briefing-health";
 import { DashboardHeader } from "@/components/briefing/DashboardHeader";
 import { PriorityBriefingCard } from "@/components/briefing/PriorityBriefingCard";
+import { DecisionBriefing } from "@/components/briefing/DecisionBriefing";
 import { DashboardSummary } from "@/components/briefing/DashboardSummary";
 import { ChangeNarratives } from "@/components/briefing/ChangeNarratives";
 import { SourceHealthList } from "@/components/briefing/SourceHealthList";
@@ -247,6 +248,12 @@ function ProtocolDashboardInner() {
             </Link>
           </div>
         )}
+
+        {!loading && cards.length > 0 && <DecisionBriefing
+          cards={cards}
+          isProtocols={isProtocols}
+          onListen={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
+        />}
 
         {/* Summary counters — dithered sparks over mono labels */}
         {!loading && cards.length > 0 && <DashboardSummary cards={cards} avgHealth={avgHealth} totalFailing={totalFailing} totalMints={totalMints} isProtocols={isProtocols} />}

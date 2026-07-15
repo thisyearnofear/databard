@@ -26,7 +26,9 @@ function patchHistoryEvents() {
     const original = window.history[method];
     window.history[method] = function patchedHistoryMethod(...args) {
       const result = original.apply(this, args);
-      window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT));
+      // Next may call history from an insertion effect. Defer subscribers until
+      // that commit phase completes so the shell does not schedule a nested update.
+      queueMicrotask(() => window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT)));
       return result;
     };
   }
