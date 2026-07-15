@@ -8,6 +8,7 @@ import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
 import { StatTile } from "@/components/viz";
 import { LeadCapture } from "@/components/LeadCapture";
+import { CountUp } from "@/components/CountUp";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
 
@@ -112,7 +113,7 @@ export function LandingStep() {
   return (
     <>
       {/* Hero — analysis-first */}
-      <section className="flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl">
+      <section className="enter-up flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl">
         {/* Tagline */}
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
           {state.persona === "enterprise" ? (
@@ -139,7 +140,7 @@ export function LandingStep() {
           <button
             data-testid="connect-button"
             onClick={() => { track("landing_cta_click", { cta: "connect", persona: state.persona }); track("connect_start", { persona: state.persona }); showConnect(); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 font-medium cursor-pointer transition ease-out hover:scale-[1.02]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 font-medium cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97]"
           >
             <span>{state.persona === "enterprise" ? "Connect your data" : "Query your data"}</span>
             <span>→</span>
@@ -147,7 +148,7 @@ export function LandingStep() {
           <button
             data-testid="demo-button"
             onClick={handleDemo}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)] hover:text-[var(--accent)] px-6 py-3 text-sm font-medium cursor-pointer transition-colors duration-200 active:scale-[0.97]"
           >
             <span>▶</span>
             <span>Try the demo</span>
@@ -182,22 +183,28 @@ export function LandingStep() {
       </section>
 
       {/* The problem — quantified pain, not vague claims */}
-      <section className="w-full max-w-2xl pb-10">
+      <section className="enter-up enter-delay-1 w-full max-w-2xl pb-10">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-[var(--danger)] mb-1">61%</div>
+          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-3xl font-bold text-[var(--danger)] mb-1">
+              <CountUp value={61} suffix="%" />
+            </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug">
               of dashboards are never opened in 6 months
             </p>
           </div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-[var(--danger)] mb-1">2.3%</div>
+          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-3xl font-bold text-[var(--danger)] mb-1">
+              <CountUp value={2.3} decimals={1} suffix="%" />
+            </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug">
               of dashboards are actually used for decisions
             </p>
           </div>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-[var(--danger)] mb-1">12%</div>
+          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+            <div className="text-3xl font-bold text-[var(--danger)] mb-1">
+              <CountUp value={12} suffix="%" />
+            </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug">
               open rate on the average data quality report
             </p>
@@ -253,11 +260,11 @@ export function LandingStep() {
       </section>
 
       {/* Why DataBard — three pillars */}
-      <section className="w-full max-w-2xl pb-12">
+      <section className="enter-up enter-delay-2 w-full max-w-2xl pb-12">
         <h2 className="text-lg font-semibold text-center mb-4">Why DataBard</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Pillar 1: Health scoring */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-2xl mb-2">📊</div>
             <h3 className="text-sm font-semibold mb-1">Health scoring</h3>
             <p className="text-xs text-[var(--text-muted)]">
@@ -267,7 +274,7 @@ export function LandingStep() {
             </p>
           </div>
           {/* Pillar 2: Alerts that find you */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-2xl mb-2">🔔</div>
             <h3 className="text-sm font-semibold mb-1">Alerts that find you</h3>
             <p className="text-xs text-[var(--text-muted)]">
@@ -276,7 +283,7 @@ export function LandingStep() {
             <Link href="/alerts" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
           </div>
           {/* Pillar 3: Verifiable by design */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
+          <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-center">
             <div className="text-2xl mb-2">⛓️</div>
             <h3 className="text-sm font-semibold mb-1">Verifiable by design</h3>
             <p className="text-xs text-[var(--text-muted)]">
@@ -297,7 +304,7 @@ export function LandingStep() {
       </section>
 
       {/* Coral showcase — cross-source SQL */}
-      <section className="w-full max-w-2xl pb-12">
+      <section className="enter-up enter-delay-3 w-full max-w-2xl pb-12">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xl">🪸</span>
@@ -380,7 +387,7 @@ export function LandingStep() {
       </section>
 
       {/* Email capture — the "talk to us" moment */}
-      <section className="w-full max-w-2xl pb-8">
+      <section className="enter-up enter-delay-4 w-full max-w-2xl pb-8">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-center">
           <h2 className="text-base font-semibold mb-1">Want a verified data health report?</h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">
@@ -395,7 +402,7 @@ export function LandingStep() {
       </section>
 
       {/* Footer */}
-      <footer className="w-full max-w-2xl border-t border-[var(--border)] pt-6 pb-8 mt-auto">
+      <footer className="enter-up enter-delay-5 w-full max-w-2xl border-t border-[var(--border)] pt-6 pb-8 mt-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-muted)]">
           <div className="flex items-center gap-2">
             <span className="font-medium text-[var(--text)]">DataBard</span>

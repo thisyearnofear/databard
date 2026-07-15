@@ -91,7 +91,13 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Typography polish — balance headings, pretty body text (no orphans) */
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
 
 /* Clearance for the fixed mobile bottom tab bar (SiteNav) so page content
    and floating CTAs never sit underneath it. Matches Tailwind's `sm` cutoff. */
@@ -178,4 +184,54 @@ button:focus {
 
 button:active {
   transform: scale(0.98);
+}
+
+/* ── Landing page polish ─────────────────────────────────────────────── */
+
+/* Staggered entrance — fade up from 8px (never scale(0), never from nothing) */
+@keyframes enter-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.enter-up {
+  animation: enter-up 0.5s var(--ease-out) both;
+}
+
+/* Stagger delays — 80ms per step, max 5 steps */
+.enter-delay-1 { animation-delay: 80ms; }
+.enter-delay-2 { animation-delay: 160ms; }
+.enter-delay-3 { animation-delay: 240ms; }
+.enter-delay-4 { animation-delay: 320ms; }
+.enter-delay-5 { animation-delay: 400ms; }
+
+/* Count-up for stat numbers — uses CSS counter + animation */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up {
+  animation: count-up 0.6s var(--ease-out) both;
+}
+
+/* Hover depth for cards — layered shadow + subtle lift, no border change */
+.hover-depth {
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.hover-depth:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* Respect reduced motion — disable all entrance + hover animations */
+@media (prefers-reduced-motion: reduce) {
+  .enter-up, .enter-delay-1, .enter-delay-2, .enter-delay-3,
+  .enter-delay-4, .enter-delay-5, .count-up, .hover-depth {
+    animation: none !important;
+    transition: none !important;
+  }
 }
