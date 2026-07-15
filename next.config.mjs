@@ -21,6 +21,7 @@ const nextConfig = {
     "/": [
       "./contracts/**/*",
       "./video/**/*",
+      "./videos/**/*",
       "./docs/**/*",
       "./blog/**/*",
       "./tests/**/*",

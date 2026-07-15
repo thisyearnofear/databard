@@ -61,13 +61,15 @@ if (existsSync(contractsDir)) {
   process.exit(1);
 }
 
-const videoDir = join(STANDALONE_DIR, 'video');
-if (existsSync(videoDir)) {
-  const videoSize = dirSize(videoDir);
-  console.error(`\n❌ FAIL: video/ directory (${mb(videoSize)}) found in standalone output.`);
-  console.error(`   Video files should never be in the server bundle.`);
-  console.error(`   Check outputFileTracingExcludes in next.config.mjs.`);
-  process.exit(1);
+for (const dir of ['video', 'videos']) {
+  const videoDir = join(STANDALONE_DIR, dir);
+  if (existsSync(videoDir)) {
+    const videoSize = dirSize(videoDir);
+    console.error(`\n❌ FAIL: ${dir}/ directory (${mb(videoSize)}) found in standalone output.`);
+    console.error(`   Video files should never be in the server bundle.`);
+    console.error(`   Check outputFileTracingExcludes in next.config.mjs.`);
+    process.exit(1);
+  }
 }
 
 console.log(`  ✓ No bloat signatures detected\n`);

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { homeHref, isNavItemActive, WORKSPACES, workspaceFromRoute, workspaceHref } from "@/lib/product/workspaces";
@@ -17,7 +18,7 @@ const WalletButton = dynamic(
  * different navigation and utilities for Teams versus Protocols, while both
  * presentations still lead to the same briefing engine.
  */
-export function HeaderBar() {
+function HeaderBarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const workspace = workspaceFromRoute(pathname, searchParams.toString());
@@ -71,5 +72,13 @@ export function HeaderBar() {
         </div>
       </div>
     </header>
+  );
+}
+
+export function HeaderBar() {
+  return (
+    <Suspense fallback={null}>
+      <HeaderBarInner />
+    </Suspense>
   );
 }
