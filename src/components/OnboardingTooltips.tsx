@@ -210,7 +210,7 @@ export function OnboardingTooltip({
         <div className="p-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-[var(--text)]">{step.title}</h3>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-xs text-[var(--text-muted)]">
               {currentStep + 1} / {steps.length}
             </span>
           </div>

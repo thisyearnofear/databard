@@ -282,7 +282,7 @@ export default async function ResearchSessionsPage({ searchParams }: { searchPar
                       </Link>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <span className="text-[10px] px-2 py-1 rounded-full bg-[var(--border)] text-[var(--text-muted)]">
+                      <span className="text-xs px-2 py-1 rounded-full bg-[var(--border)] text-[var(--text-muted)]">
                         {session.branches.length} branch{session.branches.length === 1 ? "" : "es"}
                       </span>
                       <CopyLinkChip href={sessionHref} />

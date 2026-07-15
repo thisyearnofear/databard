@@ -86,7 +86,7 @@ export function SolanaWalletConnect({ onAddressChange, onSolDomainChange }: Sola
         </span>
       </div>
       {solDomain && (
-        <p className="text-[10px] text-[var(--text-muted)]">🌐 SNS identity verified</p>
+        <p className="text-xs text-[var(--text-muted)]">🌐 SNS identity verified</p>
       )}
       <button
         onClick={disconnect}

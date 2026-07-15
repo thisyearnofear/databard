@@ -256,7 +256,7 @@ function VerifyPageInner() {
             </p>
             <p className="text-xs text-[var(--text-muted)] mb-3">{result.note}</p>
             {result.rawMemo && (
-              <pre className="text-[11px] font-mono bg-[var(--bg)] border border-[var(--border)] rounded-xl p-3 overflow-x-auto whitespace-pre-wrap break-all text-[var(--text-muted)]">
+              <pre className="text-xs font-mono bg-[var(--bg)] border border-[var(--border)] rounded-xl p-3 overflow-x-auto whitespace-pre-wrap break-all text-[var(--text-muted)]">
                 {result.rawMemo}
               </pre>
             )}
@@ -332,7 +332,7 @@ function VerifyPageInner() {
 
             {/* Hash comparison + explorer */}
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover-depth">
-              <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-3">
+              <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3">
                 On-chain record · {attestation.network}
               </div>
               <div className="flex flex-col gap-2">
@@ -346,7 +346,7 @@ function VerifyPageInner() {
                   }
                 />
                 {!attestation.episodeAvailable && (
-                  <p className="text-[11px] text-[var(--text-muted)]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Recomputation requires the shared report, which is no longer cached.
                   </p>
                 )}
@@ -389,7 +389,7 @@ function VerifyPageInner() {
           <h2 className="text-sm font-semibold mb-4">How verification works</h2>
           <ol className="flex flex-col gap-3 text-xs text-[var(--text-muted)]">
             <li className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-bold shrink-0 text-[10px]">
+              <span className="w-5 h-5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-bold shrink-0 text-xs">
                 1
               </span>
               <span>
@@ -398,7 +398,7 @@ function VerifyPageInner() {
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-bold shrink-0 text-[10px]">
+              <span className="w-5 h-5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-bold shrink-0 text-xs">
                 2
               </span>
               <span>
@@ -407,7 +407,7 @@ function VerifyPageInner() {
               </span>
             </li>
             <li className="flex gap-3">
-              <span className="w-5 h-5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-bold shrink-0 text-[10px]">
+              <span className="w-5 h-5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center font-bold shrink-0 text-xs">
                 3
               </span>
               <span>

@@ -220,7 +220,7 @@ export function LandingStep() {
             </p>
           </div>
         </div>
-        <p className="text-center text-[10px] text-[var(--text-muted)] mt-4">
+        <p className="text-center text-xs text-[var(--text-muted)] mt-4">
           Sources: dashboard audit (1,847 dashboards, Medium 2024) · founder confession (5 hrs/week, 12% open rate)
         </p>
       </section>
@@ -290,7 +290,7 @@ export function LandingStep() {
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               Get Slack or webhook alerts when health drops. Weekly digest podcasts keep your team informed without a dashboard tab open.
             </p>
-            <Link href="/alerts" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
+            <Link href="/alerts" className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
           </div>
           {/* Pillar 3: Verifiable by design */}
           <div className="text-center">
@@ -303,11 +303,11 @@ export function LandingStep() {
             </p>
             {state.persona === "web3" ? (
               <div className="flex items-center justify-center gap-3 mt-1.5">
-                <Link href="/onchain" className="text-[10px] text-[var(--accent)] hover:underline inline-block">See the showcase →</Link>
-                <Link href="/market" className="text-[10px] text-[var(--accent)] hover:underline inline-block">Watch escrow settle →</Link>
+                <Link href="/onchain" className="text-xs text-[var(--accent)] hover:underline inline-block">See the showcase →</Link>
+                <Link href="/market" className="text-xs text-[var(--accent)] hover:underline inline-block">Watch escrow settle →</Link>
               </div>
             ) : (
-              <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
+              <Link href="/verify" className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
             )}
           </div>
         </div>
@@ -333,11 +333,11 @@ export function LandingStep() {
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
             {["GitHub", "Slack", "Jira", "Linear", "Postgres", "Stripe", "Notion", "CSV files"].map((src) => (
-              <span key={src} className="text-[10px] bg-[var(--bg)] border border-[var(--border)] rounded-full px-2.5 py-1 text-[var(--text-muted)]">
+              <span key={src} className="text-xs bg-[var(--bg)] border border-[var(--border)] rounded-full px-2.5 py-1 text-[var(--text-muted)]">
                 {src}
               </span>
             ))}
-            <span className="text-[10px] text-[var(--accent)] font-medium">+ 40 more</span>
+            <span className="text-xs text-[var(--accent)] font-medium">+ 40 more</span>
           </div>
         </div>
       </section>

@@ -207,7 +207,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         </button>
 
         {/* Trust signals */}
-        <div className="flex items-center justify-center gap-3 text-[10px] text-[var(--text-muted)]">
+        <div className="flex items-center justify-center gap-3 text-xs text-[var(--text-muted)]">
           <span className="flex items-center gap-1">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -236,7 +236,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
           Pay with Palm USD
         </span>
       </button>
-      <p className="text-[10px] text-[var(--text-muted)] text-center">
+      <p className="text-xs text-[var(--text-muted)] text-center">
         Connect a Solana wallet to pay 29 PUSD · non-freezable stablecoin
       </p>
     </div>

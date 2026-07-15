@@ -135,7 +135,7 @@ export default function BriefingPage() {
               placeholder="ghp_... or leave empty to use Coral's config"
               className="w-full bg-[var(--briefing-surface-2)] border border-[var(--briefing-gold)]/20 rounded-lg px-4 py-3 text-[var(--briefing-text)] text-sm placeholder:text-[var(--briefing-dim)] focus:outline-none focus:border-[var(--briefing-gold)]/50"
             />
-            <p className="text-[10px] text-[var(--briefing-dim)] mt-1">
+            <p className="text-xs text-[var(--briefing-dim)] mt-1">
               Token stays on your machine — sent only to Coral (runs locally).
               Read-only access is enough.
             </p>

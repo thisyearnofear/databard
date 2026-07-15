@@ -210,7 +210,7 @@ function SharedEpisodeInner() {
             See the dashboard
           </a>
         </div>
-        <p className="text-[10px] text-[var(--text-muted)] pt-1">
+        <p className="text-xs text-[var(--text-muted)] pt-1">
           Free to try · No signup for demo · Connect any data source in 30 seconds
         </p>
       </div>

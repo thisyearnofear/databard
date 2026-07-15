@@ -106,7 +106,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-[var(--text)]">{preset.label}</span>
-                <span className="text-[10px] text-[var(--text-muted)]">{preset.description}</span>
+                <span className="text-xs text-[var(--text-muted)]">{preset.description}</span>
               </div>
             </button>
           ))}
@@ -122,7 +122,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
           {querySources.length > 0 && (
             <div className="flex items-center gap-1.5">
               {querySources.map((s) => (
-                <span key={s} className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium">{s}</span>
+                <span key={s} className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium">{s}</span>
               ))}
             </div>
           )}
@@ -155,7 +155,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
           />
         </div>
         {!validation.valid && query.trim() && validation.hint && (
-          <p className="text-[10px] text-yellow-500 flex items-center gap-1 mt-1.5">
+          <p className="text-xs text-yellow-500 flex items-center gap-1 mt-1.5">
             <span>⚠️</span>
             <span>{validation.hint}</span>
           </p>
@@ -165,11 +165,11 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
       {/* Source badges + preview */}
       {detectedSources.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Sources:</span>
+          <span className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Sources:</span>
           {detectedSources.map((s) => (
             <span
               key={s}
-              className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium"
+              className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium"
             >
               {s}
             </span>
@@ -216,7 +216,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
             <p className="text-red-400 font-medium">{parsed.message}</p>
             {parsed.hint && <p className="text-red-400/70 mt-1">{parsed.hint}</p>}
             {parsed.action && (
-              <code className="block mt-1.5 bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 text-[10px] text-[var(--text-muted)] select-all">
+              <code className="block mt-1.5 bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 text-xs text-[var(--text-muted)] select-all">
                 {parsed.action}
               </code>
             )}
@@ -229,7 +229,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
           <div className="flex items-center justify-between bg-[var(--surface)] px-4 py-2 border-b border-[var(--border)]">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-[var(--text)]">Results</span>
-              <span className="text-[10px] text-[var(--text-muted)]">
+              <span className="text-xs text-[var(--text-muted)]">
                 {previewData.rowCount} row{previewData.rowCount !== 1 ? "s" : ""} · {previewData.columns.length} columns
               </span>
             </div>
@@ -245,7 +245,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
           {previewData.rowCount === 0 && previewData.columns.length === 0 ? (
             <div className="px-4 py-6 text-center">
               <p className="text-sm text-[var(--text-muted)] mb-2">No results for this query</p>
-              <p className="text-[10px] text-[var(--text-muted)] opacity-70">
+              <p className="text-xs text-[var(--text-muted)] opacity-70">
                 Try changing the <code className="bg-[var(--bg)] px-1 rounded">owner</code> and <code className="bg-[var(--bg)] px-1 rounded">repo</code> to your own,
                 or pick a different template above.
               </p>
@@ -257,7 +257,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
                 {previewData.columns.map((col) => (
                   <span
                     key={col.name}
-                    className="text-[11px] px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)]"
+                    className="text-xs px-2 py-1 rounded bg-[var(--surface)] border border-[var(--border)]"
                   >
                     <span className="font-medium text-[var(--text)]">{col.name}</span>
                     <span className="text-[var(--text-muted)] ml-1">{col.dataType}</span>

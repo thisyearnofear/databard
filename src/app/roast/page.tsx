@@ -46,7 +46,7 @@ export default function RoastPage() {
             }`}
           >
             <p className="text-sm italic">"{item.quote}"</p>
-            <p className="text-[10px] text-[var(--text-muted)] mt-1">— Morgan, the quality auditor</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">— Morgan, the quality auditor</p>
           </div>
         ))}
       </div>
@@ -88,7 +88,7 @@ export default function RoastPage() {
             <span>Morgan's unfiltered assessment (she doesn't hold back)</span>
           </li>
         </ul>
-        <p className="text-[10px] text-[var(--text-muted)] pt-2 border-t border-[var(--border)]">
+        <p className="text-xs text-[var(--text-muted)] pt-2 border-t border-[var(--border)]">
           Works with OpenMetadata, dbt, The Graph, Dune, or any source via Coral SQL. No data leaves your machine.
         </p>
       </div>

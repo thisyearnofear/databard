@@ -40,17 +40,17 @@ export function TeamHistoryTab({ schemaName }: { schemaName: string }) {
           <div key={m.txSignature} className="bg-[var(--bg)] rounded-lg p-3 border border-[var(--border)] flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-mono text-[var(--text-muted)] truncate">{m.walletAddress.slice(0, 8)}…{m.walletAddress.slice(-4)}</span>
+                <span className="text-xs font-mono text-[var(--text-muted)] truncate">{m.walletAddress.slice(0, 8)}…{m.walletAddress.slice(-4)}</span>
                 {m.teamId && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)]">{m.teamId}</span>}
               </div>
-              <div className="text-[10px] text-[var(--text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
+              <div className="text-xs text-[var(--text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
             </div>
             <span className="font-bold text-[13px]" style={{ color }}>{health}%</span>
             <a
               href={`https://explorer.solana.com/tx/${m.txSignature}${net}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-[var(--accent)] hover:underline shrink-0"
+              className="text-xs text-[var(--accent)] hover:underline shrink-0"
             >
               ↗ tx
             </a>

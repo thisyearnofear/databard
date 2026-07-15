@@ -36,7 +36,7 @@ export function ActivityFeed() {
         <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Live activity
         </h3>
-        <div className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+        <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
           <div className="w-2 h-2 bg-[var(--success)] rounded-full animate-pulse" />
           <span>on devnet</span>
         </div>
@@ -70,7 +70,7 @@ function ActivityRow({ deal }: { deal: Deal }) {
         <span className="font-mono text-[var(--text-muted)]">{priceSol} SOL</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[var(--text-muted)]">
+        <span className="text-xs text-[var(--text-muted)]">
           {stateLabel(deal.state)} · {timeAgo(deal.updatedAt)}
         </span>
         {deal.explorer.release && (
@@ -78,7 +78,7 @@ function ActivityRow({ deal }: { deal: Deal }) {
             href={deal.explorer.release}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-[var(--accent)] hover:underline"
+            className="text-xs text-[var(--accent)] hover:underline"
           >
             explorer ↗
           </a>

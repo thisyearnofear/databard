@@ -167,7 +167,7 @@ export default async function LoopPage() {
                     </span>
                     <StatusPill status={it.status} />
                   </div>
-                  <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                  <div className="text-xs text-[var(--text-muted)] font-mono">
                     {it.timestamp}
                   </div>
                   {it.reasoning && (
@@ -180,7 +180,7 @@ export default async function LoopPage() {
                       href={`https://github.com/thisyearnofear/databard/commit/${it.commit}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-[var(--accent)] hover:underline font-mono"
+                      className="text-xs text-[var(--accent)] hover:underline font-mono"
                     >
                       {it.commit} ↗
                     </a>
@@ -207,7 +207,7 @@ export default async function LoopPage() {
                   {c.sha}
                 </a>
                 <div className="text-[var(--text)]/80">{c.subject}</div>
-                <div className="text-[10px] text-[var(--text-muted)]">
+                <div className="text-xs text-[var(--text-muted)]">
                   {new Date(c.date).toLocaleString()}
                 </div>
               </li>

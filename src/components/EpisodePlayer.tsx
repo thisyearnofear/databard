@@ -623,7 +623,7 @@ export function EpisodePlayer({
             {currentAudioUrl && (
               <button
                 onClick={handleDownload}
-                className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer"
+                className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-2.5 cursor-pointer"
                 title="Download MP3"
                 aria-label="Download episode as MP3"
               >
@@ -632,7 +632,7 @@ export function EpisodePlayer({
             )}
             <button
               onClick={handleClip}
-              className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-1.5 cursor-pointer font-medium transition-colors"
+              className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-2.5 cursor-pointer font-medium transition-colors"
               title="Share the most critical moment — perfect for Slack and social"
             >
               {clipCopied ? "✓ Copied!" : "🔥 Share moment"}
@@ -640,7 +640,7 @@ export function EpisodePlayer({
             <button
               onClick={handleShare}
               disabled={sharing}
-              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50"
+              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-2.5 cursor-pointer disabled:opacity-50"
               title="Share episode"
             >
               {sharing ? "…" : shareUrl ? "✓ Share" : "Share"}
@@ -649,7 +649,7 @@ export function EpisodePlayer({
               <button
                 onClick={() => { track("mint_click", { schema: currentEpisode.schemaName }); onMint(); }}
                 disabled={minting}
-                className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50 flex items-center gap-1 font-medium"
+                className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-lg px-2.5 py-2.5 cursor-pointer disabled:opacity-50 flex items-center gap-1 font-medium"
                 title={schemaMintCount > 0
                   ? `This schema has been minted ${schemaMintCount}× on Solana — mint your snapshot`
                   : "Mint this health report on Solana"}
@@ -658,7 +658,7 @@ export function EpisodePlayer({
                   <>
                     <span>⛓️ Mint</span>
                     {schemaMintCount > 0 && (
-                      <span className="bg-[var(--accent)]/20 rounded-full px-1.5 py-0.5 text-[10px] leading-none ml-0.5">
+                      <span className="bg-[var(--accent)]/20 rounded-full px-1.5 py-0.5 text-xs leading-none ml-0.5">
                         {schemaMintCount}×
                       </span>
                     )}
@@ -670,7 +670,7 @@ export function EpisodePlayer({
               <button
                 onClick={handleDownloadReport}
                 disabled={reportLoading}
-                className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-1.5 cursor-pointer disabled:opacity-50"
+                className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-2.5 cursor-pointer disabled:opacity-50"
                 title="Download 3-slide visual health report as PDF"
               >
                 {reportLoading ? "…" : "📊 Report"}
@@ -701,7 +701,7 @@ export function EpisodePlayer({
         </div>
 
         {/* Mobile bottom action bar - always visible */}
-        <div data-testid="mobile-action-bar" className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--surface)] border-t border-[var(--border)] px-4 py-3 z-20">
+        <div data-testid="mobile-action-bar" className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--surface)] border-t border-[var(--border)] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-20">
           <div className="flex items-center justify-around gap-2">
             <button
               onClick={togglePlay}
@@ -709,7 +709,7 @@ export function EpisodePlayer({
               className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
             >
               <span className="text-xl">{playing ? "⏸" : "▶"}</span>
-              <span className="text-[10px]">{playing ? "Pause" : "Play"}</span>
+              <span className="text-xs">{playing ? "Pause" : "Play"}</span>
             </button>
             <button
               onClick={handleShare}
@@ -717,7 +717,7 @@ export function EpisodePlayer({
               className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
             >
               <span className="text-xl">🔗</span>
-              <span className="text-[10px]">Share</span>
+              <span className="text-xs">Share</span>
             </button>
             {onMint && (
               <button
@@ -726,7 +726,7 @@ export function EpisodePlayer({
                 className="flex flex-col items-center gap-1 text-[var(--accent)] disabled:opacity-50"
               >
                 <span className="text-xl">⛓️</span>
-                <span className="text-[10px]">Mint</span>
+                <span className="text-xs">Mint</span>
               </button>
             )}
             <button
@@ -735,7 +735,7 @@ export function EpisodePlayer({
               className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
             >
               <span className="text-xl">↓</span>
-              <span className="text-[10px]">Save</span>
+              <span className="text-xs">Save</span>
             </button>
           </div>
         </div>
@@ -769,7 +769,7 @@ export function EpisodePlayer({
               />
               <button
                 onClick={cycleSpeed}
-                className="text-[10px] font-mono bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded px-1.5 py-0.5 cursor-pointer shrink-0 tabular-nums"
+                className="text-xs font-mono bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded px-1.5 py-0.5 cursor-pointer shrink-0 tabular-nums"
                 title="Playback speed"
               >
                 {speed}×
@@ -779,7 +779,7 @@ export function EpisodePlayer({
               </span>
             </div>
 
-            <p className="text-[10px] text-[var(--text-muted)] mt-2 text-center hidden sm:block">
+            <p className="text-xs text-[var(--text-muted)] mt-2 text-center hidden sm:block">
               Space to play/pause · ← → to seek 10s · Click a segment to jump
             </p>
           </>
@@ -833,7 +833,7 @@ export function EpisodePlayer({
             >
               {tab.label}
               {tab.count && (
-                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
                   activeTab === tab.id ? "bg-[var(--accent)] text-[var(--bg)]" : "bg-[var(--border)] text-[var(--text-muted)]"
                 }`}>
                   {tab.count}
@@ -861,7 +861,7 @@ export function EpisodePlayer({
                     {currentEpisode.researchSessionId ? `Session ${currentEpisode.researchSessionId.slice(0, 8)}` : "Session not created"}
                   </p>
                 </div>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">
                   {researchSessionLoading ? "…" : researchSession ? `${researchSession.branches.length} branches` : "No history"}
                 </span>
               </div>
@@ -872,7 +872,7 @@ export function EpisodePlayer({
                     <div key={branch.id} className="rounded-md border border-[var(--border)] p-2.5 text-xs bg-[var(--surface)]">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-medium text-[var(--text)]">{branch.question}</span>
-                        <span className="text-[10px] text-[var(--text-muted)]">{new Date(branch.createdAt).toLocaleDateString()}</span>
+                        <span className="text-xs text-[var(--text-muted)]">{new Date(branch.createdAt).toLocaleDateString()}</span>
                       </div>
                       <p className="text-[var(--text-muted)] leading-relaxed">{branch.researchTrail.summary}</p>
                     </div>
@@ -894,7 +894,7 @@ export function EpisodePlayer({
                   disabled={!currentEpisode.researchSessionId || branching}
                 />
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] text-[var(--text-muted)]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     {!currentEpisode.researchSessionId ? "Follow-up branching appears on fresh episodes with a saved research session." : "Branch the current research session without leaving the player."}
                   </p>
                   <button
@@ -905,7 +905,7 @@ export function EpisodePlayer({
                     {branching ? "Asking…" : "Ask follow-up"}
                   </button>
                 </div>
-                {branchError && <p className="text-[10px] text-[var(--danger)]">{branchError}</p>}
+                {branchError && <p className="text-xs text-[var(--danger)]">{branchError}</p>}
               </div>
             </div>
 
@@ -916,7 +916,7 @@ export function EpisodePlayer({
                   <div key={step.id} className="rounded-lg border border-[var(--border)] p-3 bg-[var(--bg)]">
                     <div className="flex items-center justify-between gap-3 mb-1">
                       <span className="font-medium text-sm">{step.title}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{step.evidenceIds.length} evidence</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{step.evidenceIds.length} evidence</span>
                     </div>
                     <p className="text-xs text-[var(--text-muted)] leading-relaxed">{step.intent}</p>
                   </div>
@@ -930,17 +930,17 @@ export function EpisodePlayer({
                 {researchTrail.evidence.map((item) => (
                   <div key={item.id} className="rounded-lg border border-[var(--border)] p-3 bg-[var(--bg)]">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{item.sourceType}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--accent)]/20 text-[var(--accent)]">{item.sourceType}</span>
                       <span className="text-sm font-medium">{item.label}</span>
                     </div>
                     <p className="text-xs text-[var(--text-muted)] leading-relaxed">{item.detail}</p>
-                    {item.table && <p className="text-[10px] text-[var(--text-muted)] mt-1">Table: {item.table}</p>}
+                    {item.table && <p className="text-xs text-[var(--text-muted)] mt-1">Table: {item.table}</p>}
                     {item.citations.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {item.citations.map((citation) => (
                           <span
                             key={`${item.id}:${citation.source}:${citation.reference}`}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)] inline-flex items-center gap-1"
+                            className="text-xs px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)] inline-flex items-center gap-1"
                             title={citation.detail}
                           >
                             <span>{citation.source}: {citation.reference}</span>
@@ -974,7 +974,7 @@ export function EpisodePlayer({
                         <p className="text-sm font-medium">{action.title}</p>
                         <p className="text-xs text-[var(--text-muted)]">{action.category}{action.table ? ` · ${action.table}` : ""}</p>
                       </div>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{action.priority}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{action.priority}</span>
                     </div>
                   ))}
                 </div>
@@ -1017,13 +1017,13 @@ export function EpisodePlayer({
             </div>
 
             {/* Coverage bars */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CoverageBar label="Test coverage" value={insights.testCoverage} />
               <CoverageBar label="Documentation" value={insights.docCoverage} color="var(--success)" />
             </div>
 
             {/* Key stats */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <MiniStat value={insights.failingTests} label="Failing" />
               <MiniStat value={insights.untestedTables.length} label="Untested" />
               <MiniStat value={insights.ownerlessTables.length} label="No owner" />
@@ -1104,19 +1104,19 @@ export function EpisodePlayer({
                           </div>
                           <p className="text-[var(--text-muted)] leading-relaxed">{item.description}</p>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.category}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.effort === "5min" ? "Quick win" : item.effort === "30min" ? "~30 min" : item.effort === "1hr" ? "~1 hour" : "Half day"}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.category}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--border)] text-[var(--text-muted)]">{item.effort === "5min" ? "Quick win" : item.effort === "30min" ? "~30 min" : item.effort === "1hr" ? "~1 hour" : "Half day"}</span>
                             {!checked && !inv?.result && (
                               <button
                                 onClick={() => handleInvestigate(item)}
                                 disabled={inv?.loading}
-                                className="text-[10px] px-2 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-auto"
+                                className="text-xs px-2 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-auto"
                               >
                                 {inv?.loading ? "Investigating…" : "Investigate →"}
                               </button>
                             )}
                             {inv?.provider && inv.result && (
-                              <span className="text-[10px] text-[var(--text-muted)] ml-auto">via {inv.provider}</span>
+                              <span className="text-xs text-[var(--text-muted)] ml-auto">via {inv.provider}</span>
                             )}
                           </div>
                         </div>
@@ -1125,13 +1125,13 @@ export function EpisodePlayer({
                       {inv?.result && (
                         <div className="mt-2 ml-6 p-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg animate-slide-up">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-medium text-[var(--accent)]">Investigation</span>
+                            <span className="text-xs font-medium text-[var(--accent)]">Investigation</span>
                             <button
                               onClick={() => setInvestigations((prev) => { const next = { ...prev }; delete next[item.id]; return next; })}
-                              className="text-[var(--text-muted)] hover:text-[var(--text)] text-[10px] cursor-pointer"
+                              className="text-[var(--text-muted)] hover:text-[var(--text)] text-xs cursor-pointer"
                             >✕</button>
                           </div>
-                          <div className="text-[11px] text-[var(--text-muted)] leading-relaxed"><MarkdownRenderer text={inv.result} /></div>
+                          <div className="text-xs text-[var(--text-muted)] leading-relaxed"><MarkdownRenderer text={inv.result} /></div>
                         </div>
                       )}
                     </div>
@@ -1172,7 +1172,7 @@ export function EpisodePlayer({
                         track("drilldown_open", { schema: currentEpisode.schemaName, topic: currentEpisode.script[i]?.topic ?? "" });
                       }
                     }}
-                    className={`flex gap-2 py-1.5 px-2 rounded text-sm w-full text-left cursor-pointer transition ${
+                    className={`flex gap-2 py-2.5 px-2 rounded text-sm w-full text-left cursor-pointer transition ${
                       i === activeIdx ? "bg-[var(--accent-glow)] scale-[1.01]" : "hover:bg-[var(--bg)]"
                     }`}
                   >
@@ -1206,7 +1206,7 @@ export function EpisodePlayer({
                     track("feedback_yes", { schema: currentEpisode.schemaName });
                     setFeedbackStage(isDemoEpisode ? "done" : "email");
                   }}
-                  className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer"
+                  className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-xs font-medium cursor-pointer"
                 >
                   Yes
                 </button>
@@ -1215,7 +1215,7 @@ export function EpisodePlayer({
                     track("feedback_no", { schema: currentEpisode.schemaName });
                     setFeedbackStage("done");
                   }}
-                  className="border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-1.5 text-xs cursor-pointer"
+                  className="border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-2.5 text-xs cursor-pointer"
                 >
                   Not really
                 </button>
@@ -1250,7 +1250,7 @@ export function EpisodePlayer({
                   placeholder="you@company.com"
                   className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs focus:border-[var(--accent)] outline-none"
                 />
-                <button type="submit" className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-1.5 text-xs font-medium cursor-pointer">
+                <button type="submit" className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-xs font-medium cursor-pointer">
                   Book it
                 </button>
               </form>

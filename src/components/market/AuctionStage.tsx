@@ -128,7 +128,7 @@ export function AuctionStage({
               filled={phase === "committing" || phase === "releasing" || phase === "settled"}
               size={7}
             />
-            <div className="text-[10px] text-[var(--text-muted)]">
+            <div className="text-xs text-[var(--text-muted)]">
               {deal.manifestHash
                 ? "on-chain — proves what was delivered"
                 : "seller committing…"}

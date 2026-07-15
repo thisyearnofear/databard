@@ -8,7 +8,7 @@ export function PriorityBadge({ priority }: { priority: ActionPriority }) {
     low: "bg-[var(--border)] text-[var(--text-muted)]",
   };
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${styles[priority]}`}>
+    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${styles[priority]}`}>
       {priority}
     </span>
   );

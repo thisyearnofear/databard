@@ -13,7 +13,7 @@ export function SourceFields() {
       {/* OpenMetadata */}
       {state.source === "openmetadata" && (
         <>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => dispatch({ type: "SET_OM_MODE", omMode: "sandbox" })}
@@ -146,7 +146,7 @@ export function SourceFields() {
             onChange={(e) => dispatch({ type: "SET_DUNE_QUERY_URL", url: e.target.value })}
             placeholder="Query URL or ID (e.g. dune.com/queries/123)"
           />
-          <p className="text-[10px] text-[var(--text-muted)] -mt-1">
+          <p className="text-xs text-[var(--text-muted)] -mt-1">
             {state.duneQueryUrl
               ? (state.duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/))
                   ? "✓ Valid query ID" : "⚠️ Paste a valid Dune query URL or ID")

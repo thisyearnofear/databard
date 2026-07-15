@@ -258,7 +258,7 @@ export function ConnectStep() {
             }}
             onChange={(e) => handleSmartPaste(e.target.value)}
           />
-          <p className="text-[10px] text-[var(--text-muted)] mt-1.5 opacity-70">
+          <p className="text-xs text-[var(--text-muted)] mt-1.5 opacity-70">
             We&apos;ll auto-detect the source — or pick one below
           </p>
         </div>
@@ -281,14 +281,14 @@ export function ConnectStep() {
               <span className="text-xl">🪸</span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-[var(--text)]">Cross-source SQL</p>
-                <p className="text-[11px] text-[var(--text-muted)]">Join Dune, GitHub, Slack, and 50+ sources in one query</p>
+                <p className="text-xs text-[var(--text-muted)]">Join Dune, GitHub, Slack, and 50+ sources in one query</p>
               </div>
               {state.source === "coral" && <span className="text-[var(--accent)] text-sm">✓</span>}
             </button>
 
             {state.source !== "coral" && (
               <>
-                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Or connect a specific source</p>
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Or connect a specific source</p>
                 <div className="flex flex-wrap gap-1.5">
                   {MAIN_SOURCES.map((ds) => (
                     <button
@@ -313,7 +313,7 @@ export function ConnectStep() {
               <button
                 type="button"
                 onClick={() => dispatch({ type: "SET_SOURCE", source: "dune" })}
-                className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
               >
                 ← Use a specific source instead
               </button>
@@ -337,14 +337,14 @@ export function ConnectStep() {
               <span className="text-xl">🔍</span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-[var(--text)]">OpenMetadata</p>
-                <p className="text-[11px] text-[var(--text-muted)]">Deep metadata — lineage, PII, quality tests, ownership. Sandbox available.</p>
+                <p className="text-xs text-[var(--text-muted)]">Deep metadata — lineage, PII, quality tests, ownership. Sandbox available.</p>
               </div>
               {state.source === "openmetadata" && <span className="text-[var(--accent)] text-sm">✓</span>}
             </button>
 
             {state.source !== "openmetadata" && (
               <>
-                <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Or try another source</p>
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Or try another source</p>
                 <div className="flex flex-wrap gap-1.5">
                   {MAIN_SOURCES.filter((ds) => ds.value !== "openmetadata").map((ds) => (
                     <button
@@ -382,7 +382,7 @@ export function ConnectStep() {
               <button
                 type="button"
                 onClick={() => dispatch({ type: "SET_SOURCE", source: "dbt-cloud" })}
-                className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
+                className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
               >
                 ← Use dbt, Dune, or Coral instead
               </button>

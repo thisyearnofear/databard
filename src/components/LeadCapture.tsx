@@ -80,7 +80,7 @@ export function LeadCapture({
         </button>
       </div>
       {status === "error" && (
-        <span className="text-[10px] text-[var(--danger)]">Please enter a valid email.</span>
+        <span className="text-xs text-[var(--danger)]">Please enter a valid email.</span>
       )}
     </form>
   );

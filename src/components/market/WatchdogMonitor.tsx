@@ -85,7 +85,7 @@ export function WatchdogMonitor({
             style={{ width: `${deltaPct}%` }}
           />
         </div>
-        <div className="mt-1 text-[10px] text-[var(--text-muted)]">
+        <div className="mt-1 text-xs text-[var(--text-muted)]">
           trigger at {thresholdPct.toFixed(0)}% — Watchdog posts a WANT when catalog drift exceeds the threshold
         </div>
       </div>

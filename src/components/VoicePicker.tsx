@@ -84,7 +84,7 @@ export function VoicePicker() {
             <div>
               <p className="text-sm font-semibold flex items-center gap-1.5">
                 <span className="text-[var(--accent)]">Alex</span>
-                <span className="text-[10px] text-[var(--text-muted)] font-normal">Data advocate</span>
+                <span className="text-xs text-[var(--text-muted)] font-normal">Data advocate</span>
               </p>
               {config.current.alex && (
                 <p className="text-xs text-[var(--text-muted)]">{config.current.alex.name} · {config.current.alex.description}</p>
@@ -124,7 +124,7 @@ export function VoicePicker() {
             <div>
               <p className="text-sm font-semibold flex items-center gap-1.5">
                 <span className="text-[var(--accent)]">Morgan</span>
-                <span className="text-[10px] text-[var(--text-muted)] font-normal">Quality auditor</span>
+                <span className="text-xs text-[var(--text-muted)] font-normal">Quality auditor</span>
               </p>
               {config.current.morgan && (
                 <p className="text-xs text-[var(--text-muted)]">{config.current.morgan.name} · {config.current.morgan.description}</p>
@@ -159,7 +159,7 @@ export function VoicePicker() {
         </div>
       </div>
 
-      <p className="text-[10px] text-[var(--text-muted)]">
+      <p className="text-xs text-[var(--text-muted)]">
         These voices are used for all DataBard episodes. Custom cloned voices require an ElevenLabs Creator subscription.
       </p>
     </div>

@@ -48,7 +48,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
         {sources.length > 0 && (
           <div className="flex items-center gap-1.5">
             {sources.map((s) => (
-              <span key={s} className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium">{s}</span>
+              <span key={s} className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full font-medium">{s}</span>
             ))}
           </div>
         )}
@@ -65,20 +65,20 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
         }`}
       />
       {!validation.valid && query.trim() && validation.hint && (
-        <p className="text-[10px] text-yellow-500 flex items-center gap-1 -mt-1">
+        <p className="text-xs text-yellow-500 flex items-center gap-1 -mt-1">
           <span>⚠️</span>
           <span>{validation.hint}</span>
         </p>
       )}
       <div className="flex items-center gap-2">
         <div className="flex flex-wrap gap-1.5 flex-1">
-          <span className="text-[10px] text-[var(--text-muted)] self-center mr-1">Templates:</span>
+          <span className="text-xs text-[var(--text-muted)] self-center mr-1">Templates:</span>
           {presets.map((preset) => (
             <button
               key={preset.label}
               type="button"
               onClick={() => { onQueryChange(preset.query); setPreviewResult(null); }}
-              className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+              className={`text-xs px-2.5 py-2.5 rounded-full border transition-colors cursor-pointer ${
                 query === preset.query
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
                   : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
@@ -92,7 +92,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
           type="button"
           onClick={handlePreview}
           disabled={!validation.valid || previewing}
-          className="text-[11px] px-3 py-1 rounded-full border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+          className="text-xs px-3 py-2.5 rounded-full border border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
         >
           {previewing && <span className="inline-block w-2.5 h-2.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
           {previewing ? "Testing…" : "▶ Test"}
@@ -101,7 +101,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
 
       {/* Preview result summary */}
       {previewResult && (
-        <div className="flex items-center gap-2 text-[10px] text-[var(--success)] bg-[var(--success)]/5 border border-[var(--success)]/10 rounded-lg px-3 py-1.5">
+        <div className="flex items-center gap-2 text-xs text-[var(--success)] bg-[var(--success)]/5 border border-[var(--success)]/10 rounded-lg px-3 py-1.5">
           <span>✓</span>
           <span>{previewResult.rowCount} rows · {previewResult.columns} columns</span>
           {previewResult.sources.length > 0 && (
@@ -110,7 +110,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
         </div>
       )}
       {previewError && (
-        <div className="text-[10px] text-red-400 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-1.5">
+        <div className="text-xs text-red-400 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-1.5">
           {previewError}
         </div>
       )}
@@ -222,11 +222,11 @@ export function SchemaPicker() {
                     const groupLeaf = group.split(".").slice(-1)[0] ?? group;
                     return [
                       <div key={`hdr-${group}`} className="flex items-center gap-2 px-3 py-1.5 mt-1 first:mt-0">
-                        <span className={`text-[11px] font-semibold uppercase tracking-wider ${hasRecommended ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${hasRecommended ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
                           {groupLeaf}
                         </span>
-                        <span className="text-[10px] text-[var(--text-muted)] tabular-nums">({items.length})</span>
-                        {hasRecommended && <span className="text-[10px] text-[var(--accent)]">⭐</span>}
+                        <span className="text-xs text-[var(--text-muted)] tabular-nums">({items.length})</span>
+                        {hasRecommended && <span className="text-xs text-[var(--accent)]">⭐</span>}
                         <div className="flex-1 h-px bg-[var(--border)]" />
                       </div>,
                       ...items.map((s) => {
@@ -248,7 +248,7 @@ export function SchemaPicker() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
-                                {isRecommended && !isSelected && <span className="text-[10px] bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full shrink-0">⭐</span>}
+                                {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full shrink-0">⭐</span>}
                               </div>
                               <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-[var(--bg)]/70" : "text-[var(--text-muted)]"}`}>{s}</p>
                             </div>
@@ -311,7 +311,7 @@ export function SchemaPicker() {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col gap-3" data-tour="research-question">
             <div className="flex items-center justify-between">
               <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your question</label>
-              <span className="text-[10px] text-[var(--accent)] opacity-75" title="A focused question helps the AI hosts investigate specific issues">💡</span>
+              <span className="text-xs text-[var(--accent)] opacity-75" title="A focused question helps the AI hosts investigate specific issues">💡</span>
             </div>
             <textarea
               autoFocus={isCoral}
@@ -338,7 +338,7 @@ export function SchemaPicker() {
                   key={preset}
                   type="button"
                   onClick={() => dispatch({ type: "SET_RESEARCH_QUESTION", question: preset })}
-                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                  className={`text-xs px-2.5 py-2.5 rounded-full border transition-colors cursor-pointer ${
                     state.researchQuestion === preset
                       ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text)]"
                       : "border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--text)] text-[var(--text-muted)]"
@@ -378,7 +378,7 @@ export function SchemaPicker() {
             {/* Format picker for non-Coral sources */}
             {!isCoral && (
               <div>
-                <label className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium block mb-1.5">Output format</label>
+                <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium block mb-1.5">Output format</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"

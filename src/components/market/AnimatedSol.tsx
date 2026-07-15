@@ -42,7 +42,7 @@ export function AnimatedSol({
       <span className="text-xs font-mono text-[var(--accent)]">
         {amountSol.toFixed(4)} SOL
       </span>
-      <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{label}</span>
+      <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">{label}</span>
     </div>
   );
 }

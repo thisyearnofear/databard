@@ -60,7 +60,7 @@ export function GraphView({
             href={parentDeal.explorer.release}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] text-[var(--accent)] hover:underline"
+            className="text-xs text-[var(--accent)] hover:underline"
           >
             parent release ↗
           </a>
@@ -71,7 +71,7 @@ export function GraphView({
       <div className="pl-6 relative">
         <div className="absolute left-3 top-0 bottom-0 w-px bg-[var(--border)]" />
         <div className="space-y-2">
-          <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+          <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
             Digest's sub-market — spent {subTotalSol} SOL buying inventory
           </div>
           {subDeals.length === 0 && (
@@ -101,7 +101,7 @@ export function GraphView({
                       href={sub.explorer.release}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-[var(--accent)] hover:underline"
+                      className="text-xs text-[var(--accent)] hover:underline"
                     >
                       release ↗
                     </a>

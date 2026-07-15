@@ -255,7 +255,7 @@ export function StatTile({ icon, value, label }: { icon: string; value: string |
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-3 flex-1 min-w-[140px] text-center">
       <div className="text-lg">{icon}</div>
       <div className="text-2xl font-extrabold mt-1">{value}</div>
-      <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider">{label}</div>
+      <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{label}</div>
     </div>
   );
 }
@@ -280,7 +280,7 @@ export function MiniStat({ value, label }: { value: string | number; label: stri
   return (
     <div className="bg-[var(--bg)] rounded-lg p-2 text-center">
       <div className="text-lg font-semibold tabular-nums">{value}</div>
-      <div className="text-[10px] text-[var(--text-muted)]">{label}</div>
+      <div className="text-xs text-[var(--text-muted)]">{label}</div>
     </div>
   );
 }

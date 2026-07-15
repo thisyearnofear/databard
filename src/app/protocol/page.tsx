@@ -99,10 +99,10 @@ function FleetHealthChart({ cards }: { cards: SourceCard[] }) {
       <DitherGradient from="purple" direction="down" cell={3} opacity={0.14} className="absolute inset-x-0 top-0 h-20" />
       <div className="relative flex items-baseline justify-between gap-3 mb-4 flex-wrap">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Fleet health</div>
+          <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Fleet health</div>
           <h2 className="text-sm font-semibold mt-0.5">Every source, last {rows.length} snapshots</h2>
         </div>
-        <span className="font-mono text-[10px] text-[var(--text-muted)]">scrub to compare · hover a legend entry to spotlight</span>
+        <span className="font-mono text-xs text-[var(--text-muted)]">scrub to compare · hover a legend entry to spotlight</span>
       </div>
       <div className="relative h-56 w-full pt-4">
         {/* Line variant, not area — four overlapping dither fills flood the plot */}
@@ -244,10 +244,10 @@ function ProtocolDashboardInner() {
 
       <div className="relative max-w-[900px] mx-auto">
         <div className="mb-8">
-          <Link href="/" className="font-mono text-[11px] text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
+          <Link href="/" className="font-mono text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
             ← DataBard
           </Link>
-          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--accent)] mt-4">
+          <div className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--accent)] mt-4">
             Data health · weekly signal
           </div>
           <h1 className="text-[28px] font-extrabold mt-1 mb-1">Analytics</h1>
@@ -329,7 +329,7 @@ function ProtocolDashboardInner() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="text-2xl font-extrabold tabular-nums">{cards.length}</div>
-              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Sources tracked</div>
+              <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mt-1">Sources tracked</div>
             </div>
             <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="flex items-end justify-between gap-2">
@@ -342,15 +342,15 @@ function ProtocolDashboardInner() {
                   />
                 </div>
               </div>
-              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Avg health</div>
+              <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mt-1">Avg health</div>
             </div>
             <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="text-2xl font-extrabold tabular-nums" style={totalFailing > 0 ? { color: "var(--danger)" } : undefined}>{totalFailing}</div>
-              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Failing tests</div>
+              <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mt-1">Failing tests</div>
             </div>
             <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="text-2xl font-extrabold tabular-nums">{totalMints}</div>
-              <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">⛓ On-chain records</div>
+              <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mt-1">⛓ On-chain records</div>
             </div>
           </div>
         )}
@@ -362,7 +362,7 @@ function ProtocolDashboardInner() {
         {!loading && trends.length > 0 && (
           <div className="mb-6">
             <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] shimmer-text">▚▚</span>
+              <span className="font-mono text-xs uppercase tracking-[0.2em] shimmer-text">▚▚</span>
               <span>What changed this week</span>
             </h2>
             <div className="flex flex-col gap-2">
@@ -386,7 +386,7 @@ function ProtocolDashboardInner() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium truncate">{t.schemaName}</span>
                         {t.healthScoreChange !== 0 && (
-                          <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          <span className={`font-mono text-xs font-bold px-1.5 py-0.5 rounded-full ${
                             isImprovement
                               ? "bg-[var(--success)]/10 text-[var(--success)]"
                               : "bg-[var(--danger)]/10 text-[var(--danger)]"
@@ -395,7 +395,7 @@ function ProtocolDashboardInner() {
                           </span>
                         )}
                         {!t.hasHistory && (
-                          <span className="font-mono text-[10px] text-[var(--text-muted)] bg-[var(--bg)] px-1.5 py-0.5 rounded-full">new</span>
+                          <span className="font-mono text-xs text-[var(--text-muted)] bg-[var(--bg)] px-1.5 py-0.5 rounded-full">new</span>
                         )}
                       </div>
                       <p className="text-xs text-[var(--text-muted)] leading-relaxed">{t.narrative}</p>
@@ -429,7 +429,7 @@ function ProtocolDashboardInner() {
                     <div className="flex items-center gap-2.5 mb-1 flex-wrap">
                       <DitherAvatar name={card.name} size={36} className="rounded-lg shrink-0" bloom="low" />
                       <h3 className="text-lg font-bold">{card.displayName}</h3>
-                      <span className="font-mono text-[10px] text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-2 py-0.5 uppercase tracking-wide">
+                      <span className="font-mono text-xs text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-2 py-0.5 uppercase tracking-wide">
                         {sourceLabel(card)}
                       </span>
                       {(() => {
@@ -439,7 +439,7 @@ function ProtocolDashboardInner() {
                         return (
                           <Link
                             href="/alerts"
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${
+                            className={`text-xs px-1.5 py-0.5 rounded-full font-medium transition-colors ${
                               firing
                                 ? "bg-[var(--danger)]/20 text-[var(--danger)] hover:bg-[var(--danger)]/30"
                                 : "bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20"
@@ -525,11 +525,11 @@ function ProtocolDashboardInner() {
                       Engine analysis · {new Date(card.insight.recordedAt).toLocaleDateString()}
                     </summary>
                     <div className="mt-3 space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <CoverageBar label="Test coverage" value={card.insight.testCoverage} />
                         <CoverageBar label="Documentation" value={card.insight.docCoverage} color="var(--success)" />
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <MiniStat value={card.insight.failingTests} label="Failing" />
                         <MiniStat value={card.insight.untestedCount} label="Untested" />
                         <MiniStat value={card.insight.ownerlessCount} label="No owner" />
@@ -543,14 +543,14 @@ function ProtocolDashboardInner() {
                 {/* Recent mint signatures */}
                 {card.recentMints.length > 0 && (
                   <div className="border-t border-[var(--border)] mt-4 pt-4">
-                    <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                    <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2">
                       Recent on-chain records
                     </div>
                     <div className="flex flex-col gap-1">
                       {card.recentMints.slice(0, 3).map((m) => (
                         <div
                           key={m.txSignature}
-                          className="flex items-center justify-between gap-2 text-[11px] px-2 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)]"
+                          className="flex items-center justify-between gap-2 text-xs px-2 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)]"
                         >
                           <a
                             href={

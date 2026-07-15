@@ -41,22 +41,22 @@ export function BadgePanel({ schemaName }: { schemaName: string }) {
               alt={`Health badge for ${schemaName}`}
               className="h-5"
             />
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-xs text-[var(--text-muted)]">
               Live — updates every 5 min
             </span>
           </div>
           {/* Markdown embed */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-1">
               Markdown (README, docs)
             </div>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-[11px] font-mono bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 truncate text-[var(--text-muted)]">
+              <code className="flex-1 text-xs font-mono bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 truncate text-[var(--text-muted)]">
                 {mdCode}
               </code>
               <button
                 onClick={() => copy(mdCode, "md")}
-                className="text-[10px] px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--accent)]/10 transition-colors shrink-0"
+                className="text-xs px-2 py-2.5 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--accent)]/10 transition-colors shrink-0"
               >
                 {copied === "md" ? "✓ Copied" : "Copy"}
               </button>
@@ -64,16 +64,16 @@ export function BadgePanel({ schemaName }: { schemaName: string }) {
           </div>
           {/* HTML embed */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-1">
               HTML (website, blog)
             </div>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-[11px] font-mono bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 truncate text-[var(--text-muted)]">
+              <code className="flex-1 text-xs font-mono bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 truncate text-[var(--text-muted)]">
                 {htmlCode}
               </code>
               <button
                 onClick={() => copy(htmlCode, "html")}
-                className="text-[10px] px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--accent)]/10 transition-colors shrink-0"
+                className="text-xs px-2 py-2.5 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--accent)]/10 transition-colors shrink-0"
               >
                 {copied === "html" ? "✓ Copied" : "Copy"}
               </button>

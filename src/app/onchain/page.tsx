@@ -65,12 +65,12 @@ function OnChainWallContent() {
           <div className="flex justify-center gap-6 pt-2">
             <div>
               <div className="text-2xl font-bold tabular-nums">{stats.total}</div>
-              <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Total Mints</div>
+              <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Total Mints</div>
             </div>
             {!schemaFilter && (
               <div>
                 <div className="text-2xl font-bold tabular-nums">{Object.keys(stats.bySchema).length}</div>
-                <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Active Schemas</div>
+                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Active Schemas</div>
               </div>
             )}
           </div>
@@ -86,7 +86,7 @@ function OnChainWallContent() {
               {schemaFilter ? "Recent Attestations" : "Recent Mints"}
             </h2>
             {schemaFilter && (
-              <Link href="/onchain" className="text-[10px] text-[var(--accent)] hover:underline">
+              <Link href="/onchain" className="text-xs text-[var(--accent)] hover:underline">
                 View all schemas
               </Link>
             )}
@@ -121,7 +121,7 @@ function OnChainWallContent() {
                         >
                           {record.schemaName}
                         </Link>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                           record.healthScore >= 90 ? "bg-[var(--success)]/10 text-[var(--success)]"
                           : record.healthScore >= 70 ? "bg-yellow-500/10 text-yellow-400"
                           : "bg-[var(--danger)]/10 text-[var(--danger)]"
@@ -129,13 +129,13 @@ function OnChainWallContent() {
                           {record.healthScore}% Healthy
                         </span>
                       </div>
-                      <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">
+                      <p className="text-xs text-[var(--text-muted)] font-mono truncate">
                         Author: {record.walletAddress}
                       </p>
                     </div>
                     <Link 
                       href={`/episode/${record.episodeId}`}
-                      className="shrink-0 bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-lg px-3 py-1.5 text-[10px] font-medium transition-colors"
+                      className="shrink-0 bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-lg px-3 py-2.5 text-xs font-medium transition-colors"
                     >
                       View Report
                     </Link>
@@ -145,11 +145,11 @@ function OnChainWallContent() {
                     <div className="flex gap-4">
                       <div>
                         <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">Network</div>
-                        <div className="text-[10px] font-medium">{record.network}</div>
+                        <div className="text-xs font-medium">{record.network}</div>
                       </div>
                       <div>
                         <div className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider mb-0.5">Attestation Hash</div>
-                        <div className="text-[10px] font-mono" title={record.reportHash}>
+                        <div className="text-xs font-mono" title={record.reportHash}>
                           {record.reportHash ? `${record.reportHash.slice(0, 8)}…` : "N/A"}
                         </div>
                       </div>
@@ -160,7 +160,7 @@ function OnChainWallContent() {
                         : `https://explorer.solana.com/tx/${record.txSignature}?cluster=${record.network}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-[var(--accent)] hover:underline flex items-center gap-1"
+                      className="text-xs text-[var(--accent)] hover:underline flex items-center gap-1"
                     >
                       <span>{new Date(record.createdAt).toLocaleDateString()}</span>
                       <span className="opacity-50">↗</span>
@@ -196,7 +196,7 @@ function OnChainWallContent() {
                         {name.split(".").pop()}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-0.5 rounded-full">
                       {count}×
                     </span>
                   </Link>
@@ -217,7 +217,7 @@ function OnChainWallContent() {
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
                     Anyone can verify a report by comparing the on-chain hash against the current report. Mismatch = tampering detected.
                   </p>
-                  <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1 inline-block">
+                  <Link href="/verify" className="text-xs text-[var(--accent)] hover:underline mt-1 inline-block">
                     Verify an attestation →
                   </Link>
                 </div>
@@ -229,7 +229,7 @@ function OnChainWallContent() {
                 </div>
               </div>
               <div className="pt-2 border-t border-[var(--accent)]/20">
-                <p className="text-[10px] text-[var(--text-muted)]">
+                <p className="text-xs text-[var(--text-muted)]">
                   Powered by Solana Memo Program · No smart contracts · No gas for verification
                 </p>
               </div>
@@ -283,7 +283,7 @@ export default function OnChainWall() {
         <OnChainWallContent />
       </Suspense>
 
-      <footer className="text-[10px] text-[var(--text-muted)] pt-8 pb-4 flex gap-3">
+      <footer className="text-xs text-[var(--text-muted)] pt-8 pb-4 flex gap-3">
         <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Leaderboard</Link>
         <span>·</span>
         <Link href="/protocol" className="hover:text-[var(--text)] transition-colors">📡 Protocol dashboard</Link>

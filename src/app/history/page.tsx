@@ -160,7 +160,7 @@ export default function HistoryPage() {
                   {r.episodeId && (
                     <Link
                       href={`/episode/${r.episodeId}`}
-                      className="text-xs px-3 py-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
+                      className="text-xs px-3 py-2.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
                     >
                       🎙️ View Episode
                     </Link>
@@ -170,7 +170,7 @@ export default function HistoryPage() {
                       href={r.groveMetadataUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs px-3 py-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
+                      className="text-xs px-3 py-2.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
                     >
                       🌿 Grove Metadata
                     </a>
@@ -180,7 +180,7 @@ export default function HistoryPage() {
                       href={r.groveAudioUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs px-3 py-1 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
+                      className="text-xs px-3 py-2.5 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold"
                     >
                       🎵 Grove Audio
                     </a>
@@ -189,7 +189,7 @@ export default function HistoryPage() {
                     href={explorerUrl(r.txSignature, r.network)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs px-3 py-1 rounded-md bg-[var(--bg)] text-[var(--text-muted)] no-underline"
+                    className="text-xs px-3 py-2.5 rounded-md bg-[var(--bg)] text-[var(--text-muted)] no-underline"
                   >
                     ◎ Solana Explorer
                   </a>
@@ -197,7 +197,7 @@ export default function HistoryPage() {
 
                 {/* Grove CID */}
                 {r.groveCid && (
-                  <div className="mt-2.5 text-[11px] text-[var(--text-muted)] font-mono break-all">
+                  <div className="mt-2.5 text-xs text-[var(--text-muted)] font-mono break-all">
                     IPFS: {r.groveCid}
                   </div>
                 )}

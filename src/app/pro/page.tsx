@@ -480,7 +480,7 @@ function ProSettingsInner() {
                 onChange={(e) => setCoralQuery(e.target.value)}
                 placeholder="SELECT * FROM github.issues JOIN slack.messages..."
               />
-              <p className="text-[10px] text-[var(--text-muted)]">Joins APIs, databases, and local files. No data leaves your machine.</p>
+              <p className="text-xs text-[var(--text-muted)]">Joins APIs, databases, and local files. No data leaves your machine.</p>
             </div>
           )}
 
@@ -564,7 +564,7 @@ function ProSettingsInner() {
               onChange={(e) => setEmailRecipients(e.target.value)}
               placeholder="team@company.com, lead@company.com"
             />
-            <p className="text-[10px] text-[var(--text-muted)]">Each Monday, recipients get an email with the health score and a link to the 2-minute briefing.</p>
+            <p className="text-xs text-[var(--text-muted)]">Each Monday, recipients get an email with the health score and a link to the 2-minute briefing.</p>
           </div>
 
           <div className="flex gap-2">

@@ -176,7 +176,7 @@ export function BriefingPlayer({
               </span>
             </div>
 
-            <p className="text-[10px] text-[var(--briefing-dim)] mt-3 text-center">
+            <p className="text-xs text-[var(--briefing-dim)] mt-3 text-center">
               Click any segment to jump · Space to play/pause
             </p>
           </>
@@ -208,7 +208,7 @@ export function BriefingPlayer({
               }`}
             >
               {tab.label}
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-[var(--briefing-surface-2)] text-[var(--briefing-dim)]">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-[var(--briefing-surface-2)] text-[var(--briefing-dim)]">
                 {tab.count}
               </span>
             </button>
@@ -243,7 +243,7 @@ export function BriefingPlayer({
                 </button>
                 {expandedSeg === i && seg.dataItems && seg.dataItems.length > 0 && (
                   <div className="ml-8 mt-1 mb-2 p-3 bg-[var(--briefing-surface-2)] rounded-lg border border-[var(--briefing-gold)]/10 animate-slide-up">
-                    <p className="text-[10px] text-[var(--briefing-dim)] mb-2">Related data:</p>
+                    <p className="text-xs text-[var(--briefing-dim)] mb-2">Related data:</p>
                     {seg.dataItems.map((item, j) => (
                       <div key={j} className="text-xs text-[var(--briefing-muted)] py-0.5">
                         {Object.entries(item)
@@ -284,7 +284,7 @@ export function BriefingPlayer({
                   <h3 className="text-sm font-medium text-[var(--briefing-gold)]">
                     {section.label}
                   </h3>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--briefing-surface-2)] text-[var(--briefing-dim)]">
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--briefing-surface-2)] text-[var(--briefing-dim)]">
                     {section.count} items
                   </span>
                 </div>
@@ -305,7 +305,7 @@ export function BriefingPlayer({
                                 {v.map((label: string) => (
                                   <span
                                     key={label}
-                                    className="inline-block px-1.5 py-0.5 rounded bg-[var(--briefing-gold)]/10 text-[var(--briefing-gold)] text-[10px] mr-1"
+                                    className="inline-block px-1.5 py-0.5 rounded bg-[var(--briefing-gold)]/10 text-[var(--briefing-gold)] text-xs mr-1"
                                   >
                                     {label}
                                   </span>
@@ -327,7 +327,7 @@ export function BriefingPlayer({
                             href={String(item.url)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[10px] text-[var(--briefing-teal)] hover:underline mt-1 inline-block"
+                            className="text-xs text-[var(--briefing-teal)] hover:underline mt-1 inline-block"
                           >
                             Open on GitHub ↗
                           </a>

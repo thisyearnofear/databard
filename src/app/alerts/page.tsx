@@ -105,7 +105,7 @@ export default function AlertsPage() {
                 />
               )}
               {availableSchemas.length === 0 && (
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   No schemas connected yet — <Link href="/" className="text-[var(--accent)] hover:underline">connect a source</Link> first, or enter a schema name manually.
                 </p>
               )}
@@ -124,7 +124,7 @@ export default function AlertsPage() {
                 onChange={(e) => setThreshold(Number(e.target.value))}
                 className="w-full accent-[var(--accent)]"
               />
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              <p className="text-xs text-[var(--text-muted)] mt-1">
                 Alert fires when health drops below {threshold}%
               </p>
             </div>
@@ -155,7 +155,7 @@ export default function AlertsPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
               />
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">
+              <p className="text-xs text-[var(--text-muted)] mt-1">
                 No wallet needed. Onchain attestation is optional — connect a wallet from the main app if you want alerts attested on-chain.
               </p>
             </div>
@@ -208,9 +208,9 @@ export default function AlertsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-sm font-medium truncate">{alert.schemaName}</span>
-                        {isFiring && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--danger)]/20 text-[var(--danger)] font-medium">🔴 Firing</span>}
+                        {isFiring && <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--danger)]/20 text-[var(--danger)] font-medium">🔴 Firing</span>}
                       </div>
-                      <div className="text-[10px] text-[var(--text-muted)]">
+                      <div className="text-xs text-[var(--text-muted)]">
                         Threshold: {alert.threshold}% · {alert.email ? `📧 ${alert.email}` : alert.walletAddress ? `⛓️ ${alert.walletAddress.slice(0, 8)}…` : "Anonymous"}
                       </div>
                     </div>

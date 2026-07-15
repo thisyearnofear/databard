@@ -68,7 +68,7 @@ export default function ReceiptsPage() {
           <a href="/loop" className="text-[var(--accent)] hover:underline">
             /loop →
           </a>
-          <span className="text-[10px] text-[var(--text-muted)] ml-auto">
+          <span className="text-xs text-[var(--text-muted)] ml-auto">
             last poll {new Date(now).toLocaleTimeString()}
           </span>
         </div>
@@ -120,7 +120,7 @@ function ReceiptCard({ deal }: { deal: Deal }) {
       </header>
 
       {deal.manifestHash && (
-        <div className="text-[10px] text-[var(--text-muted)] font-mono break-all">
+        <div className="text-xs text-[var(--text-muted)] font-mono break-all">
           manifest: {deal.manifestHash}
         </div>
       )}
@@ -131,7 +131,7 @@ function ReceiptCard({ deal }: { deal: Deal }) {
             href={deal.explorer.deposit}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2 py-1 rounded border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]"
+            className="px-2.5 py-2.5 rounded border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]"
           >
             deposit ↗
           </a>
@@ -141,7 +141,7 @@ function ReceiptCard({ deal }: { deal: Deal }) {
             href={deal.explorer.commit}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2 py-1 rounded border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]"
+            className="px-2.5 py-2.5 rounded border border-[var(--border)] bg-[var(--bg)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]"
           >
             commit ↗
           </a>
@@ -151,7 +151,7 @@ function ReceiptCard({ deal }: { deal: Deal }) {
             href={deal.explorer.release}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2 py-1 rounded border border-[var(--success)]/40 bg-[var(--success)]/5 hover:border-[var(--success)]/70 text-[var(--success)]"
+            className="px-2.5 py-2.5 rounded border border-[var(--success)]/40 bg-[var(--success)]/5 hover:border-[var(--success)]/70 text-[var(--success)]"
           >
             release ↗
           </a>
@@ -161,7 +161,7 @@ function ReceiptCard({ deal }: { deal: Deal }) {
             href={deal.explorer.mint}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2 py-1 rounded border border-purple-500/40 bg-purple-500/5 hover:border-purple-500/70 text-purple-400"
+            className="px-2.5 py-2.5 rounded border border-purple-500/40 bg-purple-500/5 hover:border-purple-500/70 text-purple-400"
           >
             mint ↗
           </a>
@@ -171,14 +171,14 @@ function ReceiptCard({ deal }: { deal: Deal }) {
             href={deal.explorer.refund}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2 py-1 rounded border border-yellow-500/40 bg-yellow-500/5 hover:border-yellow-500/70 text-yellow-400"
+            className="px-2.5 py-2.5 rounded border border-yellow-500/40 bg-yellow-500/5 hover:border-yellow-500/70 text-yellow-400"
           >
             refund ↗
           </a>
         )}
       </div>
 
-      <footer className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+      <footer className="flex items-center justify-between text-xs text-[var(--text-muted)]">
         <span>updated {new Date(deal.updatedAt).toLocaleString()}</span>
         <span className="font-mono">deal:{deal.wantId}</span>
       </footer>

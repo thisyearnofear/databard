@@ -95,7 +95,7 @@ export default function LeaderboardPage() {
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <span className="font-bold text-[15px]">{entry.schemaName}</span>
                       <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                           entry.tier === "verified"
                             ? "bg-[var(--accent)] text-[var(--bg)]"
                             : "bg-[var(--border)] text-[var(--text-muted)]"
@@ -104,7 +104,7 @@ export default function LeaderboardPage() {
                         {entry.tier === "verified" ? "⛓️ Verified" : "🔍 Scanned"}
                       </span>
                       {entry.schemaName === mostImproved && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--success)] text-[var(--bg)] font-semibold">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--success)] text-[var(--bg)] font-semibold">
                           ▲ Most improved
                         </span>
                       )}

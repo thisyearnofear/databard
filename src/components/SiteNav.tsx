@@ -17,14 +17,14 @@ function DesktopNav({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Site"
-      className="hidden sm:flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-8"
+      className="hidden sm:flex items-center gap-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] px-1.5 h-10"
     >
       {LINKS.map((l) => (
         <Link
           key={l.href}
           href={l.href}
           title={l.label}
-          className={`text-xs px-2 py-1 rounded transition-colors ${
+          className={`text-xs px-3 py-2 rounded transition-colors ${
             pathname === l.href
               ? "text-[var(--accent)] font-medium"
               : "text-[var(--text-muted)] hover:text-[var(--text)]"
@@ -66,7 +66,7 @@ function MobileTabBar({ pathname }: { pathname: string }) {
             >
               {t.icon}
             </span>
-            <span className={`text-[10px] leading-none ${active ? "text-[var(--accent)] font-medium" : "text-[var(--text-muted)]"}`}>
+            <span className={`text-xs leading-none ${active ? "text-[var(--accent)] font-medium" : "text-[var(--text-muted)]"}`}>
               {t.label}
             </span>
           </Link>

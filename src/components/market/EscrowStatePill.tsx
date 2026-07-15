@@ -32,7 +32,7 @@ export function EscrowStatePill({ deal }: { deal: DealRef | null }) {
                 />
                 <div
                   className={[
-                    "mt-1 text-[10px] uppercase tracking-wider text-center transition-colors",
+                    "mt-1 text-xs uppercase tracking-wider text-center transition-colors",
                     isCurrent ? "text-[var(--success)] font-semibold" : done ? "text-[var(--text)]" : "text-[var(--text-muted)]",
                   ].join(" ")}
                 >

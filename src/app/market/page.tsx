@@ -329,7 +329,7 @@ export default function MarketPage() {
             href="https://explorer.solana.com/address/ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK?cluster=devnet"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-mono text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/30 rounded-full px-2.5 py-1 hover:bg-[var(--success)]/20 transition-colors"
+            className="inline-flex items-center gap-1.5 mt-2 text-xs font-mono text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/30 rounded-full px-2.5 py-2.5 hover:bg-[var(--success)]/20 transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
             Live on devnet · ErwrNVN…sauYmfgdK ↗
@@ -339,7 +339,7 @@ export default function MarketPage() {
           <button
             onClick={() => setTrack("watchdog")}
             className={[
-              "px-3 py-1.5 rounded text-sm border",
+              "px-3 py-2.5 rounded text-sm border",
               track === "watchdog"
                 ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
                 : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
@@ -350,7 +350,7 @@ export default function MarketPage() {
           <button
             onClick={() => setTrack("graph")}
             className={[
-              "px-3 py-1.5 rounded text-sm border",
+              "px-3 py-2.5 rounded text-sm border",
               track === "graph"
                 ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
                 : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
@@ -361,7 +361,7 @@ export default function MarketPage() {
           <button
             onClick={() => setTrack("head-to-head")}
             className={[
-              "px-3 py-1.5 rounded text-sm border",
+              "px-3 py-2.5 rounded text-sm border",
               track === "head-to-head"
                 ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
                 : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",

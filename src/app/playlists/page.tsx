@@ -136,7 +136,7 @@ export default function PlaylistsPage() {
                           <span className="text-xs text-[var(--text-muted)] tabular-nums w-4">{i + 1}.</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm truncate">{item.schemaName}</p>
-                            <p className="text-[10px] text-[var(--text-muted)]">{item.schemaFqn}</p>
+                            <p className="text-xs text-[var(--text-muted)]">{item.schemaFqn}</p>
                           </div>
                           <div
                             className="w-2 h-2 rounded"
