@@ -28,7 +28,7 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8">
+    <main className="enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -79,7 +79,7 @@ export default function LeaderboardPage() {
               {entries.map((entry, i) => (
                 <div
                   key={entry.schemaName}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-4 flex items-center gap-4 flex-wrap"
+                  className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-4 flex items-center gap-4 flex-wrap"
                 >
                   {/* Rank */}
                   <div

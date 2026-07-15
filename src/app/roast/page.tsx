@@ -13,7 +13,7 @@ export default function RoastPage() {
   }, []);
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-2xl mx-auto">
+    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-2xl mx-auto enter-up">
       <div className="w-full">
         <Link href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Back to DataBard</Link>
       </div>
@@ -68,7 +68,7 @@ export default function RoastPage() {
       </div>
 
       {/* What you'll get */}
-      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
+      <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-3 hover-depth">
         <h2 className="text-sm font-semibold">What you'll get:</h2>
         <ul className="space-y-2 text-sm text-[var(--text-muted)]">
           <li className="flex items-start gap-2">

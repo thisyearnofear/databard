@@ -39,6 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body>
+        {/* Aurora — global ambient gradient mesh on every page */}
+        <div className="aurora" aria-hidden />
         <AppProviders>
           <ClientProviders>
             <ToastProvider>

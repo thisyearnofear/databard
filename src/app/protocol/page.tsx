@@ -95,7 +95,7 @@ function FleetHealthChart({ cards }: { cards: SourceCard[] }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6 overflow-hidden">
+    <div className="hover-depth relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 mb-6 overflow-hidden">
       <DitherGradient from="purple" direction="down" cell={3} opacity={0.14} className="absolute inset-x-0 top-0 h-20" />
       <div className="relative flex items-baseline justify-between gap-3 mb-4 flex-wrap">
         <div>
@@ -238,7 +238,7 @@ function ProtocolDashboardInner() {
   const totalMints = cards.reduce((s, c) => s + c.mintCount, 0);
 
   return (
-    <main className="relative min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8 overflow-hidden">
+    <main className="enter-up relative min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8 overflow-hidden">
       {/* Page-top dither wash — reads as a signal rising off the header */}
       <DitherGradient from="purple" direction="down" cell={4} opacity={0.16} className="absolute inset-x-0 top-0 h-44 pointer-events-none" />
 
@@ -316,7 +316,7 @@ function ProtocolDashboardInner() {
         )}
 
         {!loading && cards.length === 0 && (
-          <div className="bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
+          <div className="hover-depth bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
             <p className="text-[var(--text-muted)] mb-4 text-sm">No data sources analyzed yet.</p>
             <Link href="/" className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block">
               Generate your first health report
@@ -327,11 +327,11 @@ function ProtocolDashboardInner() {
         {/* Summary counters — dithered sparks over mono labels */}
         {!loading && cards.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="text-2xl font-extrabold tabular-nums">{cards.length}</div>
               <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Sources tracked</div>
             </div>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="flex items-end justify-between gap-2">
                 <div className="text-2xl font-extrabold tabular-nums" style={{ color: `var(--${avgHealth >= 80 ? "success" : avgHealth >= 50 ? "warning" : "danger"})` }}>{avgHealth}%</div>
                 <div className="w-16 h-7 mb-0.5">
@@ -344,11 +344,11 @@ function ProtocolDashboardInner() {
               </div>
               <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Avg health</div>
             </div>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="text-2xl font-extrabold tabular-nums" style={totalFailing > 0 ? { color: "var(--danger)" } : undefined}>{totalFailing}</div>
               <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">Failing tests</div>
             </div>
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+            <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
               <div className="text-2xl font-extrabold tabular-nums">{totalMints}</div>
               <div className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-1">⛓ On-chain records</div>
             </div>
@@ -362,7 +362,7 @@ function ProtocolDashboardInner() {
         {!loading && trends.length > 0 && (
           <div className="mb-6">
             <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent)]">▚▚</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] shimmer-text">▚▚</span>
               <span>What changed this week</span>
             </h2>
             <div className="flex flex-col gap-2">
@@ -422,7 +422,7 @@ function ProtocolDashboardInner() {
                 key={card.name}
                 onMouseEnter={() => setHoveredCard(card.name)}
                 onMouseLeave={() => setHoveredCard(null)}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors"
+                className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="min-w-0">

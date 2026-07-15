@@ -276,6 +276,13 @@ button:active {
   animation: aurora-drift 20s ease-in-out infinite;
 }
 
+/* Ensure all page content sits above the aurora */
+body > div:not(.aurora),
+body > .aurora + * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Shimmer text — animated gradient on the accent headline.
    background-clip: text with a moving gradient. The accent color
    shimmers between three shades. */

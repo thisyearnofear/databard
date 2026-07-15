@@ -113,9 +113,6 @@ export function LandingStep() {
   
   return (
     <>
-      {/* Aurora — slow-moving gradient mesh behind everything */}
-      <div className="aurora" aria-hidden />
-
       {/* Hero — analysis-first, with mouse-tracking spotlight */}
       <section
         className="spotlight-host enter-up relative flex flex-col items-center text-center pt-12 sm:pt-16 pb-8 max-w-2xl"

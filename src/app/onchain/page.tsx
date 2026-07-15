@@ -110,7 +110,7 @@ function OnChainWallContent() {
               {stats?.recent.map((record) => (
                 <div 
                   key={record.txSignature} 
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors group animate-slide-up"
+                  className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors group animate-slide-up"
                 >
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div className="min-w-0">
@@ -273,7 +273,7 @@ function OnChainWallContent() {
 
 export default function OnChainWall() {
   return (
-    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8">
+    <main className="enter-up min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8">
       <Suspense fallback={
         <div className="flex flex-col items-center gap-4 py-20">
           <div className="w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />

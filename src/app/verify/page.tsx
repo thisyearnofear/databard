@@ -135,7 +135,7 @@ function VerifyPageInner() {
   const attestation = result?.ok && result.memo ? result : null;
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8 relative">
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-8 relative enter-up">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 overflow-hidden" aria-hidden>
         <DitherGradient from="purple" direction="down" opacity={0.14} className="h-full w-full" />
       </div>
@@ -183,7 +183,7 @@ function VerifyPageInner() {
 
         {/* Loading */}
         {loading && (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 text-center text-[var(--text-muted)] text-sm animate-pulse">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-8 text-center text-[var(--text-muted)] text-sm animate-pulse hover-depth">
             Fetching transaction from Solana and recomputing the report hash…
           </div>
         )}
@@ -198,7 +198,7 @@ function VerifyPageInner() {
 
         {/* Marketplace settlement receipt — a different DataBard memo kind */}
         {!loading && result?.ok && result.verifiable === false && result.settlement && (
-          <div className="bg-[var(--surface)] border border-[var(--accent)]/40 rounded-2xl p-6">
+          <div className="bg-[var(--surface)] border border-[var(--accent)]/40 rounded-2xl p-6 hover-depth">
             <div className="flex items-center gap-3 mb-1">
               <span className="w-9 h-9 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center text-lg shrink-0">
                 ⛓
@@ -250,7 +250,7 @@ function VerifyPageInner() {
 
         {/* Memo exists but is not a DataBard attestation */}
         {!loading && result?.ok && result.verifiable === false && !result.settlement && (
-          <div className="bg-[var(--surface)] border border-[var(--warning)]/40 rounded-2xl p-6">
+          <div className="bg-[var(--surface)] border border-[var(--warning)]/40 rounded-2xl p-6 hover-depth">
             <p className="text-sm font-semibold text-[var(--warning)] mb-1">
               Not a DataBard attestation
             </p>
@@ -311,7 +311,7 @@ function VerifyPageInner() {
             )}
 
             {attestation.match === null && (
-              <div className="bg-[var(--surface)] border border-[var(--warning)]/40 rounded-2xl p-6 animate-slide-up">
+              <div className="bg-[var(--surface)] border border-[var(--warning)]/40 rounded-2xl p-6 animate-slide-up hover-depth">
                 <div className="flex items-center gap-3 mb-1">
                   <span className="w-9 h-9 rounded-full bg-[var(--warning)]/15 text-[var(--warning)] flex items-center justify-center text-lg shrink-0">
                     ⏳
@@ -331,7 +331,7 @@ function VerifyPageInner() {
             )}
 
             {/* Hash comparison + explorer */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover-depth">
               <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-3">
                 On-chain record · {attestation.network}
               </div>
@@ -385,7 +385,7 @@ function VerifyPageInner() {
         )}
 
         {/* How it works */}
-        <div className="mt-10 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+        <div className="mt-10 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 hover-depth">
           <h2 className="text-sm font-semibold mb-4">How verification works</h2>
           <ol className="flex flex-col gap-3 text-xs text-[var(--text-muted)]">
             <li className="flex gap-3">

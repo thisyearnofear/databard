@@ -318,7 +318,7 @@ export default function MarketPage() {
   }
 
   return (
-    <main className="max-w-6xl mx-auto p-6">
+    <main className="enter-up max-w-6xl mx-auto p-6">
       <header className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-semibold">Marketplace of AI Hosts</h1>
@@ -425,7 +425,7 @@ export default function MarketPage() {
                 Two Watchdogs · same schema · different budgets · same instant
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
+                <div className="hover-depth rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">Frugal Fund</span>
                     <span className="text-xs font-mono text-[var(--text-muted)]">budget 0.080 SOL</span>
@@ -438,7 +438,7 @@ export default function MarketPage() {
                     audio={null}
                   />
                 </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
+                <div className="hover-depth rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">Premium Fund</span>
                     <span className="text-xs font-mono text-[var(--text-muted)]">budget 0.150 SOL</span>

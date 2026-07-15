@@ -116,7 +116,7 @@ function SharedEpisodeInner() {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
         <p className="text-[var(--danger)]">{error || "Episode not found or expired"}</p>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center hover-depth">
           <p className="text-sm mb-3">Shared episodes expire after 24 hours. Want to hear what DataBard sounds like?</p>
           <a href="/" className="inline-block bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium">
             ▶ Listen to a demo
@@ -129,9 +129,9 @@ function SharedEpisodeInner() {
   const walletConnected = !!publicKey;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6">
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6 enter-up">
       {/* Expiry banner */}
-      <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1.5">
+      <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1.5 hover-depth">
         ⏳ {expiresIn != null
           ? expiresIn > 3600
             ? `Expires in ${Math.round(expiresIn / 3600)}h`
@@ -183,7 +183,7 @@ function SharedEpisodeInner() {
 
       {/* Wallet connect nudge for non-connected visitors */}
       {!walletConnected && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-w-md text-center">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-w-md text-center hover-depth">
           <p className="text-xs text-[var(--text-muted)] mb-2">
             🔗 Connect your Solana wallet to verify on-chain ownership and see team history
           </p>
