@@ -9,5 +9,8 @@ const nextConfig = {
     workerThreads: false,
     cpus: 1,
   },
+  outputFileTracingIncludes: {
+    "/": ["./node_modules/nodemailer/**/*"],
+  },
 };
 export default nextConfig;

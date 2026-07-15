@@ -5,7 +5,7 @@
  * if they drift.
  */
 export const ESCROW_IDL = {
-  address: "DCq82m9wgkgQGVqokKmYsvjv9Ym8Lyz8usKvcSwUS3kY",
+  address: "ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK",
   metadata: {
     name: "escrow",
     version: "0.1.0",

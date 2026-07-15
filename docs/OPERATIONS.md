@@ -16,12 +16,15 @@ runs (deploys build locally), not on the server.
 | `ELEVENLABS_API_KEY` | TTS synthesis |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL` | Script generation |
 | `CRON_SECRET` | Auth for the schedule runner (added with the runner) |
+| `STRIPE_SECRET_KEY` / `STRIPE_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` | Pro checkout + subscription lifecycle (test mode) |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Digest email delivery via Resend HTTP API |
+| `SMTP_URL` | Fallback (port 465 currently blocked on host) |
 
 ### Missing — features dormant until set
 | Key(s) | Feature blocked | Where to get it |
 |---|---|---|
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Pro checkout returns 503; "Start Pro trial" errors | Stripe dashboard (test mode is fine pre-launch). Also register webhook: `https://databard.persidian.com/api/webhook` → events: `checkout.session.completed`, `customer.subscription.deleted` |
-| `SMTP_URL` **or** `EMAIL_WEBHOOK_URL` (+ optional `EMAIL_FROM`) | Digest emails are logged and dropped | Any SMTP relay (Resend/Postmark/SES) |
+| `RESEND_API_KEY` (+ optional `EMAIL_FROM`, `SMTP_URL`) | Digest emails are logged and dropped | Resend HTTP API is preferred (port 465 SMTP is blocked on this host). Set `RESEND_API_KEY` and `EMAIL_FROM`; `SMTP_URL` is a fallback if port 465 is ever unblocked. |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Page-view/referrer analytics dark (custom events still work via `/api/events`) | Create the site in Plausible; set in **local** build env; redeploy |
 | `PALM_USD_RECIPIENT` | PalmUSD checkout pays the null address | Your treasury wallet pubkey |
 | `DATABARD_API_SECRET` | ⚠️ Do **not** set in prod as-is: it guards `/api/synthesize` and `/api/regenerate`, which the browser calls — setting it breaks the UI generation flow. Locking those routes down properly needs a session-based guard first. | — |

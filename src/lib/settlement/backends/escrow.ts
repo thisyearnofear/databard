@@ -49,7 +49,7 @@ const KEYPAIR_TTL = 86400 * 365 * 10;
 /** Program ID — from env, falling back to the upstream devnet deployment (must redeploy for our fork). */
 function programId(): PublicKey {
   return new PublicKey(
-    process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID ?? "DCq82m9wgkgQGVqokKmYsvjv9Ym8Lyz8usKvcSwUS3kY",
+    process.env.NEXT_PUBLIC_ESCROW_PROGRAM_ID ?? "ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK",
   );
 }
 

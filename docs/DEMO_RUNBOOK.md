@@ -39,9 +39,19 @@ economically trivial. Enterprise is the TAM-expansion story, not something to hi
    - Click **⛓ Verify** on the record → `/verify` recomputes the SHA-256 of the report
      and matches it against the on-chain memo. Show the green check, then the Explorer
      link.
-5. If asked about roadmap: the Anchor escrow program in `contracts/escrow/` — insights
-   settle through on-chain escrow (deal hash committed on-chain, release on match).
-   Mention it; don't live-demo it (program not yet redeployed under our ID).
+5. **Escrow settlement moment** (live on devnet):
+   - The Anchor escrow program is deployed at
+     `ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK` (devnet).
+   - Full lifecycle verified: initialize (buyer deposits SOL) → commit_delivery
+     (seller commits SHA-256 of deliverable) → release (buyer releases funds,
+     escrow closes).
+   - Explorer link for the verified transaction:
+     `https://explorer.solana.com/address/ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK?cluster=devnet`
+   - Line: *"This isn't just a hash in a memo — insights settle through on-chain
+     escrow. The seller commits what they delivered, the buyer releases funds
+     only after that commitment, and the whole thing is one RPC call to verify."*
+   - If asked to show it live: walk through the `/market` page which exercises
+     the escrow flow, or show the Explorer link above.
 
 ## Preflight checklist (do this the morning of)
 

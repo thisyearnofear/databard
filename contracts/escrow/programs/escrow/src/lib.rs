@@ -20,7 +20,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program::{transfer, Transfer};
 
 // Program id of the devnet deployment. Run `anchor keys sync` after your first build to repoint.
-declare_id!("DCq82m9wgkgQGVqokKmYsvjv9Ym8Lyz8usKvcSwUS3kY");
+declare_id!("ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK");
 
 #[program]
 pub mod escrow {
