@@ -55,7 +55,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/app/roast/page.tsx` — "Roast my data" landing variant
 
 ## Docs
-- `docs/STRATEGY.md` — north star, competitive positioning, product principles
+- `docs/STRATEGY.md` — north star, competitive positioning, product principles, operating principles (PG framework)
 - `docs/GTM.md` — viral hooks, engagement loops, user interview plan, manual outreach target list
 - `docs/UNIT_ECONOMICS.md` — cost-per-briefing, pricing, margin analysis
 - `docs/PLAN.md` — development roadmap (Phases 1-7)

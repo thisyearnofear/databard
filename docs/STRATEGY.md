@@ -88,9 +88,102 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 - **Not a podcast tool.** The audio is a format, not the product. The product is the analysis + synthesis.
 - **Not a web3 product (for enterprise).** Onchain is a persona-specific feature, not a core pillar.
 
+## Operating Principles (Paul Graham framework)
+
+These are the rules we operate by. They're not features — they're disciplines.
+
+### 1. Watch users use it
+
+> *"Watch a user use your product. You'll learn more in 10 minutes than in a month of analytics."*
+
+Analytics events tell us funnel steps. They don't tell us where someone got
+confused, what they tried to click, or why they left. The highest-value thing
+we can do before any demo or launch is sit with one person who has never seen
+DataBard and watch them use it without explanation. Don't help. Just watch.
+
+**Practice:** Before every demo, watch one person use the product cold. Record
+the screen if possible. Note where they hesitate, what they misread, what they
+try first. Those observations are the roadmap — not feature requests, not
+competitor analysis, not accelerator feedback.
+
+### 2. Get the first 10 users manually
+
+> *"Get users manually. Go to them. Don't wait for them to come to you."*
+
+The email capture forms on shared episodes, verify, leaderboard, and landing
+page are passive — they wait for the user. The first 10 users come from us
+going to them. We have 5 Solana protocol teams named in
+[`docs/GTM.md`](GTM.md) with data already seeded and briefings ready to send.
+
+**Practice:** Contact one protocol team per day. Send them a briefing on their
+actual data. Ask: "Did this surface something you didn't already know?" The
+answer to that question is the only validation that matters right now.
+
+### 3. Be a user yourself
+
+> *"The best startup ideas come from living in the future and noticing what's missing."*
+
+DataBard exists because we felt the pain of data reports not being consumed.
+That's the right origin. But the second-order question is: what's missing from
+DataBard that we personally feel? Not what a roadmap says, not what a reviewer
+wants — what do WE wish it did?
+
+**Practice:** Use DataBard on our own data, every week, for a month. If we
+won't use it, no one will. The frustration we feel is the roadmap. If we
+haven't used it on our own data for a month, we're building a product for other
+people without being a user ourselves — that's the biggest risk.
+
+### 4. Know your number (default alive)
+
+> *"The default state of a startup is dead. You have to fight to be alive."*
+
+We know our cost-per-briefing ($0.80) and our price ($49/month per team). At
+10 paying teams we're default alive. At 1 paying team we're losing $36/month
+on fixed costs. That's fine — the first 10 users are manual, not paid. The
+first paying team validates the price. The 10th paying team validates the
+business. Full breakdown in [`docs/UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md).
+
+**Practice:** Update the unit economics doc when costs change (new TTS model,
+new LLM provider, new infrastructure). The number should always be current.
+If we don't know whether we're default alive, we're default dead.
+
+### 5. The briefing is the steak; everything else is sizzle
+
+> *"The initial product should be almost embarrassingly simple."*
+
+DataBard has a wizard, a dashboard, a leaderboard, a market page, an escrow
+program, attestation, verify, alerts, a roast page, clip sharing, badges, OG
+images, Coral integration, email delivery, Stripe. That's not embarrassing.
+That's impressive. But if the briefing isn't worth listening to, none of the
+rest matters.
+
+The one thing that if removed, the product would die: **the audio briefing +
+the health score.** Everything else is a distribution mechanism or a trust
+layer. In the demo, spend the most time on the briefing itself. The escrow and
+the leaderboard are the sizzle. The briefing is the steak.
+
+**Practice:** In every demo, the briefing gets the most airtime. The escrow
+settlement is the climax, but the briefing is the product. If the reviewer
+remembers one thing, it should be the moment Morgan said "your test coverage
+is 23% and you have three PII columns with no owner" — not the program ID.
+
+### 6. Have a price, even if it's wrong
+
+> *"Don't be a sociopath about monetization, but do have a number."*
+
+We charge $49/month per team. It might be wrong. It might be too low or too
+high. But having a number forces us to think about unit economics, and it
+forces the first paying user to make a real decision. "We'll figure it out
+later" is not a strategy — it's an avoidance mechanism.
+
+**Practice:** The price stays $49 until we have 10 paying teams. Then we
+evaluate: are they all at 1 schema (too expensive) or 5+ schemas (too cheap)?
+The first 10 payments are the price test, not a survey.
+
 ## See Also
 
-- [`docs/GTM.md`](GTM.md) — Viral hooks, engagement loops, user interview plan
+- [`docs/GTM.md`](GTM.md) — Viral hooks, engagement loops, manual outreach target list
+- [`docs/UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md) — Cost-per-briefing, pricing, margin analysis
 - [`docs/PLAN.md`](PLAN.md) — Development roadmap and phases
 - [`docs/DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) — Tiered source architecture
 - [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) — Solana accelerator demo: talk track, click path, preflight
