@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { PublicLeaderboardEntry } from "@/app/api/onchain/leaderboard/route";
 import { HealthBar, TrendBadge, Sparkline } from "@/components/viz";
+import { LeadCapture } from "@/components/LeadCapture";
 
 function delta(e: PublicLeaderboardEntry): number {
   return e.healthHistory.length >= 2 ? e.latestHealthScore - e.healthHistory[0] : 0;
@@ -13,6 +14,7 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<PublicLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [claimingSchema, setClaimingSchema] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/onchain/leaderboard?limit=20")
@@ -116,12 +118,25 @@ export default function LeaderboardPage() {
                       ) : (
                         <>
                           scanned {new Date(entry.lastMintedAt).toLocaleDateString()} ·{" "}
-                          <Link href="/" className="text-[var(--accent)] no-underline">
-                            Claim your protocol →
-                          </Link>
+                          <button
+                            onClick={() => setClaimingSchema(claimingSchema === entry.schemaName ? null : entry.schemaName)}
+                            className="text-[var(--accent)] no-underline hover:underline cursor-pointer"
+                          >
+                            {claimingSchema === entry.schemaName ? "Cancel" : "Claim your protocol →"}
+                          </button>
                         </>
                       )}
                     </div>
+                    {entry.tier === "scanned" && claimingSchema === entry.schemaName && (
+                      <div className="mt-2">
+                        <LeadCapture
+                          source={`leaderboard_claim:${entry.schemaName}`}
+                          prompt="Leave your email — we'll verify your protocol's health on Solana."
+                          buttonText="Claim →"
+                          compact
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Sparkline */}

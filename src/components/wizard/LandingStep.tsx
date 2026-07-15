@@ -7,6 +7,7 @@ import { useWizard } from "./wizard-context";
 import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
 import { StatTile } from "@/components/viz";
+import { LeadCapture } from "@/components/LeadCapture";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
 
@@ -348,6 +349,21 @@ export function LandingStep() {
               Yes. DataBard monitors your connected sources and sends Slack or webhook alerts when health scores drop or tests start failing. You can also schedule weekly digest podcasts — your team gets a fresh audio briefing every Monday morning without anyone opening a dashboard.
             </p>
           </details>
+        </div>
+      </section>
+
+      {/* Email capture — the "talk to us" moment */}
+      <section className="w-full max-w-2xl pb-8">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-center">
+          <h2 className="text-base font-semibold mb-1">Want a verified data health report?</h2>
+          <p className="text-xs text-[var(--text-muted)] mb-4">
+            We&apos;ll set you up with a live briefing on your data — no commitment, no setup.
+          </p>
+          <LeadCapture
+            source="landing_footer"
+            prompt=""
+            buttonText="Get my report →"
+          />
         </div>
       </section>
 

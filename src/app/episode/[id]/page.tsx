@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
+import { LeadCapture } from "@/components/LeadCapture";
 import { track } from "@/lib/track";
 import type { Episode } from "@/lib/types";
 
@@ -196,9 +197,14 @@ function SharedEpisodeInner() {
         <p className="text-sm text-[var(--text-muted)] leading-relaxed">
           Every Monday morning, your team gets a fresh audio briefing on your data health — health scores, what changed, what to fix. No dashboard to check. No report to read. Just press play.
         </p>
+        <LeadCapture
+          source="shared_episode"
+          prompt="Want this for your data? Leave your email — we'll set you up."
+          buttonText="Get started →"
+        />
         <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-          <a href="/" onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-5 py-2.5 text-sm font-semibold transition ease-out hover:scale-[1.02]">
-            Get this for your data →
+          <a href="/" onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
+            Try the demo →
           </a>
           <a href="/protocol" onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
             See the dashboard

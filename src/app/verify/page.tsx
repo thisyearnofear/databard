@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { MintRecord } from "@/lib/mint-stats";
 import { DitherButton, DitherGradient } from "@/components/dither-kit";
+import { LeadCapture } from "@/components/LeadCapture";
 
 interface VerifyMemo {
   schemaName: string;
@@ -420,15 +421,11 @@ function VerifyPageInner() {
 
         {/* Conversion CTA — turn verifiers into users */}
         <div className="mt-6 bg-[var(--accent)]/5 border border-[var(--accent)]/30 rounded-2xl p-6 text-center">
-          <p className="text-sm text-[var(--text)] mb-3">
-            Want this for your protocol?
-          </p>
-          <Link
-            href="/?demo=1"
-            className="inline-block text-sm font-medium text-[var(--accent)] hover:underline"
-          >
-            Get a verified data health report →
-          </Link>
+          <LeadCapture
+            source="verify_cta"
+            prompt="Want this for your protocol? Leave your email — we'll set you up with a verified health report."
+            buttonText="Get my report →"
+          />
         </div>
       </div>
     </main>
