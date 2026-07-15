@@ -463,6 +463,12 @@ export function LandingStep() {
             >
               Coral Docs
             </a>
+            <Link href="/privacy" className="hover:text-[var(--text)] transition-colors">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-[var(--text)] transition-colors">
+              Terms
+            </Link>
           </nav>
         </div>
       </footer>

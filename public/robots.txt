@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /episode/
+Disallow: /research/sessions/
+
+Sitemap: https://databard.persidian.com/sitemap.xml

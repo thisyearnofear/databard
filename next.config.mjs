@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
@@ -28,4 +30,10 @@ const nextConfig = {
     ],
   },
 };
-export default nextConfig;
+
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  hideSourceMaps: true,
+  widenClientFileUpload: true,
+  disableLogger: true,
+});
