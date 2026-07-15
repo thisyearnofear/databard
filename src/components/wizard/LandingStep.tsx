@@ -254,10 +254,13 @@ export function LandingStep() {
             <p className="text-xs text-[var(--text-muted)]">
               {state.persona === "enterprise"
                 ? "Every health report is attestable on-chain — a permanent audit trail your team and auditors can verify."
-                : "Every health report is mintable on Solana — a permanent, public record your community can verify."}
+                : "Every health report is mintable on Solana. Insights settle through on-chain escrow — the seller commits what they delivered, the buyer releases funds only after that commitment."}
             </p>
             {state.persona === "web3" ? (
-              <Link href="/onchain" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">See the showcase →</Link>
+              <div className="flex items-center justify-center gap-3 mt-1.5">
+                <Link href="/onchain" className="text-[10px] text-[var(--accent)] hover:underline inline-block">See the showcase →</Link>
+                <Link href="/market" className="text-[10px] text-[var(--accent)] hover:underline inline-block">Watch escrow settle →</Link>
+              </div>
             ) : (
               <Link href="/verify" className="text-[10px] text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
             )}
@@ -380,6 +383,11 @@ export function LandingStep() {
             {state.persona === "web3" && (
               <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">
                 Leaderboard
+              </Link>
+            )}
+            {state.persona === "web3" && (
+              <Link href="/market" className="hover:text-[var(--text)] transition-colors">
+                Market
               </Link>
             )}
             {state.persona === "web3" && (

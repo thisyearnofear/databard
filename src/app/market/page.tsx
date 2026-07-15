@@ -325,6 +325,15 @@ export default function MarketPage() {
           <p className="text-[var(--text-muted)] mt-1">
             Every transaction on this page is a live devnet settlement. No humans in the loop.
           </p>
+          <a
+            href="https://explorer.solana.com/address/ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK?cluster=devnet"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-mono text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/30 rounded-full px-2.5 py-1 hover:bg-[var(--success)]/20 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
+            Live on devnet · ErwrNVN…sauYmfgdK ↗
+          </a>
         </div>
         <div className="flex items-center gap-2">
           <button

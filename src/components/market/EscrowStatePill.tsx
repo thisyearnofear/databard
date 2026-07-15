@@ -58,6 +58,17 @@ export function EscrowStatePill({ deal }: { deal: DealRef | null }) {
               </span>
             </div>
           )}
+          <div className="pt-1 border-t border-[var(--border)] mt-2">
+            <span className="text-[var(--text-muted)] uppercase tracking-wider">escrow program: </span>
+            <a
+              href="https://explorer.solana.com/address/ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK?cluster=devnet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[var(--accent)] hover:underline"
+            >
+              ErwrNVN…sauYmfgdK ↗
+            </a>
+          </div>
         </div>
       )}
     </div>
