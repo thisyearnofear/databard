@@ -7,6 +7,8 @@
  */
 export type Workspace = "teams" | "protocols";
 
+export const WORKSPACE_QUERY_KEY = "workspace";
+
 export const WORKSPACES = {
   teams: {
     label: "Teams",
@@ -43,14 +45,35 @@ export const WORKSPACES = {
 
 export function workspaceFromSearch(search: string): Workspace {
   const params = new URLSearchParams(search);
-  const value = params.get("workspace") ?? params.get("persona");
+  const value = params.get(WORKSPACE_QUERY_KEY) ?? params.get("persona");
   return value === "protocols" || value === "web3" || value === "onchain" ? "protocols" : "teams";
 }
 
 export function workspaceFromPathname(pathname: string): Workspace {
-  return pathname === "/onchain" || pathname === "/verify" || pathname === "/leaderboard"
+  return pathname === "/onchain" || pathname === "/verify" || pathname === "/leaderboard" || pathname === "/history"
     ? "protocols"
     : "teams";
+}
+
+/** Route-only protocol surfaces always win; shared surfaces use the explicit URL mode. */
+export function workspaceFromRoute(pathname: string, search = ""): Workspace {
+  return workspaceFromPathname(pathname) === "protocols"
+    ? "protocols"
+    : workspaceFromSearch(search);
+}
+
+/** Preserve the selected workspace whenever a user moves between product surfaces. */
+export function workspaceHref(href: string, workspace: Workspace): string {
+  const [pathAndQuery, hash = ""] = href.split("#", 2);
+  const [pathname, query = ""] = pathAndQuery.split("?", 2);
+  const params = new URLSearchParams(query);
+  params.set(WORKSPACE_QUERY_KEY, workspace);
+  const search = params.toString();
+  return `${pathname}${search ? `?${search}` : ""}${hash ? `#${hash}` : ""}`;
+}
+
+export function homeHref(workspace: Workspace): string {
+  return workspaceHref("/", workspace);
 }
 
 export function isNavItemActive(href: string, pathname: string): boolean {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PublicLeaderboardEntry } from "@/app/api/onchain/leaderboard/route";
 import { HealthBar, TrendBadge, Sparkline } from "@/components/viz";
 import { LeadCapture } from "@/components/LeadCapture";
+import { homeHref } from "@/lib/product/workspaces";
 
 function delta(e: PublicLeaderboardEntry): number {
   return e.healthHistory.length >= 2 ? e.latestHealthScore - e.healthHistory[0] : 0;
@@ -32,7 +33,7 @@ export default function LeaderboardPage() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="text-[var(--text-muted)] text-sm no-underline">
+          <Link href={homeHref("protocols")} className="text-[var(--text-muted)] text-sm no-underline">
             ← Back to DataBard
           </Link>
           <h1 className="text-[28px] font-extrabold mt-4 mb-1">
@@ -63,7 +64,7 @@ export default function LeaderboardPage() {
               Every source DataBard analyzes appears here automatically — mint on Solana to verify yours.
             </p>
             <Link
-              href="/"
+              href={homeHref("protocols")}
               className="inline-block mt-4 px-6 py-2.5 bg-[var(--accent)] text-[var(--bg)] rounded-lg no-underline font-semibold"
             >
               Generate an episode →

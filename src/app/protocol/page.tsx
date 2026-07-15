@@ -7,7 +7,7 @@ import type { MintRecord } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
 import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { track } from "@/lib/track";
-import { workspaceFromSearch } from "@/lib/product/workspaces";
+import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import { briefingSourceName, healthTrend } from "@/lib/briefing-health";
 import { DashboardHeader } from "@/components/briefing/DashboardHeader";
 import { PriorityBriefingCard } from "@/components/briefing/PriorityBriefingCard";
@@ -210,7 +210,7 @@ function ProtocolDashboardInner() {
           isProtocols={isProtocols}
           onListen={() => {
             track("dashboard_listen_click", { schema: episodeMeta.schemaName });
-            router.push(`/episode/${episodeId}`);
+            router.push(workspaceHref(`/episode/${episodeId}`, workspace));
           }}
           onSchedule={() => track("schedule_setup", { schema: episodeMeta.schemaName, source: "dashboard_prompt" })}
         />}
@@ -224,7 +224,7 @@ function ProtocolDashboardInner() {
         {!loading && cards.length === 0 && (
           <div className="hover-depth bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
             <p className="text-[var(--text-muted)] mb-4 text-sm">No data sources analyzed yet.</p>
-            <Link href="/" className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block">
+            <Link href={homeHref(workspace)} className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block">
               Generate your first health report
             </Link>
           </div>
@@ -244,12 +244,12 @@ function ProtocolDashboardInner() {
           isProtocols={isProtocols}
           hoveredCard={hoveredCard}
           onHoverChange={setHoveredCard}
-          onListen={(sourceEpisodeId) => router.push(`/episode/${sourceEpisodeId}`)}
+          onListen={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
         />}
       </div>
 
       {isProtocols && <footer className="relative text-center pt-12 pb-4">
-        <Link href="/leaderboard" className="font-mono text-[var(--text-muted)] text-xs no-underline hover:text-[var(--text)]">View protocol explorer →</Link>
+        <Link href={workspaceHref("/leaderboard", workspace)} className="font-mono text-[var(--text-muted)] text-xs no-underline hover:text-[var(--text)]">View protocol explorer →</Link>
       </footer>}
     </main>
   );

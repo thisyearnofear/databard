@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { MintRecord, MintStats } from "@/lib/mint-stats";
+import { homeHref, workspaceHref } from "@/lib/product/workspaces";
 
 function OnChainWallContent() {
   const searchParams = useSearchParams();
@@ -49,7 +50,7 @@ function OnChainWallContent() {
     <>
       {/* Header */}
       <header className="w-full max-w-4xl text-center space-y-4 animate-fade-in">
-        <Link href="/" className="text-xs text-[var(--accent)] hover:underline mb-2 inline-block">
+        <Link href={homeHref("protocols")} className="text-xs text-[var(--accent)] hover:underline mb-2 inline-block">
           ← Back to DataBard
         </Link>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
@@ -86,7 +87,7 @@ function OnChainWallContent() {
               {schemaFilter ? "Recent Attestations" : "Recent Mints"}
             </h2>
             {schemaFilter && (
-              <Link href="/onchain" className="text-xs text-[var(--accent)] hover:underline">
+              <Link href={workspaceHref("/onchain", "protocols")} className="text-xs text-[var(--accent)] hover:underline">
                 View all schemas
               </Link>
             )}
@@ -101,7 +102,7 @@ function OnChainWallContent() {
           {stats?.recent.length === 0 ? (
             <div className="p-12 text-center bg-[var(--surface)] border border-[var(--border)] rounded-2xl border-dashed">
               <p className="text-[var(--text-muted)] mb-4">No mints found yet.</p>
-              <Link href="/" className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium">
+              <Link href={homeHref("protocols")} className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium">
                 Be the first to mint
               </Link>
             </div>
@@ -217,7 +218,7 @@ function OnChainWallContent() {
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
                     Anyone can verify a report by comparing the on-chain hash against the current report. Mismatch = tampering detected.
                   </p>
-                  <Link href="/verify" className="text-xs text-[var(--accent)] hover:underline mt-1 inline-block">
+                  <Link href={workspaceHref("/verify", "protocols")} className="text-xs text-[var(--accent)] hover:underline mt-1 inline-block">
                     Verify an attestation →
                   </Link>
                 </div>
@@ -258,7 +259,7 @@ function OnChainWallContent() {
                  </div>
                )}
                <Link 
-                href="/" 
+                href={homeHref("protocols")}
                 className="block w-full text-center bg-[var(--accent)] text-[var(--bg)] py-3 rounded-xl text-sm font-bold hover:brightness-110 transition ease-out"
                >
                  Mint New Snapshot
@@ -284,9 +285,9 @@ export default function OnChainWall() {
       </Suspense>
 
       <footer className="text-xs text-[var(--text-muted)] pt-8 pb-4 flex gap-3">
-        <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">🏆 Leaderboard</Link>
+        <Link href={workspaceHref("/leaderboard", "protocols")} className="hover:text-[var(--text)] transition-colors">🏆 Leaderboard</Link>
         <span>·</span>
-        <Link href="/protocol" className="hover:text-[var(--text)] transition-colors">📡 Protocol dashboard</Link>
+        <Link href={workspaceHref("/protocol", "protocols")} className="hover:text-[var(--text)] transition-colors">📡 Protocol dashboard</Link>
         <span>·</span>
         <span>Powered by Solana Memo Program · {new Date().getFullYear()} DataBard</span>
       </footer>

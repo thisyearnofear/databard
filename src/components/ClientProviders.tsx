@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { workspaceFromSearch } from "@/lib/product/workspaces";
 
 // Dynamic import: SolanaProvider pulls in @solana/web3.js, wallet adapters,
@@ -26,21 +26,10 @@ function needsSolanaProvider(pathname: string, search = ""): boolean {
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  // Path-only modes are known during SSR. The protocol dashboard is promoted
-  // after hydration when its workspace is query-selected; landing mode never
-  // needs a wallet provider.
-  const [solanaEnabled, setSolanaEnabled] = useState(() => needsSolanaProvider(pathname));
-
-  useEffect(() => {
-    const sync = () => setSolanaEnabled(needsSolanaProvider(pathname, window.location.search));
-    sync();
-    window.addEventListener("databard:workspacechange", sync);
-    window.addEventListener("popstate", sync);
-    return () => {
-      window.removeEventListener("databard:workspacechange", sync);
-      window.removeEventListener("popstate", sync);
-    };
-  }, [pathname]);
+  const searchParams = useSearchParams();
+  // Keep the provider decision synchronous with navigation. A state/effect
+  // handoff briefly rendered episode pages without WalletProvider after a push.
+  const solanaEnabled = needsSolanaProvider(pathname, searchParams.toString());
 
   return solanaEnabled ? <SolanaProvider>{children}</SolanaProvider> : <>{children}</>;
 }

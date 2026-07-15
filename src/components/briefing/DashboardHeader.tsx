@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { homeHref, workspaceHref, type Workspace } from "@/lib/product/workspaces";
 
 export function DashboardHeader({ isProtocols }: { isProtocols: boolean }) {
+  const workspace: Workspace = isProtocols ? "protocols" : "teams";
   return (
     <div className="mb-8">
-      <Link href="/" className="font-mono text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
+      <Link href={homeHref(workspace)} className="font-mono text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
         ← DataBard
       </Link>
       <div className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--accent)] mt-4">
@@ -17,9 +19,9 @@ export function DashboardHeader({ isProtocols }: { isProtocols: boolean }) {
       </p>
       <div className="mt-3 flex items-center gap-4 font-mono text-[12px]">
         {isProtocols ? (
-          <Link href="/verify" className="text-[var(--accent)] no-underline hover:underline">Verify an attestation →</Link>
+          <Link href={workspaceHref("/verify", workspace)} className="text-[var(--accent)] no-underline hover:underline">Verify an attestation →</Link>
         ) : (
-          <Link href="/alerts" className="text-[var(--accent)] no-underline hover:underline">Manage alerts →</Link>
+          <Link href={workspaceHref("/alerts", workspace)} className="text-[var(--accent)] no-underline hover:underline">Manage alerts →</Link>
         )}
       </div>
     </div>

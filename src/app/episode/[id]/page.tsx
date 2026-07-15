@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { LeadCapture } from "@/components/LeadCapture";
 import { track } from "@/lib/track";
+import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import type { Episode } from "@/lib/types";
 
 // Lazy-load Solana wallet connect — avoids bundling Phantom/Solflare adapters
@@ -28,6 +29,7 @@ function SharedEpisodeInner() {
   const params = useParams();
   const id = params.id as string;
   const searchParams = useSearchParams();
+  const workspace = workspaceFromSearch(searchParams.toString());
   const segmentIdx = searchParams.get("seg");
   const { publicKey } = useWallet();
 
@@ -203,10 +205,10 @@ function SharedEpisodeInner() {
           buttonText="Get started →"
         />
         <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-          <a href="/" onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
+          <a href={homeHref(workspace)} onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
             Try the demo →
           </a>
-          <a href="/protocol" onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
+          <a href={workspaceHref("/protocol", workspace)} onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
             See the dashboard
           </a>
         </div>

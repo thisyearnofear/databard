@@ -63,4 +63,32 @@ test.describe("Workspace switch", () => {
 
     await expect(page.getByRole("heading", { name: /protocol health, explained and provable/i })).toBeVisible({ timeout: 3_000 });
   });
+
+  test("keeps protocol context when navigating home from a protocol surface", async ({ page }) => {
+    await page.goto("/onchain");
+
+    await expect(page.getByRole("link", { name: "Back to DataBard home" }))
+      .toHaveAttribute("href", "/?workspace=protocols");
+  });
+
+  test("switches dashboard workspace without changing the route", async ({ page }) => {
+    await page.goto("/protocol?workspace=protocols");
+
+    const teams = page.getByRole("link", { name: "Teams", exact: true });
+    await expect(teams).toHaveAttribute("href", "/protocol?workspace=teams");
+    await teams.click();
+
+    await expect(page).toHaveURL(/\/protocol\?workspace=teams/);
+    await expect(page.getByRole("link", { name: "Teams", exact: true })).toHaveAttribute("aria-current", "page");
+  });
+
+  test("keeps home and workspace controls available on mobile protocol surfaces", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto("/onchain");
+
+    await expect(page.getByRole("link", { name: "Back to DataBard home" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Teams", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Protocols", exact: true })).toBeVisible();
+    expect(await page.getByRole("banner").evaluate((header) => header.scrollWidth <= window.innerWidth)).toBe(true);
+  });
 });

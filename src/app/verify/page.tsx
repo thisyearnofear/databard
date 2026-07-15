@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import type { MintRecord } from "@/lib/mint-stats";
 import { DitherButton, DitherGradient } from "@/components/dither-kit";
 import { LeadCapture } from "@/components/LeadCapture";
+import { homeHref } from "@/lib/product/workspaces";
 
 interface VerifyMemo {
   schemaName: string;
@@ -142,7 +143,7 @@ function VerifyPageInner() {
 
       <div className="max-w-[720px] mx-auto relative">
         <div className="mb-8">
-          <Link href="/" className="text-[var(--text-muted)] text-sm no-underline">
+          <Link href={homeHref("protocols")} className="text-[var(--text-muted)] text-sm no-underline">
             ← Back to DataBard
           </Link>
           <h1 className="text-[28px] font-extrabold mt-4 mb-1">Verify an attestation</h1>

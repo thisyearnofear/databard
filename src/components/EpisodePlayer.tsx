@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { ScriptSegment, Episode, ResearchSession } from "@/lib/types";
 import { analyzeSchema, generateActionItems, type ActionItem } from "@/lib/schema-analysis";
 import { buildResearchTrail } from "@/lib/research";
@@ -14,6 +15,7 @@ import { PriorityBadge } from "@/components/player/PriorityBadge";
 import { TeamHistoryTab } from "@/components/player/TeamHistoryTab";
 import { AnthemTab } from "@/components/player/AnthemTab";
 import { MarkdownRenderer } from "@/components/player/MarkdownRenderer";
+import { workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
 type PlayerTab = "segments" | "insights" | "actions" | "research" | "anthem" | "team";
@@ -33,6 +35,8 @@ export function EpisodePlayer({
   onMint?: () => void;
   minting?: boolean;
 }) {
+  const searchParams = useSearchParams();
+  const workspace = workspaceFromSearch(searchParams.toString());
   const [currentEpisode, setCurrentEpisode] = useState<Episode>(episode);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(audioUrl);
   const [researchSession, setResearchSession] = useState<ResearchSession | null>(null);
@@ -1041,7 +1045,7 @@ export function EpisodePlayer({
             <HotspotChips hotspots={insights.lineageHotspots} />
 
             <Link
-              href="/protocol"
+              href={workspaceHref("/protocol", workspace)}
               className="block text-center text-xs text-[var(--accent)] hover:underline pt-1"
             >
               📊 Track this schema over time on the dashboard →

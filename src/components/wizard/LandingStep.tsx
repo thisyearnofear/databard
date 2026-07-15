@@ -11,7 +11,7 @@ import { LeadCapture } from "@/components/LeadCapture";
 import { CountUp } from "@/components/CountUp";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
-import { WORKSPACES } from "@/lib/product/workspaces";
+import { WORKSPACES, workspaceHref } from "@/lib/product/workspaces";
 
 export function LandingStep() {
   const { state, dispatch, showConnect } = useWizard();
@@ -159,7 +159,7 @@ export function LandingStep() {
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
           <Link
-            href="/protocol"
+            href={workspaceHref("/protocol", workspace)}
             className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 text-[var(--danger)] border border-[var(--danger)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
           >
             <span>🔥</span>
@@ -172,7 +172,7 @@ export function LandingStep() {
         {/* On-chain social proof pill */}
         {state.persona === "web3" && state.mintStats && state.mintStats.total > 0 && (
           <Link
-            href="/onchain"
+            href={workspaceHref("/onchain", workspace)}
             className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
           >
             <span>⛓️</span>
@@ -219,7 +219,7 @@ export function LandingStep() {
       {/* Live dashboard stats — proof the engine is running */}
       {totals && totals.sources > 0 && (
         <section className="w-full max-w-2xl pb-10">
-          <Link href="/protocol" className="block group">
+          <Link href={workspaceHref("/protocol", workspace)} className="block group">
             <div className="flex flex-wrap gap-3 justify-center">
               <StatTile icon="📊" value={totals.sources} label="Sources watched" />
               <StatTile icon="⚠️" value={totals.failingTests} label="Failing tests" />
@@ -254,7 +254,7 @@ export function LandingStep() {
               <span>·</span>
               <span>Coral</span>
               <span>·</span>
-              <a href="/leaderboard" className="hover:text-[var(--text)]">Leaderboard</a>
+              <Link href={workspaceHref("/leaderboard", workspace)} className="hover:text-[var(--text)]">Leaderboard</Link>
             </>
           )}
         </div>
@@ -281,7 +281,7 @@ export function LandingStep() {
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               Get Slack or webhook alerts when health drops. Weekly digest podcasts keep your team informed without a dashboard tab open.
             </p>
-            <Link href="/alerts" className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
+            <Link href={workspaceHref("/alerts", workspace)} className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
           </div>
           {/* Pillar 3: Verifiable by design */}
           <div className="text-center">
@@ -294,11 +294,11 @@ export function LandingStep() {
             </p>
             {state.persona === "web3" ? (
               <div className="flex items-center justify-center gap-3 mt-1.5">
-                <Link href="/onchain" className="text-xs text-[var(--accent)] hover:underline inline-block">See the showcase →</Link>
-                <Link href="/market" className="text-xs text-[var(--accent)] hover:underline inline-block">Watch escrow settle →</Link>
+                <Link href={workspaceHref("/onchain", workspace)} className="text-xs text-[var(--accent)] hover:underline inline-block">See the showcase →</Link>
+                <Link href={workspaceHref("/market", workspace)} className="text-xs text-[var(--accent)] hover:underline inline-block">Watch escrow settle →</Link>
               </div>
             ) : (
-              <Link href="/verify" className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
+              <Link href={workspaceHref("/verify", workspace)} className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
             )}
           </div>
         </div>
@@ -419,10 +419,10 @@ export function LandingStep() {
             >
               GitHub
             </a>
-            <Link href="/protocol" className="hover:text-[var(--text)] transition-colors">
+            <Link href={workspaceHref("/protocol", workspace)} className="hover:text-[var(--text)] transition-colors">
               Dashboard
             </Link>
-            <Link href="/alerts" className="hover:text-[var(--text)] transition-colors">
+            <Link href={workspaceHref("/alerts", workspace)} className="hover:text-[var(--text)] transition-colors">
               Alerts
             </Link>
             <Link href="/labs" className="hover:text-[var(--text)] transition-colors">
@@ -432,17 +432,17 @@ export function LandingStep() {
               🔥 Roast my data
             </Link>
             {state.persona === "web3" && (
-              <Link href="/leaderboard" className="hover:text-[var(--text)] transition-colors">
+              <Link href={workspaceHref("/leaderboard", workspace)} className="hover:text-[var(--text)] transition-colors">
                 Leaderboard
               </Link>
             )}
             {state.persona === "web3" && (
-              <Link href="/market" className="hover:text-[var(--text)] transition-colors">
+              <Link href={workspaceHref("/market", workspace)} className="hover:text-[var(--text)] transition-colors">
                 Market
               </Link>
             )}
             {state.persona === "web3" && (
-              <Link href="/onchain" className="hover:text-[var(--text)] transition-colors">
+              <Link href={workspaceHref("/onchain", workspace)} className="hover:text-[var(--text)] transition-colors">
                 On-chain
               </Link>
             )}

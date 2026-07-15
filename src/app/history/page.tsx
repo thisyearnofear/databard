@@ -9,6 +9,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
 import { HealthBar } from "@/components/viz";
+import { homeHref } from "@/lib/product/workspaces";
 
 interface HistoryRecord {
   schemaName: string;
@@ -120,7 +121,7 @@ export default function HistoryPage() {
               Generate an episode and mint it on Solana — it will appear here permanently.
             </p>
             <Link
-              href="/"
+              href={homeHref("protocols")}
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 text-sm font-semibold no-underline transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97]"
             >
               Generate an episode →
