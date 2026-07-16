@@ -6,7 +6,7 @@
  * Body: { walletAddress }
  * Returns: { ok, unsignedTxBase64, amount, recipient } or { ok: false, error }
  *
- * Palm USD is a Solana stablecoin. The Pro subscription is $29/mo = 29 PUSD.
+ * Palm USD is a Solana stablecoin. The Pro subscription is $49/mo = 49 PUSD.
  * After the client signs and submits, they call /api/checkout/palmusd/verify
  * to confirm payment and activate Pro.
  */
@@ -24,7 +24,7 @@ import {
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
 const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? `https://api.${NETWORK}.solana.com`;
-const PRO_PRICE_PUSD = 29; // $29/mo
+const PRO_PRICE_PUSD = 49; // $49/mo
 
 function getConfig() {
   const mint = new PublicKey(

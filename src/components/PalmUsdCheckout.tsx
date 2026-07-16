@@ -116,7 +116,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         </div>
         <p className="text-sm font-medium text-[var(--success)]">Pro activated</p>
         <p className="text-xs text-[var(--text-muted)] text-center">
-          Paid 29 PUSD via Palm USD on Solana
+          Paid 49 PUSD via Palm USD on Solana
         </p>
         {explorerUrl && (
           <a
@@ -174,7 +174,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         </p>
         <p className="text-xs text-[var(--text-muted)]">
           {effectiveState === "signing"
-            ? "Sign the 29 PUSD transfer in your wallet"
+            ? "Sign the 49 PUSD transfer in your wallet"
             : "Waiting for Solana network confirmation"
           }
         </p>
@@ -192,7 +192,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
             <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
             {wallet?.adapter.name} · {publicKey?.toBase58().slice(0, 4)}…{publicKey?.toBase58().slice(-4)}
           </span>
-          <span className="text-[var(--text-muted)]">29 PUSD</span>
+          <span className="text-[var(--text-muted)]">49 PUSD</span>
         </div>
 
         {/* Pay button */}
@@ -202,7 +202,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
             <PalmIcon size={16} />
-            Pay 29 PUSD
+            Pay 49 PUSD
           </span>
         </button>
 
@@ -237,7 +237,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         </span>
       </button>
       <p className="text-xs text-[var(--text-muted)] text-center">
-        Connect a Solana wallet to pay 29 PUSD · non-freezable stablecoin
+        Connect a Solana wallet to pay 49 PUSD · non-freezable stablecoin
       </p>
     </div>
   );

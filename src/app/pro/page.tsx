@@ -315,7 +315,7 @@ function ProSettingsInner() {
             </div>
             <label className="text-sm font-medium">Pay with Palm USD</label>
           </div>
-          <span className="text-xs bg-[var(--palm)]/10 text-[var(--palm-light)] px-2 py-0.5 rounded-full font-medium">29 PUSD/mo</span>
+          <span className="text-xs bg-[var(--palm)]/10 text-[var(--palm-light)] px-2 py-0.5 rounded-full font-medium">49 PUSD/mo</span>
         </div>
         <p className="text-xs text-[var(--text-muted)]">
           Pay for DataBard Pro using Palm USD — a non-freezable, 1:1 USD-backed stablecoin on Solana. 

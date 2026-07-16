@@ -128,7 +128,7 @@ travels.
 - **One channel:** the forwarded briefing in Slack/email. Instrumented end-to-end
   (`shared_episode_open` → `shared_episode_cta_click`; targets in GTM.md). Everything
   else is subordinate to that loop converting.
-- **Dead zone (name it first):** $29–299/mo data tooling is exactly Thiel's dead zone —
+- **Dead zone (name it first):** $49–299/mo data tooling is exactly Thiel's dead zone —
   too cheap for a sales team, too niche for mass marketing. Product-led virality is the
   only coherent escape at this price, which is why the product is its own distribution
   vehicle.
@@ -136,7 +136,7 @@ travels.
   construction; the leaderboard is a public registry of protocol health. Protocols WANT
   to publicize verified health — their marketing is our distribution, and the memos are
   composable. Cold start: this accelerator's ecosystem intros seed the registry flywheel.
-- **CLV > CAC:** weekly-habit product at $29/mo, CAC → 0 on forwarded acquisition; the
+- **CLV > CAC:** weekly-habit product at $49/mo, CAC → 0 on forwarded acquisition; the
   economics only require activation to convert, which the funnel measures.
 - **Pre-empt the eye-roll:** this isn't invite-a-friend virality bolted on — the thing
   being shared IS the thing being sold. The report is the referral.

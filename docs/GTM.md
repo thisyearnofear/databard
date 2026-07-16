@@ -130,7 +130,7 @@ Validate (or invalidate) the repositioning before investing more in building. We
 - "Would you set this up as a weekly thing? What would stop you?"
 
 **5. Pricing & willingness to pay (2 min)**
-- "Would you pay $29/month for weekly digests + alerts + email delivery?"
+- "Would you pay $49/month for weekly digests + alerts + email delivery?"
 - "What would make this a no-brainer for your team?"
 
 **6. Onchain (1 min)**
@@ -147,6 +147,53 @@ Validate (or invalidate) the repositioning before investing more in building. We
 | "Weekly digest creates a habit" | If they say "I'd set it up once and forget" or "weekly is too often" |
 | "Teams would forward this in Slack" | If they say "my team wouldn't click a Slack link to an audio player" |
 | "Onchain doesn't matter for enterprise" | If enterprise leads say "the audit trail is the most interesting part" |
+| "The agentic framing resonates" | If they say "this is just a podcast tool" or "where does the analyst actually do something?" |
+
+### Capability map — what they can do today vs what's planned
+
+Use this during interviews to be honest about the current state. Don't oversell what exists. The gap between "today" and "planned" is what the interviews should inform.
+
+#### What works today (show these in the demo)
+
+| Capability | Status | Notes |
+|---|---|---|
+| Connect a data source | Live | OpenMetadata, dbt, Coral (cross-source SQL), Dune, The Graph |
+| Health score computation | Live | Test coverage, lineage risk, PII flags, freshness — across every table |
+| Trend narrative generation | Live | "Your health score dropped 8 points because test coverage fell in the payments schema after the Friday deploy" |
+| 2-minute audio briefing | Live | Two AI hosts (Alex + Morgan), segment-synced transcript, drill-down |
+| Dashboard with health scores | Live | Fleet view, per-source drill-down, critical tables, what changed |
+| Recommended next step | Live | Text-based recommendation on the dashboard ("Review the failing tests and their downstream impact") |
+| Alerts (Slack / webhook) | Live | Threshold-based, fires when health drops below your configured level |
+| Scheduled weekly digests | Live (Pro) | Email delivery via SMTP or webhook, weekly cadence |
+| Episode sharing | Live | Shareable links, clip sharing ("Share moment"), OG images |
+| On-chain attestation | Live (Protocols) | Mint health reports on Solana, verify on /verify, leaderboard |
+| Pro subscription | Live | $49/month via Stripe or Palm USD (49 PUSD) |
+| Research follow-ups | Live | Ask a follow-up question about the data, branch the research session |
+
+#### What's planned (don't promise timelines — ask if they'd want it)
+
+| Capability | Status | What it would do | Interview question |
+|---|---|---|---|
+| Agent status bar | Planned | "Monitoring · Last checked 2h ago · 3 issues found" at the top of the dashboard | "Would you want to see that your analyst is actively monitoring, or is the weekly briefing enough?" |
+| Actions panel with Approve/Dismiss | Planned | Recommended actions with approve/dismiss buttons on the dashboard | "If the analyst said 're-run the payments test suite,' would you want to approve that action in the UI, or is the recommendation enough?" |
+| Jira/Linear ticket creation | Planned | Agent files a ticket from a recommended action | "Would you want the analyst to file the ticket for you, or just tell you what to do?" |
+| Slack channel posting | Planned | Agent posts findings to a channel, pings on-call | "Would you want the analyst to post to a specific Slack channel when it finds something, or just alert you?" |
+| GitHub issue creation | Planned | Agent creates issues from failing tests | "Would you want the analyst to create GitHub issues from failing tests?" |
+| Agent activity log | Planned | Timeline of what the analyst has done (checked, found, briefed, alerted) | "Would you want to see a log of what the analyst has been doing, or just the outputs?" |
+| Multi-source trend narratives | Planned | "Your payments schema in OpenMetadata and your test results in dbt tell the same story" | "Do you have data quality signals spread across multiple tools? Would a cross-source narrative be valuable?" |
+| Custom alert thresholds per table | Planned | Different thresholds for different tables/schemas | "Do all your tables matter equally, or do some need tighter monitoring?" |
+| Data quality regression detection | Planned | Compare this week's health to last week's, flag regressions automatically | "Would you want the analyst to tell you what regressed since last week, or just the current state?" |
+| Runbook drafting | Planned | Agent drafts a runbook for fixing a recurring issue | "Would you want the analyst to draft the fix runbook, or just identify the problem?" |
+
+#### What we're explicitly not building (until interviews justify it)
+
+| Capability | Why not | What would change our mind |
+|---|---|---|
+| Real-time streaming analysis | Cost prohibitive (LLM + TTS per event), and weekly cadence is the habit we're testing | If 3+ interviewees say "weekly is too slow, I need to know within hours" |
+| Per-user personalisation | DataBard is a team tool, not a per-seat tool. Personalisation penalises sharing. | If interviewees say "my CFO needs a different briefing than my data engineer" |
+| Custom LLM model selection | Adds complexity, increases support burden. One good model is better than three options. | If an enterprise customer requires on-prem / BYO model as a procurement condition |
+| White-label / embedded | Distraction from the core product. DataBard should be a destination, not a widget. | If a partner offers distribution in exchange for embedded deployment |
+| Mobile app | The web app is the workspace. Audio works in the browser. A native app adds maintenance for no clear gain. | If interviewees say "I'd only use this on my phone" — unlikely for a data team lead |
 
 ### What to do with results
 

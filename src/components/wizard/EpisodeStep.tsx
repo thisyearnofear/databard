@@ -176,7 +176,7 @@ export function EpisodeStep() {
           <div className="bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-4 max-w-md text-center animate-slide-up">
             <p className="text-sm mb-2">Want this for your team every week?</p>
             <p className="text-xs text-[var(--text-muted)] mb-3">
-              Scheduled episodes, private feeds, Slack notifications — $29/mo
+              Scheduled episodes, private feeds, Slack notifications — $49/mo
             </p>
             <button 
               onClick={handleCheckout} 

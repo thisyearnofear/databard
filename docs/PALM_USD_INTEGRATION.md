@@ -8,7 +8,7 @@
 
 ## Overview
 
-DataBard integrates Palm USD (PUSD) as a native payment rail for Pro subscriptions. Users pay 29 PUSD/month directly from their Solana wallet — no intermediaries, no freeze risk, instant activation.
+DataBard integrates Palm USD (PUSD) as a native payment rail for Pro subscriptions. Users pay 49 PUSD/month directly from their Solana wallet — no intermediaries, no freeze risk, instant activation.
 
 This is not a wrapper around a traditional payment processor. The entire flow happens on-chain via SPL token transfer, verified server-side, with Pro access activated the moment the transaction confirms.
 
@@ -52,7 +52,7 @@ This is not a wrapper around a traditional payment processor. The entire flow ha
 - **Decimals:** 6
 - **Mint address:** `CZzgUBvxaMLwMhVSLgqJn3npmxoTo6nzMNQPAnwtHF3s`
 - **Chain:** Solana (mainnet-beta)
-- **Price:** 29 PUSD = $29 USD (1:1 peg)
+- **Price:** 49 PUSD = $49 USD (1:1 peg)
 
 ### API Flow
 
@@ -79,8 +79,8 @@ Content-Type: application/json
 
 **Server-side logic:**
 1. Resolve payer's Associated Token Account (ATA) for PUSD mint
-2. Check balance ≥ 29 PUSD
-3. Build `createTransferInstruction` (payer ATA → recipient ATA, 29_000_000 lamports)
+2. Check balance ≥ 49 PUSD
+3. Build `createTransferInstruction` (payer ATA → recipient ATA, 49_000_000 lamports)
 4. Set fee payer, recent blockhash
 5. Serialize unsigned and return
 
@@ -116,7 +116,7 @@ The `PalmUsdCheckout` component (`src/components/PalmUsdCheckout.tsx`) handles t
 | State | UI | User Action |
 |---|---|---|
 | `idle` | "Pay with Palm USD" button | Connect wallet |
-| `ready` | Wallet connected, "Pay 29 PUSD" button | Click to pay |
+| `ready` | Wallet connected, "Pay 49 PUSD" button | Click to pay |
 | `signing` | Spinner + "Approve in wallet…" | Sign in wallet popup |
 | `confirming` | Spinner + "Confirming on-chain…" | Wait |
 | `success` | Green checkmark + explorer link | Done |
@@ -168,7 +168,7 @@ PALM_USD_RECIPIENT=<your_treasury_solana_wallet>
 
 - **No private keys on server** — the server only builds unsigned transactions. Signing happens exclusively in the user's wallet.
 - **Recipient validation** — the verify endpoint checks that the DataBard treasury wallet is in the transaction's account keys.
-- **Amount validation** — the server sets the transfer amount (29 PUSD). The client cannot modify it.
+- **Amount validation** — the server sets the transfer amount (49 PUSD). The client cannot modify it.
 - **Replay protection** — each transaction uses a recent blockhash with a limited validity window.
 - **No token account creation risk** — we use Associated Token Accounts (deterministic derivation), not arbitrary accounts.
 
@@ -177,7 +177,7 @@ PALM_USD_RECIPIENT=<your_treasury_solana_wallet>
 The payment flow is designed to feel native to Solana users:
 
 1. **One-click wallet connect** — standard Solana wallet modal (Phantom, Solflare)
-2. **Clear pricing** — "29 PUSD" shown before and during payment
+2. **Clear pricing** — "49 PUSD" shown before and during payment
 3. **Trust signals** — "Non-freezable · 1:1 USD backed · Solana SPL" displayed below the button
 4. **Progress feedback** — distinct states for signing vs. confirming
 5. **Success confirmation** — checkmark animation + direct link to Solana Explorer
