@@ -43,7 +43,7 @@ export function DecisionBriefing({ cards, isProtocols, onListen }: DecisionBrief
         <div className="min-w-0 max-w-2xl">
           <div className="flex items-center gap-2">
             <DitherAvatar name={priority.name} size={28} className="rounded-md shrink-0" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "Protocol signal" : "What needs attention"}</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "Protocol signal" : "What your analyst found"}</p>
           </div>
           <h2 id="priority-title" className="mt-3 text-xl font-bold">
             {insight.failingTests > 0
@@ -53,11 +53,11 @@ export function DecisionBriefing({ cards, isProtocols, onListen }: DecisionBrief
           <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">{impact ?? nextAction}</p>
         </div>
         <div className="min-w-[150px] border-l border-[var(--border)] pl-5">
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{isProtocols ? "Next action" : "Recommended next step"}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Recommended action</p>
           <p className="mt-2 text-sm font-medium leading-snug">{nextAction}</p>
           {episodeId && (
             <DitherButton color="purple" variant="gradient" onClick={() => onListen(episodeId)} className="mt-4 px-3 py-2 text-xs font-semibold">
-              {isProtocols ? "Listen to the briefing" : "Listen to the analysis"}
+              Listen to the briefing
             </DitherButton>
           )}
         </div>

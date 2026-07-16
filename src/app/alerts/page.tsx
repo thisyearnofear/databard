@@ -70,7 +70,7 @@ export default function AlertsPage() {
           <Link href="/" className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] mb-4 inline-block">← Back to DataBard</Link>
           <h1 className="text-2xl font-bold mb-2">🔔 Alerts</h1>
           <p className="text-sm text-[var(--text-muted)]">
-            Get notified when your data health drops. DataBard monitors connected sources and fires Slack or webhook alerts when health scores fall below your threshold.
+            Your analyst watches your data 24/7. Get alerted via Slack or webhook when it finds something — no dashboard checking required.
           </p>
         </div>
 
@@ -233,7 +233,7 @@ export default function AlertsPage() {
         {/* Info card */}
         <div className="mt-6 bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-xl p-4">
           <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-            <strong className="text-[var(--text)]">How it works:</strong> DataBard checks your alert thresholds against the latest health snapshots. When a score drops below your threshold, it fires your webhook with the schema name, current health score, and a link to the episode. No wallet required — onchain attestation is an optional upgrade for teams that want a permanent audit trail.
+            <strong className="text-[var(--text)]">How it works:</strong> Your analyst checks your alert thresholds against the latest health snapshots continuously. When a score drops below your threshold, it reaches out via your webhook with the schema name, current health score, and a link to the episode. No wallet required — onchain attestation is an optional upgrade for teams that want a permanent audit trail.
           </p>
         </div>
 

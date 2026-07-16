@@ -817,8 +817,8 @@ export function EpisodePlayer({
         <div className="flex border-b border-[var(--border)]">
           {([
             { id: "research" as const, label: "Research", count: researchTrail ? `${researchTrail.plan.length}` : undefined },
-            { id: "insights" as const, label: "Summary", count: insights ? `${insights.healthScore}` : undefined },
             { id: "actions" as const, label: "Actions", count: actionItems.length > 0 ? `${actionItems.length - checkedActions.size}` : undefined },
+            { id: "insights" as const, label: "Briefing", count: insights ? `${insights.healthScore}` : undefined },
             { id: "segments" as const, label: "Transcript" },
             ...(currentEpisode.musicPlan ? [{ id: "anthem" as const, label: "🎵 Anthem" }] : []),
             { id: "team" as const, label: "👥 Team" },

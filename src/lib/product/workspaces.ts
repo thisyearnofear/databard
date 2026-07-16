@@ -18,11 +18,11 @@ export const WORKSPACES = {
       { href: "/alerts", label: "Settings" },
     ],
     landing: {
-      eyebrow: "WEEKLY DATA BRIEFING",
-      title: "Know what changed in your data before it becomes someone else’s problem.",
-      description: "DataBard turns data-health signals into a decision-ready weekly briefing: the change, the impact, and the next action.",
-      demoLabel: "Open this week’s briefing",
-      connectLabel: "Connect a data source",
+      eyebrow: "YOUR AI DATA ANALYST",
+      title: "Your data is broken. Your team doesn't know yet. Your analyst does.",
+      description: "DataBard connects to your data sources, computes health scores, and tells you what broke, why it broke, and what to do — in a 2-minute briefing your team actually listens to.",
+      demoLabel: "Open this week's briefing",
+      connectLabel: "Connect your analyst to your data",
     },
   },
   protocols: {
@@ -34,9 +34,9 @@ export const WORKSPACES = {
       { href: "/leaderboard", label: "Explorer" },
     ],
     landing: {
-      eyebrow: "VERIFIABLE PROTOCOL BRIEFING",
+      eyebrow: "YOUR AI PROTOCOL ANALYST",
       title: "Protocol health, explained and provable.",
-      description: "DataBard turns on-chain data into a clear health briefing, with the evidence and attestation trail behind every claim.",
+      description: "DataBard connects to your on-chain data, computes health scores, and tells you what changed, why it matters, and what to do — with an attestation trail behind every claim.",
       demoLabel: "Open a protocol briefing",
       connectLabel: "Query protocol data",
     },

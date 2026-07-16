@@ -19,18 +19,18 @@ export function PriorityBriefingCard({ episodeId, episode, isProtocols, onListen
         <div className="flex items-center gap-3">
           <DitherAvatar name={episode.schemaName} size={40} className="rounded-lg shrink-0" />
           <div>
-            <p className="text-sm font-semibold mb-1">Priority briefing ready — {episode.schemaName}</p>
+            <p className="text-sm font-semibold mb-1">Your analyst found {episode.testsFailed > 0 ? `${episode.testsFailed} issue${episode.testsFailed !== 1 ? "s" : ""}` : "a briefing"} — {episode.schemaName}</p>
             <p className="text-xs text-[var(--text-muted)] font-mono">
               {episode.tableCount} tables · {episode.testsFailed}/{episode.testsTotal} tests failing · {episode.segments} segments
             </p>
           </div>
         </div>
         <DitherButton color="purple" variant="gradient" bloom="low" onClick={onListen} className="px-5 py-2.5 text-sm font-semibold shrink-0">
-          ▶ Listen to this analysis
+          ▶ Listen to the briefing
         </DitherButton>
       </div>
       <div className="relative mt-4 pt-4 border-t border-[var(--accent)]/20 flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-xs text-[var(--text-muted)]">{isProtocols ? "Want a fresh, attestable protocol briefing each week?" : "Want this every Monday? Set up a weekly digest for your team."}</p>
+        <p className="text-xs text-[var(--text-muted)]">{isProtocols ? "Want a fresh, attestable protocol briefing each week?" : "Want this every Monday? Your analyst can run automatically."}</p>
         <Link
           href={`/pro?setup=1&schema=${encodeURIComponent(episode.schemaName)}&episode=${episodeId}`}
           onClick={onSchedule}

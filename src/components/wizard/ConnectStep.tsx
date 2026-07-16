@@ -238,12 +238,12 @@ export function ConnectStep() {
   return (
     <div className="w-full max-w-md">
       <h2 className="text-xl font-semibold mb-1">
-        {state.source === "coral" ? "Query your data" : "Connect your data"}
+        {state.source === "coral" ? "Query your data" : "Connect your analyst to your data"}
       </h2>
       <p className="text-sm text-[var(--text-muted)] mb-5">
         {state.source === "coral"
-          ? "Write SQL to join any sources — DataBard will narrate the results."
-          : "Start with one source. Your first findings appear while DataBard prepares the briefing."}
+          ? "Write SQL to join any sources — your analyst will narrate the results."
+          : "Start with one source. Your analyst starts finding issues immediately."}
       </p>
 
       {state.source !== "coral" && (

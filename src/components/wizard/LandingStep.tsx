@@ -147,7 +147,7 @@ export function LandingStep() {
             }}
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
           >
-            <span>Analyse my data</span>
+            <span>Connect your analyst</span>
             <span aria-hidden>→</span>
           </button>
           <button
@@ -160,7 +160,7 @@ export function LandingStep() {
           </button>
         </div>
 
-        <p className="relative z-10 text-xs text-[var(--text-muted)]">Read-only setup · First findings appear while your briefing is prepared</p>
+        <p className="relative z-10 text-xs text-[var(--text-muted)]">Read-only setup · Your analyst starts finding issues in 30 seconds</p>
 
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
@@ -301,22 +301,22 @@ export function LandingStep() {
       <section className="enter-up enter-delay-2 w-full max-w-2xl pb-12">
         <h2 className="text-lg font-semibold text-center mb-6">Why DataBard</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-          {/* Pillar 1: Health scoring */}
+          {/* Pillar 1: Synthesis */}
           <div className="text-center">
-            <div className="text-2xl mb-2">📊</div>
-            <h3 className="text-sm font-semibold mb-1">Health scoring</h3>
+            <div className="text-2xl mb-2">🧠</div>
+            <h3 className="text-sm font-semibold mb-1">Synthesis, not raw data</h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               {state.persona === "enterprise"
-                ? "AI computes health scores from test coverage, lineage risk, PII flags, and freshness — across every table you own."
-                : "AI scores indexer lag, freshness, and entity relationships — across every subgraph you run."}
+                ? "Your analyst computes health scores from test coverage, lineage risk, PII flags, and freshness — then explains why they changed, across every table you own."
+                : "Your analyst scores indexer lag, freshness, and entity relationships — then explains why they changed, across every subgraph you run."}
             </p>
           </div>
-          {/* Pillar 2: Alerts that find you */}
+          {/* Pillar 2: Always watching */}
           <div className="text-center">
             <div className="text-2xl mb-2">🔔</div>
-            <h3 className="text-sm font-semibold mb-1">Alerts that find you</h3>
+            <h3 className="text-sm font-semibold mb-1">Always watching</h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              Get Slack or webhook alerts when health drops. Weekly digest podcasts keep your team informed without a dashboard tab open.
+              Your analyst checks your data 24/7 and reaches out via Slack or webhook when it finds something. Weekly briefings keep your team informed without a dashboard tab open.
             </p>
             <Link href={workspaceHref("/alerts", workspace)} className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
           </div>

@@ -22,9 +22,9 @@ export function GenerationProgress({ isProtocols = false, currentStep, segmentsC
   const [primaryFinding, ...supportingFindings] = findings;
   const signalTone = signal?.healthLabel === "critical" ? "var(--danger)" : signal?.healthLabel === "at-risk" ? "var(--warning)" : "var(--success)";
   const steps: Step[] = [
-    { label: isProtocols ? "Reading protocol data" : "Reading your data", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "📊" },
-    { label: isProtocols ? "Writing the protocol briefing" : "Preparing the explanation", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "✍️" },
-    { label: isProtocols ? "Recording the briefing" : "Preparing the audio briefing", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "🎵" },
+    { label: isProtocols ? "Scanning protocol data" : "Scanning your tables for issues", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "📊" },
+    { label: isProtocols ? "Synthesising findings" : "Synthesising findings", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "✍️" },
+    { label: isProtocols ? "Recording the briefing" : "Recording your briefing", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "🎵" },
   ];
 
   // ETA calculation based on segments synthesized
@@ -42,7 +42,7 @@ export function GenerationProgress({ isProtocols = false, currentStep, segmentsC
     <div className="w-full max-w-xl bg-[var(--surface)] border border-[var(--accent)] rounded-xl p-6 animate-slide-up">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "Live protocol briefing" : "Initial assessment"}</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "Live protocol briefing" : "Your analyst is working"}</p>
           <h3 className="mt-1 text-lg font-semibold">{isProtocols ? "Preparing your briefing" : "Reviewing your data"}</h3>
         </div>
         <div className="flex gap-1">
@@ -102,7 +102,7 @@ export function GenerationProgress({ isProtocols = false, currentStep, segmentsC
         <div className="mt-5 border-y border-[var(--accent)]/30 bg-[var(--accent)]/10 px-4 py-4 animate-slide-up" aria-live="polite">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "First protocol signal" : "What needs attention"}</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "First protocol signal" : "First findings"}</p>
               <p className="mt-2 text-xl font-semibold leading-snug">{signal?.primaryFinding ?? primaryFinding}</p>
             </div>
             {signal && (
