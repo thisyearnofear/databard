@@ -48,3 +48,5 @@ data/events.json
 data/alerts.json
 .claude/settings.local.json
 demo-assets/
+screenshots-review/
+screenshots-review-v2/

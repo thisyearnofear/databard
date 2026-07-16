@@ -1,8 +1,10 @@
 "use client";
 /**
- * /history — Wallet-connected episode history page.
- * Shows all past episodes minted by the connected wallet, with Grove/IPFS
- * links to retrieve the full episode metadata and audio.
+ * /history — Episode history page.
+ *
+ * Shows useful public content above the wallet gate (episode count, recent
+ * episode previews, an explainer) so non-web3 visitors get value immediately.
+ * Connected wallets see their full, owned episode list below the fold.
  */
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -24,36 +26,113 @@ interface HistoryRecord {
   solDomain: string | null;
 }
 
-function WalletGate() {
+interface PreviewRecord {
+  schemaName: string;
+  healthScore: number;
+  episodeId: string;
+  createdAt: string;
+}
+
+/**
+ * Public preview section — shown to everyone, no wallet required.
+ * Fetches the global episode count and a few recent mints for social proof.
+ */
+function PublicPreview() {
   const { setVisible } = useWalletModal();
   const [totalMinted, setTotalMinted] = useState<number | null>(null);
+  const [recent, setRecent] = useState<PreviewRecord[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetch("/api/onchain/mints/stats?limit=1")
+    fetch("/api/onchain/mints/stats?limit=3")
       .then((r) => r.json())
-      .then((d) => { if (d.ok) setTotalMinted(d.total); })
-      .catch(() => {});
+      .then((d) => {
+        if (d.ok) {
+          setTotalMinted(d.total);
+          setRecent((d.recent ?? []).slice(0, 3));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
   return (
-    <div className="flex flex-col items-center text-center py-16">
-      <div className="text-5xl mb-4 opacity-60">🔗</div>
-      <h2 className="text-xl font-semibold mb-2">Your episodes, permanently yours</h2>
-      <p className="text-sm text-[var(--text-muted)] max-w-sm mb-6 leading-relaxed">
-        Every episode you mint is anchored on Solana and stored on IPFS — portable, provable, and tied to your wallet forever.
-      </p>
-      <button
-        onClick={() => setVisible(true)}
-        className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 text-sm font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
-      >
-        <span>👛</span>
-        <span>Connect Wallet</span>
-      </button>
-      {totalMinted !== null && totalMinted > 0 && (
-        <p className="text-xs text-[var(--text-muted)] mt-5">
-          🎧 {totalMinted.toLocaleString()} episode{totalMinted !== 1 ? "s" : ""} recorded on-chain so far
+    <div className="flex flex-col gap-8">
+      {/* Prominent stat — episode count, above everything else */}
+      <div className="text-center">
+        {totalMinted !== null && totalMinted > 0 ? (
+          <div className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/25 px-5 py-2.5">
+            <span className="text-lg">🎧</span>
+            <span className="text-sm font-semibold text-[var(--accent)]">
+              {totalMinted.toLocaleString()} episode{totalMinted !== 1 ? "s" : ""} recorded on-chain so far
+            </span>
+          </div>
+        ) : loaded ? (
+          <div className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] border border-[var(--border)] px-5 py-2.5">
+            <span className="text-sm text-[var(--text-muted)]">
+              Be the first to mint an episode on-chain
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* "What is this?" explainer */}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 text-center">
+        <div className="text-3xl mb-3 opacity-70">📚</div>
+        <h2 className="text-base font-semibold mb-2">What is this?</h2>
+        <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
+          Every DataBard briefing can be minted on Solana and stored on IPFS — creating a permanent,
+          verifiable record of your data health. Connect your wallet to see your episodes.
         </p>
+      </div>
+
+      {/* Recent episode previews — read-only, no wallet actions */}
+      {recent.length > 0 && (
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-3">
+            Recent episodes
+          </h3>
+          <div className="flex flex-col gap-3">
+            {recent.map((r, i) => (
+              <div
+                key={i}
+                className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 opacity-90"
+              >
+                <div className="flex justify-between items-start gap-3 mb-3">
+                  <div className="font-semibold text-sm truncate">{r.schemaName}</div>
+                  <div className="text-xs text-[var(--text-muted)] whitespace-nowrap">
+                    {new Date(r.createdAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-[var(--text-muted)] mb-1">Health Score</div>
+                  <HealthBar score={r.healthScore} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
+
+      {/* Wallet gate — framed as a feature, not a wall */}
+      <div className="flex flex-col items-center text-center pt-2">
+        <h2 className="text-lg font-semibold mb-2">Connect to see your full history</h2>
+        <p className="text-sm text-[var(--text-muted)] max-w-sm mb-5 leading-relaxed">
+          Your minted episodes are tied to your wallet. Connect to view, replay, and share your
+          permanent on-chain record.
+        </p>
+        <button
+          onClick={() => setVisible(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-6 py-3 text-sm font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
+        >
+          <span>👛</span>
+          <span>Connect Wallet</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -94,8 +173,8 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        {/* Wallet gate — centered, no card */}
-        {!publicKey && <WalletGate />}
+        {/* Public preview — useful content for everyone, above the wallet gate */}
+        {!publicKey && <PublicPreview />}
 
         {/* Loading */}
         {publicKey && loading && (
@@ -129,7 +208,7 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Records list */}
+        {/* Records list — wallet-gated, below the fold for connected users */}
         {records.length > 0 && (
           <div className="flex flex-col gap-3">
             <p className="text-[var(--text-muted)] text-xs mb-1">

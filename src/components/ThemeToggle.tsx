@@ -5,25 +5,23 @@ import { useState, useEffect } from "react";
 type Theme = "light" | "dark" | "system";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     const saved = localStorage.getItem("databard:theme") as Theme | null;
     if (saved) {
       setTheme(saved);
-      if (saved !== "system") document.documentElement.setAttribute("data-theme", saved);
+      if (saved !== "dark") document.documentElement.setAttribute("data-theme", saved);
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark");
     }
   }, []);
 
   function cycle() {
-    const next: Theme = theme === "system" ? "dark" : theme === "dark" ? "light" : "system";
+    const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     localStorage.setItem("databard:theme", next);
-    if (next === "system") {
-      document.documentElement.removeAttribute("data-theme");
-    } else {
-      document.documentElement.setAttribute("data-theme", next);
-    }
+    document.documentElement.setAttribute("data-theme", next);
   }
 
   const icon = theme === "dark" ? "🌙" : theme === "light" ? "☀️" : "💻";

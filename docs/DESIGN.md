@@ -268,7 +268,7 @@ Key rules:
 
 | Decision | Why |
 | --- | --- |
-| Dark-first | The product is an analytical tool; dark reduces eye strain and makes status colors pop. |
+| Dark-first (enforced default) | The product is an analytical tool; dark reduces eye strain and makes status colors pop. Dark is the default via `data-theme="dark"` on `<html>`; light is opt-in via the ThemeToggle. The `prefers-color-scheme: light` media query was removed so the default is always dark regardless of OS setting. |
 | Dithered charts | Distinctive, lightweight, dependency-free, and signals "machine-processed signal" rather than generic dashboard. |
 | CSS variables in Tailwind | Keeps theming simple (enterprise vs. onchain vs. light/dark) and avoids leaking hardcoded colors. |
 | System font | Performance, native feel, and avoids licensing/loading complexity. |

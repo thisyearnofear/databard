@@ -64,8 +64,15 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/schema-analysis.ts` — health score, critical tables, trend diffs
 - `src/app/protocol/page.tsx` — dashboard (hero output)
 - `src/components/EpisodePlayer.tsx` — audio player with drill-down
+- `src/components/wizard/wizard-context.tsx` — wizard provider (slim, wires together types + reducer + effects)
+- `src/components/wizard/wizard-types.ts` — wizard state shape, action types, initialState
+- `src/components/wizard/wizard-reducer.ts` — composed reducer (5 domain reducers: core, connection, schema, generation, episode)
+- `src/components/wizard/wizard-effects.ts` — extracted effect hooks (persona sync, connection persistence, mint stats, schema defaults, deep links)
 - `src/components/wizard/LandingStep.tsx` — landing page
 - `src/app/roast/page.tsx` — "Roast my data" landing variant
+
+## Theming
+Dark-first. `data-theme="dark"` is set on `<html>` in `layout.tsx`. Light mode is opt-in via the `ThemeToggle` component (dark/light toggle, persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components.
 
 ## Docs
 - `docs/STRATEGY.md` — north star, competitive positioning, product principles, operating principles (PG framework)

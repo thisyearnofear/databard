@@ -82,6 +82,14 @@ See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, an
 - [x] Onboarding tour moved off the landing hero; decision-support copy
 - [x] Leaderboard backfills zero-score mint rows from engine snapshots
 
+### Phase 6.5: UI/UX Catch-Up — Match the Demo Video
+- [x] Dark-first theme enforced as default (`data-theme="dark"` on `<html>`, removed `prefers-color-scheme: light` override); light mode still available via ThemeToggle
+- [x] Landing page: added browser-framed dashboard screenshot to break up the text wall
+- [x] Leaderboard rebuilt: sorting (score/change/recent), filter toggle (all/verified/scanned), search, stats summary bar, styled claim buttons, improved row design, empty states
+- [x] History page: episode count and recent episode previews shown above the wallet gate; "What is this?" explainer added; gate reframed as "Connect to see your full history"
+- [x] Wizard context split: 538-line monolith decomposed into `wizard-types.ts` (types + initialState), `wizard-reducer.ts` (5 domain reducers), `wizard-effects.ts` (5 extracted effect hooks), slim `wizard-context.tsx` (provider only)
+- [x] Fixed infinite render loop from unstable `onReady` callback in persona sync effect
+
 ### Phase 7: Validation & GTM
 - [ ] 5 user interviews with data team leads
 - [ ] A/B test CTA ordering (demo vs connect first)

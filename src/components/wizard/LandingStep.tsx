@@ -222,6 +222,37 @@ export function LandingStep() {
         </p>
       </section>
 
+      {/* Product preview — show the actual dashboard, not just talk about it */}
+      <section className="enter-up enter-delay-1 w-full max-w-3xl pb-10">
+        <Link href={workspaceHref("/protocol", workspace)} className="block group">
+          <div className="relative rounded-xl overflow-hidden border border-[var(--border)] shadow-2xl shadow-black/40 transition-transform duration-300 group-hover:scale-[1.01]">
+            {/* Browser chrome */}
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)]">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-[var(--danger)]/60" />
+                <div className="w-3 h-3 rounded-full bg-[var(--warning)]/60" />
+                <div className="w-3 h-3 rounded-full bg-[var(--success)]/60" />
+              </div>
+              <div className="flex-1 ml-3 text-xs font-mono text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-3 py-1 border border-[var(--border)]">
+                databard.app/protocol
+              </div>
+            </div>
+            {/* Screenshot */}
+            <img
+              src="/dashboard-preview.png"
+              alt="DataBard protocol dashboard showing health scores, trend narratives, and source health list"
+              className="w-full block"
+              loading="lazy"
+            />
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-[var(--accent)]/0 group-hover:bg-[var(--accent)]/5 transition-colors duration-300 pointer-events-none" />
+          </div>
+          <p className="text-center text-xs text-[var(--text-muted)] mt-3 group-hover:text-[var(--accent)] transition-colors">
+            See the live dashboard →
+          </p>
+        </Link>
+      </section>
+
       {/* Live dashboard stats — proof the engine is running */}
       {totals && totals.sources > 0 && (
         <section className="w-full max-w-2xl pb-10">
