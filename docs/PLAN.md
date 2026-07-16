@@ -2,7 +2,7 @@
 
 ## What We're Building
 
-DataBard closes the communication gap between data teams and everyone else. The core product is a **weekly data health briefing** — a 2-minute audio summary plus a dashboard with health scores, trend narratives, and alerts. The dashboard is the hero; the audio is a button on the dashboard.
+DataBard is an AI data analyst that monitors your data estate, synthesises what it finds, and acts on it. The core product is a **synthesis engine** that connects to any data source, computes health scores, generates trend narratives, and recommends next steps. Audio briefings, dashboards, alerts, and (next) automated actions are all output formats of that engine. The agent layer is the product; the outputs are how it reaches you.
 
 ## Why It Matters
 

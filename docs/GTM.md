@@ -2,7 +2,7 @@
 
 ## North Star
 
-**DataBard solves the communication gap between data teams and everyone else.** The weekly digest is the wedge. The trend narrative is the moat. The shared episode link is the viral surface.
+**DataBard is an AI data analyst that synthesises your data health and acts on it.** The synthesis engine is the product. Audio briefings are the wedge — the output format nobody else offers. The trend narrative is the moat. The shared episode link is the viral surface. The agent layer — informing today, acting tomorrow — is the differentiation.
 
 ---
 

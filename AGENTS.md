@@ -1,7 +1,7 @@
 # AGENTS.md — DataBard
 
 ## Project Overview
-DataBard is a weekly data health briefing tool. The core product is a scheduled audio digest plus dashboard with health scores and trend narratives. Dashboard is the hero; audio is a button on the dashboard.
+DataBard is an AI data analyst that monitors your data estate, synthesises what it finds, and acts on it. The agent layer — synthesis, trend narratives, recommended next steps — is the product. Audio briefings, dashboards, alerts, and (next) automated actions are all output formats of that synthesis engine.
 
 ## Build & Dev Commands
 - `npm run dev` — start dev server on localhost:3000

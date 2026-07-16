@@ -35,7 +35,7 @@
 
 ### "Who are your competitors?"
 
-> "Nobody, directly. We're not competing with Monte Carlo or Bigeye — they detect what's broken, we make the findings consumable. They could be inputs to DataBard. The category is 'data communication,' not 'data observability,' and there's no incumbent. The closest thing is a data team lead writing a weekly Notion doc that nobody reads."
+> "Nobody, directly. We're not competing with Monte Carlo or Bigeye — they detect what's broken, we synthesise what it means and act on it. They could be inputs to DataBard. We're an AI data analyst, not a observability tool or a podcast tool. The closest competitor is a data team lead writing a weekly Notion doc that nobody reads — except we also explain why it happened, recommend what to do, and (next) file the ticket for you."
 
 ### "Do you have customers?"
 

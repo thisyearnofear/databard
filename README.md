@@ -32,11 +32,11 @@ The core product is the **scheduled weekly digest.** Every Monday, your team rec
 
 The audio is the differentiator. It's not a gimmick — it's a forcing function for synthesis. You can't read 47 rows aloud. You have to say "your payments table is stale, 8 dashboards are wrong, and here's what to do." That synthesis is the value.
 
-### The dashboard is the hero
+### The agent is the hero
 
-After every analysis, you land on the dashboard — not the audio player. Health scores, critical tables, trend narratives, and "What changed this week" are front and center. The audio is a button on the dashboard: **▶ Listen to this analysis.**
+DataBard is an AI data analyst that synthesises what it finds and acts on it. The dashboard is where you see the synthesis. The audio briefing is where you hear it. The alert is where it finds you. The ticket (next) is where it acts. No single output format is the product — the synthesis engine behind all of them is.
 
-This makes the product feel like an analyst that also talks — not a podcast that also analyzes.
+This makes the product feel like an analyst that works for you — not a podcast that also analyses, and not a dashboard that also talks.
 
 ## Architecture
 

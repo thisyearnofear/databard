@@ -23,24 +23,24 @@
 - 12% open rate on data quality reports
 
 **Speaker:**
-> "Data teams have a communication problem, not a tooling problem. Monte Carlo, Bigeye, Soda — they all detect what's broken. But 61% of dashboards are never opened. Only 2.3% drive decisions. We spent 5 hours a week writing a data quality report that 12% of people opened."
+> "Data teams have an action problem, not a tooling problem. Monte Carlo, Bigeye, Soda — they all detect what's broken. But 61% of dashboards are never opened. Only 2.3% drive decisions. We spent 5 hours a week writing a data quality report that 12% of people opened."
 >
-> "The insight exists. The dashboards exist. The tests exist. What doesn't exist is consumption. Nobody listens because nobody wants to read a 47-row test results table."
+> "The insight exists. The dashboards exist. The tests exist. What doesn't exist is synthesis and action. Nobody acts because nobody wants to read a 47-row test results table, and nobody connects the dots between 'test coverage dropped' and '8 downstream dashboards are now wrong.'"
 >
-> "This isn't a data observability problem — it's a data communication problem. And there's no incumbent in that category."
+> "This isn't a data observability problem — it's a data inaction problem. And in the agentic era, the answer isn't another dashboard. It's an analyst that synthesises and acts for you."
 
 ---
 
 ## Slide 3: The Solution (50 seconds)
 
-**Visual:** DataBard dashboard screenshot + audio waveform side by side. Arrow showing the flow: Connect → Analyze → Synthesize → Deliver
+**Visual:** DataBard dashboard screenshot + audio waveform side by side. Arrow showing the flow: Connect → Analyse → Synthesise → Act
 
 **Speaker:**
-> "DataBard connects to any data catalog — OpenMetadata, dbt, Coral, Dune, The Graph — computes health scores, and synthesizes a two-minute podcast briefing. Two AI hosts walk you through what changed, what's broken, and what to fix first."
+> "DataBard is an AI data analyst. It connects to any data source — OpenMetadata, dbt, Coral, Dune, The Graph — computes health scores, and synthesises what it finds into trend narratives and recommended next steps."
 >
-> "The dashboard is the hero. Audio is a button on the dashboard. You get the executive summary in 2 minutes on your commute, then drill into the dashboard when you need the detail."
+> "The agent is the hero. Audio briefings, dashboards, alerts — those are all output formats of the same synthesis engine. You get a 2-minute briefing on your commute, drill into the dashboard when you need detail, and (next) the agent files the ticket and drafts the runbook for you."
 >
-> "The synthesis is the moat. You can't read 47 rows aloud — you have to distill. That distillation, powered by LLMs, is something observability tools can't do."
+> "The synthesis is the moat. You can't read 47 rows aloud — you have to distill. That distillation, powered by LLMs, is something observability tools can't do and generic AI assistants can't do without our data connectors and health-scoring engine."
 
 ---
 

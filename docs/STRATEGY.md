@@ -1,12 +1,12 @@
-# DataBard Strategy: Data Communication Gap
+# DataBard Strategy: The AI Data Analyst That Acts
 
 ## North Star
 
-**DataBard solves the communication gap between data teams and everyone else.**
+**DataBard is an AI data analyst that monitors your data estate, synthesises what it finds, and acts on it.**
 
-Data health monitoring tools (Monte Carlo, Bigeye, Soda, dbt tests) tell you *what's broken*. They don't tell the people who need to know. The insight exists in dashboards, logs, and test results — but it doesn't *land* with the exec, the PM, or the stakeholder who needs to act on it.
+Data health monitoring tools (Monte Carlo, Bigeye, Soda, dbt tests) tell you *what's broken*. They don't tell the people who need to know, and they don't do anything about it. The insight exists in dashboards, logs, and test results — but it doesn't *land* with the exec, the PM, or the stakeholder who needs to act on it. And nobody files the ticket, pings the on-call, or drafts the runbook.
 
-DataBard's real problem is not "data observability" (we'd lose to better-funded competitors). It's **data communication** — a category with no incumbent. Audio briefings are a new format for an old pain: "I built a report and nobody read it."
+DataBard's real problem is not "data observability" (we'd lose to better-funded competitors). It's not even "data communication" alone — that's a symptom. The real problem is **data inaction**: the gap between knowing something is broken and doing something about it. Audio briefings were our first output format. The agent layer — synthesis, trend narratives, recommended next steps, and the ability to act on them — is the product.
 
 ## The Problem, Quantified
 
@@ -27,15 +27,22 @@ findings don't reach the people who need to act on them. The data exists. The
 dashboards exist. The tests exist. What doesn't exist is **consumption**.
 
 DataBard doesn't compete with observability tools — it competes with the
-status quo of "I built a report and nobody read it." The audio briefing is the
-format that solves the consumption problem, because:
+status quo of "I know something is broken and I'm still not doing anything
+about it." The agent layer is what closes the gap, because:
 
-1. **Audio gets consumed.** 12% open rate on a report vs. a 2-minute podcast
-   you can listen to on your commute. The format is the fix.
-2. **Synthesis gets acted on.** "Your health dropped 8 points because test
-   coverage fell in payments after Friday's deploy" gets acted on. "47 rows
-   of test results" gets skimmed.
-3. **Distribution is built in.** Shared episodes, embeddable badges, on-chain
+1. **Synthesis gets acted on.** "Your health dropped 8 points because test
+   coverage fell in payments after Friday's deploy, and here's what to do"
+   gets acted on. "47 rows of test results" gets skimmed. The synthesis —
+   not the format — is what drives action.
+2. **Audio gets consumed.** 12% open rate on a report vs. a 2-minute briefing
+   you can listen to on your commute. Audio is one output format that solves
+   the consumption problem. It's not the only one — dashboards, alerts,
+   tickets, and emails are others — but it's the one nobody else offers.
+3. **Action is the differentiator.** An analyst that tells you something is
+   broken is a dashboard. An analyst that tells you, explains why, recommends
+   a fix, and files the ticket is an agent. The gap between informing and
+   acting is where DataBard differentiates.
+4. **Distribution is built in.** Shared episodes, embeddable badges, on-chain
    attestations — every artifact is a distribution surface. The report
    travels; it doesn't sit in a dashboard graveyard.
 
@@ -76,10 +83,18 @@ The claim is now backed by product, not just copy: every report's SHA-256 is wri
 | Positioning | Competitor | Our edge |
 |---|---|---|
 | "Data observability" | Monte Carlo, Bigeye, Soda, dbt tests | We lose — they're better funded, more mature |
-| "Data communication" | Nobody | We own it — audio briefings are a new category |
-| "Data catalog podcast" | Nobody (but novelty wears off) | The format is the wedge, not the product |
+| "Data communication" | Nobody | We own it — but communication alone is a symptom, not the disease |
+| "AI data analyst" | Generic AI assistants (ChatGPT, Copilot) | They don't connect to your data estate, don't compute health scores, don't produce trend narratives, and don't act with context |
+| "Data agent" | Emerging (too early to name) | First-mover with a working product, real data connectors (Coral, OpenMetadata, dbt, Dune), and a proven output format (audio briefings) |
 
-**The key insight:** We're not competing with observability tools. We're a communication layer that sits on top of any data source and makes findings consumable. The observability tools can be inputs to DataBard, not competitors.
+**The key insight:** We're not competing with observability tools. We're not
+just a communication layer. We're an **AI analyst** that sits on top of any
+data source, synthesises what it finds into trend narratives and recommended
+actions, and delivers those through multiple channels — audio briefings,
+dashboards, alerts, and (next) automated actions like filing tickets and
+drafting runbooks. The observability tools can be inputs to DataBard, not
+competitors. The generic AI assistants don't have our data connectors, our
+health-scoring engine, or our synthesis layer.
 
 ## Workspace Strategy
 
@@ -132,21 +147,24 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 
 ## Product Principles
 
-1. **Dashboard is the hero, audio is the button.** After analysis, land on the dashboard. Audio is a CTA on the dashboard, not the destination. This makes the product feel like an analyst that also talks — not a podcast that also analyzes.
+1. **The agent is the hero. Audio, dashboards, alerts, and actions are all outputs.** DataBard is an AI analyst that synthesises what it finds and acts on it. The dashboard is where you see the synthesis. The audio briefing is where you hear it. The alert is where it finds you. The ticket is where it acts. No single output format is the product — the synthesis engine behind all of them is. This makes the product feel like an analyst that works for you, not a podcast that also analyses.
 
-2. **Synthesis over raw data.** The value is in the distillation. "Your payments table is stale, 8 dashboards are wrong, and here's what to do" is worth more than 47 rows of test results. Every output (audio, dashboard, alert) should be synthesized, not raw.
+2. **Synthesis over raw data.** The value is in the distillation. "Your payments table is stale, 8 dashboards are wrong, and here's what to do" is worth more than 47 rows of test results. Every output (audio, dashboard, alert, ticket) should be synthesised, not raw.
 
-3. **Trend narratives are the moat.** Not just "health score is 72%" but "your health score dropped 8 points this week because test coverage fell in the payments schema after the Friday deploy." This is what LLMs are actually good at and traditional tools can't do.
+3. **Trend narratives are the moat.** Not just "health score is 72%" but "your health score dropped 8 points this week because test coverage fell in the payments schema after the Friday deploy." This is what LLMs are actually good at and traditional tools can't do. It's also what separates an analyst from a dashboard — an analyst explains *why*, not just *what*.
 
-4. **Protocols is a workspace, not a pillar.** Solana attestation is valuable for Protocols. Don't contaminate the Teams pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care, not a core feature for everyone. The inverse also holds: for a Solana-native audience, open the Protocols workspace and show verification as the trust layer, while making clear the same engine serves Teams.
+4. **From informing to acting.** The current product informs: it tells you what's broken and recommends a next step. The agentic evolution acts: it files the ticket, pings the on-call, drafts the runbook, and then briefs you on what it did. The gap between informing and acting is the differentiation. Build toward closing it, one action at a time.
 
-5. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analysis-first positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
+5. **Protocols is a workspace, not a pillar.** Solana attestation is valuable for Protocols. Don't contaminate the Teams pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care, not a core feature for everyone. The inverse also holds: for a Solana-native audience, open the Protocols workspace and show verification as the trust layer, while making clear the same engine serves Teams.
+
+6. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analyst positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
 
 ## What We're Not
 
-- **Not a data observability platform.** We don't compete with Monte Carlo. We're a communication layer that can ingest observability data.
-- **Not a data catalog.** We don't replace OpenMetadata or dbt. We read from them and make their findings consumable.
-- **Not a podcast tool.** The audio is a format, not the product. The product is the analysis + synthesis.
+- **Not a data observability platform.** We don't compete with Monte Carlo. We're an AI analyst that can ingest observability data and act on it.
+- **Not a data catalog.** We don't replace OpenMetadata or dbt. We read from them and make their findings actionable.
+- **Not a podcast tool.** Audio is one output format, not the product. The product is the synthesis engine + the agent layer.
+- **Not a generic AI assistant.** ChatGPT doesn't connect to your data estate, doesn't compute health scores, and doesn't produce trend narratives. We do.
 - **Not a web3 product for Teams.** Onchain is a workspace-specific feature, not a core pillar.
 
 ## Operating Principles (Paul Graham framework)
@@ -208,25 +226,31 @@ business. Full breakdown in [`docs/UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md).
 new LLM provider, new infrastructure). The number should always be current.
 If we don't know whether we're default alive, we're default dead.
 
-### 5. The briefing is the steak; everything else is sizzle
+### 5. The synthesis is the steak; everything else is sizzle
 
 > *"The initial product should be almost embarrassingly simple."*
 
 DataBard has a wizard, a dashboard, a leaderboard, a market page, an escrow
 program, attestation, verify, alerts, a roast page, clip sharing, badges, OG
 images, Coral integration, email delivery, Stripe. That's not embarrassing.
-That's impressive. But if the briefing isn't worth listening to, none of the
+That's impressive. But if the synthesis isn't worth acting on, none of the
 rest matters.
 
-The one thing that if removed, the product would die: **the audio briefing +
-the health score.** Everything else is a distribution mechanism or a trust
-layer. In the demo, spend the most time on the briefing itself. The escrow and
-the leaderboard are the sizzle. The briefing is the steak.
+The one thing that if removed, the product would die: **the trend narrative +
+the recommended next step.** That's the synthesis engine. The audio briefing
+is the most distinctive *output* of that engine — it's what nobody else
+offers — but it's an output, not the engine itself. The dashboard is another
+output. The alert is another. The agent action (when we build it) will be
+another. In the demo, spend the most time on the synthesis itself — the
+moment Morgan says "your test coverage is 23% and you have three PII columns
+with no owner" is the steak. The escrow, the leaderboard, even the audio
+player are sizzle.
 
-**Practice:** In every demo, the briefing gets the most airtime. The escrow
-settlement is the climax, but the briefing is the product. If the reviewer
-remembers one thing, it should be the moment Morgan said "your test coverage
-is 23% and you have three PII columns with no owner" — not the program ID.
+**Practice:** In every demo, the synthesis gets the most airtime. The audio
+is the proof that the synthesis is real and consumable. The escrow settlement
+is the climax, but the synthesis is the product. If the reviewer remembers
+one thing, it should be the trend narrative — not the program ID, not the
+voice model, not the leaderboard rank.
 
 ### 6. Have a price, even if it's wrong
 
