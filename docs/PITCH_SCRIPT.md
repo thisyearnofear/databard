@@ -18,14 +18,14 @@
 ## Slide 2: The Problem (50 seconds)
 
 **Visual:** Three stats, large text:
-- 61% of dashboards are never opened
-- 2.3% are used for decisions
-- 12% open rate on data quality reports
+- 75% of business users don't trust dashboards enough to make decisions (Forrester, 2023)
+- Only 7% of companies are truly insights-driven (Forrester, 2023)
+- 73% of enterprise data goes unused for analytics (Forrester/industry, 2023)
 
 **Speaker:**
-> "Data teams have an action problem, not a tooling problem. Monte Carlo, Bigeye, Soda — they all detect what's broken. But 61% of dashboards are never opened. Only 2.3% drive decisions. We spent 5 hours a week writing a data quality report that 12% of people opened."
+> "Forrester says only 7% of companies are truly insights-driven. The other 93% have dashboards nobody trusts — 75% of business users say they don't feel confident making decisions from the dashboards available to them. 73% of enterprise data goes completely unused for analytics."
 >
-> "The insight exists. The dashboards exist. The tests exist. What doesn't exist is synthesis and action. Nobody acts because nobody wants to read a 47-row test results table, and nobody connects the dots between 'test coverage dropped' and '8 downstream dashboards are now wrong.'"
+> "The problem isn't detection. Monte Carlo, Bigeye, Soda — they all detect what's broken. The problem is the last mile: turning 'something is wrong' into 'here's why, and here's what to do.' A dashboard shows churn spiked 4% in EMEA. It rarely answers why, and almost never says 'here are the 5 clients you must call today to fix it.'"
 >
 > "This isn't a data observability problem — it's a data inaction problem. And in the agentic era, the answer isn't another dashboard. It's an analyst that synthesises and acts for you."
 
@@ -126,7 +126,7 @@
 ## Key Phrases to Hit (memorize these)
 
 1. **Opening:** "DataBard is an AI analyst that turns data health into something people actually consume"
-2. **Problem:** "61% of dashboards are never opened. Only 2.3% drive decisions."
+2. **Problem:** "Only 7% of companies are truly insights-driven. 75% of business users don't trust dashboards enough to make decisions."
 3. **Moat:** "The synthesis is the moat. You can't read 47 rows aloud — you have to distill."
 4. **Solana (honest):** "The core product works without Solana. But for teams that need public trust, every report is anchored on-chain."
 5. **Closing:** "Data reports don't fail on accuracy — they fail on distribution to human attention. We built a report that travels."

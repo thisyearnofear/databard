@@ -81,4 +81,4 @@
 
 *(Adapt this to your actual background)*
 
-> "I'm a builder who felt the pain — I spent 5 hours a week writing a data quality report that 12% of people opened. DataBard exists because I needed it. I've shipped the full product end-to-end: the analysis engine, the LLM synthesis, the TTS pipeline, the Solana attestation, the escrow program. The code is on GitHub — you can verify everything I just showed you."
+> "I'm a builder who felt the pain — I spent 5 hours a week writing a data quality report that nobody read. Forrester says 75% of business users don't trust dashboards enough to make decisions, and only 7% of companies are truly insights-driven. DataBard exists because I needed it. I've shipped the full product end-to-end: the analysis engine, the LLM synthesis, the TTS pipeline, the Solana attestation, the escrow program. The code is on GitHub — you can verify everything I just showed you."

@@ -192,33 +192,33 @@ export function LandingStep() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
           <div className="text-center">
             <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
-              <CountUp value={61} suffix="%" />
+              <CountUp value={75} suffix="%" />
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
-              of dashboards never opened in 6 months
+              of business users don&apos;t trust dashboards enough to make decisions
             </p>
           </div>
           <div className="hidden sm:block w-px h-12 bg-[var(--border)]" />
           <div className="text-center">
             <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
-              <CountUp value={2.3} decimals={1} suffix="%" />
+              <CountUp value={7} suffix="%" />
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
-              of dashboards used for decisions
+              of companies are truly insights-driven
             </p>
           </div>
           <div className="hidden sm:block w-px h-12 bg-[var(--border)]" />
           <div className="text-center">
             <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
-              <CountUp value={12} suffix="%" />
+              <CountUp value={73} suffix="%" />
             </div>
             <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
-              open rate on data quality reports
+              of enterprise data goes unused for analytics
             </p>
           </div>
         </div>
         <p className="text-center text-xs text-[var(--text-muted)] mt-4">
-          Sources: dashboard audit (1,847 dashboards, Medium 2024) · founder confession (5 hrs/week, 12% open rate)
+          Sources: Forrester — The State Of The Insights-Driven Business Market, 2023 · Forrester Business Technographics Data &amp; Analytics Survey
         </p>
       </section>
 

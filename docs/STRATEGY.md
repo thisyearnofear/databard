@@ -14,17 +14,17 @@ The pain is not a feeling. It's a number. Several numbers, actually:
 
 | Statistic | Source | What it means |
 |-----------|--------|---------------|
-| **61% of dashboards are never opened in 6 months** | Dashboard audit (1,847 dashboards), Medium 2024 | The majority of data work is invisible. Teams build dashboards that literally never get viewed. |
-| **Only 2.3% of dashboards are used for decisions** | Same audit (43 of 1,847) | Even when dashboards are opened, almost none drive action. The other 97.7% are decoration. |
+| **Only 7% of companies are truly insights-driven** | Forrester, *The State Of The Insights-Driven Business Market, 2023* | 93% of companies have data, dashboards, and observability tools — but insights don't reach the people who act. The gap is synthesis and action, not detection. |
+| **75% of business users don't feel confident making decisions from dashboards** | Forrester Business Technographics Data & Analytics Survey, 2023 | The "last-mile problem": dashboards show what changed, but not why, and don't suggest a next step. Even when dashboards are opened, they don't drive action. |
+| **60-73% of enterprise data goes unused for analytics** | Forrester / industry research, 2023 | The "data cemetery" effect: dashboards are built, visited once, and abandoned. The majority of data work is invisible. |
 | **54% of teams say reporting has inefficiencies** | Databox Time to Insight survey | Over half of teams know their reporting process is broken. |
 | **11.2 hours/month per client on manual reporting** | AgencyAnalytics 2025 State of Agency Reporting | For agencies alone, reporting is a full-time job that produces no strategy. |
-| **12% open rate on a data quality report** | Founder confession (DataBard origin) | We spent 5 hours/week writing a report that 12% of people opened. That's why DataBard exists. |
 
 ### What these numbers say
 
 The problem isn't that data tools can't detect issues. The problem is that the
 findings don't reach the people who need to act on them. The data exists. The
-dashboards exist. The tests exist. What doesn't exist is **consumption**.
+dashboards exist. The tests exist. What doesn't exist is **synthesis and action**.
 
 DataBard doesn't compete with observability tools — it competes with the
 status quo of "I know something is broken and I'm still not doing anything
@@ -34,10 +34,11 @@ about it." The agent layer is what closes the gap, because:
    coverage fell in payments after Friday's deploy, and here's what to do"
    gets acted on. "47 rows of test results" gets skimmed. The synthesis —
    not the format — is what drives action.
-2. **Audio gets consumed.** 12% open rate on a report vs. a 2-minute briefing
-   you can listen to on your commute. Audio is one output format that solves
-   the consumption problem. It's not the only one — dashboards, alerts,
-   tickets, and emails are others — but it's the one nobody else offers.
+2. **Audio gets consumed.** A 2-minute briefing you can listen to on your
+   commute solves the consumption problem that Forrester quantified — 75% of
+   users don't trust dashboards enough to act. Audio is one output format
+   that solves this. It's not the only one — dashboards, alerts, tickets,
+   and emails are others — but it's the one nobody else offers.
 3. **Action is the differentiator.** An analyst that tells you something is
    broken is a dashboard. An analyst that tells you, explains why, recommends
    a fix, and files the ticket is an agent. The gap between informing and
@@ -48,7 +49,7 @@ about it." The agent layer is what closes the gap, because:
 
 ### Where these numbers appear in the product
 
-The landing page shows three of these statistics (61%, 2.3%, 12%) as a
+The landing page shows three of these statistics (75%, 7%, 73%) as a
 quantified problem section before any solution copy. The roast page uses
 specific findings ("test coverage at 23%?") as emotional hooks. The dashboard
 shows the live cost of the problem via `costHighlights()` — "3 tests failing
@@ -166,6 +167,32 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 - **Not a podcast tool.** Audio is one output format, not the product. The product is the synthesis engine + the agent layer.
 - **Not a generic AI assistant.** ChatGPT doesn't connect to your data estate, doesn't compute health scores, and doesn't produce trend narratives. We do.
 - **Not a web3 product for Teams.** Onchain is a workspace-specific feature, not a core pillar.
+
+## Why Now
+
+The market conditions that make DataBard viable in 2025 didn't exist in 2020. Three forces converged:
+
+### 1. The dashboard trust collapse is now quantified
+
+Forrester's *State Of The Insights-Driven Business Market, 2023* put hard numbers on what data teams have felt for years:
+
+- **Only 7% of companies are truly insights-driven.** The other 93% have data, dashboards, and observability tools — but the insights don't reach the people who act.
+- **75% of business users don't feel confident making decisions from dashboards.** The dashboards exist, but they don't answer "why" and they don't suggest a next step. The "last-mile problem" — turning "churn spiked 4% in EMEA" into "here are the 5 clients you must call today" — is unsolved by traditional BI.
+- **60-73% of enterprise data goes completely unused for analytics.** Dashboards are built, visited once, and abandoned — the "data cemetery" effect.
+
+The problem is no longer "we can't detect issues." Monte Carlo, Bigeye, Soda, dbt tests — detection is solved. The problem is the gap between detection and action. Forrester calls it the journey from "passive visuals" to "active intelligence." We call it data inaction.
+
+**Source:** Forrester, *The State Of The Insights-Driven Business Market, 2023*. Data from the Forrester Business Technographics Data & Analytics Survey (global, thousands of decision-makers across NA, Europe, APAC). The 7% figure represents organisations classified as "Insights-Driven" on Forrester's maturity curve (Beginners → Intermediate → Advanced → Insights-Driven). The 75% figure reflects business users who report lacking confidence in dashboard-based decisions.
+
+### 2. LLMs can now synthesise, not just summarise
+
+In 2020, you couldn't ask an AI "why did our health score drop?" and get a useful answer. In 2025, LLMs can ingest structured metadata (test results, lineage, ownership, PII flags, freshness), compute a health score, explain the trend in plain language, and recommend a next step. The synthesis that used to require a senior data analyst writing a weekly Notion doc can now be automated — and the output is better than the Notion doc because it's grounded in real metadata, not a human's selective memory.
+
+### 3. The agentic era is starting
+
+Forrester's 7% — the insights-driven companies — bypass human interpretation with "decision intelligence": the dashboard itself triggers an automated workflow, alert, or API call when a metric crosses a threshold. That's the agent layer. The industry is already moving from "inform" to "act." DataBard's roadmap — recommended actions with Approve/Dismiss, Jira ticket creation, Slack posting, runbook drafting — is aligned with where the market is going, not ahead of it.
+
+**The convergence:** detection is solved (observability tools), synthesis is now possible (LLMs), and the market wants action (Forrester's "active intelligence"). DataBard sits at the intersection — it reads from detection tools, synthesises with LLMs, and is building toward action. That intersection didn't exist five years ago.
 
 ## Operating Principles (Paul Graham framework)
 

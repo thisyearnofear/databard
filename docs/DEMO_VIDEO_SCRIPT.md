@@ -7,10 +7,10 @@
 
 ## Scene 1: Opening (10 seconds)
 
-**Visual:** Dark background, DataBard logo, animated stats counting up (61%, 2.3%, 12%)
+**Visual:** Dark background, DataBard logo, animated stats counting up (75%, 7%, 73%)
 
 **Narration:**
-> "DataBard turns data health into something people actually consume — a two-minute audio briefing. Sixty-one percent of dashboards are never opened. Only two point three percent drive decisions. We built a report that travels."
+> "DataBard is an AI data analyst that synthesises your data health and acts on it. Forrester says only seven percent of companies are truly insights-driven. Seventy-five percent of business users don't trust dashboards enough to make decisions. We built an analyst that closes that gap."
 
 ---
 
