@@ -227,7 +227,7 @@ The project grew from an 800-line MVP to a 5,000-line production system (Pro tie
 - Steering files (`elevenlabs.md`, `conventions.md`) ensured correct voice IDs, context stitching params, and code style were applied automatically across every generated file
 - `fileEdited` hook auto-validated API routes against the design spec on every save — caught 3 bugs before commit
 
-**Live demo:** https://databard.vercel.app  
+**Live demo:** https://databard.persidian.com  
 **Repo:** https://github.com/thisyearnofear/databard  
 **Built with:** Next.js 16, ElevenLabs SDK, OpenMetadata API, Kiro spec-driven development
 
@@ -237,7 +237,7 @@ The project grew from an 800-line MVP to a 5,000-line production system (Pro tie
 >
 > Two AI hosts debate your schema health, flag failing tests, and trace lineage. Kiro wrote the specs, steered the ElevenLabs integration, and caught bugs before commit.
 >
-> Try it: https://databard.vercel.app
+> Try it: https://databard.persidian.com
 >
 > #ElevenHacks #CodeWithKiro
 

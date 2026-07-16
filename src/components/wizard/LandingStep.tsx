@@ -234,7 +234,7 @@ export function LandingStep() {
                 <div className="w-3 h-3 rounded-full bg-[var(--success)]/60" />
               </div>
               <div className="flex-1 ml-3 text-xs font-mono text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-3 py-1 border border-[var(--border)]">
-                databard.app/protocol
+                databard.persidian.com/protocol
               </div>
             </div>
             {/* Screenshot */}
