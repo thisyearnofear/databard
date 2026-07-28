@@ -244,6 +244,36 @@ Each invariant is a Python + `requests` test in [`tests/testsprite/`](tests/test
 
 See [`LOOP.md`](LOOP.md) for the full iteration audit trail — every run, every fix, every commit SHA.
 
+## OKX.AI Marketplace
+
+DataBard is listed as an [Agent Service Provider](https://www.okx.ai/tutorial/asp) (ASP) on [OKX.AI](https://www.okx.ai) — the synthesis engine is exposed as two MCP tools that any MCP-compatible agent (Claude Code, Codex, Hermes, OpenClaw) can call directly.
+
+| Tool | Type | Price | Endpoint |
+|---|---|---|---|
+| **Data Health Check** | A2MCP | Free | `POST /api/mcp/health-check` |
+| **Data Briefing** | A2MCP | 1 USDT / call | `POST /api/mcp/briefing` |
+| **Service discovery** | — | Free | `GET /api/mcp/tools` |
+
+The paid briefing settles via [x402](https://web3.okx.com/onchainos/dev-docs/payments/service-seller-sdk) — an exact EIP-3009 USDT0 transfer on X Layer, with on-chain settlement that only fires after the synthesis succeeds. Agents pay autonomously; failed synthesis never charges.
+
+```bash
+# Free health check — any agent can call this
+curl -X POST https://databard.persidian.com/api/mcp/health-check \
+  -H 'content-type: application/json' \
+  -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+
+# Paid briefing — returns 402 + PAYMENT-REQUIRED header; agents pay via x402
+curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
+  -H 'content-type: application/json' \
+  -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+```
+
+See [`docs/OKX_AI_ASP.md`](docs/OKX_AI_ASP.md) for the full ASP reference (identity, services, builder code, deploy state, demo shot list).
+
+## AG Grid
+
+[AG Grid](https://www.ag-grid.com/javascript-data-grid/getting-started/) (free Community edition) could make DataBard's health score tables, critical-table rankings, and coverage gap analysis sortable/filterable — turning the dashboard into an interactive data explorer. Row grouping and pivoting would let users drill from overall health into per-schema details without custom table logic.
+
 ## License
 
 MIT

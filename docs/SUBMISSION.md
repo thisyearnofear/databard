@@ -9,7 +9,7 @@ Keep this file for reference; not shipped as part of either submission.
 
 > 🎯 **DataBard × TestSprite S3 — Autonomous coding-agent loop over a live devnet marketplace**
 >
-> **Live URL:** https://databard.thisyearnofear.com
+> **Live URL:** https://databard.persidian.com
 > **Repo:** https://github.com/thisyearnofear/databard
 > **TestSprite account:** papaandthejimjams@gmail.com
 > **Official dashboard:** https://www.testsprite.com/dashboard/tests/98d788db-4ec4-46ea-abb9-49acd9d4ffd5/test/ba123a58-77d2-4f9d-881f-235dca9ef936
@@ -39,7 +39,7 @@ Keep this file for reference; not shipped as part of either submission.
 > 🎯 **DataBard — Marketplace of AI Hosts (Solana × CoralOS track)**
 >
 > **Live escrow:** program `DCq82m9wgkgQGVqokKmYsvjv9Ym8Lyz8usKvcSwUS3kY` on devnet
-> **Demo:** https://databard.thisyearnofear.com/market
+> **Demo:** https://databard.persidian.com/market
 > **Repo:** https://github.com/thisyearnofear/databard
 > **One-command run:** `node scripts/loop/loop-local.mjs digest-margin --target-url <your tunnel>`
 >
@@ -145,7 +145,7 @@ Visual: hit play on the audio. Fade out.
 
 ## Loose ends before submission
 
-- [x] Deploy the market code to `databard.thisyearnofear.com` — **DONE.** Public URL
+- [x] Deploy the market code to `databard.persidian.com` — **DONE.** Public URL
       returns 200 on `/api/market/*` and `/market`.
 - [x] Re-run TestSprite Cloud against production URL — **DONE** (test `cfa9db2e…`, ✓ passed).
 - [ ] Record the video against the **live production URL** (no tunnel needed now)
@@ -180,6 +180,70 @@ in the tarball. For prod recycling, either:
 1. `scp` it once post-deploy (three-line snippet above), or
 2. Add `scripts/loop/wallet-ops.mjs` to the deploy script's `tar` list, or
 3. Fund from your local wallet via `solana transfer <prod-consumer> 0.3 --url devnet`
-   (fetch prod pubkeys from `curl https://databard.thisyearnofear.com/api/market/keypairs`).
+   (fetch prod pubkeys from `curl https://databard.persidian.com/api/market/keypairs`).
 
 For a hackathon demo window, option (3) is simplest.
+
+---
+
+## OKX.AI Genesis Hackathon · X post + Google form
+
+> 🎯 **DataBard — AI data analyst as an OKX.AI Agent Service Provider**
+>
+> **Live URL:** https://databard.persidian.com
+> **Marketplace:** ASP #9878 on OKX.AI (pending final review)
+> **Repo:** https://github.com/thisyearnofear/databard
+> **Builder Code:** `iea0zhsx4mp4an14` (X Layer)
+>
+> **What it is.** DataBard is an AI data analyst that scores your data warehouse's
+> schema health and delivers narrated audio briefings with recommended next steps.
+> Listed as an Agent Service Provider on OKX.AI with two A2MCP tools:
+>
+> 1. **Data Health Check** — free. POST your schema FQN, get back a 0-100 health
+>    score, critical tables ranked, coverage gaps, and prioritized actions.
+> 2. **Data Briefing** — $1 USDT per call via x402. Exact EIP-3009 USDT0 transfer
+>    on X Layer, settled on-chain only after synthesis succeeds. Returns the
+>    analysis script, an MP3 audio briefing, the health score, and next steps.
+>
+> **Why it's built this way.** The free health check is the discovery driver —
+> any MCP-compatible agent can call it to triage a data estate. The paid briefing
+> is the hero output: full synthesis, narrated, actionable. x402 means agents pay
+> autonomously and failed synthesis never charges. The endpoints are stateless
+> one-shot wrappers over the same synthesis engine that powers the DataBard web
+> app — no session dependency, no lock-in.
+>
+> **Try it:**
+> ```bash
+> # Free health check
+> curl -X POST https://databard.persidian.com/api/mcp/health-check \
+>   -H 'content-type: application/json' \
+>   -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+>
+> # Paid briefing (returns 402 + PAYMENT-REQUIRED header without payment)
+> curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
+>   -H 'content-type: application/json' \
+>   -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+> ```
+>
+> #OKXAI
+
+### Submission checklist
+
+- [x] Build the ASP endpoints (health-check + briefing) — DONE
+- [x] Deploy to `databard.persidian.com` — DONE (release `20260728_021040`)
+- [x] Self-check live endpoints (tools=200, health-check=400, briefing=402 amount=1000000) — DONE
+- [x] Register as A2MCP ASP on OKX.AI — DONE (#9878, AI quality "suggested pass")
+- [x] Activate / submit for review — DONE (approvalStatus 3, "Listing under review")
+- [ ] Wait for OKX final approval (status flips to "listed")
+- [ ] Record the 90s X demo post with `#OKXAI` — see [docs/OKX_AI_ASP.md](OKX_AI_ASP.md) § "90s X demo shot list"
+- [ ] Submit the [Google form](https://forms.gle/mddEUagmDbyV37ws8) (deadline Jul 28 23:59 UTC; may be extended — verify)
+- [ ] Post the X post and copy the link into the Google form
+
+### Notes
+- The hackathon is the [OKX.AI Genesis](https://web3.okx.com/xlayer/build-x-series)
+  (part of the X Layer Build X series). Submission window was Jul 3 – Jul 27,
+  23:59 UTC; CoinLive reported an extension to Jul 28.
+- The Google form requires the ASP details (name, ID, services) AND a link to the
+  X post — so the X post must go up before the form is submitted.
+- The ASP must pass OKX's internal review and go live to remain eligible — if the
+  listing is rejected, the hackathon submission is invalid.
