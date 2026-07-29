@@ -23,7 +23,7 @@ function RoastPageInner() {
   return (
     <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-2xl mx-auto enter-up">
       <div className="w-full">
-        <Link href="/" className="text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Back to DataBard</Link>
+        <Link href="/" className="inline-flex items-center py-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Back to DataBard</Link>
       </div>
 
       {/* Hero */}

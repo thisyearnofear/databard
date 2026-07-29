@@ -16,7 +16,9 @@ function WizardContent() {
   // never covers the hero or a demo
   if (state.step === "landing") {
     return (
-      <main className="min-h-screen flex flex-col items-center p-4 sm:p-8">
+      // overflow-x-hidden guards against any wide child (spotlight/aurora/stats)
+      // pushing the layout wider than the viewport on small screens.
+      <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 overflow-x-hidden">
         <LandingStep />
       </main>
     );

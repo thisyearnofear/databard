@@ -29,7 +29,7 @@ function HeaderBarInner() {
   return (
     <header className="sticky top-3 z-50 mx-auto mt-3 w-[min(100%-2rem,68rem)]">
       <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur px-3 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
-        <Link href={homeHref(workspace)} aria-label="Back to DataBard home" className="shrink-0 text-sm font-semibold tracking-tight hover:text-[var(--accent)] transition-colors">
+        <Link href={homeHref(workspace)} aria-label="Back to DataBard home" className="inline-flex shrink-0 items-center py-1 text-sm font-semibold tracking-tight hover:text-[var(--accent)] transition-colors">
           DataBard <span className="ml-1 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-muted)]">Home</span>
         </Link>
         <div className="flex shrink-0 rounded-md border border-[var(--border)] p-0.5" aria-label="Workspace">
@@ -41,7 +41,7 @@ function HeaderBarInner() {
                 if (target !== workspace) track("persona_toggle", { from: workspace, to: target === "protocols" ? "web3" : "enterprise" });
               }}
               aria-current={target === workspace ? "page" : undefined}
-              className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+              className={`inline-flex items-center rounded px-2 py-1.5 text-[11px] font-medium transition-colors ${
                 target === workspace
                   ? "bg-[var(--accent)] text-[var(--bg)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)]"
@@ -56,7 +56,7 @@ function HeaderBarInner() {
             <Link
               key={item.href}
               href={workspaceHref(item.href, workspace)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`inline-flex items-center rounded-md px-3 py-2 text-xs font-medium transition-colors ${
                 isNavItemActive(item.href, pathname)
                   ? "bg-[var(--accent)]/12 text-[var(--accent)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)]"

@@ -67,7 +67,7 @@ export default function AlertsPage() {
       <div className="max-w-2xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] mb-4 inline-block">← Back to DataBard</Link>
+          <Link href="/" className="inline-flex items-center py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] mb-4">← Back to DataBard</Link>
           <h1 className="text-2xl font-bold mb-2">🔔 Alerts</h1>
           <p className="text-sm text-[var(--text-muted)]">
             Your analyst watches your data 24/7. Get alerted via Slack or webhook when it finds something — no dashboard checking required.

@@ -8,7 +8,7 @@ test.describe("Wizard Flow", () => {
     await page.getByTestId("connect-button").click();
 
     // Connect step should show its heading
-    await expect(page.getByText("Connect your data")).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByRole("heading", { name: "Connect your analyst to your data" })).toBeVisible({ timeout: 3_000 });
 
     // Step indicator should highlight "Connect"
     await expect(page.getByText("Connect", { exact: true }).first()).toBeVisible();
@@ -23,9 +23,9 @@ test.describe("Wizard Flow", () => {
     // All four step labels should be present in the nav
     const nav = page.locator("nav[aria-label='Progress']");
     await expect(nav.getByText("Connect", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Pick dataset", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Generate", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Listen", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Pick a dataset", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Create episode", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Listen / Play", { exact: true })).toBeVisible();
   });
 
   test("should allow navigating back from schema picker", async ({ page }) => {

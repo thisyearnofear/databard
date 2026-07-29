@@ -73,7 +73,7 @@ export default function LeaderboardPage() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href={homeHref("protocols")} className="text-[var(--text-muted)] text-sm no-underline hover:text-[var(--text)] transition-colors">
+          <Link href={homeHref("protocols")} className="inline-flex items-center py-1.5 text-[var(--text-muted)] text-sm no-underline hover:text-[var(--text)] transition-colors">
             ← Back to DataBard
           </Link>
           <h1 className="text-[34px] font-extrabold mt-4 mb-2 tracking-tight">
@@ -291,7 +291,7 @@ export default function LeaderboardPage() {
         )}
 
         <p className="mt-10 text-[var(--text-muted)] text-xs text-center">
-          Scores sourced from on-chain Solana mints via DataBard · <Link href="/api/onchain/leaderboard" className="text-[var(--accent)]">JSON API</Link>
+          Scores sourced from on-chain Solana mints via DataBard · <Link href="/api/onchain/leaderboard" className="inline-flex items-center py-1 text-[var(--accent)]">JSON API</Link>
         </p>
       </div>
     </main>

@@ -134,29 +134,30 @@ export function LandingStep() {
           {workspaceCopy.description}
         </p>
 
-        {/* A sample is useful context, but it must not masquerade as a user's workspace. */}
+        {/* Demo-first: the zero-friction "wow" is the highest-converting path,
+            so it leads. Connect is a real step, kept as an equal-weight secondary. */}
         <div className="relative z-10 flex flex-col items-center gap-3 mb-8">
+          <button
+            data-testid="demo-button"
+            onClick={handleDemo}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
+          >
+            <span>Hear a 2-minute briefing</span>
+            <span aria-hidden>→</span>
+          </button>
           <button
             data-testid="connect-button"
             onClick={() => {
               track("landing_cta_click", { cta: "connect", persona: state.persona });
               track("connect_start", { persona: state.persona });
               dispatch({ type: "SET_SOURCE", source: "openmetadata" });
-              dispatch({ type: "SET_OM_MODE", omMode: "custom" });
+              dispatch({ type: "SET_OM_MODE", omMode: "sandbox" });
               showConnect();
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,color,border-color] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97]"
           >
-            <span>Connect your analyst</span>
+            <span>Connect your own data</span>
             <span aria-hidden>→</span>
-          </button>
-          <button
-            data-testid="demo-button"
-            onClick={handleDemo}
-            className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-colors duration-200 active:scale-[0.97]"
-          >
-            <span>See a sample briefing first</span>
-            <span className="text-[var(--accent)]">→</span>
           </button>
         </div>
 
@@ -447,7 +448,7 @@ export function LandingStep() {
             <span>·</span>
             <span>© {new Date().getFullYear()}</span>
           </div>
-          <nav className="flex items-center gap-4">
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-left">
             <a
               href="https://github.com/thisyearnofear/databard"
               target="_blank"

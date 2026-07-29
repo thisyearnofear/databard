@@ -5,7 +5,7 @@ export function DashboardHeader({ isProtocols }: { isProtocols: boolean }) {
   const workspace: Workspace = isProtocols ? "protocols" : "teams";
   return (
     <div className="mb-8">
-      <Link href={homeHref(workspace)} className="font-mono text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
+      <Link href={homeHref(workspace)} className="inline-flex items-center py-1.5 font-mono text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
         ← DataBard
       </Link>
       <div className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--accent)] mt-4">
@@ -19,9 +19,9 @@ export function DashboardHeader({ isProtocols }: { isProtocols: boolean }) {
       </p>
       <div className="mt-3 flex items-center gap-4 font-mono text-[12px]">
         {isProtocols ? (
-          <Link href={workspaceHref("/verify", workspace)} className="text-[var(--accent)] no-underline hover:underline">Verify an attestation →</Link>
+          <Link href={workspaceHref("/verify", workspace)} className="inline-flex items-center py-1.5 text-[var(--accent)] no-underline hover:underline">Verify an attestation →</Link>
         ) : (
-          <Link href={workspaceHref("/alerts", workspace)} className="text-[var(--accent)] no-underline hover:underline">Manage alerts →</Link>
+          <Link href={workspaceHref("/alerts", workspace)} className="inline-flex items-center py-1.5 text-[var(--accent)] no-underline hover:underline">Manage alerts →</Link>
         )}
       </div>
     </div>

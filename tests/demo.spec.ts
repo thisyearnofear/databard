@@ -26,10 +26,10 @@ test.describe("Demo Mode", () => {
 
     // A sample dashboard must say so and offer an explicit path to real data.
     await expect(page.getByRole("region", { name: "Sample briefing" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /analyse my data/i })).toHaveAttribute("href", "/?start=connect&workspace=teams");
+    await expect(page.getByRole("link", { name: /connect your analyst/i })).toHaveAttribute("href", "/?start=connect&workspace=teams");
 
     // The fresh-episode banner offers the audio as a CTA on the dashboard
-    const listenCta = page.getByText("Listen to this analysis");
+    const listenCta = page.getByRole("region", { name: "Priority briefing" }).getByRole("button", { name: /listen to the briefing/i });
     await expect(listenCta).toBeVisible({ timeout: 10_000 });
     await listenCta.click();
 
@@ -41,9 +41,9 @@ test.describe("Demo Mode", () => {
   test("takes a sample viewer straight into the real-data connection flow", async ({ page }) => {
     await page.goto("/protocol?episode=demo-enterprise&demo=1&workspace=teams");
 
-    await page.getByRole("link", { name: /analyse my data/i }).click();
+    await page.getByRole("link", { name: /connect your analyst/i }).click();
     await page.waitForURL("**/?start=connect&workspace=teams");
-    await expect(page.getByRole("heading", { name: "Connect your data" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Connect your analyst to your data" })).toBeVisible();
     await expect(page.getByText("Your instance", { exact: true })).toBeVisible();
   });
 
