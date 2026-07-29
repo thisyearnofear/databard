@@ -203,6 +203,48 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights, context?
       : `Looking pretty solid — ${insights.testCoverage}% test coverage, ${insights.passingTests} tests all green. Let's see what's under the hood.`,
   });
 
+  // Data highlights — the "wow" moment for Dune/Coral sources.
+  // Placed early so the specific numbers land before generic structural commentary.
+  if (context?.tableStats && Object.keys(context.tableStats).length > 0) {
+    const entries = Object.entries(context.tableStats);
+
+    // Narrate each table that has interesting data (up to 3)
+    const narratable = entries.filter(([, stats]) =>
+      stats.rowCount > 0 && stats.columnHighlights.length > 0
+    ).slice(0, 3);
+
+    narratable.forEach(([tableName, stats], idx) => {
+      const fmt = formatNum(stats.rowCount);
+      const numCols = stats.columnHighlights.filter((c) => c.type === "numeric");
+      const catCols = stats.columnHighlights.filter((c) => c.type === "categorical" && c.topValues && c.topValues.length > 0);
+
+      let detail = `${tableName} returned ${fmt} rows`;
+
+      if (numCols.length > 0) {
+        const best = numCols.reduce((a, b) => (Math.abs((b.max ?? 0) - (b.min ?? 0)) > Math.abs((a.max ?? 0) - (a.min ?? 0)) ? b : a));
+        const spread = Math.abs((best.max ?? 0) - (best.min ?? 0));
+        const spreadPct = best.avg ? Math.round((spread / Math.abs(best.avg)) * 100) : 0;
+        detail += `. ${best.column} ranges from ${formatNum(best.min ?? 0)} to ${formatNum(best.max ?? 0)} (avg ${formatNum(best.avg ?? 0)}`;
+        if (spreadPct > 200) detail += ` — that's a ${spreadPct}% spread, which is wide`;
+        detail += `)`;
+      }
+      if (catCols.length > 0) {
+        const topCat = catCols[0];
+        detail += `. Most common ${topCat.column} values: ${topCat.topValues!.slice(0, 3).join(", ")}`;
+      }
+      detail += ".";
+
+      segments.push({ speaker: idx === 0 ? "Morgan" : "Alex", topic: "data", text: detail });
+    });
+
+    if (entries.length > narratable.length) {
+      segments.push({
+        speaker: "Alex", topic: "data",
+        text: `${entries.length - narratable.length} ${entries.length - narratable.length === 1 ? "other query has" : "other queries have"} result data too — the numbers tell a richer story than column names alone.`,
+      });
+    }
+  }
+
   // Critical tables first (most interesting for listeners)
   if (insights.criticalTables.length > 0) {
     segments.push({
@@ -308,36 +350,6 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights, context?
     });
   }
 
-  // Data highlights (Dune query results)
-  if (context?.tableStats && Object.keys(context.tableStats).length > 0) {
-    const entries = Object.entries(context.tableStats);
-    const [tableName, stats] = entries[0];
-    const fmt = stats.rowCount > 1_000_000 ? `${(stats.rowCount / 1_000_000).toFixed(1)}M` : stats.rowCount > 1000 ? `${(stats.rowCount / 1000).toFixed(0)}K` : `${stats.rowCount}`;
-    const numCol = stats.columnHighlights.find((c) => c.type === "numeric");
-    const catCol = stats.columnHighlights.find((c) => c.type === "categorical" && c.topValues && c.topValues.length > 0);
-
-    let detail = `${tableName} has ${fmt} rows in its result set`;
-    if (numCol) {
-      const fmtMin = numCol.min !== undefined ? formatNum(numCol.min) : "?";
-      const fmtMax = numCol.max !== undefined ? formatNum(numCol.max) : "?";
-      const fmtAvg = numCol.avg !== undefined ? formatNum(numCol.avg) : "?";
-      detail += `. The ${numCol.column} column ranges from ${fmtMin} to ${fmtMax}, averaging ${fmtAvg}`;
-    }
-    if (catCol && catCol.topValues) {
-      detail += numCol ? ". " : ". ";
-      detail += `Top values for ${catCol.column}: ${catCol.topValues.slice(0, 3).join(", ")}`;
-    }
-    detail += ".";
-
-    segments.push({ speaker: "Alex", topic: "data", text: detail });
-    if (entries.length > 1) {
-      segments.push({
-        speaker: "Morgan", topic: "data",
-        text: `${entries.length - 1} other ${entries.length - 1 === 1 ? "query has" : "queries have"} result data too. The numbers tell a richer story than column names alone.`,
-      });
-    }
-  }
-
   // Lineage
   if (insights.lineageHotspots.length > 0) {
     const top = insights.lineageHotspots[0];
@@ -366,7 +378,7 @@ function generateTemplate(schema: SchemaMeta, insights: SchemaInsights, context?
   segments.push({
     speaker: "Morgan", topic: "outro",
     text: insights.failingTests > 0
-      ? `Priority one: fix those ${insights.failingTests} failing tests. Priority two: get test coverage above ${insights.testCoverage}%. Until next time.`
+      ? `Priority one: fix those ${insights.failingTests} failing tests. Priority two: ${insights.testCoverage < 100 ? `get test coverage above ${insights.testCoverage}%.` : "document those tables — 0% documentation is a liability."} Until next time.`
       : insights.testCoverage < 50
       ? `No failures, but ${insights.testCoverage}% test coverage is thin. Add tests before something slips through. Until next time.`
       : `Clean bill of health. Keep those tests running and that documentation fresh. Until next time.`,

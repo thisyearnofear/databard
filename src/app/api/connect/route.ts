@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (ids.length > 1) {
-        schemas = [`dune.batch.${ids.join("-")}`];
+        schemas = [`dune.batch.${[...new Set(ids)].sort((a, b) => Number(a) - Number(b)).join("-")}`];
       } else if (ids.length === 1) {
         schemas = [`dune.query.${ids[0]}`];
       }
