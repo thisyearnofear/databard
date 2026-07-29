@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      TARGET_URL: https://databard.thisyearnofear.com
+      TARGET_URL: https://databard.persidian.com
       VENICE_API_KEY: ${{ secrets.VENICE_API_KEY }}
       NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
