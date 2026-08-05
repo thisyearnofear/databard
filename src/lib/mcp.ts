@@ -14,6 +14,8 @@ export interface McpRequestInput {
   schemaFqn: string;
   /** Structured OpenMetadata connection (preferred). */
   openmetadata?: { url: string; token: string };
+  /** DataHub Context Platform (GMS) connection. */
+  datahub?: { serverUrl: string; token?: string };
   /** Flat OpenMetadata fields — accepted for parity with /api/synthesize. */
   url?: string;
   token?: string;
@@ -54,6 +56,7 @@ export function parseMcpInput(body: unknown): ParsedMcpInput {
   const config: ConnectionConfig = {
     source,
     openmetadata,
+    datahub: b.datahub,
     dbtCloud: b.dbtCloud,
     dbtLocal: b.dbtLocal,
     theGraph: b.theGraph,

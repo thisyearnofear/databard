@@ -71,6 +71,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     "the-graph": "The Graph",
     dune: "Dune",
     coral: "Coral",
+    datahub: "DataHub",
   };
 
   // Source help text
@@ -81,6 +82,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
     dune: "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
     coral: "Query 50+ sources via SQL — GitHub, Slack, Jira, Postgres, Notion, Stripe, and more. Join across sources in a single query.",
+    datahub: "Connect your DataHub GMS instance (server URL + optional personal access token). DataBard reads the context graph — datasets, lineage, owners, tags, assertions — and synthesises it into briefings and health scores.",
   };
 
   // Active context string
@@ -97,9 +99,11 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
             ? state.graphUrl || "No subgraph endpoint set"
             : state.source === "coral"
               ? "Cross-source SQL"
-              : state.duneNamespace
-                ? `Dune user: ${state.duneNamespace}`
-                : "Dune username optional";
+              : state.source === "datahub"
+                ? state.dhServerUrl || "No DataHub GMS set"
+                : state.duneNamespace
+                  ? `Dune user: ${state.duneNamespace}`
+                  : "Dune username optional";
 
   // Convenience actions
   const setStep = useCallback((step: WizardStep) => dispatch({ type: "SET_STEP", step }), []);

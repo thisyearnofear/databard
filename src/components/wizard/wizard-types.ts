@@ -34,6 +34,8 @@ export interface WizardState {
   duneApiKey: string;
   duneNamespace: string;
   duneQueryUrl: string;
+  dhServerUrl: string;
+  dhToken: string;
   coralQuery: string;
   coralSubStep: "query" | "configure";
   coralPreviewData: {
@@ -98,6 +100,8 @@ export type WizardAction =
   | { type: "SET_DUNE_API_KEY"; key: string }
   | { type: "SET_DUNE_NAMESPACE"; ns: string }
   | { type: "SET_DUNE_QUERY_URL"; url: string }
+  | { type: "SET_DH_SERVER_URL"; url: string }
+  | { type: "SET_DH_TOKEN"; token: string }
   | { type: "SET_CORAL_QUERY"; query: string }
   | { type: "SET_CORAL_SUB_STEP"; subStep: "query" | "configure" }
   | { type: "SET_CORAL_PREVIEW_DATA"; data: WizardState["coralPreviewData"] }
@@ -154,6 +158,8 @@ export const initialState: WizardState = {
   duneApiKey: "",
   duneNamespace: "",
   duneQueryUrl: "",
+  dhServerUrl: "http://localhost:8080",
+  dhToken: "",
   coralQuery: `SELECT g.title, g.state, s.text, s.ts
 FROM github.pull_requests g
 JOIN slack.messages s ON s.channel = '#incidents'

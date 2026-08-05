@@ -17,7 +17,7 @@ const connectionSchema = {
   properties: {
     source: {
       type: "string",
-      enum: ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune", "coral"],
+      enum: ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune", "coral", "datahub"],
       default: "openmetadata",
     },
     schemaFqn: { type: "string", description: "Fully-qualified schema name, e.g. \"db.sales\" or \"prod.analytics\"." },
@@ -25,6 +25,13 @@ const connectionSchema = {
       type: "object",
       properties: { url: { type: "string" }, token: { type: "string" } },
       required: ["url", "token"],
+    },
+    datahub: {
+      type: "object",
+      description:
+        "DataHub GMS GraphQL connection. serverUrl is the DataHub base URL (e.g. http://localhost:8080); token is a DataHub personal access token (optional for open deployments).",
+      properties: { serverUrl: { type: "string" }, token: { type: "string" } },
+      required: ["serverUrl"],
     },
     dbtCloud: {
       type: "object",
@@ -130,6 +137,41 @@ const briefingOutputSchema = {
   },
 } as const;
 
+const writebackInputSchema = {
+  ...connectionSchema,
+  properties: {
+    ...connectionSchema.properties,
+    writeDescriptions: {
+      type: "boolean",
+      description: "Append an AI summary line to each dataset's description (default true).",
+    },
+  },
+  required: ["source", "schemaFqn"],
+} as const;
+
+const writebackOutputSchema = {
+  type: "object",
+  properties: {
+    ok: { type: "boolean" },
+    tool: { type: "string", const: "databard.write-back" },
+    schemaFqn: { type: "string" },
+    health: {
+      type: "object",
+      properties: { score: { type: "number" }, label: { type: "string" } },
+    },
+    summaryLine: { type: "string" },
+    written: {
+      type: "object",
+      properties: {
+        tablesTouched: { type: "number" },
+        tagsApplied: { type: "number" },
+        descriptionsUpdated: { type: "number" },
+        errors: { type: "number" },
+      },
+    },
+  },
+} as const;
+
 const TOOLS = [
   {
     name: "databard_health_check",
@@ -159,6 +201,18 @@ const TOOLS = [
       },
     },
     outputSchema: briefingOutputSchema,
+  },
+  {
+    name: "databard_write_back",
+    summary:
+      "Write DataBard's findings back into the DataHub context graph: health + defect tags and an AI summary description. Free.",
+    description:
+      "Analyses a DataHub schema, then contributes back to the context graph: tags each table with its health band and defect tags (ownerless / untested / undocumented / stale) and optionally appends an AI summary to each dataset's description. Idempotent (marker blocks are stripped before re-appending). Requires source: \"datahub\".",
+    method: "POST",
+    endpoint: "/api/mcp/writeback",
+    pricing: "free",
+    inputSchema: writebackInputSchema,
+    outputSchema: writebackOutputSchema,
   },
 ];
 

@@ -63,6 +63,11 @@ export function useGeneration() {
       if (state.source === "openmetadata") {
         body.url = state.omUrl;
         body.token = state.token;
+      } else if (state.source === "datahub") {
+        body.datahub = {
+          serverUrl: state.dhServerUrl,
+          token: state.dhToken || undefined,
+        };
       } else if (state.source === "dbt-cloud") {
         body.dbtCloud = {
           accountId: state.dbtAccountId,

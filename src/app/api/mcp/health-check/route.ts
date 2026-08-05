@@ -19,6 +19,10 @@ export const runtime = "nodejs";
  *   curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
  *     -H 'content-type: application/json' \
  *     -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+ *
+ *   curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
+ *     -H 'content-type: application/json' \
+ *     -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080","token":"..."}}'
  */
 export async function POST(req: NextRequest) {
   try {

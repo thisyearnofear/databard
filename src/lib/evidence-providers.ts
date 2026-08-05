@@ -23,6 +23,7 @@ export function buildEvidenceContext(config: ConnectionConfig): EvidenceSourceCo
     "the-graph": "The Graph subgraph",
     dune: "Dune workspace",
     coral: "Coral Unified SQL",
+    datahub: "DataHub context graph",
   };
 
   return {

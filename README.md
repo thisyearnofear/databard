@@ -43,7 +43,7 @@ This makes the product feel like an analyst that works for you — not a podcast
 ```
 ┌─────────────────────────────────────────────┐
 │              Data Sources                    │
-│  OpenMetadata · dbt · The Graph · Dune       │
+│  OpenMetadata · DataHub · dbt · The Graph   │
 │  Coral (50+ sources via SQL)                 │
 └───────────────────┬─────────────────────────┘
                     │
@@ -270,10 +270,43 @@ curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
 
 See [`docs/OKX_AI_ASP.md`](docs/OKX_AI_ASP.md) for the full ASP reference (identity, services, builder code, deploy state, demo shot list).
 
+## DataHub Integration
+
+DataBard is an entry in **Build with DataHub: The Agent Hackathon** — an AI agent that lives on top of DataHub's Context Platform.
+
+> **"DataHub gives the agent context; DataBard makes the agent act."** DataHub's context graph is the *read source* (datasets, lineage, ownership, tags, assertions); DataBard's synthesis engine is the agent brain that turns that context into a health score, a trend narrative, an audio briefing, and recommended actions — then **writes its findings back into the graph**.
+
+DataHub is a first-class source: pick **🧭 DataHub** in the wizard, paste a GMS URL (+ optional personal access token), and DataBard reads the context graph. It also **contributes back** — after analysis it tags tables (health band + ownerless / untested / undocumented / stale) and appends an idempotent AI summary to dataset descriptions, attributed as `DataBard AI analyst`.
+
+### MCP tools (agent-callable)
+
+| Tool | Description | Endpoint |
+|---|---|---|
+| `databard_health_check` | Free — health score + critical tables + recommended actions | `POST /api/mcp/health-check` |
+| `databard_briefing` | x402-paid — full briefing: script + audio + health | `POST /api/mcp/briefing` |
+| `databard_write_back` | Free — writes findings back into the DataHub graph | `POST /api/mcp/writeback` |
+| Service discovery | Tool list + JSON schemas | `GET /api/mcp/tools` |
+
+```bash
+# Health check from a DataHub connection
+curl -X POST https://databard.persidian.com/api/mcp/health-check \
+  -H 'content-type: application/json' \
+  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080","token":"..."}}'
+
+# Write findings back into the DataHub context graph (tags + AI summary)
+curl -X POST https://databard.persidian.com/api/mcp/writeback \
+  -H 'content-type: application/json' \
+  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080","token":"..."}}'
+```
+
+Sample outputs produced by the real pipeline (no live DataHub needed): [`examples/`](examples/).
+
+See [`docs/DATAHUB_HACKATHON.md`](docs/DATAHUB_HACKATHON.md) for the full submission packet — judging-criteria mapping, local setup, and the demo shot list.
+
 ## AG Grid
 
 [AG Grid](https://www.ag-grid.com/javascript-data-grid/getting-started/) (free Community edition) could make DataBard's health score tables, critical-table rankings, and coverage gap analysis sortable/filterable — turning the dashboard into an interactive data explorer. Row grouping and pivoting would let users drill from overall health into per-schema details without custom table logic.
 
 ## License
 
-MIT
+[Apache License 2.0](LICENSE) — © 2026 DataBard Contributors.

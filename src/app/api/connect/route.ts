@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
       if (!body.dune?.apiKey) throw new ValidationError("Dune API key required");
     } else if (source === "coral") {
       if (!body.coral?.query) throw new ValidationError("Coral query required");
+    } else if (source === "datahub") {
+      if (!body.datahub?.serverUrl) throw new ValidationError("DataHub server URL required");
     } else {
       throw new ValidationError(`Unsupported data source: ${source}`);
     }
@@ -81,6 +83,7 @@ export async function POST(req: NextRequest) {
       theGraph: body.theGraph,
       dune: body.dune,
       coral: body.coral,
+      datahub: body.datahub,
     };
 
     let schemas: string[] = [];

@@ -1,0 +1,54 @@
+{
+  "ok": true,
+  "tool": "databard.briefing",
+  "schemaFqn": "db.sales",
+  "schemaName": "sales",
+  "tableCount": 4,
+  "outputFormat": "podcast",
+  "health": {
+    "score": 63,
+    "label": "at-risk",
+    "failingTests": 1,
+    "passingTests": 6,
+    "totalTests": 7,
+    "testCoverage": 75,
+    "docCoverage": 75,
+    "staleTables": 1,
+    "ownerlessTables": 1
+  },
+  "script": [
+    {
+      "speaker": "Alex",
+      "topic": "Opening",
+      "text": "Welcome back to your data week. The sales estate is holding at a 63 — but there's one table quietly costing you."
+    },
+    {
+      "speaker": "Morgan",
+      "topic": "Critical finding",
+      "text": "Order items has been stale for six days, it's never been tested, and nobody owns it. And it sits directly downstream of orders, so every issue in orders cascades into it."
+    },
+    {
+      "speaker": "Alex",
+      "topic": "Recommended actions",
+      "text": "First: assign an owner and a freshness test to order_items. Second: the failing orders-to-customer foreign key needs a ticket — that's one bad join from a production incident."
+    }
+  ],
+  "recommendedActions": [
+    {
+      "priority": "high",
+      "category": "freshness",
+      "title": "Investigate stale db.sales.order_items",
+      "table": "db.sales.order_items",
+      "effort": "30min"
+    },
+    {
+      "priority": "critical",
+      "category": "test",
+      "title": "Fix failing test orders_fk_customer on db.sales.orders",
+      "table": "db.sales.orders",
+      "effort": "1hr"
+    }
+  ],
+  "audio": "<base64-mp3 in a real call>",
+  "audioUrl": "https://grove.storage/ipfs/bafy...  (real briefing only)"
+}

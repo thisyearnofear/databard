@@ -1,0 +1,90 @@
+{
+  "ok": true,
+  "tool": "databard.health-check",
+  "schemaFqn": "db.sales",
+  "schemaName": "sales",
+  "tableCount": 4,
+  "health": {
+    "score": 78,
+    "label": "healthy",
+    "failingTests": 1,
+    "passingTests": 5,
+    "totalTests": 6,
+    "testCoverage": 75,
+    "docCoverage": 75,
+    "staleTables": 1,
+    "ownerlessTables": 1,
+    "undocumentedTables": 1
+  },
+  "criticalTables": [
+    {
+      "name": "db.sales.orders",
+      "failingTests": 1,
+      "downstreamCount": 0,
+      "risk": "high"
+    }
+  ],
+  "staleTables": [
+    {
+      "name": "db.sales.order_items",
+      "hoursAgo": 144
+    }
+  ],
+  "recommendedActions": [
+    {
+      "priority": "high",
+      "category": "test",
+      "title": "Fix 1 failing test on db.sales.orders",
+      "description": "Test is failing. Investigate and fix or update expectations.",
+      "table": "db.sales.orders",
+      "effort": "30min"
+    },
+    {
+      "priority": "high",
+      "category": "test",
+      "title": "Add tests to db.sales.order_items",
+      "description": "No quality tests configured. Add not_null, unique, or accepted_values checks.",
+      "table": "db.sales.order_items",
+      "effort": "30min"
+    },
+    {
+      "priority": "high",
+      "category": "freshness",
+      "title": "Investigate stale db.sales.order_items",
+      "description": "Last updated 144h ago. Check if the pipeline is running or if this table is deprecated.",
+      "table": "db.sales.order_items",
+      "effort": "30min"
+    },
+    {
+      "priority": "medium",
+      "category": "documentation",
+      "title": "Document db.sales.order_items",
+      "description": "No description set. Add a brief explanation of what this table contains and its purpose.",
+      "table": "db.sales.order_items",
+      "effort": "5min"
+    },
+    {
+      "priority": "medium",
+      "category": "ownership",
+      "title": "Assign owners to 1 table",
+      "description": "Tables without owners: db.sales.order_items. Ownership ensures accountability when issues arise.",
+      "effort": "5min"
+    },
+    {
+      "priority": "medium",
+      "category": "governance",
+      "title": "Review PII access on db.sales.customer",
+      "description": "Contains PII columns: email. Verify access policies and retention rules.",
+      "table": "db.sales.customer",
+      "effort": "30min"
+    },
+    {
+      "priority": "medium",
+      "category": "governance",
+      "title": "Review PII access on db.sales.payments",
+      "description": "Contains PII columns: card_pan. Verify access policies and retention rules.",
+      "table": "db.sales.payments",
+      "effort": "30min"
+    }
+  ]
+}

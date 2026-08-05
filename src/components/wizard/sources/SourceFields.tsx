@@ -154,6 +154,29 @@ export function SourceFields() {
           </p>
         </>
       )}
+
+      {/* DataHub */}
+      {state.source === "datahub" && (
+        <>
+          <input
+            className={inputClass}
+            value={state.dhServerUrl}
+            onChange={(e) => dispatch({ type: "SET_DH_SERVER_URL", url: e.target.value })}
+            placeholder="DataHub GMS URL (e.g. http://localhost:8080)"
+          />
+          <input
+            className={inputClass}
+            type="password"
+            autoComplete="off"
+            value={state.dhToken}
+            onChange={(e) => dispatch({ type: "SET_DH_TOKEN", token: e.target.value })}
+            placeholder="Personal access token (optional)"
+          />
+          <p className="text-xs text-[var(--text-muted)] -mt-1">
+            DataBard reads the context graph — datasets, lineage, owners, tags, assertions — and writes findings back.
+          </p>
+        </>
+      )}
     </>
   );
 }

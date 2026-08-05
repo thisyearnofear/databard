@@ -1,10 +1,17 @@
 /** Shared domain types — single source of truth */
 
-export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune" | "coral";
+export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune" | "coral" | "datahub";
 
 export interface OMConnection {
   url: string;
   token: string;
+}
+
+export interface DataHubConnection {
+  /** DataHub GMS base URL, e.g. http://localhost:8080 or https://datahub.myco.com */
+  serverUrl: string;
+  /** Personal access token (optional for open deployments). */
+  token?: string;
 }
 
 export interface DbtConnection {
@@ -31,6 +38,7 @@ export interface CoralConnection {
 export interface ConnectionConfig {
   source: DataSource;
   openmetadata?: OMConnection;
+  datahub?: DataHubConnection;
   dbtCloud?: DbtConnection;
   dbtLocal?: { manifestPath?: string; manifestContent?: string };
   theGraph?: TheGraphConnection;

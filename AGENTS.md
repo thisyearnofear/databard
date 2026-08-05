@@ -8,7 +8,7 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 - `npm run build` — production build (81 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
-- `npm run test:unit` — `tsx tests/rate-limit.unit.ts`
+- `npm run test:unit` — `tsx tests/rate-limit.unit.ts && tsx tests/datahub-adapter.unit.ts`
 - `npx playwright install` — install required browsers
 - `npx playwright test --project=chromium` — run a single browser project
 
@@ -69,6 +69,8 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/app/api/mcp/health-check/route.ts` — FREE A2MCP tool: schema health score + recommended actions
 - `src/app/api/mcp/briefing/route.ts` — PAID A2MCP tool (x402): full synthesis (script + audio + health)
 - `src/app/api/mcp/tools/route.ts` — A2MCP service discovery (tool list + JSON schemas)
+- `src/lib/datahub-adapter.ts` — DataHub GMS adapter: GraphQL read (datasets, lineage, owners, tags, assertions, profile) + write-back (tags + AI descriptions)
+- `src/app/api/mcp/writeback/route.ts` — FREE A2MCP tool: writes findings back into the DataHub context graph
 - `src/app/protocol/page.tsx` — dashboard (hero output)
 - `src/components/EpisodePlayer.tsx` — audio player with drill-down
 - `src/components/wizard/wizard-context.tsx` — wizard provider (slim, wires together types + reducer + effects)
@@ -87,6 +89,7 @@ Dark-first. `data-theme="dark"` is set on `<html>` in `layout.tsx`. Light mode i
 - `docs/UNIT_ECONOMICS.md` — cost-per-briefing, pricing, margin analysis
 - `docs/PLAN.md` — development roadmap (Phases 1-7)
 - `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture
+- `docs/DATAHUB_HACKATHON.md` — DataHub Agent Hackathon submission packet (pitch, judging-criteria map, setup, demo shot list)
 - `docs/AZURE.md` — Azure OpenAI migration guide
 
 ## OKX.AI A2MCP ASP
@@ -96,6 +99,7 @@ DataBard is registered as an Agent Service Provider (ASP) on OKX.AI, exposing th
 - `POST /api/mcp/health-check` — **FREE**. `databard_health_check`: health score, critical tables, stale/ownerless/undocumented counts, prioritised recommended actions. No LLM, no audio. The discovery driver.
 - `POST /api/mcp/briefing` — **PAID (x402)**. `databard_briefing`: full synthesis — script (Alex + Morgan) + audio (MP3, base64 + Grove URL) + health + recommended actions. The hero tool.
 - `GET /api/mcp/tools` — service discovery: tool list + JSON input/output schemas.
+- `POST /api/mcp/writeback` — **FREE** (additional tool, not a registered OKX service). `databard_write_back`: analyses a DataHub schema and writes findings back into the DataHub graph — health + defect tags and an idempotent AI summary description. Requires `source: "datahub"`.
 
 ### Pricing
 - Health check: free (`fee: "0"`).
@@ -120,6 +124,12 @@ curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
 curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
   -H 'content-type: application/json' \
   -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'   # expect HTTP 402 + PAYMENT-REQUIRED header
+curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
+  -H 'content-type: application/json' \
+  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (DataHub source)
+curl -i -X POST https://databard.persidian.com/api/mcp/writeback \
+  -H 'content-type: application/json' \
+  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (write back to DataHub graph)
 ```
 
 ### Registration status (DONE — pending final OKX review)

@@ -106,6 +106,9 @@ export function ConnectStep() {
     } else if (state.source === "dune") {
       if (!state.duneApiKey) { showError("Dune API key required"); return null; }
       body.dune = { apiKey: state.duneApiKey, namespace: state.duneNamespace || undefined, queryUrl: state.duneQueryUrl || undefined };
+    } else if (state.source === "datahub") {
+      if (!state.dhServerUrl) { showError("DataHub server URL required"); return null; }
+      body.datahub = { serverUrl: state.dhServerUrl, token: state.dhToken || undefined };
     } else if (state.source === "coral") {
       if (!state.coralQuery) { showError("Coral query required"); return null; }
       body.coral = { query: state.coralQuery };
@@ -218,6 +221,9 @@ export function ConnectStep() {
       dispatch({ type: "SET_SOURCE", source: "openmetadata" });
       dispatch({ type: "SET_OM_MODE", omMode: "custom" });
       dispatch({ type: "SET_OM_URL", url: trimmed });
+    } else if (/datahub/i.test(trimmed)) {
+      dispatch({ type: "SET_SOURCE", source: "datahub" });
+      dispatch({ type: "SET_DH_SERVER_URL", url: trimmed.replace(/\/api\/graphql\/?$/, "") });
     }
   }
 
@@ -229,6 +235,7 @@ export function ConnectStep() {
       ]
     : [
         { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },
+        { value: "datahub", label: "DataHub", emoji: "🧭", hint: "GMS URL" },
         { value: "dbt-cloud", label: "dbt Cloud", emoji: "☁️", hint: "Account + token" },
         { value: "dbt-local", label: "dbt Local", emoji: "💻", hint: "Upload manifest" },
       ];

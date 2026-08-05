@@ -1,0 +1,49 @@
+{
+  "ok": true,
+  "tool": "databard.write-back",
+  "schemaFqn": "db.sales",
+  "health": {
+    "score": 78,
+    "label": "healthy"
+  },
+  "summaryLine": "DataBard: health 78/100 (healthy), 4 tables, 1 failing tests, 1 ownerless, 1 untested.",
+  "written": {
+    "tagsApplied": 0,
+    "descriptionsUpdated": 4,
+    "tablesTouched": 4,
+    "plan": [
+      {
+        "table": "db.sales.customer",
+        "tags": [
+          "urn:li:tag:DataBard_Healthy"
+        ],
+        "descriptionAppend": "\n\n— DataBard AI analyst: DataBard: health 78/100 (healthy), 4 tables, 1 failing tests, 1 ownerless, 1 untested."
+      },
+      {
+        "table": "db.sales.orders",
+        "tags": [
+          "urn:li:tag:DataBard_Healthy"
+        ],
+        "descriptionAppend": "\n\n— DataBard AI analyst: DataBard: health 78/100 (healthy), 4 tables, 1 failing tests, 1 ownerless, 1 untested."
+      },
+      {
+        "table": "db.sales.order_items",
+        "tags": [
+          "urn:li:tag:DataBard_Healthy",
+          "urn:li:tag:DataBard_Ownerless",
+          "urn:li:tag:DataBard_Untested",
+          "urn:li:tag:DataBard_Undocumented",
+          "urn:li:tag:DataBard_Stale"
+        ],
+        "descriptionAppend": "\n\n— DataBard AI analyst: DataBard: health 78/100 (healthy), 4 tables, 1 failing tests, 1 ownerless, 1 untested."
+      },
+      {
+        "table": "db.sales.payments",
+        "tags": [
+          "urn:li:tag:DataBard_Healthy"
+        ],
+        "descriptionAppend": "\n\n— DataBard AI analyst: DataBard: health 78/100 (healthy), 4 tables, 1 failing tests, 1 ownerless, 1 untested."
+      }
+    ]
+  }
+}

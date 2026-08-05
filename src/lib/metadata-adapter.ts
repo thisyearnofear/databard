@@ -1,6 +1,6 @@
 /**
  * Unified metadata adapter — single entry point for all data sources.
- * Abstracts OpenMetadata, dbt Cloud, dbt Local, The Graph, and Dune behind a common interface.
+ * Abstracts OpenMetadata, DataHub, dbt Cloud, dbt Local, The Graph, and Dune behind a common interface.
  */
 import type { ConnectionConfig, SchemaMeta } from "./types";
 import { fetchSchemaMeta as fetchOM, listSchemas as listOM } from "./openmetadata";
@@ -8,6 +8,7 @@ import { fetchDbtCloudManifest, parseDbtManifest, loadLocalManifest, loadManifes
 import { fetchTheGraphMeta, listTheGraphSchemas } from "./the-graph-adapter";
 import { fetchDuneMeta, listDuneSchemas, fetchSingleDuneQuery, fetchDuneBatch } from "./dune-adapter";
 import { fetchCoralMeta } from "./coral-adapter";
+import { fetchSchemaMeta as fetchDataHubMeta, listSchemas as listDataHubSchemas } from "./datahub-adapter";
 
 async function getDbtBundle(config: ConnectionConfig) {
   if (config.source === "dbt-cloud") {
@@ -28,6 +29,10 @@ async function getDbtBundle(config: ConnectionConfig) {
 }
 
 export async function listSchemas(config: ConnectionConfig): Promise<string[]> {
+  if (config.source === "datahub") {
+    if (!config.datahub) throw new Error("DataHub config missing");
+    return listDataHubSchemas(config.datahub);
+  }
   if (config.source === "openmetadata") {
     if (!config.openmetadata) throw new Error("OpenMetadata config missing");
     return listOM(config.openmetadata);
@@ -50,6 +55,10 @@ export async function listSchemas(config: ConnectionConfig): Promise<string[]> {
 }
 
 export async function fetchSchemaMeta(config: ConnectionConfig, schemaFqn: string): Promise<SchemaMeta> {
+  if (config.source === "datahub") {
+    if (!config.datahub) throw new Error("DataHub config missing");
+    return fetchDataHubMeta(config.datahub, schemaFqn);
+  }
   if (config.source === "openmetadata") {
     if (!config.openmetadata) throw new Error("OpenMetadata config missing");
     return fetchOM(config.openmetadata, schemaFqn);

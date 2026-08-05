@@ -4,7 +4,7 @@
 
 DataBard uses a **dual-path** data architecture optimised for the end user:
 
-1. **First-class adapters** for the top 5 sources — deep integration with full feature support
+1. **First-class adapters** for the top 6 sources — deep integration with full feature support
 2. **Coral as the "Bring Your Own Source" escape hatch** — lets users connect anything else via SQL without waiting on us to build an adapter
 
 This is a user-first decision. First-class adapters deliver better error messages, deeper metadata extraction (lineage, PII, owners, profiler data), and zero extra dependencies. Coral gives users immediate access to the long tail of sources we haven't built adapters for yet.
@@ -19,6 +19,7 @@ These sources have dedicated adapters (`src/lib/<source>-adapter.ts`) with:
 | Source | Adapter | Depth |
 |---|---|---|
 | OpenMetadata | `openmetadata.ts` | Tables, columns, PII tags, quality tests, lineage, owners, profiler, glossary |
+| DataHub | `datahub-adapter.ts` | Datasets, columns, tags, glossary terms, owners, assertions (quality), lineage, last profile (freshness) |
 | dbt (Cloud + Local) | `dbt-adapter.ts` | Manifest parsing, run results, model lineage, test status |
 | The Graph | `the-graph-adapter.ts` | GraphQL introspection, entity-to-table mapping, cross-entity lineage |
 | Dune Analytics | `dune-adapter.ts` | Query metadata, result execution, column statistics (min/max/avg) |
@@ -59,7 +60,7 @@ User selects "Coral" source
 | Metadata depth | Full (lineage, PII, tests, owners) | Columns + data types only |
 | Error messages | Source-specific | Generic SQL errors |
 | Dependency | None (HTTP) | Coral binary or gateway |
-| Source coverage | 5 sources | 50+ sources |
+| Source coverage | 6 sources | 50+ sources |
 | Cross-source joins | No | Yes |
 
 ## When to Promote Coral → First-Class

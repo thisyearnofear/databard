@@ -1,0 +1,178 @@
+{
+  "fqn": "db.sales",
+  "name": "sales",
+  "tables": [
+    {
+      "fqn": "urn:li:dataset:(urn:li:dataPlatform:postgres,db.sales.customer,PROD)",
+      "name": "db.sales.customer",
+      "description": "Customer master record — source of truth for customer identity.",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "email",
+          "dataType": "varchar",
+          "tags": [
+            "PII.Email"
+          ]
+        },
+        {
+          "name": "created_at",
+          "dataType": "timestamp",
+          "tags": []
+        }
+      ],
+      "qualityTests": [
+        {
+          "name": "customer_id_not_null",
+          "status": "Success"
+        },
+        {
+          "name": "customer_email_unique",
+          "status": "Success"
+        },
+        {
+          "name": "freshness_daily",
+          "status": "Success"
+        }
+      ],
+      "tags": [
+        "primary_source"
+      ],
+      "owner": "jane.chen",
+      "rowCount": 1234567,
+      "freshness": "2026-08-05T09:07:19.605Z",
+      "glossaryTerms": [
+        "customer_data"
+      ],
+      "piiColumns": [
+        "email"
+      ]
+    },
+    {
+      "fqn": "urn:li:dataset:(urn:li:dataPlatform:postgres,db.sales.orders,PROD)",
+      "name": "db.sales.orders",
+      "description": "Customer orders.",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "customer_id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "total",
+          "dataType": "numeric",
+          "tags": []
+        },
+        {
+          "name": "placed_at",
+          "dataType": "timestamp",
+          "tags": []
+        }
+      ],
+      "qualityTests": [
+        {
+          "name": "orders_fk_customer",
+          "status": "Failed"
+        },
+        {
+          "name": "orders_total_positive",
+          "status": "Success"
+        }
+      ],
+      "tags": [],
+      "owner": "jane.chen",
+      "rowCount": 812400,
+      "freshness": "2026-08-05T09:07:19.606Z"
+    },
+    {
+      "fqn": "urn:li:dataset:(urn:li:dataPlatform:postgres,db.sales.order_items,PROD)",
+      "name": "db.sales.order_items",
+      "columns": [
+        {
+          "name": "order_id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "product_id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "qty",
+          "dataType": "int",
+          "tags": []
+        }
+      ],
+      "qualityTests": [],
+      "tags": [],
+      "rowCount": 2000100,
+      "freshness": "2026-07-30T21:07:19.606Z"
+    },
+    {
+      "fqn": "urn:li:dataset:(urn:li:dataPlatform:postgres,db.sales.payments,PROD)",
+      "name": "db.sales.payments",
+      "description": "Payment events linked to orders.",
+      "columns": [
+        {
+          "name": "id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "order_id",
+          "dataType": "int",
+          "tags": []
+        },
+        {
+          "name": "amount",
+          "dataType": "numeric",
+          "tags": []
+        },
+        {
+          "name": "card_pan",
+          "dataType": "varchar",
+          "tags": [
+            "PII.Sensitive"
+          ]
+        }
+      ],
+      "qualityTests": [
+        {
+          "name": "payments_amount_positive",
+          "status": "Success"
+        }
+      ],
+      "tags": [],
+      "owner": "kofi.amankwah",
+      "rowCount": 1100200,
+      "freshness": "2026-08-05T13:55:19.606Z",
+      "piiColumns": [
+        "card_pan"
+      ]
+    }
+  ],
+  "lineage": [
+    {
+      "fromTable": "db.sales.customer",
+      "toTable": "db.sales.orders"
+    },
+    {
+      "fromTable": "db.sales.orders",
+      "toTable": "db.sales.order_items"
+    },
+    {
+      "fromTable": "db.sales.orders",
+      "toTable": "db.sales.payments"
+    }
+  ]
+}

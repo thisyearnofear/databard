@@ -35,6 +35,10 @@ export function connectionReducer(state: WizardState, action: WizardAction): Wiz
       return { ...state, duneNamespace: action.ns };
     case "SET_DUNE_QUERY_URL":
       return { ...state, duneQueryUrl: action.url };
+    case "SET_DH_SERVER_URL":
+      return { ...state, dhServerUrl: action.url, connectionTested: "idle" };
+    case "SET_DH_TOKEN":
+      return { ...state, dhToken: action.token, connectionTested: "idle" };
     case "SET_CORAL_QUERY":
       return { ...state, coralQuery: action.query };
     case "SET_CORAL_SUB_STEP":

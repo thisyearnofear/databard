@@ -150,6 +150,8 @@ class Store {
         }
       } catch { /* ignore */ }
     }, intervalMs);
+    // Background cleanup must not keep the process alive (CLI/unit-test exits).
+    this.cleanupInterval.unref();
   }
 }
 

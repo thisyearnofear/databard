@@ -58,6 +58,30 @@ Expected response:
 
 DataBard will fetch query metadata, execute non-parameterized queries (top 10 by recency), and compute column statistics. Results are cached for 30 minutes.
 
+#### Test DataHub Connection
+```bash
+curl -X POST http://localhost:3000/api/connect \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "datahub",
+    "datahub": { "serverUrl": "http://localhost:8080", "token": "optional_personal_access_token" }
+  }'
+```
+
+Expected response:
+```json
+{
+  "ok": true,
+  "schemas": ["db.sales", "..."],
+  "source": "datahub"
+}
+```
+
+DataHub reads the context graph via the GMS GraphQL API (datasets, columns, tags,
+owners, assertions, lineage). Findings can be written back with
+`POST /api/mcp/writeback` (tags + AI summary description). Unit tests:
+`npm run test:unit` runs both `tests/rate-limit.unit.ts` and `tests/datahub-adapter.unit.ts`.
+
 #### Test Dune Episode Generation
 ```bash
 curl -X POST http://localhost:3000/api/synthesize \
