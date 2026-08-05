@@ -5,7 +5,7 @@ import type { InsightSummary } from "@/app/api/insights/route";
 export interface SourceCard {
   name: string;
   displayName: string;
-  source: "the-graph" | "dune" | "unknown";
+  source: "the-graph" | "dune" | "datahub" | "unknown";
   latestHealth: number;
   trend: "up" | "down" | "stable";
   mintCount: number;

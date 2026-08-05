@@ -8,6 +8,7 @@ import type { SchemaInsights } from "./schema-analysis";
 export interface SchemaSnapshot {
   schemaFqn: string;
   schemaName: string;
+  source?: string;
   tableNames: string[];
   insights: SchemaInsights;
   recordedAt: string;

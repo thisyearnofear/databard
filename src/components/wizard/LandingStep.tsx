@@ -280,6 +280,8 @@ export function LandingStep() {
             <>
               <span>OpenMetadata</span>
               <span>·</span>
+              <span>DataHub</span>
+              <span>·</span>
               <span>dbt Cloud</span>
               <span>·</span>
               <span>Coral</span>
@@ -399,7 +401,7 @@ export function LandingStep() {
               <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-              Coral is an open-source SQL engine that queries 50+ data sources — GitHub, Slack, Jira, Postgres, Stripe, and more. DataBard uses it as the primary data layer: write a SQL query, and we&apos;ll analyze the results and generate a podcast episode. You can also connect specific sources directly (OpenMetadata, dbt, Dune) for deeper metadata extraction.
+              Coral is an open-source SQL engine that queries 50+ data sources — GitHub, Slack, Jira, Postgres, Stripe, and more. DataBard uses it as the primary data layer: write a SQL query, and we&apos;ll analyze the results and generate a podcast episode. You can also connect specific sources directly (OpenMetadata, DataHub, dbt, Dune) for deeper metadata extraction.
             </p>
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">

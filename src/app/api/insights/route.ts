@@ -11,6 +11,7 @@ import { listSnapshots, getSnapshotHistory } from "@/lib/schema-snapshots";
 export interface InsightSummary {
   schemaFqn: string;
   schemaName: string;
+  source?: string;
   recordedAt: string;
   episodeId?: string;
   healthScore: number;
@@ -50,6 +51,7 @@ export async function GET() {
     const insights: InsightSummary[] = snapshots.map((snap) => ({
       schemaFqn: snap.schemaFqn,
       schemaName: snap.schemaName,
+      source: snap.source,
       recordedAt: snap.recordedAt,
       episodeId: snap.episodeId,
       healthScore: snap.insights.healthScore,

@@ -9,6 +9,7 @@ import type { SourceCard } from "./types";
 function sourceLabel(card: SourceCard) {
   if (card.source === "the-graph") return "The Graph subgraph";
   if (card.source === "dune") return "Dune Analytics";
+  if (card.source === "datahub") return "DataHub context graph";
   return card.mintCount > 0 ? "Onchain" : "Warehouse / catalog";
 }
 

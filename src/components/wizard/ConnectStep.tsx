@@ -232,6 +232,7 @@ export function ConnectStep() {
         { value: "dune", label: "Dune", emoji: "🏜️", hint: "API key" },
         { value: "the-graph", label: "The Graph", emoji: "🔗", hint: "Subgraph URL" },
         { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },
+        { value: "datahub", label: "DataHub", emoji: "🧭", hint: "GMS URL" },
       ]
     : [
         { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },

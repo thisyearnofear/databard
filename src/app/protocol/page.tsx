@@ -16,6 +16,7 @@ import { DashboardSummary } from "@/components/briefing/DashboardSummary";
 import { ChangeNarratives } from "@/components/briefing/ChangeNarratives";
 import { SourceHealthList } from "@/components/briefing/SourceHealthList";
 import type { BriefingEpisodeMeta, SourceCard } from "@/components/briefing/types";
+import { WriteBackAction } from "@/components/briefing/WriteBackAction";
 import {
   LineChart,
   Line,
@@ -161,10 +162,15 @@ function ProtocolDashboardInner() {
           const wallets = [...new Set(records.map((r) => r.walletAddress))];
 
           let source: SourceCard["source"] = "unknown";
-          if (name.toLowerCase().includes("graph") || name.toLowerCase().includes("subgraph")) {
+          if (insight?.source === "datahub") source = "datahub";
+          else if (insight?.source === "the-graph") source = "the-graph";
+          else if (insight?.source === "dune") source = "dune";
+          else if (name.toLowerCase().includes("graph") || name.toLowerCase().includes("subgraph")) {
             source = "the-graph";
           } else if (name.toLowerCase().includes("dune")) {
             source = "dune";
+          } else if (name.toLowerCase().includes("datahub") || name.toLowerCase().includes("gms")) {
+            source = "datahub";
           }
 
           return {
@@ -204,6 +210,7 @@ function ProtocolDashboardInner() {
 
       <div className="relative max-w-[900px] mx-auto">
         <DashboardHeader isProtocols={isProtocols} />
+        <WriteBackAction />
 
         {isDemo && (
           <section className="mb-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3" aria-label="Sample briefing">
