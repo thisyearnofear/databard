@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { analyzeSchema } from "@/lib/schema-analysis";
-import { writeBackFindings } from "@/lib/datahub-adapter";
+import { writeBackFindings, fetchFleetDatasets } from "@/lib/datahub-adapter";
+import { buildFleetReport } from "@/lib/fleet-analysis";
 import { rateLimit } from "@/lib/validation";
 import type { SchemaInsights } from "@/lib/schema-analysis";
-import type { SchemaMeta } from "@/lib/types";
+import type { SchemaMeta, TableMeta } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,46 @@ export async function POST(req: NextRequest) {
     } catch {
       /* empty body is fine */
     }
+
+    // Fleet-scale write-back: analyze the whole DataHub graph and write findings
+    // (tags + governance docs + ownership) across every dataset.
+    if (body.fleet === true) {
+      const datasets = await fetchFleetDatasets(config.datahub);
+      const report = buildFleetReport(datasets);
+      const tables: TableMeta[] = datasets.map((d) => ({
+        fqn: d.urn,
+        name: d.name,
+        description: d.description,
+        columns: d.columns,
+        qualityTests: d.qualityTests,
+        tags: d.tags,
+        owner: d.owner,
+        rowCount: d.rowCount,
+        freshness: d.freshness,
+      }));
+      const meta: SchemaMeta = { fqn: "fleet", name: "fleet", tables, lineage: [] };
+      const label = report.fleetScore >= 80 ? "healthy" : report.fleetScore >= 50 ? "at-risk" : "critical";
+      const summaryLine = `DataBard: fleet health ${report.fleetScore}/100 across ${report.totalTables} tables.`;
+      const written = await writeBackFindings(
+        config.datahub,
+        meta,
+        label,
+        {
+          applyDescriptions: body.writeDescriptions !== false,
+          applyOwnership: body.writeOwnership !== false,
+        },
+        summaryLine
+      );
+      return NextResponse.json({
+        ok: true,
+        schemaFqn: "fleet",
+        health: { score: report.fleetScore, label },
+        summaryLine,
+        written,
+        report,
+      });
+    }
+
     const schemaFqn =
       typeof body.schemaFqn === "string" && body.schemaFqn.trim()
         ? body.schemaFqn.trim()

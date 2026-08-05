@@ -698,12 +698,15 @@ export interface WriteBackSummary {
   tablesTouched: number;
   tagsApplied: number;
   descriptionsUpdated: number;
+  ownersAssigned: number;
   errors: number;
 }
 
 export interface WriteBackOptions {
-  /** Append an AI summary line to each dataset's description. Default true. */
+  /** Write governance-grade auto-documentation to each dataset's description. Default true (idempotent). */
   applyDescriptions?: boolean;
+  /** Assign a suggested DataBard-analyst owner to ownerless datasets. Default true (best-effort). */
+  applyOwnership?: boolean;
 }
 
 /**
@@ -722,11 +725,12 @@ export async function writeBackFindings(
   options: WriteBackOptions = {},
   summaryLine?: string
 ): Promise<WriteBackSummary> {
-  const { applyDescriptions = true } = options;
+  const { applyDescriptions = true, applyOwnership = true } = options;
   const summary: WriteBackSummary = {
     tablesTouched: 0,
     tagsApplied: 0,
     descriptionsUpdated: 0,
+    ownersAssigned: 0,
     errors: 0,
   };
 
@@ -734,7 +738,7 @@ export async function writeBackFindings(
     meta.tables,
     async (table) => {
       const plan = planTableWriteBack(table, healthLabel, summaryLine);
-      if (!applyDescriptions) plan.descriptionAppend = undefined;
+      let touched = false;
 
       for (const tagUrn of plan.tags) {
         try {
@@ -743,29 +747,110 @@ export async function writeBackFindings(
             tagUrn,
           });
           summary.tagsApplied++;
+          touched = true;
         } catch {
           summary.errors++;
         }
       }
 
-      if (plan.descriptionAppend) {
+      if (applyDescriptions) {
         try {
+          const doc = buildTableDocumentation(table, summaryLine);
           const base = stripExistingMarker(table.description);
           await dhGraphql<Record<string, unknown>>(conn, UPDATE_DESCRIPTION_MUTATION, {
             resourceUrn: table.fqn,
-            description: base ? `${base}${plan.descriptionAppend}` : plan.descriptionAppend,
+            description: base ? `${base.trimEnd()}\n\n${doc}` : doc,
           });
           summary.descriptionsUpdated++;
+          touched = true;
         } catch {
           summary.errors++;
         }
       }
 
-      if (plan.tags.length > 0 || plan.descriptionAppend) summary.tablesTouched++;
+      if (applyOwnership) {
+        const ownerUrn = suggestedOwnerUrn(table);
+        if (ownerUrn) {
+          try {
+            await dhGraphql<Record<string, unknown>>(conn, ADD_OWNERSHIP_MUTATION, {
+              resourceUrn: table.fqn,
+              ownerUrn,
+              type: "DATAOWNER",
+            });
+            summary.ownersAssigned++;
+            touched = true;
+          } catch {
+            summary.errors++;
+          }
+        }
+      }
+
+      if (touched) summary.tablesTouched++;
     },
     FETCH_CONCURRENCY
   );
 
   return summary;
 }
+
+const ADD_OWNERSHIP_MUTATION = /* GraphQL */ `
+  mutation AddOwnership($resourceUrn: String!, $ownerUrn: String!, $type: OwnershipType!) {
+    addOwnership(input: { resourceUrn: $resourceUrn, ownerUrn: $ownerUrn, type: $type })
+  }
+`;
+
+/**
+ * Build a governance-grade documentation block for a table: name, existing
+ * description, columns, ownership/tests state, and an attributed DataBard
+ * summary line. The block ends with the DATABARD_MARKER so stripExistingMarker
+ * can remove it on re-write (idempotent).
+ */
+export function buildTableDocumentation(table: TableMeta, summaryLine?: string): string {
+  const lines: string[] = [`DataBard analysis — ${table.name}`];
+  if (table.description && !table.description.includes("DataBard analysis")) lines.push(table.description.trim());
+
+  const cols = (table.columns ?? []).map((c) => c.name).filter((n): n is string => Boolean(n));
+  if (cols.length) {
+    lines.push(`Columns: ${cols.slice(0, 14).join(", ")}${cols.length > 14 ? ` and ${cols.length - 14} more` : ""}.`);
+  }
+
+  const state: string[] = [];
+  state.push(table.owner ? `owned by ${table.owner}` : "unowned");
+  const failing = (table.qualityTests ?? []).filter((q) => q.status === "Failed").length;
+  state.push(table.qualityTests?.length ? `${table.qualityTests.length} test(s), ${failing} failing` : "untested");
+  if (!table.description) state.push("undocumented");
+  lines.push(`State: ${state.join(" · ")}.`);
+
+  const issues: string[] = [];
+  if (!table.owner) issues.push("no owner");
+  if (!table.qualityTests?.length) issues.push("untested");
+  if (!table.description) issues.push("undocumented");
+  if (failing > 0) issues.push("failing tests");
+  if (issues.length) lines.push(`Needs attention: ${issues.join(", ")}.`);
+
+  if (summaryLine) lines.push(`${DATABARD_MARKER} ${summaryLine}`);
+  return lines.join("\n");
+}
+
+/** Datasets with no owner get a suggested DataBard-analyst owner written to the graph. */
+export function suggestedOwnerUrn(table: TableMeta): string | undefined {
+  return table.owner ? undefined : "urn:li:corpuser:databard";
+}
+
+/**
+ * Fetch the FULL DataHub context graph as enriched dataset metadata — every
+ * dataset in the GMS — for fleet-level ("town hall") analysis. Cached per
+ * connection for 5 minutes.
+ */
+export async function fetchFleetDatasets(conn: DataHubConnection): Promise<DataHubDatasetMeta[]> {
+  const cacheKey = `dh:fleet:${connectionScopeKey(conn)}`;
+  const cached = metaCache.get<DataHubDatasetMeta[]>(cacheKey);
+  if (cached) return cached;
+
+  const datasets = await listAllDatasets(conn);
+  const metas = await mapWithConcurrency(datasets, (d) => fetchDatasetMeta(conn, d.urn), FETCH_CONCURRENCY);
+  metaCache.set(cacheKey, metas, 300);
+  return metas;
+}
+
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface WriteBackResult {
   tablesTouched: number;
@@ -63,14 +64,22 @@ export function WriteBackAction() {
             Write DataBard&apos;s findings — health + defect tags, AI summary — back into the DataHub context graph.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={writeBack}
-          disabled={busy}
-          className="shrink-0 bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {busy ? "Writing…" : "Write back →"}
-        </button>
+        <div className="flex gap-2 items-center shrink-0">
+          <button
+            type="button"
+            onClick={writeBack}
+            disabled={busy}
+            className="bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? "Writing…" : "Write back →"}
+          </button>
+          <Link
+            href="/fleet"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+          >
+            Fleet town hall →
+          </Link>
+        </div>
       </div>
       {status && (
         <p className={`mt-2 text-xs ${status.kind === "ok" ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
