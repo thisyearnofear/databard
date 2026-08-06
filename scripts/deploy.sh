@@ -104,7 +104,7 @@ echo "→ Building locally..."
 # DATABARD_DATA_DIR is required in production — set a dummy path for the
 # build step so static page generation doesn't throw. The real path is
 # set in ecosystem.config.cjs at runtime.
-DATABARD_DATA_DIR=/tmp/databard-build NEXT_DISABLE_ESLINT=1 npm run build
+DATABARD_DATA_DIR=/tmp/databard-build NEXT_DISABLE_ESLINT=1 NEXT_PUBLIC_URL=https://databard.persidian.com npm run build
 
 # ── 2. Package the release (minimal footprint for space-constrained server) ──
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
