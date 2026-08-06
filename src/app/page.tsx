@@ -1,6 +1,7 @@
 "use client";
 
 import { WizardProvider, useWizard, PersonaToggle, LandingStep, ConnectStep, SchemaPicker, GenerationStep, StepIndicator } from "@/components/wizard";
+import { AccountMenu } from "@/components/AccountMenu";
 import { OnboardingTooltip } from "@/components/OnboardingTooltips";
 import dynamic from "next/dynamic";
 
@@ -44,12 +45,22 @@ function WizardContent() {
   );
 }
 
+// Landing exposes sign-in in the top bar (the global header is hidden on "/").
+function LandingAccount() {
+  const { state } = useWizard();
+  return <AccountMenu workspace={state.persona === "web3" ? "protocols" : "teams"} />;
+}
+
 export default function Home() {
   return (
     <WizardProvider>
       <div className="min-h-screen">
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 flex justify-center">
+        <div className="fixed top-3 inset-x-0 z-40 mx-auto flex w-[min(100%-2rem,44rem)] items-center justify-between gap-2">
+          <div className="hidden sm:block w-24 shrink-0" aria-hidden />
           <PersonaToggle />
+          <div className="flex shrink-0 justify-end w-24">
+            <LandingAccount />
+          </div>
         </div>
 
         {/* Wizard content (renders the onboarding tour past the landing step) */}

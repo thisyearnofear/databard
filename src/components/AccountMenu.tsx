@@ -142,7 +142,7 @@ function SignInModal({ onClose, onSignedIn }: { onClose: () => void; onSignedIn:
 }
 
 /** Header account menu: sign in (email OTP), show identity, my sources, sign out. */
-export function AccountMenu({ workspace }: { workspace: "teams" | "protocols" }) {
+export function AccountMenu({ workspace = "teams" }: { workspace?: "teams" | "protocols" }) {
   const { session, loading, refresh, setCurrent, signOut, signedIn } = useAccount();
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState(false);
