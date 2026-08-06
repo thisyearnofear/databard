@@ -45,6 +45,16 @@ dataset.
 | **Submission Quality** | README + `examples/` fixtures produced by the real pipeline + `< 3 min` demo video (shot list below) + Apache-2.0. |
 | **Bonus: OSS contribution** | Concrete plan below — a real DataHub contribution to accompany the submission. |
 
+## Agent-native posture (why no second MCP-client source)
+
+We deliberately consume DataHub's context through its **GMS GraphQL API** — the
+same stable read path the DataHub UI and its own MCP server use — rather than
+bolting on a second MCP-client transport (redundant + risk with an unconfirmed
+endpoint). Our analyst is exposed back to the agent ecosystem as **A2MCP tools**
+any MCP-compatible agent can call. DataHub **Skills / Agent Context Kit** are the
+intended deep-integration path; the contribution draft in `datahub-contribution/`
+is one concrete step on it.
+
 ## Setup
 
 **Run DataHub locally:**

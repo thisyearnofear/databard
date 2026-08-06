@@ -8,6 +8,8 @@ DataBard closes that gap. Every Monday morning, your team gets a fresh audio bri
 
 > **[▶ Listen to a demo episode](https://databard.persidian.com)** — no signup required
 
+> **Built for the [DataHub Agent Hackathon](https://datahub.devpost.com/).** DataBard is an AI data analyst that reads **DataHub's context graph**, synthesises the whole estate, and **writes the fix back** — governance docs, ownership, guardrails. *"DataHub gives the agent context; DataBard makes the agent act."* → **[Fleet town hall](https://databard.persidian.com/fleet)**
+
 ---
 
 ## The Problem
@@ -75,7 +77,7 @@ This makes the product feel like an analyst that works for you — not a podcast
       └────────────┘    └────────────┘
 ```
 
-**Pipeline:** Connect source → Metadata fetch → Schema analysis (health score, critical tables, trends) → Dashboard (hero) → Audio briefing (button on dashboard) → Optional: schedule weekly, alert on drops, attest on-chain
+**Pipeline:** Connect source → Metadata fetch → Schema analysis (health score, critical tables, trends) → Dashboard (hero) → Audio briefing → **Fleet town hall** (lineage blast radius) → **Write back into the data graph** (docs, ownership, guardrails) → Optional: schedule weekly, alert on drops, attest on-chain
 
 ## Output Formats
 
@@ -121,12 +123,14 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000) → Connect → Dashboard with health scores → Listen to briefing.
 
+**Connect DataHub:** in the wizard pick 🧭 DataHub, paste a GMS URL (+ optional token) → connect → run a **fleet town hall** at [/fleet](http://localhost:3000/fleet). Every capability is also agent-callable via the A2MCP tools (`GET /api/mcp/tools`).
+
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
 | Web UI | Next.js 16, React 19, Tailwind CSS 4 |
-| Data sources | OpenMetadata REST API, dbt manifest, The Graph, Dune Analytics, Coral (SQL) |
+| Data sources | DataHub (GMS GraphQL), OpenMetadata REST API, dbt manifest, The Graph, Dune Analytics, Coral (SQL) |
 | AI scripts | OpenAI-compatible API (GPT-4o-mini default; Azure OpenAI drop-in — [`docs/AZURE.md`](docs/AZURE.md)) |
 | Audio | ElevenLabs TTS (two voices) + Sound Effects |
 | Caching | File-backed with TTL (no external dependencies) |
