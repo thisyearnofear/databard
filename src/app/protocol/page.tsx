@@ -7,6 +7,7 @@ import type { MintRecord } from "@/lib/mint-stats";
 import type { InsightSummary } from "@/app/api/insights/route";
 import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { track } from "@/lib/track";
+import { useDataContext } from "@/lib/data-context";
 import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import { briefingSourceName, healthTrend } from "@/lib/briefing-health";
 import { DashboardHeader } from "@/components/briefing/DashboardHeader";
@@ -100,7 +101,10 @@ function ProtocolDashboardInner() {
   const episodeId = searchParams.get("episode");
   const workspace = workspaceFromSearch(searchParams.toString());
   const isProtocols = workspace === "protocols";
-  const isDemo = searchParams.get("demo") === "1";
+  // Demo if either the URL says so (?demo=1) OR the persisted data-context is
+  // still "demo" (e.g. the in-wizard demo path that didn't carry the URL flag).
+  const dataCtx = useDataContext();
+  const isDemo = searchParams.get("demo") === "1" || dataCtx?.kind === "demo";
   const [cards, setCards] = useState<SourceCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [episodeMeta, setEpisodeMeta] = useState<BriefingEpisodeMeta | null>(null);
