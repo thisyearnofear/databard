@@ -96,14 +96,15 @@ Lead with ONE practitioner scenario, not a feature tour. Script:
 ## Open-source contribution to DataHub (bonus)
 
 Judges explicitly favor meaningful OSS contributions. Land ONE real, mergeable
-PR to `datahub-project/datahub`:
+PR to `datahub-project/datahub`. A ready-to-submit candidate is drafted in
+[`datahub-contribution/`](datahub-contribution/BLAST_RADIUS_IMPACT_GUIDE.md) —
+a documentation guide on **lineage-based blast-radius analysis** (with the PR
+description in `PR_DESCRIPTION.md`). To land it:
 
-- **A DataHub "Skill" definition** for data-health narration (fits the Agent
-  Context Kit), **or**
-- **A how-to doc** mapping DataHub's lineage graph to blast-radius impact
-  analysis, **or**
-- **A small connector / docs path** where a gap exists.
+1. Fork `datahub-project/datahub`.
+2. Add `BLAST_RADIUS_IMPACT_GUIDE.md` under the repo's `docs/` (match the
+   nearest existing lineage guide's location/format).
+3. Open the PR using `PR_DESCRIPTION.md`, and cite the PR in the submission.
 
-Fork, open the PR on the `thisyearnofear` GitHub account, and cite the PR in the
-submission write-up. Any one of these, real and mergeable, is the single most
-leveraged ~half-day left.
+Alternative (if you prefer code over docs): a small **DataHub "Skill"** definition
+for the Agent Context Kit.
