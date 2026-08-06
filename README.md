@@ -1,315 +1,155 @@
 # DataBard
 
-**Weekly data health briefings your team actually consumes.**
+**AI data analyst that monitors your estate, synthesises what it finds, and acts on it.**
 
-Data teams produce findings nobody reads. The exec doesn't open Looker. The PM doesn't check dbt tests. The data engineer's Slack message about "the payments table has been stale for 3 days" gets buried. The insight exists but it doesn't *land*.
+Data teams produce findings nobody reads. Execs don't open Looker. The data engineer's Slack message about a stale payments table gets buried. The insight exists — it just doesn't land.
 
-DataBard closes that gap. Every Monday morning, your team gets a fresh audio briefing on your data health — health scores, what changed, what to fix. No dashboard to check. No report to read. Just press play.
+DataBard closes that gap: it reads your data catalogue, computes health scores, narrates trend stories via two AI hosts, and writes the findings back into the graph.
 
-> **[▶ Listen to a demo episode](https://databard.persidian.com)** — no signup required
+> **[▶ Try the live demo](https://databard.persidian.com)** — no signup required
 
-> **Built for the [DataHub Agent Hackathon](https://datahub.devpost.com/).** DataBard is an AI data analyst that reads **DataHub's context graph**, synthesises the whole estate, and **writes the fix back** — governance docs, ownership, guardrails. *"DataHub gives the agent context; DataBard makes the agent act."* → **[Fleet town hall](https://databard.persidian.com/fleet)**
+> **Built for the [DataHub Agent Hackathon](https://datahub.devpost.com/)** — reads DataHub's context graph, synthesises the estate, and writes back governance docs + ownership tags. *"DataHub gives the agent context; DataBard makes the agent act."*
 
 ---
 
-## The Problem
-
-Data health monitoring tools tell you *what's broken*. They don't tell the people who need to know. The result:
-
-- **Data leads spend hours building reports nobody opens.** Dashboards have 47 rows of test results. Execs want a 1-line summary.
-- **Issues surface too late.** By the time someone notices the payments table is stale, 8 downstream dashboards are already wrong.
-- **Audit trails live in tools auditors can't access.** Compliance wants proof of data quality history. Engineering has it in dbt logs nobody reads.
-
-## The Solution
-
-DataBard is **one analysis engine with outputs people actually consume.** The engine ingests metadata from any source, computes health scores, critical-table rankings, coverage gaps, and trend narratives. Every output — audio briefing, dashboard, alert, audit record — renders from that same analysis.
-
-### The wedge: the weekly digest
-
-The core product is the **scheduled weekly digest.** Every Monday, your team receives:
-
-1. **A 2-minute executive briefing** (audio) — top 3 issues, what changed, recommended actions
-2. **A dashboard** with health scores, trend narratives, and drill-down
-3. **An alert** if health dropped below your threshold since last week
-
-The audio is the differentiator. It's not a gimmick — it's a forcing function for synthesis. You can't read 47 rows aloud. You have to say "your payments table is stale, 8 dashboards are wrong, and here's what to do." That synthesis is the value.
-
-### The agent is the hero
-
-DataBard is an AI data analyst that synthesises what it finds and acts on it. The dashboard is where you see the synthesis. The audio briefing is where you hear it. The alert is where it finds you. The ticket (next) is where it acts. No single output format is the product — the synthesis engine behind all of them is.
-
-This makes the product feel like an analyst that works for you — not a podcast that also analyses, and not a dashboard that also talks.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│              Data Sources                    │
-│  OpenMetadata · DataHub · dbt · The Graph   │
-│  Coral (50+ sources via SQL)                 │
-└───────────────────┬─────────────────────────┘
-                    │
-                    ▼
-          ┌──────────────────┐
-          │  Analysis Engine  │
-          │  Health score     │
-          │  Critical tables  │
-          │  Trend narratives │
-          │  PII / governance │
-          └────────┬─────────┘
-                   │
-       ┌───────────┼───────────┐
-       ▼           ▼           ▼
-  ┌─────────┐ ┌─────────┐ ┌─────────┐
-  │Dashboard│ │  Audio  │ │ Alerts  │
-  │ (hero)  │ │Briefing │ │Webhook/ │
-  │Trends   │ │2-15 min │ │Slack    │
-  │Drill-down│ │Exec/Full│ │Email    │
-  └─────────┘ └─────────┘ └─────────┘
-       │           │           │
-       └─────┬─────┘           │
-             ▼                 ▼
-      ┌────────────┐    ┌────────────┐
-      │  Solana    │    │  Weekly    │
-      │Attestation │    │  Digest    │
-      │(Onchain    │    │  (Pro)     │
-      │ persona)   │    │            │
-      └────────────┘    └────────────┘
-```
-
-**Pipeline:** Connect source → Metadata fetch → Schema analysis (health score, critical tables, trends) → Dashboard (hero) → Audio briefing → **Fleet town hall** (lineage blast radius) → **Write back into the data graph** (docs, ownership, guardrails) → Optional: schedule weekly, alert on drops, attest on-chain
-
-## Output Formats
-
-| Format | Length | Use case |
-|---|---|---|
-| **Executive briefing** | 2 min | Monday morning — top 3 issues + actions |
-| **Full analysis** | 10-15 min | Deep dive — two AI hosts discuss every finding |
-| **Dashboard** | — | Health scores, trends, drill-down (always available) |
-| **Alert** | — | Slack/webhook when health drops below threshold |
-| **Onchain attestation** | — | Tamper-evident audit trail (Onchain persona) |
-
-## Features
-
-- **Dashboard-first flow** — after analysis, land on the dashboard with health scores and trend narratives. Audio is a button, not the destination.
-- **Trend narratives** — "What changed this week" section computes week-over-week diffs and explains them in plain English: "Health dropped 8 points because test coverage fell in the payments schema after the Friday deploy."
-- **Executive summary format** — 2-minute briefing with top 3 issues, what changed, and recommended actions. For busy people who want the bottom line.
-- **Two-voice AI podcast** — Alex (advocate) and Morgan (auditor) via ElevenLabs. Full analysis mode for deep dives.
-- **Alerts** — health threshold monitoring with Slack/webhook notifications. Decoupled from wallet — works with email only.
-- **Scheduled weekly digests** — Pro tier. Set up a Monday morning briefing for your team. RSS + email delivery.
-- **Onchain attestation** — Solana Memo Program. Tamper-evident audit trail for data quality history. Onchain persona only.
-- **Coral integration** — 50+ data sources via SQL. Cross-source joins, no ETL, no data warehouse.
-- **Interactive drill-down** — click any segment in the audio player to see columns, tests, lineage, tags.
-- **Labs** — experimental features including Data Anthems (data-driven songs). Accessible at [/labs](https://databard.persidian.com/labs).
-
-## Quick Start
+## Quick start
 
 ```bash
 git clone https://github.com/thisyearnofear/databard.git
 cd databard
 npm install
-
 cp .env.example .env
-# Add your ELEVENLABS_API_KEY (Starter plan or higher recommended)
-# Add OPENAI_API_KEY for LLM scripts (optional)
+# Required: ELEVENLABS_API_KEY (Starter plan or higher)
+# Optional: OPENAI_API_KEY for LLM scripts (falls back to templates)
 npm run dev
 ```
 
-**ElevenLabs Setup:**
-1. Sign up at [elevenlabs.io](https://elevenlabs.io)
-2. Upgrade to Starter plan ($5/month) for API access
-3. Get your API key from Profile → API Keys
-4. Add to `.env`: `ELEVENLABS_API_KEY=sk_your_key_here`
+Open [localhost:3000](http://localhost:3000) → Connect a source → Dashboard with health scores → Listen to briefing.
 
-Open [localhost:3000](http://localhost:3000) → Connect → Dashboard with health scores → Listen to briefing.
+**Connect DataHub:** pick 🧭 DataHub in the wizard, paste a GMS URL, connect. Run the fleet town hall at [/fleet](http://localhost:3000/fleet). Every capability is also agent-callable via the MCP tools (`GET /api/mcp/tools`).
 
-**Connect DataHub:** in the wizard pick 🧭 DataHub, paste a GMS URL (+ optional token) → connect → run a **fleet town hall** at [/fleet](http://localhost:3000/fleet). Every capability is also agent-callable via the A2MCP tools (`GET /api/mcp/tools`).
+See [`.env.example`](.env.example) for the full list of optional env vars (Stripe, SMTP, Plausible, Solana, etc.).
 
-## Tech Stack
+---
+
+## How it works
+
+```
+Data source (DataHub, OpenMetadata, dbt, The Graph, Dune)
+  → Schema analysis: health score · critical tables · lineage blast radius
+  → Script generation: two-host narrative (Alex + Morgan via ElevenLabs)
+  → Dashboard: health score · trend narrative · recommended actions
+  → Audio briefing: 2-min executive or 15-min full analysis
+  → Write-back (DataHub): governance docs · ownership tags · health/defect tags
+  → Optional: schedule weekly · alert on drops · attest on-chain (Solana)
+```
+
+---
+
+## Data sources
+
+| Source | Adapter | Status |
+|---|---|---|
+| DataHub | `src/lib/datahub-adapter.ts` | ✅ Shipped |
+| OpenMetadata | `src/lib/openmetadata.ts` | ✅ Shipped |
+| dbt Cloud + local manifest | `src/lib/dbt-adapter.ts` | ✅ Shipped |
+| The Graph | `src/lib/the-graph-adapter.ts` | ✅ Shipped |
+| Dune Analytics | `src/lib/dune-adapter.ts` | ✅ Shipped |
+| Coral (50+ sources via SQL) | `src/lib/coral-adapter.ts` | ✅ Shipped (escape hatch for long-tail sources) |
+
+See [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) for the tiered adapter design and graduation tracking.
+
+---
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
 | Web UI | Next.js 16, React 19, Tailwind CSS 4 |
-| Data sources | DataHub (GMS GraphQL), OpenMetadata REST API, dbt manifest, The Graph, Dune Analytics, Coral (SQL) |
-| AI scripts | OpenAI-compatible API (GPT-4o-mini default; Azure OpenAI drop-in — [`docs/AZURE.md`](docs/AZURE.md)) |
-| Audio | ElevenLabs TTS (two voices) + Sound Effects |
-| Caching | File-backed with TTL (no external dependencies) |
-| Payments | Stripe Checkout, Palm USD (Solana SPL stablecoin) |
-| Onchain | Solana Memo Program + PDA registry (Onchain persona) |
+| AI scripts | OpenAI-compatible API (GPT-4o-mini default; Azure drop-in via [`docs/AZURE.md`](docs/AZURE.md)) |
+| Audio | ElevenLabs TTS (two voices) + Sound Effects API |
+| Episode storage | Lens Protocol Grove (IPFS, immutable) via `src/lib/grove-storage.ts` |
+| Caching | File-backed with TTL — no external dependencies |
+| Payments | Stripe Checkout (Pro subscription) · x402 EIP-3009 USDT0 on X Layer (MCP pay-per-call) |
+| Onchain | Solana Memo Program + PDA registry (Protocols workspace) |
+| Analytics | Plausible (pageviews) + self-hosted event ledger (`src/lib/events.ts`) |
 
-## Engagement Loops
+---
 
-```
-ATTENTION
-  ├─ Social post: "AI roasted my database" (shareable clip)
-  ├─ Colleague forwards Slack link to shared episode
-  └─ Blog post: "We replaced our weekly data report with a podcast"
-       │
-       ▼
-CONVERSION (first "wow" moment)
-  ├─ Demo: hears AI hosts discuss sample schema (zero friction)
-  ├─ Connects own data → sees health score → hears personal analysis
-  └─ "Roast my data" emotional trigger → shares result
-       │
-       ▼
-RETENTION (habit formation)
-  ├─ Sets up weekly digest (Monday morning briefing)
-  ├─ Alert fires when health drops → comes back to dashboard
-  ├─ Trend narrative: "what changed?" → curiosity pull
-  └─ Team forwards digest in Slack → social accountability
-       │
-       ▼
-VIRAL (each retention cycle creates new attention)
-  ├─ Shared episode link in Slack → 5-20 colleagues click
-  ├─ Health score badge in README / team page
-  ├─ "Share this moment" clip → social media
-  └─ Weekly digest email forwarded to stakeholders
-       │
-       └─── (loops back to ATTENTION)
-```
+## OKX.AI — agent-to-agent marketplace
 
-See [`docs/GTM.md`](docs/GTM.md) for the full go-to-market strategy, viral hooks, and user interview plan.
+DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP) on OKX.AI (ASP #9878, pending final review). The synthesis engine is exposed as two A2MCP tools any MCP-compatible agent can call:
 
-## Roadmap
-
-### Done
-- [x] Dashboard-first flow (land on dashboard after analysis, not player)
-- [x] Executive summary format (2-minute briefing)
-- [x] Trend narratives ("What changed this week")
-- [x] Format picker for all sources (not just Coral)
-- [x] Anthem moved to /labs (experimental, not in main flow)
-- [x] Alerts page with email-based subscriptions (no wallet required)
-- [x] Scheduled weekly digests (Pro tier)
-- [x] Onchain attestation (Onchain persona)
-- [x] Coral integration (50+ sources via SQL)
-- [x] Two-voice AI podcast with ElevenLabs
-- [x] Health analytics dashboard with sparklines and trend badges
-- [x] Solana on-chain audit trail, leaderboard, team history
-
-### Next — Viral & Retention
-- [ ] "Get this for your data" CTA on shared episode pages
-- [ ] "Want this every Monday?" one-click schedule from dashboard
-- [ ] "Share this moment" clip feature (15-second audio highlight)
-- [ ] Email delivery for scheduled digests
-- [ ] "Roast my data" landing page variant
-- [ ] Health score badge (embeddable SVG for README/team page)
-- [ ] Team email recipients for scheduled digests
-
-### Future
-- [ ] Azure migration — inference on Azure OpenAI, hosting on Container Apps ([`docs/AZURE.md`](docs/AZURE.md))
-- [ ] Microsoft Purview Tier-1 adapter ([`docs/PURVIEW_ADAPTER.md`](docs/PURVIEW_ADAPTER.md))
-- [ ] Custom voice personalities
-- [ ] Benchmarking — "your health score vs. teams your size"
-
-## Solana Integration
-
-DataBard uses Solana as a verifiable audit trail for the Onchain persona. Every health report can be attested on-chain — a tamper-evident record your team and auditors can verify.
-
-| Feature | Description |
-|---|---|
-| **Onchain attestation** | Every episode mint writes a memo + PDA record: schema, health score, timestamp, episode ID, wallet |
-| **Health alert subscriptions** | Register wallet + schema + threshold + webhook; fires when health drops |
-| **Public leaderboard** | Ranked protocols by health score + trend — [/leaderboard](https://databard.persidian.com/leaderboard) |
-| **Team history** | Cross-wallet mint history per schema — shared ground truth for post-mortems |
-| **Palm USD payments** | Pay for Pro with Palm USD, a non-freezable Solana stablecoin |
-| **SNS `.sol` identity** | Wallet address resolved to `.sol` domain on connect |
-
-See [`docs/PALM_USD_INTEGRATION.md`](docs/PALM_USD_INTEGRATION.md) for Palm USD setup.
-
-## ElevenLabs Integration
-
-| Host | Personality | Voice |
+| Tool | Price | Endpoint |
 |---|---|---|
-| **Alex** | Enthusiastic data advocate | George (`JBFqnCBsd6RMkjVDRZzb`) |
-| **Morgan** | Skeptical quality auditor | Charlotte (`XB0fDUnXU5powFXDhCwa`) |
-
-Both voices use **context stitching** (`previous_text` / `next_text`) for natural prosody across segment boundaries. Transitions use ElevenLabs Sound Effects API (cached 30 days).
-
-**Setup:**
-```bash
-# ElevenLabs Starter plan ($5/month) required for API access
-ELEVENLABS_API_KEY=sk_your_key_here
-```
-
-## TestSprite Verification Loop
-
-DataBard is submitted to [TestSprite Season 3](https://www.testsprite.com/hackathon-s3) — "CLI Launch & Loop Engineering."
-
-The loop defends **economic invariants** — properties that must hold or the market silently breaks:
-
-1. **Digest reseller must earn positive margin** on every settled deal
-2. **Cascade wins Quality briefs, Newsroom wins Freshness** — persona-focus fit
-3. **Escrow state machine rejects invalid transitions** (no release before commit)
-4. **Release cascade settles all sub-escrows** (Newsroom must get paid)
-
-Each invariant is a Python + `requests` test in [`tests/testsprite/`](tests/testsprite/). The loop ([`scripts/loop/loop.mjs`](scripts/loop/loop.mjs)) uploads them to TestSprite Cloud, runs them against the live URL, and on failure feeds the failure bundle to the coding agent to propose + apply + commit a minimal patch. Re-runs until green or hits the 4-iteration cap.
-
-**CI/CD:** The TestSprite checker is wired into GitHub Actions (`.github/workflows/testsprite.yml`) — every PR reruns the invariants and fails the build if something breaks. (+5 Innovation)
-
-See [`LOOP.md`](LOOP.md) for the full iteration audit trail — every run, every fix, every commit SHA.
-
-## OKX.AI Marketplace
-
-DataBard is listed as an [Agent Service Provider](https://www.okx.ai/tutorial/asp) (ASP) on [OKX.AI](https://www.okx.ai) — the synthesis engine is exposed as two MCP tools that any MCP-compatible agent (Claude Code, Codex, Hermes, OpenClaw) can call directly.
-
-| Tool | Type | Price | Endpoint |
-|---|---|---|---|
-| **Data Health Check** | A2MCP | Free | `POST /api/mcp/health-check` |
-| **Data Briefing** | A2MCP | 1 USDT / call | `POST /api/mcp/briefing` |
-| **Service discovery** | — | Free | `GET /api/mcp/tools` |
-
-The paid briefing settles via [x402](https://web3.okx.com/onchainos/dev-docs/payments/service-seller-sdk) — an exact EIP-3009 USDT0 transfer on X Layer, with on-chain settlement that only fires after the synthesis succeeds. Agents pay autonomously; failed synthesis never charges.
+| `databard_health_check` | Free | `POST /api/mcp/health-check` |
+| `databard_briefing` | 1 USDT / call (x402) | `POST /api/mcp/briefing` |
+| `databard_write_back` | Free | `POST /api/mcp/writeback` |
+| Service discovery | — | `GET /api/mcp/tools` |
 
 ```bash
-# Free health check — any agent can call this
+# Free health check
 curl -X POST https://databard.persidian.com/api/mcp/health-check \
   -H 'content-type: application/json' \
-  -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'
 
-# Paid briefing — returns 402 + PAYMENT-REQUIRED header; agents pay via x402
+# Paid briefing — returns 402 + PAYMENT-REQUIRED; agents settle via x402
 curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
   -H 'content-type: application/json' \
   -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
 ```
 
-See [`docs/OKX_AI_ASP.md`](docs/OKX_AI_ASP.md) for the full ASP reference (identity, services, builder code, deploy state, demo shot list).
+---
 
-## DataHub Integration
+## DataHub integration
 
-DataBard is an entry in **Build with DataHub: The Agent Hackathon** — an AI agent that lives on top of DataHub's Context Platform.
+DataBard reads DataHub's full context graph (datasets, lineage, ownership, tags, assertions, freshness) and writes back:
+- Governance-grade auto-documentation on dataset descriptions
+- `DataBard_Health_*` tags (health band, ownerless, stale, undocumented)
+- Suggested ownership on ownerless tables
 
-> **"DataHub gives the agent context; DataBard makes the agent act."** DataHub's context graph is the *read source* (datasets, lineage, ownership, tags, assertions); DataBard's synthesis engine is the agent brain that turns that context into a health score, a trend narrative, an audio briefing, and recommended actions — then **writes its findings back into the graph**.
+See [`docs/DATAHUB_HACKATHON.md`](docs/DATAHUB_HACKATHON.md) for the full submission packet and demo script.
 
-DataHub is a first-class source: pick **🧭 DataHub** in the wizard, paste a GMS URL (+ optional personal access token), and DataBard reads the context graph. It also **contributes back** — after analysis it tags tables (health band + ownerless / untested / undocumented / stale) and appends an idempotent AI summary to dataset descriptions, attributed as `DataBard AI analyst`.
+---
 
-### MCP tools (agent-callable)
+## Pro subscription
 
-| Tool | Description | Endpoint |
-|---|---|---|
-| `databard_health_check` | Free — health score + critical tables + recommended actions | `POST /api/mcp/health-check` |
-| `databard_briefing` | x402-paid — full briefing: script + audio + health | `POST /api/mcp/briefing` |
-| `databard_write_back` | Free — writes findings back into the DataHub graph | `POST /api/mcp/writeback` |
-| Service discovery | Tool list + JSON schemas | `GET /api/mcp/tools` |
+$49/month per team via Stripe:
+- Scheduled weekly digests (email via SMTP or webhook)
+- Multiple schemas
+- Custom alert thresholds
+- On-chain attestation (Solana mainnet, Protocols workspace)
+- Team email recipients
+
+Free: demo, ad-hoc briefings, shared episode viewing, leaderboard, health badge, verify.
+
+---
+
+## Docs
+
+| Doc | What it covers |
+|---|---|
+| [`docs/STRATEGY.md`](docs/STRATEGY.md) | North star, competitive positioning, product principles, why now |
+| [`docs/PLAN.md`](docs/PLAN.md) | Full development roadmap (Phases 1–9) |
+| [`docs/GTM.md`](docs/GTM.md) | Viral hooks, engagement loops, user interview plan, outreach target list |
+| [`docs/UNIT_ECONOMICS.md`](docs/UNIT_ECONOMICS.md) | Cost-per-briefing, pricing, margin analysis |
+| [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) | Tiered adapter design, Coral graduation tracking |
+| [`docs/DATAHUB_HACKATHON.md`](docs/DATAHUB_HACKATHON.md) | DataHub hackathon submission packet, demo script, judging-criteria map |
+| [`docs/AZURE.md`](docs/AZURE.md) | Azure OpenAI + Container Apps migration guide |
+
+---
+
+## Build commands
 
 ```bash
-# Health check from a DataHub connection
-curl -X POST https://databard.persidian.com/api/mcp/health-check \
-  -H 'content-type: application/json' \
-  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080","token":"..."}}'
-
-# Write findings back into the DataHub context graph (tags + AI summary)
-curl -X POST https://databard.persidian.com/api/mcp/writeback \
-  -H 'content-type: application/json' \
-  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080","token":"..."}}'
+npm run dev                                        # dev server on localhost:3000
+DATABARD_DATA_DIR=/tmp/databard npm run build      # production build + bundle guard (<120MB)
+npx tsc --noEmit                                   # type check
+npm run test:unit                                  # unit tests
+npm run test:e2e                                   # Playwright E2E (chromium + Mobile Safari)
 ```
 
-Sample outputs produced by the real pipeline (no live DataHub needed): [`examples/`](examples/).
-
-See [`docs/DATAHUB_HACKATHON.md`](docs/DATAHUB_HACKATHON.md) for the full submission packet — judging-criteria mapping, local setup, and the demo shot list.
-
-## AG Grid
-
-[AG Grid](https://www.ag-grid.com/javascript-data-grid/getting-started/) (free Community edition) could make DataBard's health score tables, critical-table rankings, and coverage gap analysis sortable/filterable — turning the dashboard into an interactive data explorer. Row grouping and pivoting would let users drill from overall health into per-schema details without custom table logic.
+---
 
 ## License
 

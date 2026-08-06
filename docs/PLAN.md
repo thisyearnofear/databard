@@ -90,12 +90,25 @@ See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, an
 - [x] Wizard context split: 538-line monolith decomposed into `wizard-types.ts` (types + initialState), `wizard-reducer.ts` (5 domain reducers), `wizard-effects.ts` (5 extracted effect hooks), slim `wizard-context.tsx` (provider only)
 - [x] Fixed infinite render loop from unstable `onReady` callback in persona sync effect
 
+### Phase 6.7: OKX.AI ASP + A2MCP — Done
+- [x] `POST /api/mcp/health-check` — free A2MCP tool (health score + recommended actions, no LLM/audio)
+- [x] `POST /api/mcp/briefing` — paid A2MCP tool (x402 EIP-3009 USDT0 on X Layer, default $1.00/call)
+- [x] `POST /api/mcp/writeback` — free A2MCP tool (writes findings back into DataHub context graph)
+- [x] `GET /api/mcp/tools` — service discovery (tool list + JSON input/output schemas)
+- [x] x402 server setup (`src/lib/x402.ts`) — OKX Payment SDK, `syncSettle: true`, 503 on misconfigured deploy
+- [x] ASP #9878 registered on OKX.AI (X Layer, chainIndex 196); services attached (`Data Health Check` id 37750, `Data Briefing` id 37751); submitted for final OKX review
+- [x] Episode persistence via Lens Protocol Grove (`src/lib/grove-storage.ts`) — IPFS-backed, immutable ACL
+- [x] `DATABARD_DATA_DIR` production guard (`src/lib/data-dir.ts`) — throws at startup without it, preventing process.cwd() bundle trace blowup
+- [x] Bundle size guard (`scripts/check-bundle-size.mjs`) — fails build if `.next/standalone/` exceeds 120MB; current healthy size ~85MB
+
 ### Phase 7: Validation & GTM
 - [ ] 5 user interviews with data team leads
 - [ ] A/B test CTA ordering (demo vs connect first)
 - [ ] Review funnel numbers against targets in [`docs/GTM.md`](GTM.md)
 - [ ] Blog post: "We replaced our weekly data report with a podcast"
 - [ ] Social content: "AI roasted my database" clips
+- [ ] Wait for OKX final approval (status flips to "listed" — check with `onchainos agent get-agents --agent-ids 9878`)
+- [ ] Record 90s X demo post with `#OKXAI` (shot list in [`docs/OKX_AI_ASP.md`](OKX_AI_ASP.md))
 
 ### Phase 8: Field-Sales Allocation Discovery — Validate Before Building
 

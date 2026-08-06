@@ -99,9 +99,9 @@ Lead with ONE practitioner scenario, not a feature tour. Script:
 - [x] README DataHub section
 - [x] Fleet town hall + enforced write-back (docs/ownership) — live
 - [x] `databard_fleet_briefing` MCP tool
-- [ ] `< 3 min` demo video (YouTube/Vimeo, public) — story script above
-- [ ] README setup instructions final
-- [ ] DataHub OSS contribution (plan below)
+- [x] `< 3 min` demo video — `videos/databard-hackathon/renders/databard-v3.mp4` (60s, 1280×720, narration + music, copied to Downloads; upload to YouTube for Devpost)
+- [x] README setup instructions — final
+- [ ] DataHub OSS contribution (plan below — draft in `datahub-contribution/`)
 
 ## Open-source contribution to DataHub (bonus)
 

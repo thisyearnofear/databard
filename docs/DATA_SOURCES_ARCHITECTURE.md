@@ -9,20 +9,20 @@ DataBard uses a **dual-path** data architecture optimised for the end user:
 
 This is a user-first decision. First-class adapters deliver better error messages, deeper metadata extraction (lineage, PII, owners, profiler data), and zero extra dependencies. Coral gives users immediate access to the long tail of sources we haven't built adapters for yet.
 
-## Tier 1: First-Class Adapters
+## Tier 1: First-Class Adapters (all shipped)
 
 These sources have dedicated adapters (`src/lib/<source>-adapter.ts`) with:
 - Full `SchemaMeta` extraction (columns, quality tests, lineage, tags, owners)
 - Source-specific error handling and validation
 - No external binary required — pure HTTP/file-based
 
-| Source | Adapter | Depth |
-|---|---|---|
-| OpenMetadata | `openmetadata.ts` | Tables, columns, PII tags, quality tests, lineage, owners, profiler, glossary |
-| DataHub | `datahub-adapter.ts` | Datasets, columns, tags, glossary terms, owners, assertions (quality), lineage, last profile (freshness) |
-| dbt (Cloud + Local) | `dbt-adapter.ts` | Manifest parsing, run results, model lineage, test status |
-| The Graph | `the-graph-adapter.ts` | GraphQL introspection, entity-to-table mapping, cross-entity lineage |
-| Dune Analytics | `dune-adapter.ts` | Query metadata, result execution, column statistics (min/max/avg) |
+| Source | Adapter file | Status | Depth |
+|---|---|---|---|
+| OpenMetadata | `openmetadata.ts` | ✅ Shipped | Tables, columns, PII tags, quality tests, lineage, owners, profiler, glossary |
+| DataHub | `datahub-adapter.ts` | ✅ Shipped | Datasets, columns, tags, glossary terms, owners, assertions, lineage, last profile (freshness) |
+| dbt (Cloud + Local) | `dbt-adapter.ts` | ✅ Shipped | Manifest parsing, run results, model lineage, test status |
+| The Graph | `the-graph-adapter.ts` | ✅ Shipped | GraphQL introspection, entity-to-table mapping, cross-entity lineage |
+| Dune Analytics | `dune-adapter.ts` | ✅ Shipped | Query metadata, result execution, column statistics (min/max/avg) |
 
 ### Why dedicated adapters?
 
@@ -31,9 +31,9 @@ These sources have dedicated adapters (`src/lib/<source>-adapter.ts`) with:
 - **Error UX**: Source-specific error messages ("Your OM token expired" vs generic SQL failure)
 - **Zero friction**: Users paste a URL + token and they're connected — no `brew install`, no `coral source add`
 
-## Tier 2: Coral — The Long-Tail Connector
+## Tier 2: Coral — The Long-Tail Connector (shipped)
 
-Coral is exposed as both a source and a **power-user tool** for joining across any combination of APIs, databases, and files.
+Coral is shipped as both a source and a **power-user tool** for joining across any combination of APIs, databases, and files. It is an escape hatch for sources without a Tier 1 adapter — not a replacement for them.
 
 | Use Case | Example |
 |---|---|
@@ -81,7 +81,7 @@ A source should get a dedicated adapter when:
 │                  (unified entry point)                     │
 ├──────────────┬───────────┬──────────┬──────────┬─────────┤
 │ OpenMetadata │    dbt    │The Graph │   Dune   │  Coral  │
-│   (Tier 1)   │ (Tier 1)  │(Tier 1)  │ (Tier 1) │(Tier 2) │
+│  (Tier 1 ✅) │(Tier 1 ✅)│(Tier 1 ✅)│(Tier 1 ✅)│(Tier 2 ✅)|
 │              │           │          │          │         │
 │ Full depth   │Full depth │Full depth│Full depth│ Generic │
 │ HTTP only    │File/HTTP  │GraphQL   │HTTP      │CLI/GW   │

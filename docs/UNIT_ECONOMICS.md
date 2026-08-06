@@ -62,13 +62,25 @@ At 10 paying teams ($490/month revenue), fixed costs are covered with ~$450 marg
 
 ## Pricing
 
-### Entry price: $49/month per team
+### Entry price: $49/month per team (Stripe)
 
 - Below the "need to ask my manager" threshold for most data teams
 - Covers up to 5 schemas, unlimited listeners
 - Includes on-chain attestation (Solana mainnet)
 - Includes weekly email digest delivery
 - Includes embeddable health badge
+
+### Pay-per-call: x402 A2MCP (agent-to-agent)
+
+For agents rather than humans. The `databard_briefing` MCP tool charges **$1.00 per call** (configurable via `BRIEFING_PRICE_USD`) settled as exact EIP-3009 USDT0 on X Layer via the OKX Payment SDK. Settlement only fires after the handler returns <400 — failed synthesis never charges the caller.
+
+| Tool | Price | Cost | Margin |
+|---|---|---|---|
+| `databard_health_check` | Free | ~$0.00 (no LLM/audio) | — |
+| `databard_briefing` | $1.00 | ~$0.80 | ~$0.20 |
+| `databard_write_back` | Free | ~$0.00 (no LLM/audio) | — |
+
+At 100 briefing calls/month that's ~$20 additional margin on top of the subscription business.
 
 ### Why $49, not $99 or $29
 
@@ -84,14 +96,17 @@ At 10 paying teams ($490/month revenue), fixed costs are covered with ~$450 marg
 - Leaderboard browsing
 - Verify page (public good)
 - Health badge (embeddable, free forever — it's a distribution surface)
+- `databard_health_check` A2MCP tool
+- `databard_write_back` A2MCP tool
 
 ### What's paid
 
-- Scheduled weekly digests (the retention loop)
-- Multiple schemas
-- Custom alerts
-- On-chain attestation (mainnet)
-- Team management (multiple recipients)
+- Scheduled weekly digests (the retention loop) — $49/month via Stripe
+- Multiple schemas — $49/month
+- Custom alerts — $49/month
+- On-chain attestation (Solana mainnet, Protocols workspace) — $49/month
+- Team management (multiple recipients) — $49/month
+- `databard_briefing` A2MCP tool — $1.00/call via x402 (agent pay-per-call)
 
 ---
 
@@ -123,6 +138,8 @@ These costs are calculated from the actual codebase:
 - `src/lib/script-generator.ts` — LLM call, GPT-4o-mini, ~5K tokens
 - `src/lib/audio-engine.ts` — ElevenLabs API, eleven_multilingual_v2, ~2K chars + 5 SFX
 - `src/app/api/onchain/mint-solana/route.ts` — Solana Memo transaction
-- `src/lib/notifications.ts` — Resend email delivery
+- `src/lib/notifications.ts` — email delivery (SMTP or webhook)
+- `src/lib/grove-storage.ts` — Lens Protocol Grove IPFS storage (immutable ACL, no per-upload cost beyond gas)
+- `src/lib/x402.ts` — x402 pay-per-call settlement (OKX Payment SDK, X Layer)
 
 Pricing is a hypothesis. The first 10 paying teams are the test.

@@ -157,17 +157,19 @@ Use this during interviews to be honest about the current state. Don't oversell 
 
 | Capability | Status | Notes |
 |---|---|---|
-| Connect a data source | Live | OpenMetadata, dbt, Coral (cross-source SQL), Dune, The Graph |
+| Connect a data source | Live | OpenMetadata, DataHub, dbt, The Graph, Dune, Coral (cross-source SQL) |
 | Health score computation | Live | Test coverage, lineage risk, PII flags, freshness — across every table |
 | Trend narrative generation | Live | "Your health score dropped 8 points because test coverage fell in the payments schema after the Friday deploy" |
 | 2-minute audio briefing | Live | Two AI hosts (Alex + Morgan), segment-synced transcript, drill-down |
 | Dashboard with health scores | Live | Fleet view, per-source drill-down, critical tables, what changed |
-| Recommended next step | Live | Text-based recommendation on the dashboard ("Review the failing tests and their downstream impact") |
+| Recommended next step | Live | Text-based recommendation on the dashboard |
 | Alerts (Slack / webhook) | Live | Threshold-based, fires when health drops below your configured level |
 | Scheduled weekly digests | Live (Pro) | Email delivery via SMTP or webhook, weekly cadence |
 | Episode sharing | Live | Shareable links, clip sharing ("Share moment"), OG images |
 | On-chain attestation | Live (Protocols) | Mint health reports on Solana, verify on /verify, leaderboard |
-| Pro subscription | Live | $49/month via Stripe or Palm USD (49 PUSD) |
+| Pro subscription | Live | $49/month via Stripe |
+| A2MCP tools (agent-callable) | Live | `databard_health_check` (free), `databard_briefing` (1 USDT via x402), `databard_write_back` (free) |
+| DataHub write-back | Live | Writes governance docs, health/defect tags, suggested ownership back into DataHub graph |
 | Research follow-ups | Live | Ask a follow-up question about the data, branch the research session |
 
 #### What's planned (don't promise timelines — ask if they'd want it)
@@ -249,16 +251,18 @@ This is not evidence to pivot DataBard into generic sales analytics. It is evide
 |---|---|---|
 | `landing_cta_click` | Landing page | Which CTA (demo vs connect) converts better |
 | `persona_toggle` | Landing page | How many users switch between Teams and Protocols |
-| `demo_play` | Landing page | Zero-friction conversion rate |
+| `demo_play` | Landing page | Zero-friction conversion rate (event fires on actual play, not just click) |
 | `connect_start` | Connect step | Funnel: landing → connect |
 | `connect_complete` | Connect step | Funnel: connect → schema selection |
 | `generate_start` | Generation | Funnel: schema → generation |
 | `generate_complete` | Generation | Funnel: generation → dashboard |
 | `dashboard_listen_click` | Dashboard | How many users click "Listen to this analysis" |
 | `schedule_setup` | Dashboard/Pro | Conversion to retention loop |
-| `share_click` | Episode page | Viral coefficient |
+| `clip_share` | Episode page | "Share moment" viral hook fires |
 | `shared_episode_open` | Shared episode | Reach of shared links |
 | `shared_episode_cta_click` | Shared episode | Viral → conversion rate |
+| `roast_page_view` | `/roast` | Traffic to roast variant |
+| `roast_cta_click` | `/roast` | Roast → connect conversion |
 
 ### Funnel targets (initial)
 
