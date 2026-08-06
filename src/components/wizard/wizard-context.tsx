@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useMemo, useReducer, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import type { DataSource } from "@/lib/types";
 
 // Re-export types and initialState for backward compatibility
@@ -8,7 +9,7 @@ export type { WizardStep, OMMode, LiveBriefingSignal, WizardState, WizardAction,
 import type { WizardState, WizardAction, WizardContextValue, WizardStep } from "./wizard-types";
 import { initialState, DEFAULT_OM_SANDBOX_URL } from "./wizard-types";
 import { wizardReducer } from "./wizard-reducer";
-import { useConnectionPersistence, usePersonaSync, useMintStats, useSchemaDefaults, useDeepLink } from "./wizard-effects";
+import { useConnectionPersistence, usePersonaSync, useMintStats, useSchemaDefaults, useDeepLink, usePublishDataContext } from "./wizard-effects";
 
 const WizardContext = createContext<WizardContextValue | null>(null);
 
@@ -29,12 +30,14 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [personaReady, setPersonaReady] = useState(false);
   const onPersonaReady = useCallback(() => setPersonaReady(true), []);
+  const router = useRouter();
 
   // Extracted effects (previously inline in this component)
-  useDeepLink(dispatch);
+  useDeepLink(dispatch, router);
   useConnectionPersistence(state, dispatch);
   usePersonaSync(state, dispatch, onPersonaReady);
   useMintStats(state, dispatch);
+  usePublishDataContext(state, sandboxUrl);
 
   // Question presets — persona-aware
   const questionPresets = useMemo(() =>
@@ -76,7 +79,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
 
   // Source help text
   const sourceHelp: Record<DataSource, string> = {
-    openmetadata: "Choose the OpenMetadata sandbox for a one-click demo, or connect your own instance.",
+    openmetadata: "Choose Sample data for a one-click demo against a hosted catalog, or connect your own instance.",
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
@@ -89,7 +92,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   const activeContext =
     state.source === "openmetadata"
       ? state.omMode === "sandbox"
-        ? `Sandbox · ${sandboxUrl}`
+        ? `Sample data · ${sandboxUrl}`
         : `Custom · ${state.omUrl || "Not set"}`
       : state.source === "dbt-cloud"
         ? `Account ${state.dbtAccountId || "?"} · Project ${state.dbtProjectId || "?"}`

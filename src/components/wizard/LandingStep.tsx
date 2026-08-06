@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useWizard } from "./wizard-context";
 import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
+import { setDataContext } from "@/lib/data-context";
 import { StatTile } from "@/components/viz";
 import { LeadCapture } from "@/components/LeadCapture";
 import { CountUp } from "@/components/CountUp";
@@ -48,6 +49,7 @@ export function LandingStep() {
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Demo seed failed");
       dispatch({ type: "SET_STATUS", status: "" });
+      setDataContext({ kind: "demo", label: "Demo", detail: "sample briefing", source: "demo", demo: true });
       router.push(`/protocol?episode=${state.persona === "web3" ? "demo" : "demo-enterprise"}&demo=1&workspace=${workspace}`);
       return;
     } catch {
@@ -57,6 +59,7 @@ export function LandingStep() {
     dispatch({ type: "SET_STEP", step: "generating" });
     dispatch({ type: "SET_GEN_STEP", step: 0 });
     dispatch({ type: "SET_STATUS", status: "Loading demo…" });
+    setDataContext({ kind: "demo", label: "Demo", detail: "sample episode", source: "demo", demo: true });
 
     try {
       const isWeb3 = state.persona === "web3";

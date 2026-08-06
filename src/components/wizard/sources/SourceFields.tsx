@@ -21,8 +21,8 @@ export function SourceFields() {
                 state.omMode === "sandbox" ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] hover:border-[var(--accent)]"
               }`}
             >
-              <p className="font-medium text-[var(--text)]">Sandbox</p>
-              <p className="text-[var(--text-muted)]">Try with sample data</p>
+              <p className="font-medium text-[var(--text)]">Sample data</p>
+              <p className="text-[var(--text-muted)]">Try with a hosted sample catalog</p>
             </button>
             <button
               type="button"
@@ -55,7 +55,7 @@ export function SourceFields() {
           )}
           {state.omMode === "sandbox" && (
             <p className="text-xs text-[var(--text-muted)]">
-              Connects to sample metadata — no credentials needed.
+              Connects to a hosted sample catalog — no credentials needed.
             </p>
           )}
         </>

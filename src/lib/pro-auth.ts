@@ -30,6 +30,13 @@ interface WalletChallenge {
   issuedAt: string;
 }
 
+interface EmailChallenge {
+  email: string;
+  code: string;
+  attempts: number;
+  issuedAt: string;
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -118,6 +125,61 @@ export function readWalletChallenge(challengeId: string): WalletChallenge | null
 
 export function consumeWalletChallenge(challengeId: string): void {
   store.delete(`pro:wallet_challenge:${challengeId}`);
+}
+
+// ── Email (passwordless) auth ─────────────────────────────────────────────
+// A 6-digit code delivered by email. The existing HMAC-signed `databard_pro_auth`
+// cookie is the single unified account session — this just adds email identity
+// to it (the same cookie wallet + Stripe already use).
+
+const EMAIL_CODE_TTL_SECONDS = 10 * 60;
+const EMAIL_MAX_ATTEMPTS = 5;
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+export function makeEmailChallenge(email: string): { challengeId: string; code: string } {
+  const challengeId = randomBytes(18).toString("base64url");
+  const code = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit
+  const challenge: EmailChallenge = {
+    email: normalizeEmail(email),
+    code,
+    attempts: 0,
+    issuedAt: nowIso(),
+  };
+  store.set(`pro:email_challenge:${challengeId}`, challenge, EMAIL_CODE_TTL_SECONDS);
+  return { challengeId, code };
+}
+
+export function readEmailChallenge(challengeId: string): EmailChallenge | null {
+  return store.get<EmailChallenge>(`pro:email_challenge:${challengeId}`);
+}
+
+export function consumeEmailChallenge(challengeId: string): void {
+  store.delete(`pro:email_challenge:${challengeId}`);
+}
+
+/** Pure check used by verifyEmailCode — kept separate so it's unit-testable. */
+export function checkEmailCode(attempts: number, code: string, expected: string): { ok: boolean; reason?: string } {
+  if (attempts >= EMAIL_MAX_ATTEMPTS) return { ok: false, reason: "Too many attempts — request a new code" };
+  if (code.trim() !== expected) return { ok: false, reason: "Incorrect code — try again" };
+  return { ok: true };
+}
+
+export async function verifyEmailCode(challengeId: string, code: string): Promise<{ ok: boolean; session?: ProAuthSession; reason?: string }> {
+  const challenge = readEmailChallenge(challengeId);
+  if (!challenge) return { ok: false, reason: "Code expired — request a new one" };
+
+  const outcome = checkEmailCode(challenge.attempts, code, challenge.code);
+  if (!outcome.ok) {
+    store.set(`pro:email_challenge:${challengeId}`, { ...challenge, attempts: challenge.attempts + 1 }, EMAIL_CODE_TTL_SECONDS);
+    return { ok: false, reason: outcome.reason };
+  }
+
+  consumeEmailChallenge(challengeId);
+  const session = await mergeAndPersistProIdentity({ email: challenge.email });
+  return { ok: true, session };
 }
 
 export function hasStripeEntitlement(stripeCustomerId: string | null): boolean {

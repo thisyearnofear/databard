@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { DataContextChip } from "./DataContextChip";
+import { DataSourceSwitch } from "./DataSourceSwitch";
+import { AccountMenu } from "./AccountMenu";
 import { homeHref, isNavItemActive, WORKSPACES, workspaceFromRoute, workspaceHref } from "@/lib/product/workspaces";
 import { track } from "@/lib/track";
 
@@ -68,6 +71,9 @@ function HeaderBarInner() {
         </nav>
         <div className="flex items-center gap-1.5">
           {workspace === "protocols" && <WalletButton />}
+          <DataContextChip />
+          <DataSourceSwitch workspace={workspace} />
+          <AccountMenu workspace={workspace} />
           <ThemeToggle />
         </div>
       </div>

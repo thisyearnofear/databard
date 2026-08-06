@@ -5,6 +5,7 @@ import { useWizard } from "./wizard-context";
 import { useGeneration } from "./useGeneration";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
+import { useAccount } from "@/lib/use-account";
 import { validateCoralSql, getDataAwarePresets } from "./coral-helpers";
 import { CoralForm } from "./sources/CoralForm";
 import { CoralConfigureStep } from "./sources/CoralConfigureStep";
@@ -23,6 +24,7 @@ export function ConnectStep() {
   const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp } = useWizard();
   const { generatePodcast, generateAnthem } = useGeneration();
   const { toast } = useToast();
+  const { session } = useAccount();
   const [showOtherSources, setShowOtherSources] = useState(false);
 
   function showError(message: string) {
@@ -161,6 +163,7 @@ export function ConnectStep() {
         const nextSchemas = data.schemas ?? [];
         dispatch({ type: "SET_STATUS", status: `Connected — ${nextSchemas.length} schemas found` });
         connected(nextSchemas);
+        void saveSourceToAccount(body);
       } else {
         showError(data.error);
       }
@@ -168,6 +171,31 @@ export function ConnectStep() {
       showError(e instanceof Error ? e.message : "Connection failed");
     } finally {
       dispatch({ type: "SET_CONNECTING", connecting: false });
+    }
+  }
+
+  // If signed in, remember this connection under the account so it shows up
+  // in the header's "My data sources" and persists across sessions.
+  async function saveSourceToAccount(body: Record<string, unknown>) {
+    const email = session?.identity.email;
+    if (!email) return;
+    const source = String(body.source ?? "openmetadata");
+    // Sample data isn't "their" connection — don't save it.
+    if (source === "openmetadata" && body.omMode === "sandbox") return;
+    const host =
+      typeof body.url === "string" ? String(body.url) :
+      (body as { datahub?: { serverUrl?: string } }).datahub?.serverUrl ? String((body as { datahub?: { serverUrl?: string } }).datahub?.serverUrl) :
+      (body as { theGraph?: { subgraphUrl?: string } }).theGraph?.subgraphUrl ? String((body as { theGraph?: { subgraphUrl?: string } }).theGraph?.subgraphUrl) :
+      undefined;
+    const name = `${sourceLabel[(source as DataSource)] ?? "Data source"}${host ? ` · ${host}` : ""}`;
+    try {
+      await fetch("/api/account/sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.slice(0, 80), source, host: host ? host.slice(0, 200) : undefined }),
+      });
+    } catch {
+      /* non-fatal — saving a source must never block connecting */
     }
   }
   

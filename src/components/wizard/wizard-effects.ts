@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from "react";
 import type { WizardState, WizardAction } from "./wizard-types";
+import { setDataContext } from "@/lib/data-context";
 
 /**
  * Connection-persistence effects.
@@ -151,18 +152,77 @@ export function useSchemaDefaults(
   }, [state.step, recommendedSchema, state.expandedGroups.size, dispatch]);
 }
 
+/** Minimal router surface used by useDeepLink (we only call push). */
+type RouterLike = { push: (href: string) => void };
+
 /**
- * Deep-link handler — ?start=connect jumps straight to the connect step.
+ * Deep-link handler:
+ *  - ?start=connect      -> jump to the connect step (source-aware)
+ *  - ?start=connect&mode=sample -> OpenMetadata sample data
+ *  - ?start=connect&mode=my     -> OpenMetadata custom / your own instance
+ *  - ?start=demo         -> run the dashboard demo (seeds demo data, lands on it)
  */
-export function useDeepLink(dispatch: React.Dispatch<WizardAction>) {
+export function useDeepLink(dispatch: React.Dispatch<WizardAction>, router: RouterLike) {
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("start") === "connect") {
+      const start = params.get("start");
+      if (start === "demo") {
+        const workspace = params.get("workspace") === "protocols" ? "protocols" : "teams";
+        (async () => {
+          try {
+            const res = await fetch("/api/demo/seed", { method: "POST" });
+            const data = await res.json();
+            if (res.ok && data.ok) {
+              setDataContext({ kind: "demo", label: "Demo", detail: "sample briefing", source: "demo", demo: true });
+              router.push(`/protocol?episode=demo&demo=1&workspace=${workspace}`);
+              return;
+            }
+          } catch {
+            /* fall through to in-wizard demo below */
+          }
+          setDataContext({ kind: "demo", label: "Demo", source: "demo", demo: true });
+          dispatch({ type: "SET_STEP", step: "episode" });
+        })();
+        return;
+      }
+      if (start === "connect") {
+        const mode = params.get("mode");
         dispatch({ type: "SET_SOURCE", source: "openmetadata" });
-        dispatch({ type: "SET_OM_MODE", omMode: "custom" });
+        dispatch({ type: "SET_OM_MODE", omMode: mode === "sample" ? "sandbox" : "custom" });
         dispatch({ type: "SET_STEP", step: "connect" });
       }
-    } catch { /* ignore — SSR-safe by construction */ }
-  }, [dispatch]);
+    } catch {
+      /* ignore — SSR-safe by construction */
+    }
+  }, [dispatch, router]);
+}
+
+/**
+ * Publishes the current "whose data is this" context whenever the wizard's
+ * connection state changes, so the global header chip stays accurate even
+ * after the user navigates away from the wizard to the dashboard.
+ */
+export function usePublishDataContext(state: WizardState, sandboxUrl: string) {
+  useEffect(() => {
+    if (state.step === "landing") return; // leave whatever was set
+    if (state.source === "openmetadata" && state.omMode === "sandbox") {
+      setDataContext({
+        kind: "sample",
+        label: "Sample data",
+        detail: sandboxUrl.replace(/^https?:\/\//, ""),
+        source: "openmetadata",
+      });
+    } else {
+      const detail =
+        state.source === "openmetadata"
+          ? state.omUrl || "not connected"
+          : state.source === "datahub"
+            ? state.dhServerUrl || "not connected"
+            : state.source === "dune"
+              ? `Dune · ${state.duneNamespace || "user"}`
+              : state.source;
+      setDataContext({ kind: "connected", label: state.source, detail, source: state.source });
+    }
+  }, [state.step, state.source, state.omMode, state.omUrl, state.dhServerUrl, state.duneNamespace, sandboxUrl]);
 }

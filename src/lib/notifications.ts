@@ -151,3 +151,80 @@ export async function sendDigestEmail(notification: DigestNotification): Promise
   console.log(`[notifications] Subject: ${subject}`);
   return { sent: false, method: "dev" };
 }
+
+/**
+ * Sends a passwordless sign-in code for the given email.
+ * Uses the same delivery ladder as digests: Resend → SMTP → webhook → dev log.
+ */
+export async function sendLoginCodeEmail(email: string, code: string): Promise<{ sent: boolean; method: string }> {
+  const userLabel = process.env.EMAIL_FROM || "DataBard <onboarding@resend.dev>";
+  const subject = "Your DataBard sign-in code";
+  const textBody = [
+    `Your DataBard sign-in code is: ${code}`,
+    ``,
+    `It expires in 10 minutes. If you didn't request it, you can ignore this email.`,
+    ``,
+    `— DataBard`,
+  ].join("\n");
+
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: userLabel,
+          to: [email],
+          subject,
+          text: textBody,
+          html: `<div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
+            <h2 style="margin-bottom: 0.5rem;">Your DataBard sign-in code</h2>
+            <div style="font-size: 2rem; font-weight: bold; letter-spacing: 0.25em; color: #6366f1; margin: 1rem 0;">${code}</div>
+            <p style="color: #444;">It expires in 10 minutes. If you didn't request it, you can ignore this email.</p>
+          </div>`,
+        }),
+      });
+      if (res.ok) return { sent: true, method: "resend" };
+      console.error("[notifications] Resend login-code error:", res.status, await res.text());
+    } catch (e) {
+      console.error("[notifications] Resend login-code failed:", e);
+    }
+  }
+
+  const smtpUrl = process.env.SMTP_URL;
+  if (smtpUrl) {
+    try {
+      const nodemailer = await (Function("return import('nodemailer')")() as Promise<any>);
+      if (nodemailer) {
+        const transporter = nodemailer.createTransport(smtpUrl);
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || "DataBard <login@databard.dev>",
+          to: email,
+          subject,
+          text: textBody,
+        });
+        return { sent: true, method: "smtp" };
+      }
+    } catch (e) {
+      console.error("[notifications] SMTP login-code failed:", e);
+    }
+  }
+
+  const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: email, subject, text: textBody, code }),
+      });
+      return { sent: true, method: "webhook" };
+    } catch (e) {
+      console.error("[notifications] Email webhook login-code failed:", e);
+    }
+  }
+
+  console.log(`[notifications] Sign-in code for ${email}: ${code} (no delivery configured — dev mode)`);
+  return { sent: false, method: "dev" };
+}

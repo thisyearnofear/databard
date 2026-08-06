@@ -245,3 +245,36 @@ export const proAccounts = {
     store.set(`pro:${customerId}`, { ...existing, ...patch }, 86400 * 365 * 10);
   },
 };
+
+// ── Account connections (saved under a signed-in email) ───────────────────
+// A named, sanitised (no secrets) record per account so a user's data sources
+// persist across sessions and can be switched/removed — the "my data" home.
+
+export interface SavedConnection {
+  id: string;
+  name: string;
+  source: string;
+  host?: string;
+  savedAt: string;
+}
+
+export const accounts = {
+  key: (email: string) => `account:${normalizeStoreEmail(email)}:sources`,
+  list: (email: string): SavedConnection[] =>
+    store.get<SavedConnection[]>(accounts.key(email)) ?? [],
+  add: (email: string, conn: SavedConnection): SavedConnection[] => {
+    const list = accounts.list(email).filter((c) => c.id !== conn.id);
+    const next = [...list, conn];
+    store.set(accounts.key(email), next, 86400 * 365 * 10);
+    return next;
+  },
+  remove: (email: string, id: string): SavedConnection[] => {
+    const next = accounts.list(email).filter((c) => c.id !== id);
+    store.set(accounts.key(email), next, 86400 * 365 * 10);
+    return next;
+  },
+};
+
+function normalizeStoreEmail(email: string): string {
+  return String(email).trim().toLowerCase();
+}
