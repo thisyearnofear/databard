@@ -172,6 +172,38 @@ const writebackOutputSchema = {
   },
 } as const;
 
+const fleetOutputSchema = {
+  type: "object",
+  properties: {
+    ok: { type: "boolean" },
+    report: {
+      type: "object",
+      properties: {
+        totalTables: { type: "number" },
+        fleetScore: { type: "number", minimum: 0, maximum: 100 },
+        ownerless: { type: "number" },
+        untested: { type: "number" },
+        undocumented: { type: "number" },
+        stale: { type: "number" },
+        failingTests: { type: "number" },
+        totalTests: { type: "number" },
+        health: {
+          type: "object",
+          properties: { healthy: { type: "number" }, atRisk: { type: "number" }, critical: { type: "number" } },
+        },
+        hotspots: {
+          type: "array",
+          items: { type: "object", properties: { name: { type: "string" }, downstream: { type: "number" } } },
+        },
+        townHall: {
+          type: "array",
+          items: { type: "object", properties: { speaker: { type: "string" }, topic: { type: "string" }, text: { type: "string" } } },
+        },
+      },
+    },
+  },
+} as const;
+
 const TOOLS = [
   {
     name: "databard_health_check",
@@ -213,6 +245,17 @@ const TOOLS = [
     pricing: "free",
     inputSchema: writebackInputSchema,
     outputSchema: writebackOutputSchema,
+  },
+  {
+    name: "databard_fleet_briefing",
+    summary: "Fleet 'town hall' briefing: lineage-aware cascade impact across the whole DataHub graph. Free.",
+    description:
+      "Reads every dataset in the DataHub context graph, computes transitive blast radius over lineage, and returns fleet health, top blast-radius risks, hotspots, and a two-host town-hall narration. Requires source: \"datahub\".",
+    method: "POST",
+    endpoint: "/api/fleet",
+    pricing: "free",
+    inputSchema: connectionSchema,
+    outputSchema: fleetOutputSchema,
   },
 ];
 
