@@ -124,6 +124,7 @@ tar czf "$TARFILE" \
   .next/standalone/public \
   ecosystem.config.cjs \
   scripts/coral-bridge.mjs \
+  scripts/ensure-running.sh \
   package.json \
   2>/dev/null
 
@@ -202,8 +203,17 @@ ssh "$REMOTE" bash <<EOF
   # Restart via PM2
   echo "   Reloading PM2..."
   cd "$DEPLOY_DIR/current"
+  chmod +x "$DEPLOY_DIR/current/scripts/ensure-running.sh" 2>/dev/null || true
   /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --update-env
   /usr/local/bin/pm2 save
+
+  # Keep DataBard in the shared PM2 dump even if another app later `pm2 save`s
+  # while we are down. Matches OnPoint's */2 watchdog pattern.
+  echo "   Installing ensure-running cron..."
+  CRON_LINE='*/2 * * * * /opt/databard/current/scripts/ensure-running.sh'
+  EXISTING=$(crontab -l 2>/dev/null || true)
+  FILTERED=$(printf '%s\n' "$EXISTING" | grep -v '/opt/databard/current/scripts/ensure-running.sh' || true)
+  printf '%s\n%s\n' "$FILTERED" "$CRON_LINE" | grep -v '^$' | crontab -
 
   # Cleanup old releases (keep last 5)
   echo "   Cleaning up old releases..."

@@ -49,6 +49,22 @@ Cron entry on the server (deploy user's crontab):
 Hourly is correct: schedules specify a UTC hour, and the runner only executes
 ones whose `nextRunAt` has passed.
 
+## Stay-alive (shared PM2)
+
+All apps on `snel-bot` share the `deploy` user's PM2. `pm2 save` snapshots
+whoever is in the list; a daemon resurrect then starts only that dump. DataBard
+dropped out of the dump on 2026-08-08 and nginx 502'd until the process was
+started again.
+
+`scripts/ensure-running.sh` runs every 2 minutes (installed by `deploy.sh`).
+If `http://127.0.0.1:42100/api/insights` is not 200, it `startOrReload`s only
+this ecosystem, then `pm2 save`s so we are back in the dump. It does not
+delete or restart other apps. Log: `/opt/databard/logs/ensure.log`.
+
+Do not `pm2 delete all`. Other deploys should `pm2 restart <their-app>` or
+`pm2 startOrReload` their own ecosystem — never a dump that omits DataBard
+while 42100 is down.
+
 ## Rollback
 
 `./scripts/deploy.sh --rollback` — flips the `current` symlink to the previous
