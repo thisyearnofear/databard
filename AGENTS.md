@@ -8,7 +8,8 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 - `npm run build` — production build (81 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
-- `npm run test:unit` — `tsx tests/rate-limit.unit.ts && tsx tests/datahub-adapter.unit.ts`
+- `npm run test:unit` — rate-limit, datahub-adapter, fleet-analysis, account, score-card (`package.json`)
+- `./scripts/deploy.sh` — local build → tarball → `snel-bot` (`/opt/databard`), PM2 reload, health gate, installs `ensure-running` cron. Do **not** `npm install` on the box.
 - `npx playwright install` — install required browsers
 - `npx playwright test --project=chromium` — run a single browser project
 
@@ -27,6 +28,11 @@ Without it, `data-dir.ts` and `store.ts` throw at startup. This prevents
 `process.cwd()` from leaking into the server bundle via Next.js file tracing,
 which would trace the entire project directory (including Rust build artifacts).
 
+Live site: `https://databard.persidian.com` (PM2 `databard` on port 42100). Shared
+host PM2 with other apps — see `docs/OPERATIONS.md` stay-alive section.
+`scripts/ensure-running.sh` runs every 2 minutes and `startOrReload`s this
+ecosystem if `/api/insights` is not 200, then `pm2 save`s so we stay in the dump.
+
 ## Analytics
 Two-layer analytics system:
 
@@ -36,14 +42,17 @@ Two-layer analytics system:
 ### Tracked funnel events
 - `landing_cta_click` — which CTA (demo vs connect) on landing page
 - `demo_play` — demo episode actually played (not just clicked)
-- `persona_toggle` — enterprise vs onchain switch
+- `persona_toggle` — Teams vs Protocols workspace switch
 - `connect_start` — user clicked connect
 - `generate_complete` — analysis finished, landed on dashboard
 - `dashboard_listen_click` — clicked "Listen to this analysis" on dashboard
-- `schedule_setup` — clicked "Set up weekly digest"
-- `clip_share` — clicked "Share moment" (viral hook)
-- `shared_episode_open` — someone opened a shared episode link
-- `shared_episode_cta_click` — clicked "Get this for your data" on shared page
+- `schedule_setup` — clicked "Set up weekly digest" (Pro path)
+- `monday_signup` — email on the finding: send this every Monday (pre-Pro habit)
+- `clip_share` — clicked "Share card" (score card + deep link)
+- `shared_episode_open` — someone opened a shared episode / score-card link
+- `shared_episode_cta_click` — CTA on shared page (league / get this / dashboard)
+- `league_page_view` — visited `/league` (weekly protocol accounting magnet)
+- `league_share_copy` — copied tweet, email, or permalink from the league
 - `roast_page_view` — visited /roast
 - `roast_cta_click` — clicked "Roast my data" on /roast
 
@@ -72,13 +81,18 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/datahub-adapter.ts` — DataHub GMS adapter: GraphQL read (datasets, lineage, owners, tags, assertions, profile) + write-back (tags + AI descriptions)
 - `src/app/api/mcp/writeback/route.ts` — FREE A2MCP tool: writes findings back into the DataHub context graph
 - `src/app/protocol/page.tsx` — dashboard (hero output)
-- `src/components/EpisodePlayer.tsx` — audio player with drill-down
+- `src/app/league/page.tsx` — public weekly protocol data-health league
+- `src/lib/league.ts` — league edition builder (live snapshots or seeded roster)
+- `src/lib/score-card.ts` — shareable finding (score + quote); shared TTL = 21 days
+- `src/components/EpisodePlayer.tsx` — audio player with drill-down + Share card
+- `src/components/MondaySignup.tsx` — one-field Monday email on the finding
 - `src/components/wizard/wizard-context.tsx` — wizard provider (slim, wires together types + reducer + effects)
 - `src/components/wizard/wizard-types.ts` — wizard state shape, action types, initialState
 - `src/components/wizard/wizard-reducer.ts` — composed reducer (5 domain reducers: core, connection, schema, generation, episode)
 - `src/components/wizard/wizard-effects.ts` — extracted effect hooks (persona sync, connection persistence, mint stats, schema defaults, deep links)
-- `src/components/wizard/LandingStep.tsx` — landing page
+- `src/components/wizard/LandingStep.tsx` — landing page (default workspace: Protocols)
 - `src/app/roast/page.tsx` — "Roast my data" landing variant
+- `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)
 
 ## Theming
 Dark-first. `data-theme="dark"` is set on `<html>` in `layout.tsx`. Light mode is opt-in via the `ThemeToggle` component (dark/light toggle, persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components.
@@ -86,8 +100,9 @@ Dark-first. `data-theme="dark"` is set on `<html>` in `layout.tsx`. Light mode i
 ## Docs
 - `docs/STRATEGY.md` — north star, competitive positioning, product principles, operating principles (PG framework)
 - `docs/GTM.md` — viral hooks, engagement loops, user interview plan, manual outreach target list
+- `docs/OPERATIONS.md` — prod env, schedule cron, stay-alive / shared PM2
 - `docs/UNIT_ECONOMICS.md` — cost-per-briefing, pricing, margin analysis
-- `docs/PLAN.md` — development roadmap (Phases 1-7)
+- `docs/PLAN.md` — development roadmap (Phases 1-9)
 - `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture
 - `docs/DATAHUB_HACKATHON.md` — DataHub Agent Hackathon submission packet (pitch, judging-criteria map, setup, demo shot list)
 - `docs/AZURE.md` — Azure OpenAI migration guide
@@ -146,9 +161,9 @@ curl -i -X POST https://databard.persidian.com/api/mcp/writeback \
 - **Other ASPs under the same wallet** (one address = one identity per role, but multiple ASPs are allowed): `OnPoint` #9874, `Wowowify` #6462.
 
 ### Deploy state
-- Commit `92cba6a` ("Add A2MCP endpoints for OKX.AI ASP marketplace") deployed to `databard.persidian.com` via `scripts/deploy.sh` (release `20260728_021040`, PM2 reloaded, health check 200).
+- Production tracks `main` via `./scripts/deploy.sh` (local Next standalone build → scp tarball → PM2 `startOrReload` → `/api/insights` health gate → ensure-running cron). Pushing git alone does not ship.
 - x402 env vars live in `/opt/databard/.env` on the production host (symlinked into each release by `deploy.sh`). NOT in `ecosystem.config.cjs` — the PM2 env block is for non-secret runtime config only.
-- Local `.env` is gitignored; the deploy script never ships it.
+- Local `.env` is gitignored; the deploy script never ships it. Never `npm install` on `snel-bot` for this app.
 
 ### Remaining steps (user actions)
 1. Wait for OKX final approval (status flips to "listed" — check with `onchainos agent get-agents --agent-ids 9878`).

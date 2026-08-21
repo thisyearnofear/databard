@@ -109,7 +109,8 @@ export default function PrivacyPage() {
             <ul className="flex flex-col gap-2 list-disc pl-5 text-[var(--text-muted)]">
               <li>
                 <span className="text-[var(--text)]">Audio briefings</span> are cached for 24 hours
-                after generation.
+                after generation. <span className="text-[var(--text)]">Shared score cards</span> (links
+                you explicitly share) stay available for up to 21 days.
               </li>
               <li>
                 <span className="text-[var(--text)]">Analysis scripts</span> are cached for 1 hour

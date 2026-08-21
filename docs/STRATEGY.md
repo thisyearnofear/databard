@@ -101,23 +101,23 @@ health-scoring engine, or our synthesis layer.
 
 The product now presents this split as workspaces, not as separate products. Both workspaces use the same briefing engine, health scoring, trend narratives, and dashboard composition. The difference is disclosure: Teams hides crypto mechanics by default; Protocols exposes attestation, verification, and registry surfaces.
 
-### Teams (default)
+### Teams (enterprise path)
 - **Who:** Data team leads at companies with 50+ tables
 - **Pain:** "I spend hours building reports nobody reads"
 - **Wedge:** Weekly executive briefing (2-min audio)
 - **Expansion:** Alerts, trend narratives, team email delivery
 - **Terminology:** Health score, test coverage, critical tables, downstream risk
 - **Onchain:** Not mentioned. Enterprise data teams don't want Solana in their stack.
-- **Entry point:** `/` and `/protocol` default to Teams. Wallet providers and on-chain navigation are not mounted in this workspace.
+- **Entry point:** `/?workspace=teams` or `/protocol?workspace=teams`. Wallet providers and on-chain navigation are not mounted in this workspace.
 
-### Protocols (secondary)
-- **Who:** Web3 protocol operators, DAO data teams
-- **Pain:** "I need publicly verifiable protocol health"
-- **Wedge:** Onchain attestation + `/verify` + leaderboard/explorer
-- **Expansion:** Same analysis engine, different output emphasis
+### Protocols (GTM beachhead / default)
+- **Who:** Web3 protocol operators, DAO data teams — where inbound interest is strongest today
+- **Pain:** "I need publicly verifiable protocol health" + a public weekly accounting of peer sources
+- **Wedge:** `/league` (weekly table) → briefing → onchain attestation + `/verify` + leaderboard
+- **Expansion:** Same analysis engine; Monday email from the finding before Pro billing
 - **Terminology:** Subgraphs, indexers, entities, attestations
 - **Onchain:** Core feature, not afterthought
-- **Entry point:** `/?workspace=protocols` or `/protocol?workspace=protocols` opens the Protocols workspace. Legacy `?persona=onchain` links still map to this mode for compatibility.
+- **Entry point:** `/` defaults to Protocols. `/?workspace=protocols` or `/protocol?workspace=protocols`. Legacy `?persona=onchain` still maps here.
 
 ### Presentation Discipline
 
@@ -156,7 +156,7 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 
 4. **From informing to acting.** The current product informs: it tells you what's broken and recommends a next step. The agentic evolution acts: it files the ticket, pings the on-call, drafts the runbook, and then briefs you on what it did. The gap between informing and acting is the differentiation. Build toward closing it, one action at a time.
 
-5. **Protocols is a workspace, not a pillar.** Solana attestation is valuable for Protocols. Don't contaminate the Teams pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care, not a core feature for everyone. The inverse also holds: for a Solana-native audience, open the Protocols workspace and show verification as the trust layer, while making clear the same engine serves Teams.
+5. **Protocols is the GTM beachhead, not a side product.** Solana attestation and `/league` are valuable for Protocols. Don't contaminate the Teams pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care. The inverse also holds: for a Solana-native audience, open Protocols by default and show verification as the trust layer, while making clear the same engine serves Teams.
 
 6. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analyst positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
 

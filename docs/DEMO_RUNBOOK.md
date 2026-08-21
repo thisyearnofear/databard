@@ -26,42 +26,28 @@ and web3 arms.
 
 ## The click path
 
-1. Open **`/?workspace=protocols`** for the Solana demo, or **`/`** for the Teams-first demo.
-2. Click **Open a protocol briefing** → lands on **`/protocol?workspace=protocols`** (dashboard-first):
+1. Open **`/`** (Protocols is the default). Use **`/?workspace=teams`** only if demoing the enterprise surface.
+2. Click **Try the demo** → seeds data → lands on **`/league?from=demo`**:
+   - This week's table + headline finding (e.g. a declining protocol score).
+   - **That's my protocol — claim a row** / **Listen to the briefing**.
+3. From the league, open the briefing → play 20–30 s. Or continue to **`/protocol?workspace=protocols`**:
    - Fleet health chart — scrub it, hover a legend entry to spotlight a series.
-   - "What changed this week" — Uniswap Analytics decline narrative.
-   - Open the Uniswap card → critical tables, coverage, downstream risk.
-3. Click **▶ Listen to this analysis** → play 20–30 s of the audio briefing. Audio is
-   the format, not the pitch — come back to the dashboard.
-4. **Attestation moment** (wallet pre-connected, devnet):
-   - Mint the report from the episode page (Protocols workspace + connected wallet shows
-     the mint CTA), OR use a pre-minted record on a dashboard card.
-   - Click **⛓ Verify** on the record → `/verify` recomputes the SHA-256 of the report
-     and matches it against the on-chain memo. Show the green check, then the Explorer
-     link.
-5. **Escrow settlement moment** (live on devnet):
-   - The Anchor escrow program is deployed at
-     `ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK` (devnet).
-   - Full lifecycle verified: initialize (buyer deposits SOL) → commit_delivery
-     (seller commits SHA-256 of deliverable) → release (buyer releases funds,
-     escrow closes).
-   - Explorer link for the verified transaction:
-     `https://explorer.solana.com/address/ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK?cluster=devnet`
-   - Line: *"This isn't just a hash in a memo — insights settle through on-chain
-     escrow. The seller commits what they delivered, the buyer releases funds
-     only after that commitment, and the whole thing is one RPC call to verify."*
-   - If asked to show it live: walk through the `/market` page which exercises
-     the escrow flow, or show the Explorer link above.
+   - "What changed this week" — narrative on the declining source.
+4. Click **Share card** on the episode → show the score-card OG / shared page (no wallet).
+5. **Attestation moment** (wallet pre-connected, devnet) — Protocols dashboard / episode mint CTA, then **`/verify`**.
+6. **Escrow settlement moment** (live on **devnet**):
+   - Program `ErwrNVN9DgGvPkHTm1KziXhHjWm6ehE2MUnsauYmfgdK`.
+   - Line: *"Insights can settle through on-chain escrow — verify with one Explorer link."*
+   - Live walkthrough: `/market` if asked.
 
 ## Preflight checklist (do this the morning of)
 
 - [ ] `npm run build && npm start` (or the deployed URL) — no dev-mode jank.
 - [ ] Hit `POST /api/demo/seed` once (the demo button does this too) and load
-      `/protocol?workspace=protocols` — 6 sources, trends populated, no `0%` scores anywhere.
-      Then load `/leaderboard` — 6 entries (Uniswap, Jupiter, Marinade, Raydium,
-      Orca, E-commerce), badges inline, "Claim your protocol" on scanned entries.
-- [ ] Load `/protocol` separately and confirm the Teams view has no wallet button,
-      Market, Verify, or leaderboard navigation in the header.
+      `/league` — ranked table + headline finding. Then `/protocol?workspace=protocols`
+      — 6 sources, trends populated, no `0%` scores anywhere. Then `/leaderboard`.
+- [ ] Load `/protocol?workspace=teams` and confirm no wallet button, Market, Verify,
+      or leaderboard nav in the header.
 - [ ] Phantom installed, set to **devnet**, wallet funded (≥ 0.05 devnet SOL —
       `solana airdrop 1 <pubkey> -u devnet` the day before; faucets rate-limit).
 - [ ] Wallet pre-connected to the site; auto-connect is on.
@@ -101,17 +87,13 @@ and web3 arms.
    Friday's deploy, here's the owner.' Narratives get acted on; dashboards get skimmed."*
 5. **Back pocket:** `/roast` — "when we want people to share it, we let the AI roast
    their data." Use if energy dips; exit on the laugh.
-6. **The viral loop (GTM built into the product):** on the dashboard, expand
-   "📛 Embeddable badge" → show the live SVG + copy the Markdown embed code.
-   Line: *"Every dashboard has an embeddable badge. A protocol puts this in
-   their README — every visitor sees DataBard."* Then click "Share moment" on
-   the episode player → open the deep link → show the branded player with OG
-   image + "Get this for your data" CTA. Line: *"Every shared episode is a
-   mini-landing page. The product is its own distribution channel."*
-7. **The leaderboard as registry:** load `/leaderboard` — 6 protocols, badges
-   inline, "Claim your protocol" on scanned entries. Line: *"This is the public
-   registry. Protocols want to be on it because verified health is marketing.
-   Their marketing is our acquisition channel."*
+6. **The viral loop (GTM built into the product):** on the league, copy tweet.
+   On the episode player, click **Share card** → open the shared score card
+   (health + finding, Monday signup, no wallet). Line: *"Every shared finding
+   is a mini-landing page. The product is its own distribution channel."*
+7. **The leaderboard as registry:** load `/leaderboard` — claim flow. Line:
+   *"This is the public registry. Protocols want to be on it because verified
+   health is marketing. Their marketing is our acquisition channel."*
 
 **Founding insight, said out loud:** data reports don't fail on accuracy — they fail on
 distribution to human attention. We didn't build a better report; we built a report that

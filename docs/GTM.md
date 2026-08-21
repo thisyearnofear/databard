@@ -11,21 +11,22 @@
 ```
 ATTENTION
   │
-  ├─ Social post: "AI roasted my database" (shareable clip)
-  ├─ Colleague forwards Slack link to shared episode
+  ├─ Social post / copy-tweet from `/league` (weekly protocol table)
+  ├─ Colleague forwards Slack link to a shared score card
   ├─ Blog post: "We replaced our weekly data report with a podcast"
   │
   ▼
 CONVERSION (first "wow" moment)
   │
-  ├─ Demo: lands on a live dashboard — what changed, downstream risk — with the audio briefing one click away (zero friction)
+  ├─ Demo (Protocols): seeds data → lands on this week's `/league` → listen / claim row
   ├─ Connects own data → sees health score → hears personal analysis
   ├─ "Roast my data" emotional trigger → shares result
   │
   ▼
 RETENTION (habit formation)
   │
-  ├─ Sets up weekly digest (Monday morning briefing)
+  ├─ "Send me this every Monday" email on the finding (pre-Pro)
+  ├─ Pro: multi-schema weekly digest + alerts
   ├─ Alert fires when health drops → comes back to dashboard
   ├─ Trend narrative: "what changed?" → curiosity pull
   ├─ Team forwards digest in Slack → social accountability
@@ -33,9 +34,9 @@ RETENTION (habit formation)
   ▼
 VIRAL (each retention cycle creates new attention)
   │
-  ├─ Shared episode link in Slack → 5-20 colleagues click
+  ├─ Shared score card (OG image + quote + ~15s audio) → colleagues click
   ├─ Health score badge in README / team page
-  ├─ "Share this moment" clip → social media
+  ├─ League edition forwarded / copy-tweeted
   ├─ Weekly digest email forwarded to stakeholders
   │
   ▼
@@ -52,7 +53,7 @@ The first time someone hears two AI hosts discussing their database is genuinely
 
 **How to weaponize:**
 - The demo is zero-friction and already works. But the demo analyzes a *sample* schema. The real viral moment is when someone connects *their own* data and hears Morgan say "your test coverage is 23% and you have three PII columns with no owner." That's personal, surprising, and slightly embarrassing — which makes it shareable.
-- **"Share this moment" button** on the episode player that creates a 15-second audio clip of the most critical segment (Morgan's harshest call-out). People share clips, not full episodes.
+- **"Share card" button** on the episode player that builds a score card (name, health, one-line finding) plus a deep link. Slack/X unfurl the OG image; the shared page plays ~15s of the finding. Cards stay live for **21 days**. No wallet on that surface.
 - **The "roast my data" framing.** Position the demo as "let AI roast your data quality." This is more shareable than "AI analyst for your data estate." Same product, different emotional trigger.
 
 ### Hook 2: The health score as a status symbol
@@ -60,7 +61,7 @@ The first time someone hears two AI hosts discussing their database is genuinely
 "Our data health score is 87" is a metric people want to share and compare. It's like a credit score for your data estate.
 
 **How to weaponize:**
-- The leaderboard already exists for web3. Extend the concept: let teams share their health score publicly (opt-in) with a badge. "DataBard Health Score: 87/100" in a README or team page.
+- The leaderboard already exists for web3. **`/league`** is the weekly public accounting magnet (dated edition, headline finding, copy tweet/email). Extend the concept: let teams share their health score publicly (opt-in) with a badge. "DataBard Health Score: 87/100" in a README or team page.
 - **Weekly health score email.** Every Monday, the team lead gets an email: "Your data health score this week: 82 (↓3 from last week). Listen to the 2-minute briefing →" The score creates anxiety/curiosity; the audio satisfies it.
 - **Benchmarking.** "Your health score is 82. The average for teams your size is 71. You're in the top quartile." Comparison drives engagement.
 
@@ -69,32 +70,36 @@ The first time someone hears two AI hosts discussing their database is genuinely
 This is the most important retention-to-viral loop. When a data lead sets up a weekly digest, they forward it to their team in Slack. Every forward is a touchpoint for 5-20 people.
 
 **How to weaponize:**
-- **Make the shared episode page the best possible first impression.** When a colleague clicks the Slack link, they should see the dashboard with health scores, not just an audio player. The dashboard is the hook; the audio is the payoff.
-- **Add "Get this for your data" CTA on every shared episode page.** Right now shared episodes don't have a strong conversion path. Add a banner: "This is DataBard — get weekly audio briefings for your own data. Connect →"
+- **Make the shared score-card page the best possible first impression.** When a colleague clicks the Slack link, they should see the score + finding first, with Monday signup and the full briefing below — not a wallet connect nudge.
+- **CTA on every shared page:** league / get this for your data / dashboard.
 - **Team-level sharing.** Let the data lead add email recipients to the weekly digest. Each recipient gets the episode link + a 1-line summary. This is organic distribution to exactly the right audience (other people who care about data health).
 
 ---
 
-## Loop Status (all previously-missing pieces shipped)
+## Loop Status (protocol beachhead)
 
 ### Attention → Conversion
-- The demo is zero-friction and dashboard-first: it seeds deterministic data and lands on /protocol with the briefing one click away ✓
-- The landing page tells the story ✓
-- "Share this moment" clip feature (15-second highlight + shareable link) ✓
+- Default workspace is **Protocols**; landing proof uses a live declining finding when available ✓
+- Demo seeds deterministic data and lands on **`/league?from=demo`** (claim row / listen) ✓
+- Teams demo still lands on `/protocol` with the sample briefing ✓
+- "Share card" (score + finding OG + deep link; 21-day TTL) ✓
 - "Roast my data" framing lives at `/roast` and in the footer ✓
 
 ### Conversion → Retention
-- After generation (and the demo), we land on the dashboard ✓
-- "Want this every Monday?" one-click schedule prompt on the dashboard, pre-filled schema ✓
+- "Send me this every Monday" one-field signup on the finding (dashboard, league, shared card) — habit before `/pro` ✓
+- Pro path still handles multi-schema digests + alerts ✓
 - Email delivery for scheduled digests ✓
-- Verification loop: every on-chain record links to `/verify`, which recomputes the report hash against the memo — the trust surface that makes attestation worth returning to ✓
+- Verification loop: every on-chain record links to `/verify` ✓
 
 ### Retention → Viral
-- Shared episode links exist, with a "Get this for your data" CTA on `/episode/[id]` ✓
+- Shared score cards with Monday signup + league CTA ✓
 - Health score badge (embeddable SVG, `/api/badge/[schema]`) ✓
+- `/league` copy tweet / email / permalink ✓
 - Team email recipients for scheduled digests ✓
 
-**What's genuinely still missing:** benchmarking ("your score vs. teams your size"), A/B testing the CTA order, and real funnel numbers — see Phase 7 in [`docs/PLAN.md`](PLAN.md).
+**Honesty:** when `/league` shows `sample: true`, numbers match seeded snapshots — do not claim a live indexer audit in outreach.
+
+**What's genuinely still missing:** a Monday live-scan cron for the league, benchmarking ("your score vs. teams your size"), A/B testing the CTA order, and real funnel numbers — see Phase 7 in [`docs/PLAN.md`](PLAN.md).
 
 ---
 
@@ -165,7 +170,9 @@ Use this during interviews to be honest about the current state. Don't oversell 
 | Recommended next step | Live | Text-based recommendation on the dashboard |
 | Alerts (Slack / webhook) | Live | Threshold-based, fires when health drops below your configured level |
 | Scheduled weekly digests | Live (Pro) | Email delivery via SMTP or webhook, weekly cadence |
-| Episode sharing | Live | Shareable links, clip sharing ("Share moment"), OG images |
+| Episode / card sharing | Live | Score card OG (`/api/og`), 21-day share TTL, ~15s finding clip, no wallet on shared page |
+| Public league | Live | `/league` + `/api/league` + `/api/og/league` — weekly accounting magnet |
+| Monday from the finding | Live | Email capture on finding surfaces; Pro still for multi-schema digests |
 | On-chain attestation | Live (Protocols) | Mint health reports on Solana, verify on /verify, leaderboard |
 | Pro subscription | Live | $49/month via Stripe |
 | A2MCP tools (agent-callable) | Live | `databard_health_check` (free), `databard_briefing` (1 USDT via x402), `databard_write_back` (free) |
@@ -257,10 +264,13 @@ This is not evidence to pivot DataBard into generic sales analytics. It is evide
 | `generate_start` | Generation | Funnel: schema → generation |
 | `generate_complete` | Generation | Funnel: generation → dashboard |
 | `dashboard_listen_click` | Dashboard | How many users click "Listen to this analysis" |
-| `schedule_setup` | Dashboard/Pro | Conversion to retention loop |
-| `clip_share` | Episode page | "Share moment" viral hook fires |
-| `shared_episode_open` | Shared episode | Reach of shared links |
+| `monday_signup` | Finding / league / shared card | Pre-Pro Monday habit capture |
+| `schedule_setup` | Pro path | Conversion to paid weekly digest |
+| `clip_share` | Episode page | "Share card" viral hook fires |
+| `shared_episode_open` | Shared episode | Reach of shared score-card links |
 | `shared_episode_cta_click` | Shared episode | Viral → conversion rate |
+| `league_page_view` | `/league` | Weekly accounting magnet traffic |
+| `league_share_copy` | `/league` | Tweet / email / link copy |
 | `roast_page_view` | `/roast` | Traffic to roast variant |
 | `roast_cta_click` | `/roast` | Roast → connect conversion |
 

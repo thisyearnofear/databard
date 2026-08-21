@@ -24,9 +24,11 @@ cp .env.example .env
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000) → Connect a source → Dashboard with health scores → Listen to briefing.
+Open [localhost:3000](http://localhost:3000) → default workspace is **Protocols** (switch to Teams anytime) → Try the demo (lands on this week's [league](https://databard.persidian.com/league)) or connect a source → Dashboard / briefing → Share a score card.
 
-**Connect DataHub:** pick 🧭 DataHub in the wizard, paste a GMS URL, connect. Run the fleet town hall at [/fleet](http://localhost:3000/fleet). Every capability is also agent-callable via the MCP tools (`GET /api/mcp/tools`).
+**Connect DataHub:** pick 🧭 DataHub in the wizard (Teams), paste a GMS URL, connect. Run the fleet town hall at [/fleet](http://localhost:3000/fleet). Every capability is also agent-callable via the MCP tools (`GET /api/mcp/tools`).
+
+**Public league:** [/league](https://databard.persidian.com/league) — weekly ranked protocol data-health accounting (OG card + copy tweet/email). When a live scan isn't available, numbers match the seeded demo roster — don't pitch them as a live indexer audit.
 
 See [`.env.example`](.env.example) for the full list of optional env vars (Stripe, SMTP, Plausible, Solana, etc.).
 
@@ -41,7 +43,7 @@ Data source (DataHub, OpenMetadata, dbt, The Graph, Dune)
   → Dashboard: health score · trend narrative · recommended actions
   → Audio briefing: 2-min executive or 15-min full analysis
   → Write-back (DataHub): governance docs · ownership tags · health/defect tags
-  → Optional: schedule weekly · alert on drops · attest on-chain (Solana)
+  → Optional: Monday email from the finding · schedule weekly (Pro) · alert on drops · attest on-chain (Solana) · share a score card (21-day link)
 ```
 
 ---
@@ -121,7 +123,7 @@ $49/month per team via Stripe:
 - On-chain attestation (Solana mainnet, Protocols workspace)
 - Team email recipients
 
-Free: demo, ad-hoc briefings, shared episode viewing, leaderboard, health badge, verify.
+Free: demo, ad-hoc briefings, shared score cards, `/league`, leaderboard, health badge, verify. Monday email capture on the finding starts the habit before Pro.
 
 ---
 
@@ -132,6 +134,7 @@ Free: demo, ad-hoc briefings, shared episode viewing, leaderboard, health badge,
 | [`docs/STRATEGY.md`](docs/STRATEGY.md) | North star, competitive positioning, product principles, why now |
 | [`docs/PLAN.md`](docs/PLAN.md) | Full development roadmap (Phases 1–9) |
 | [`docs/GTM.md`](docs/GTM.md) | Viral hooks, engagement loops, user interview plan, outreach target list |
+| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Prod env, deploy, schedule cron, shared-PM2 stay-alive |
 | [`docs/UNIT_ECONOMICS.md`](docs/UNIT_ECONOMICS.md) | Cost-per-briefing, pricing, margin analysis |
 | [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) | Tiered adapter design, Coral graduation tracking |
 | [`docs/DATAHUB_HACKATHON.md`](docs/DATAHUB_HACKATHON.md) | DataHub hackathon submission packet, demo script, judging-criteria map |
@@ -144,6 +147,7 @@ Free: demo, ad-hoc briefings, shared episode viewing, leaderboard, health badge,
 ```bash
 npm run dev                                        # dev server on localhost:3000
 DATABARD_DATA_DIR=/tmp/databard npm run build      # production build + bundle guard (<120MB)
+./scripts/deploy.sh                                # local build → snel-bot (no npm on the box)
 npx tsc --noEmit                                   # type check
 npm run test:unit                                  # unit tests
 npm run test:e2e                                   # Playwright E2E (chromium + Mobile Safari)

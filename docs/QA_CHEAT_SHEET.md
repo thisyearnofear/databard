@@ -43,7 +43,7 @@
 
 ### "What's the distribution strategy? How do you get users?"
 
-> "The product is its own distribution channel. Every shared episode is a mini-landing page with a 'Get this for your data' CTA. Every dashboard has an embeddable health badge for READMEs. The success event — forwarding the Monday briefing to 20 stakeholders — IS the acquisition event. Usage and distribution are the same act."
+> "The product is its own distribution channel. Every shared score card is a mini-landing page with Monday signup and a path to `/league`. Every dashboard has an embeddable health badge. The success event — forwarding the Monday briefing — IS the acquisition event."
 
 ### "What if ElevenLabs goes down or raises prices?"
 

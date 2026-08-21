@@ -38,7 +38,7 @@ Data teams produce findings nobody reads. Dashboards have 47 rows of test result
 
 ### Phase 3: Analysis-First Repositioning — Done
 - [x] Landing page rewritten: analysis-first hero, live dashboard stats, three pillars
-- [x] Default persona changed to enterprise
+- [x] Default persona initially set to enterprise (later flipped to Protocols beachhead — Phase 6.8)
 - [x] Alerts page with email-based subscriptions (decoupled from wallet)
 - [x] Alert badges on protocol dashboard cards
 - [x] Executive summary output format (2-minute briefing)
@@ -60,9 +60,9 @@ Data teams produce findings nobody reads. Dashboards have 47 rows of test result
 - [x] Coral presets expanded (stale PRs, bug triage)
 
 ### Phase 5: Viral Hooks & Retention — Done
-- [x] "Get this for your data" CTA on shared episode pages
-- [x] "Want this every Monday?" one-click schedule from dashboard
-- [x] "Share this moment" clip feature (15-second audio highlight)
+- [x] CTA on shared episode / score-card pages
+- [x] Monday signup on the finding (later refined in Phase 6.8; Pro still for multi-schema)
+- [x] Share card / clip feature (refined to score-card OG in Phase 6.8)
 - [x] Email delivery for scheduled digests
 - [x] "Roast my data" landing page variant (`/roast`)
 - [x] Health score badge (embeddable SVG, `/api/badge/[schema]`)
@@ -73,10 +73,10 @@ Data teams produce findings nobody reads. Dashboards have 47 rows of test result
 See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, and preflight checklist.
 
 - [x] Dashboard redesigned on dither-kit: fleet-health chart (scrub + legend spotlight), generative source avatars, dithered CTAs
-- [x] Dashboard-first demo: "Try the demo" seeds deterministic data (`POST /api/demo/seed`) and lands on /protocol; audio is a CTA there
+- [x] Dashboard-first demo: "Try the demo" seeds deterministic data (`POST /api/demo/seed`); Protocols land on `/league`, Teams on `/protocol`
 - [x] `/verify` page + `/api/onchain/verify`: decode the SPL-memo attestation, recompute the report hash, show match/mismatch (also renders marketplace settlement receipts)
-- [x] Teams/Protocols workspace model: `/protocol` defaults to Teams; `/protocol?workspace=protocols` exposes attestation, verification, and explorer navigation
-- [x] Wallet provider loads only for Protocols and on-chain routes, keeping the Teams dashboard free of wallet chrome and Solana dependencies
+- [x] Teams/Protocols workspace model: `/` defaults to **Protocols**; Teams hides wallet chrome
+- [x] Wallet provider loads only for Protocols dashboard and on-chain routes (not shared score-card pages)
 - [x] Dashboard broken into briefing components (`DashboardHeader`, `PriorityBriefingCard`, `DashboardSummary`, `ChangeNarratives`, `SourceHealthList`) with shared health logic in `src/lib/briefing-health.ts`
 - [x] `/?workspace=protocols` URL param; legacy `?persona=onchain` still maps to Protocols
 - [x] Onboarding tour moved off the landing hero; decision-support copy
@@ -101,12 +101,22 @@ See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, an
 - [x] `DATABARD_DATA_DIR` production guard (`src/lib/data-dir.ts`) — throws at startup without it, preventing process.cwd() bundle trace blowup
 - [x] Bundle size guard (`scripts/check-bundle-size.mjs`) — fails build if `.next/standalone/` exceeds 120MB; current healthy size ~85MB
 
+### Phase 6.8: Protocol Growth Loop — Done
+Beachhead = Protocols (interest is web3-heavy). Close the viral/retention loop without burying attestation.
+
+- [x] Default workspace Protocols; landing proof = live declining finding or seeded Orca drop
+- [x] Public `/league` + `/api/league` + `/api/og/league` (sample roster when no live scan — honesty in copy)
+- [x] Share as a **score card** (OG + quote + ~15s audio); shared TTL 21 days; no wallet on `/episode/[id]`
+- [x] Protocols demo lands on `/league?from=demo` (claim row / listen)
+- [x] Monday email on the finding (`MondaySignup`) — habit before `/pro`
+- [x] Prod stay-alive: `scripts/ensure-running.sh` cron + `docs/OPERATIONS.md` shared-PM2 notes
+
 ### Phase 7: Validation & GTM
-- [ ] 5 user interviews with data team leads
+- [ ] 5 user interviews (protocol teams first; data team leads as expansion)
+- [ ] Monday live-scan cron so `/league` is not sample-only
 - [ ] A/B test CTA ordering (demo vs connect first)
 - [ ] Review funnel numbers against targets in [`docs/GTM.md`](GTM.md)
-- [ ] Blog post: "We replaced our weekly data report with a podcast"
-- [ ] Social content: "AI roasted my database" clips
+- [ ] Blog / social from league editions (see [`docs/CONTENT_PLAYBOOK.md`](CONTENT_PLAYBOOK.md))
 - [ ] Wait for OKX final approval (status flips to "listed" — check with `onchainos agent get-agents --agent-ids 9878`)
 - [ ] Record 90s X demo post with `#OKXAI` (shot list in [`docs/OKX_AI_ASP.md`](OKX_AI_ASP.md))
 

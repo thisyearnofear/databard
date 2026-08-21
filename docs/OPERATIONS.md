@@ -49,6 +49,22 @@ Cron entry on the server (deploy user's crontab):
 Hourly is correct: schedules specify a UTC hour, and the runner only executes
 ones whose `nextRunAt` has passed.
 
+## Deploy
+
+```bash
+./scripts/deploy.sh              # local build → scp tarball → PM2 reload → health gate
+./scripts/deploy.sh --dry-run    # build + package only
+./scripts/deploy.sh --rollback   # previous release symlink + PM2 reload
+```
+
+Build happens on your laptop (`npm run build` inside the script). The server receives
+only the standalone artifact — **no `npm install` on `snel-bot`**. Pushing `main`
+does not ship; CI typechecks/lints only.
+
+After a successful deploy, `/opt/databard/current/COMMIT` matches the git SHA and
+`curl -s -o /dev/null -w '%{http_code}\n' https://databard.persidian.com/api/insights`
+should print `200`.
+
 ## Stay-alive (shared PM2)
 
 All apps on `snel-bot` share the `deploy` user's PM2. `pm2 save` snapshots
