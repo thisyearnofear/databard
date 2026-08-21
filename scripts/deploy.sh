@@ -208,12 +208,13 @@ ssh "$REMOTE" bash <<EOF
   /usr/local/bin/pm2 save
 
   # Keep DataBard in the shared PM2 dump even if another app later `pm2 save`s
-  # while we are down. Matches OnPoint's */2 watchdog pattern.
+  # while we are down. Matches OnPoint's every-2-min watchdog pattern.
+  # Dollars/stars escaped so this unquoted heredoc does not expand locally.
   echo "   Installing ensure-running cron..."
-  CRON_LINE='*/2 * * * * /opt/databard/current/scripts/ensure-running.sh'
-  EXISTING=$(crontab -l 2>/dev/null || true)
-  FILTERED=$(printf '%s\n' "$EXISTING" | grep -v '/opt/databard/current/scripts/ensure-running.sh' || true)
-  printf '%s\n%s\n' "$FILTERED" "$CRON_LINE" | grep -v '^$' | crontab -
+  CRON_LINE='\*/2 * * * * /opt/databard/current/scripts/ensure-running.sh'
+  EXISTING=\$(crontab -l 2>/dev/null || true)
+  FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v '/opt/databard/current/scripts/ensure-running.sh' || true)
+  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$CRON_LINE"; } | grep -v '^\$' | crontab -
 
   # Cleanup old releases (keep last 5)
   echo "   Cleaning up old releases..."
