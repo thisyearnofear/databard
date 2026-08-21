@@ -285,7 +285,7 @@ export default function OnChainWall() {
       </Suspense>
 
       <footer className="text-xs text-[var(--text-muted)] pt-8 pb-4 flex gap-3">
-        <Link href={workspaceHref("/leaderboard", "protocols")} className="hover:text-[var(--text)] transition-colors">🏆 Leaderboard</Link>
+        <Link href={workspaceHref("/league", "protocols")} className="hover:text-[var(--text)] transition-colors">League</Link>
         <span>·</span>
         <Link href={workspaceHref("/protocol", "protocols")} className="hover:text-[var(--text)] transition-colors">📡 Protocol dashboard</Link>
         <span>·</span>

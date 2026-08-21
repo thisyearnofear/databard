@@ -26,7 +26,7 @@ function HeaderBarInner() {
   const searchParams = useSearchParams();
   const workspace = workspaceFromRoute(pathname, searchParams.toString());
 
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname.startsWith("/episode/")) return null;
   const definition = WORKSPACES[workspace];
 
   return (
@@ -70,7 +70,7 @@ function HeaderBarInner() {
           ))}
         </nav>
         <div className="flex items-center gap-1.5">
-          {workspace === "protocols" && <WalletButton />}
+          {workspace === "protocols" && pathname !== "/league" && <WalletButton />}
           <DataContextChip />
           <DataSourceSwitch workspace={workspace} />
           <AccountMenu workspace={workspace} />

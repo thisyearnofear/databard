@@ -235,14 +235,12 @@ function ProtocolDashboardInner() {
 
         {/* Fresh episode banner — "Listen to this analysis" */}
         {episodeId && episodeMeta && <PriorityBriefingCard
-          episodeId={episodeId}
           episode={episodeMeta}
           isProtocols={isProtocols}
           onListen={() => {
             track("dashboard_listen_click", { schema: episodeMeta.schemaName });
             router.push(workspaceHref(`/episode/${episodeId}`, workspace));
           }}
-          onSchedule={() => track("schedule_setup", { schema: episodeMeta.schemaName, source: "dashboard_prompt" })}
         />}
 
         {loading && (
@@ -285,7 +283,7 @@ function ProtocolDashboardInner() {
       </div>
 
       {isProtocols && <footer className="relative text-center pt-12 pb-4">
-        <Link href={workspaceHref("/leaderboard", workspace)} className="font-mono text-[var(--text-muted)] text-xs no-underline hover:text-[var(--text)]">View protocol explorer →</Link>
+        <Link href={workspaceHref("/league", workspace)} className="font-mono text-[var(--text-muted)] text-xs no-underline hover:text-[var(--text)]">View this week’s league →</Link>
       </footer>}
     </main>
   );

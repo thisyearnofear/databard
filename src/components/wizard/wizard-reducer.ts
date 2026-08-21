@@ -167,6 +167,7 @@ export function coreReducer(state: WizardState, action: WizardAction): WizardSta
       return {
         ...initialState,
         persona: state.persona, // Preserve persona preference
+        source: state.persona === "web3" ? "coral" : "dbt-local",
       };
     default:
       return state;

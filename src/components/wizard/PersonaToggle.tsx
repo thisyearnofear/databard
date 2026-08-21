@@ -9,7 +9,11 @@ export function PersonaToggle() {
   return (
     <div className="flex bg-[var(--surface)] p-1 rounded-xl border border-[var(--border)] animate-fade-in" aria-label="Choose a workspace">
       <button
-        onClick={() => { track("persona_toggle", { from: state.persona, to: "enterprise" }); dispatch({ type: "SET_PERSONA", persona: "enterprise" }); }}
+        onClick={() => {
+          track("persona_toggle", { from: state.persona, to: "enterprise" });
+          dispatch({ type: "SET_PERSONA", persona: "enterprise" });
+          dispatch({ type: "SET_SOURCE", source: "dbt-local" });
+        }}
         className={`px-4 py-2 text-xs font-medium rounded-lg transition ${
           state.persona === "enterprise"
             ? "bg-[var(--accent)] text-[var(--bg)] shadow-sm"
@@ -19,7 +23,11 @@ export function PersonaToggle() {
         Teams
       </button>
       <button
-        onClick={() => { track("persona_toggle", { from: state.persona, to: "web3" }); dispatch({ type: "SET_PERSONA", persona: "web3" }); }}
+        onClick={() => {
+          track("persona_toggle", { from: state.persona, to: "web3" });
+          dispatch({ type: "SET_PERSONA", persona: "web3" });
+          dispatch({ type: "SET_SOURCE", source: "coral" });
+        }}
         className={`px-4 py-2 text-xs font-medium rounded-lg transition ${
           state.persona === "web3"
             ? "bg-[var(--accent)] text-[var(--bg)] shadow-sm"

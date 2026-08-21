@@ -83,6 +83,11 @@ export default function LeaderboardPage() {
             The public index of data-source health. <b>🔍 Scanned</b> scores come from DataBard&apos;s analysis
             engine; <b>⛓️ Verified</b> scores were attested on Solana by the team behind the source.
           </p>
+          <p className="mt-3 text-sm">
+            <Link href="/league" className="text-[var(--accent)] hover:underline">
+              This week&apos;s accounting (the league) →
+            </Link>
+          </p>
         </div>
 
         {/* Stats summary bar */}

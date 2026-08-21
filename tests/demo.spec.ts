@@ -12,28 +12,23 @@ test.describe("Demo Mode", () => {
     await expect(page.getByTestId("connect-button")).toBeVisible();
   });
 
-  test("should enter demo mode dashboard-first, then reach the episode player", async ({ page }) => {
+  test("should enter demo mode on this week's league, then reach the episode player", async ({ page }) => {
     await page.goto("/");
 
     // Click demo button using stable testid — demo is dashboard-first now
     await page.getByTestId("demo-button").click();
-    await page.waitForURL("**/protocol**", { timeout: 15_000 });
+    await page.waitForURL("**/league**", { timeout: 15_000 });
 
-    // Teams is intentionally free of protocol/wallet chrome.
-    await expect(page.getByRole("button", { name: /connect wallet/i })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Market", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Verify", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /state of protocol data health/i })).toBeVisible();
+    await expect(page.getByRole("region", { name: "This week's table" })).toBeVisible();
+    await expect(page.getByText("Send me this every Monday")).toBeVisible();
+    await expect(page.getByRole("link", { name: /that's my protocol/i })).toHaveAttribute("href", "/?start=connect&workspace=protocols");
 
-    // A sample dashboard must say so and offer an explicit path to real data.
-    await expect(page.getByRole("region", { name: "Sample briefing" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /connect your analyst/i })).toHaveAttribute("href", "/?start=connect&workspace=teams");
-
-    // The fresh-episode banner offers the audio as a CTA on the dashboard
-    const listenCta = page.getByRole("region", { name: "Priority briefing" }).getByRole("button", { name: /listen to the briefing/i });
-    await expect(listenCta).toBeVisible({ timeout: 10_000 });
+    const listenCta = page.getByRole("link", { name: /listen to the briefing/i });
+    await expect(listenCta).toBeVisible();
     await listenCta.click();
 
-    // Episode player page with the demo episode
+    // Episode player page with the protocol demo episode
     await page.waitForURL("**/episode/demo**", { timeout: 15_000 });
     await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 10_000 });
   });
@@ -41,10 +36,15 @@ test.describe("Demo Mode", () => {
   test("takes a sample viewer straight into the real-data connection flow", async ({ page }) => {
     await page.goto("/protocol?episode=demo-enterprise&demo=1&workspace=teams");
 
+    // Teams is free of protocol/wallet chrome.
+    await expect(page.getByRole("button", { name: /connect wallet/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Market", exact: true })).toHaveCount(0);
+
     await page.getByRole("link", { name: /connect your analyst/i }).click();
     await page.waitForURL("**/?start=connect&workspace=teams");
     await expect(page.getByRole("heading", { name: "Connect your analyst to your data" })).toBeVisible();
-    await expect(page.getByText("Your instance", { exact: true })).toBeVisible();
+    await expect(page.getByText("dbt manifest")).toBeVisible();
+    await expect(page.getByText(/upload your target\/manifest\.json/i)).toBeVisible();
   });
 
   test("should show onboarding tooltips once inside the wizard (not on landing)", async ({ page }) => {
@@ -65,16 +65,16 @@ test.describe("Demo Mode", () => {
 });
 
 test.describe("Workspace switch", () => {
-  test("should switch to the protocol presentation and update landing content", async ({ page }) => {
+  test("should switch to the Teams presentation and update landing content", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Teams is the default workspace.
-    await expect(page.getByText("Teams", { exact: true })).toBeVisible();
+    // Protocols is the default workspace.
+    await expect(page.getByRole("heading", { name: /protocol health, explained and provable/i })).toBeVisible();
 
-    await page.getByText("Protocols", { exact: true }).click();
+    await page.getByRole("button", { name: "Teams", exact: true }).click();
 
-    await expect(page.getByRole("heading", { name: /protocol health, explained and provable/i })).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByRole("heading", { name: /your data is broken/i })).toBeVisible({ timeout: 3_000 });
   });
 
   test("keeps protocol context when navigating home from a protocol surface", async ({ page }) => {

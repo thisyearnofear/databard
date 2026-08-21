@@ -144,8 +144,8 @@ export { DEFAULT_OM_SANDBOX_URL };
 
 export const initialState: WizardState = {
   step: "landing",
-  persona: "enterprise",
-  source: "openmetadata",
+  persona: "web3",
+  source: "coral",
   omMode: "sandbox",
   omUrl: "http://localhost:8585",
   token: "",

@@ -31,11 +31,14 @@ export const EVENT_TYPES = [
   "generate_complete",        // analysis finished, landed on dashboard
   "dashboard_listen_click",   // clicked "Listen to this analysis"
   "schedule_setup",           // clicked "Set up weekly digest"
-  "clip_share",               // clicked "Share moment" (viral hook)
+  "clip_share",               // clicked "Share card" (viral hook)
   "shared_episode_open",      // someone opened a shared episode link
   "shared_episode_cta_click", // clicked "Get this for your data" on shared page
   "roast_page_view",          // visited /roast
   "roast_cta_click",          // clicked "Roast my data" on /roast
+  "league_page_view",         // visited /league (weekly accounting magnet)
+  "league_share_copy",        // copied tweet, email, or permalink
+  "monday_signup",            // email on the finding: send this every Monday
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

@@ -1,21 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
-import { useWallet } from "@solana/wallet-adapter-react";
+import Link from "next/link";
 import { EpisodePlayer } from "@/components/EpisodePlayer";
-import { LeadCapture } from "@/components/LeadCapture";
+import { MondaySignup } from "@/components/MondaySignup";
+import { ScoreCardView } from "@/components/ScoreCardView";
 import { track } from "@/lib/track";
+import { scoreFromEpisode } from "@/lib/score-card";
 import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import type { Episode } from "@/lib/types";
-
-// Lazy-load Solana wallet connect — avoids bundling Phantom/Solflare adapters
-// on shared episode pages until the user clicks to connect.
-const SolanaWalletConnect = dynamic(
-  () => import("@/components/SolanaWalletConnect").then((m) => ({ default: m.SolanaWalletConnect })),
-  { ssr: false, loading: () => null },
-);
 
 export default function SharedEpisode() {
   return (
@@ -25,26 +19,29 @@ export default function SharedEpisode() {
   );
 }
 
+function formatExpiry(seconds: number): string {
+  if (seconds > 86400) return `Expires in ${Math.round(seconds / 86400)}d`;
+  if (seconds > 3600) return `Expires in ${Math.round(seconds / 3600)}h`;
+  if (seconds > 60) return `Expires in ${Math.round(seconds / 60)}m`;
+  return "Expiring soon";
+}
+
 function SharedEpisodeInner() {
   const params = useParams();
   const id = params.id as string;
   const searchParams = useSearchParams();
   const workspace = workspaceFromSearch(searchParams.toString());
   const segmentIdx = searchParams.get("seg");
-  const { publicKey } = useWallet();
+  const segNumber = segmentIdx != null && segmentIdx !== "" ? Number.parseInt(segmentIdx, 10) : null;
 
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
-
-  // Gated access state
-  const [isMinted, setIsMinted] = useState(false);
-  const [isMintedAtAll, setIsMintedAtAll] = useState(false);
-  const [mintTxSignature, setMintTxSignature] = useState<string | null>(null);
-  const [accessChecked, setAccessChecked] = useState(false);
-  const [checkingAccess, setCheckingAccess] = useState(false);
+  const [clipPlaying, setClipPlaying] = useState(false);
+  const clipRef = useRef<HTMLAudioElement>(null);
+  const clipStopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     async function loadEpisode() {
@@ -53,11 +50,9 @@ function SharedEpisodeInner() {
         const data = await res.json();
 
         if (data.ok) {
-          const ep = data.episode;
+          const ep = data.episode as Episode & { audioBase64?: string };
           if (data.expiresIn != null) setExpiresIn(data.expiresIn);
 
-          // Reconstruct audio from base64 if available, else fall back to a
-          // static audio URL (seeded demo episodes ship pre-rendered MP3s)
           if (ep.audioBase64) {
             const bytes = Uint8Array.from(atob(ep.audioBase64), (c) => c.charCodeAt(0));
             const blob = new Blob([bytes], { type: "audio/mpeg" });
@@ -79,142 +74,111 @@ function SharedEpisodeInner() {
     }
 
     loadEpisode();
-  }, [id]);
+  }, [id, segmentIdx]);
 
-  // Check public verification (is this episode minted by anyone?)
   useEffect(() => {
-    if (!episode) return;
-    fetch(`/api/onchain/access?episodeId=${id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.isMintedAtAll && d.mint?.txSignature) {
-          setIsMintedAtAll(true);
-          setMintTxSignature(d.mint.txSignature);
-        }
-      })
-      .catch(() => {});
-  }, [episode, id]);
+    return () => {
+      clipStopRef.current?.();
+    };
+  }, []);
 
-  // Check wallet ownership whenever wallet connects
-  useEffect(() => {
-    if (!publicKey || !episode) return;
-    setCheckingAccess(true);
-    fetch(`/api/onchain/access?walletAddress=${publicKey.toBase58()}&episodeId=${id}`)
-      .then((r) => r.json())
-      .then((d) => { setIsMinted(d.hasAccess === true); setAccessChecked(true); })
-      .catch(() => setAccessChecked(true))
-      .finally(() => setCheckingAccess(false));
-  }, [publicKey, episode, id]);
+  function playFinding() {
+    const audio = clipRef.current;
+    if (!audio || !episode) return;
+    const card = scoreFromEpisode(episode, Number.isFinite(segNumber) ? segNumber : null);
+    const n = episode.script.length || 1;
+    const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 120;
+    const start = duration * (card.segmentIndex / n);
+    const stopAt = start + 15;
+    clipStopRef.current?.();
+    const onTime = () => {
+      if (audio.currentTime >= stopAt) {
+        audio.pause();
+        audio.removeEventListener("timeupdate", onTime);
+        setClipPlaying(false);
+      }
+    };
+    clipStopRef.current = () => audio.removeEventListener("timeupdate", onTime);
+    audio.currentTime = start;
+    audio.addEventListener("timeupdate", onTime);
+    void audio.play().then(() => setClipPlaying(true)).catch(() => setClipPlaying(false));
+  }
 
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-[var(--text-muted)]">Loading episode…</p>
+        <p className="text-[var(--text-muted)]">Loading finding…</p>
       </main>
     );
   }
 
-  if (error || !episode || !audioUrl) {
+  if (error || !episode) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-4">
-        <p className="text-[var(--danger)]">{error || "Episode not found or expired"}</p>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center hover-depth">
-          <p className="text-sm mb-3">Shared episodes expire after 24 hours. Want to hear what DataBard sounds like?</p>
-          <a href="/" className="inline-block bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium">
-            ▶ Listen to a demo
+        <p className="text-[var(--danger)]">{error || "This briefing is no longer live"}</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center">
+          <p className="text-sm mb-3">See this week&apos;s public table instead.</p>
+          <a
+            href="/league"
+            className="inline-block bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium"
+          >
+            Open the league →
           </a>
         </div>
       </main>
     );
   }
 
-  const walletConnected = !!publicKey;
+  const card = scoreFromEpisode(episode, Number.isFinite(segNumber) ? segNumber : null);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 gap-6 enter-up">
-      {/* Expiry banner */}
-      <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-1.5 hover-depth">
-        ⏳ {expiresIn != null
-          ? expiresIn > 3600
-            ? `Expires in ${Math.round(expiresIn / 3600)}h`
-            : expiresIn > 60
-            ? `Expires in ${Math.round(expiresIn / 60)}m`
-            : "Expiring soon"
-          : "Shared episodes expire 24 hours after creation"}
-      </div>
-
-      {/* Verified on Solana badge */}
-      {isMintedAtAll && mintTxSignature && (
-        <a
-          href={`https://explorer.solana.com/tx/${mintTxSignature}${process.env.NEXT_PUBLIC_SOLANA_NETWORK !== "mainnet-beta" ? `?cluster=${process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet"}` : ""}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--accent)] hover:brightness-110 transition ease-out"
-        >
-          <span>⛓️</span>
-          <span className="font-medium">Verified on Solana</span>
-          <span className="text-[var(--text-muted)] hidden sm:inline">· {mintTxSignature.slice(0, 6)}…{mintTxSignature.slice(-4)}</span>
-        </a>
+    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 enter-up">
+      {expiresIn != null && (
+        <p className="text-xs text-[var(--text-muted)]">{formatExpiry(expiresIn)}</p>
       )}
 
-      {/* On-chain ownership badge */}
-      {walletConnected && accessChecked && !checkingAccess && (
-        <div
-          className={`text-xs px-3 py-1.5 rounded-lg border ${
-            isMinted
-              ? "bg-[var(--success)]/8 border-[var(--success)] text-[var(--success)]"
-              : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"
-          }`}
-        >
-          {isMinted
-            ? "✓ You minted this episode — on-chain record verified"
-            : "ℹ This episode hasn't been minted by your wallet"}
-        </div>
-      )}
+      <ScoreCardView
+        card={card}
+        onPlayClip={audioUrl ? playFinding : undefined}
+        clipPlaying={clipPlaying}
+      />
+      {audioUrl && <audio ref={clipRef} src={audioUrl} preload="metadata" className="hidden" />}
 
-      {/* "Shared moment" banner — when arriving via a clip deep link */}
-      {segmentIdx != null && episode && (
-        <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-2.5 text-center max-w-lg">
-          <p className="text-xs text-[var(--text-muted)]">
-            🔥 Someone shared this moment from the analysis — press play to hear the full briefing
+      <section className="w-full max-w-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+        <MondaySignup schema={episode.schemaName} />
+      </section>
+
+      {audioUrl && (
+        <section id="briefing" className="w-full max-w-2xl">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)] mb-3">
+            Full briefing
           </p>
-        </div>
+          <EpisodePlayer episode={episode} audioUrl={audioUrl} />
+        </section>
       )}
 
-      <EpisodePlayer episode={episode} audioUrl={audioUrl} />
-
-      {/* Wallet connect nudge for non-connected visitors */}
-      {!walletConnected && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 max-w-md text-center hover-depth">
-          <p className="text-xs text-[var(--text-muted)] mb-2">
-            🔗 Connect your Solana wallet to verify on-chain ownership and see team history
-          </p>
-          <SolanaWalletConnect />
-        </div>
-      )}
-
-      {/* CTA for shared episode visitors — the viral conversion surface */}
-      <div className="bg-gradient-to-br from-[var(--surface)] to-[var(--accent)]/5 border border-[var(--accent)]/30 rounded-2xl p-6 max-w-lg text-center space-y-3">
-        <p className="text-sm font-bold">This is DataBard.</p>
-        <p className="text-sm text-[var(--text-muted)] leading-relaxed">
-          Every Monday morning, your team gets a fresh audio briefing on your data health — health scores, what changed, what to fix. No dashboard to check. No report to read. Just press play.
-        </p>
-        <LeadCapture
-          source="shared_episode"
-          prompt="Want this for your data? Leave your email — we'll set you up."
-          buttonText="Get started →"
-        />
-        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-          <a href={homeHref(workspace)} onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
-            Try the demo →
-          </a>
-          <a href={workspaceHref("/protocol", workspace)} onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode?.schemaName ?? "" })} className="bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] text-[var(--text)] rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
-            See the dashboard
-          </a>
-        </div>
-        <p className="text-xs text-[var(--text-muted)] pt-1">
-          Free to try · No signup for demo · Connect any data source in 30 seconds
-        </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center pb-8">
+        <Link
+          href="/league"
+          onClick={() => track("shared_episode_cta_click", { cta: "league", schema: episode.schemaName })}
+          className="bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110 text-center"
+        >
+          This week&apos;s league →
+        </Link>
+        <Link
+          href={homeHref(workspace)}
+          onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode.schemaName })}
+          className="border border-[var(--border)] px-5 py-2.5 text-sm font-medium hover:border-[var(--accent)] text-center"
+        >
+          Get this on your data
+        </Link>
+        <Link
+          href={workspaceHref("/protocol", workspace)}
+          onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode.schemaName })}
+          className="border border-[var(--border)] px-5 py-2.5 text-sm font-medium hover:border-[var(--accent)] text-center"
+        >
+          Dashboard
+        </Link>
       </div>
     </main>
   );

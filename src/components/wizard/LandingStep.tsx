@@ -9,7 +9,7 @@ import { costHighlights } from "@/lib/cost-framing";
 import { setDataContext } from "@/lib/data-context";
 import { StatTile } from "@/components/viz";
 import { LeadCapture } from "@/components/LeadCapture";
-import { CountUp } from "@/components/CountUp";
+import { LandingProof } from "./LandingProof";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
 import { WORKSPACES, workspaceHref } from "@/lib/product/workspaces";
@@ -42,15 +42,14 @@ export function LandingStep() {
     track("demo_start", { persona: state.persona });
     dispatch({ type: "SET_STATUS", status: "Loading demo…" });
 
-    // Dashboard-first: seed deterministic demo data server-side, then land on
-    // the dashboard with the demo episode queued up.
+    // Protocols demo lands on this week's public table, then the briefing.
     try {
       const res = await fetch("/api/demo/seed", { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Demo seed failed");
       dispatch({ type: "SET_STATUS", status: "" });
       setDataContext({ kind: "demo", label: "Demo", detail: "sample briefing", source: "demo", demo: true });
-      router.push(`/protocol?episode=${state.persona === "web3" ? "demo" : "demo-enterprise"}&demo=1&workspace=${workspace}`);
+      router.push(workspace === "protocols" ? "/league?from=demo" : `/protocol?episode=demo-enterprise&demo=1&workspace=teams`);
       return;
     } catch {
       // Fall back to the in-wizard episode demo below
@@ -145,7 +144,7 @@ export function LandingStep() {
             onClick={handleDemo}
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
           >
-            <span>Hear a 2-minute briefing</span>
+            <span>{workspaceCopy.demoLabel}</span>
             <span aria-hidden>→</span>
           </button>
           <button
@@ -153,18 +152,23 @@ export function LandingStep() {
             onClick={() => {
               track("landing_cta_click", { cta: "connect", persona: state.persona });
               track("connect_start", { persona: state.persona });
-              dispatch({ type: "SET_SOURCE", source: "openmetadata" });
-              dispatch({ type: "SET_OM_MODE", omMode: "sandbox" });
+              if (state.persona === "enterprise") {
+                dispatch({ type: "SET_SOURCE", source: "dbt-local" });
+              }
               showConnect();
             }}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,color,border-color] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97]"
           >
-            <span>Connect your own data</span>
+            <span>{workspaceCopy.connectLabel}</span>
             <span aria-hidden>→</span>
           </button>
         </div>
 
-        <p className="relative z-10 text-xs text-[var(--text-muted)]">Read-only setup · Your analyst starts finding issues in 30 seconds</p>
+        <p className="relative z-10 text-xs text-[var(--text-muted)]">
+          {state.persona === "web3"
+            ? "Public subgraphs and Dune queries · no wallet needed to listen"
+            : "Read-only setup · Upload a manifest and your analyst starts in 90 seconds"}
+        </p>
 
         {/* Live problem-cost pill — the problem statement proving itself with real data */}
         {state.persona === "enterprise" && totals && costHighlights(totals).length > 0 && (
@@ -191,40 +195,17 @@ export function LandingStep() {
         )}
       </section>
 
-      {/* The problem — quantified pain, inline (no cards) */}
-      <section className="enter-up enter-delay-1 w-full max-w-2xl pb-10">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
-              <CountUp value={75} suffix="%" />
-            </div>
-            <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
-              of business users don&apos;t trust dashboards enough to make decisions
-            </p>
-          </div>
-          <div className="hidden sm:block w-px h-12 bg-[var(--border)]" />
-          <div className="text-center">
-            <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
-              <CountUp value={7} suffix="%" />
-            </div>
-            <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
-              of companies are truly insights-driven
-            </p>
-          </div>
-          <div className="hidden sm:block w-px h-12 bg-[var(--border)]" />
-          <div className="text-center">
-            <div className="text-4xl font-bold text-[var(--danger)] mb-0.5">
-              <CountUp value={73} suffix="%" />
-            </div>
-            <p className="text-xs text-[var(--text-muted)] leading-snug max-w-[140px]">
-              of enterprise data goes unused for analytics
-            </p>
-          </div>
-        </div>
-        <p className="text-center text-xs text-[var(--text-muted)] mt-4">
-          Sources: Forrester — The State Of The Insights-Driven Business Market, 2023 · Forrester Business Technographics Data &amp; Analytics Survey
-        </p>
-      </section>
+      <LandingProof
+        workspace={workspace}
+        onConnect={() => {
+          track("landing_cta_click", { cta: "proof", persona: state.persona });
+          track("connect_start", { persona: state.persona });
+          if (state.persona === "enterprise") {
+            dispatch({ type: "SET_SOURCE", source: "dbt-local" });
+          }
+          showConnect();
+        }}
+      />
 
       {/* Product preview — show the actual dashboard, not just talk about it */}
       <section className="enter-up enter-delay-1 w-full max-w-3xl pb-10">
@@ -297,7 +278,7 @@ export function LandingStep() {
               <span>·</span>
               <span>Coral</span>
               <span>·</span>
-              <Link href={workspaceHref("/leaderboard", workspace)} className="hover:text-[var(--text)]">Leaderboard</Link>
+              <Link href={workspaceHref("/league", workspace)} className="hover:text-[var(--text)]">League</Link>
             </>
           )}
         </div>
@@ -326,28 +307,31 @@ export function LandingStep() {
             </p>
             <Link href={workspaceHref("/alerts", workspace)} className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up alerts →</Link>
           </div>
-          {/* Pillar 3: Verifiable by design */}
+          {/* Pillar 3: weekly delivery (Teams) or attestation (Protocols) */}
           <div className="text-center">
-            <div className="text-2xl mb-2">⛓️</div>
-            <h3 className="text-sm font-semibold mb-1">Verifiable by design</h3>
+            <div className="text-2xl mb-2">{state.persona === "web3" ? "⛓️" : "📬"}</div>
+            <h3 className="text-sm font-semibold mb-1">
+              {state.persona === "web3" ? "Verifiable by design" : "In the Monday inbox"}
+            </h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              {state.persona === "enterprise"
-                ? "Every health report is attestable on-chain — a permanent audit trail your team and auditors can verify."
-                : "Every health report is mintable on Solana. Insights settle through on-chain escrow — the seller commits what they delivered, the buyer releases funds only after that commitment."}
+              {state.persona === "web3"
+                ? "Every health report is mintable on Solana. Anyone can recompute the hash and check it against the on-chain memo — no need to trust our servers."
+                : "Your analyst emails the 2-minute briefing every Monday. Forward it in Slack. Unlimited listeners — you are not charged per seat."}
             </p>
             {state.persona === "web3" ? (
               <div className="flex items-center justify-center gap-3 mt-1.5">
                 <Link href={workspaceHref("/onchain", workspace)} className="text-xs text-[var(--accent)] hover:underline inline-block">See the showcase →</Link>
-                <Link href={workspaceHref("/market", workspace)} className="text-xs text-[var(--accent)] hover:underline inline-block">Watch escrow settle →</Link>
+                <Link href={workspaceHref("/verify", workspace)} className="text-xs text-[var(--accent)] hover:underline inline-block">Verify an attestation →</Link>
               </div>
             ) : (
-              <Link href={workspaceHref("/verify", workspace)} className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Verify an attestation →</Link>
+              <Link href="/pro" className="text-xs text-[var(--accent)] hover:underline mt-1.5 inline-block">Set up the weekly digest →</Link>
             )}
           </div>
         </div>
       </section>
 
-      {/* Coral showcase — cross-source SQL */}
+      {/* Coral showcase — Protocols only; Teams should not look like a SQL engine */}
+      {state.persona === "web3" && (
       <section className="enter-up enter-delay-3 w-full max-w-2xl pb-12">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
@@ -355,7 +339,7 @@ export function LandingStep() {
             <h2 className="text-lg font-semibold">Query 50+ sources with SQL</h2>
           </div>
           <p className="text-sm text-[var(--text-muted)] mb-4">
-            Coral is an open-source SQL engine that joins APIs, databases, and files — no ETL, no data warehouse. DataBard uses it as the primary data layer for cross-source analysis.
+            Join Dune, GitHub, Slack, and protocol APIs in one query — no ETL. DataBard narrates the result as a briefing.
           </p>
           <div className="bg-[var(--bg)] border border-[var(--border)] rounded-xl p-4 font-mono text-xs overflow-x-auto">
             <div className="text-[var(--text-muted)] mb-1">-- Find stale PRs across your repos</div>
@@ -366,7 +350,7 @@ export function LandingStep() {
             <div><span className="text-[var(--accent)]">ORDER BY</span> created_at <span className="text-[var(--accent)]">ASC</span></div>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">
-            {["GitHub", "Slack", "Jira", "Linear", "Postgres", "Stripe", "Notion", "CSV files"].map((src) => (
+            {["Dune", "The Graph", "GitHub", "Slack", "Postgres"].map((src) => (
               <span key={src} className="text-xs bg-[var(--bg)] border border-[var(--border)] rounded-full px-2.5 py-1 text-[var(--text-muted)]">
                 {src}
               </span>
@@ -375,6 +359,7 @@ export function LandingStep() {
           </div>
         </div>
       </section>
+      )}
 
       {/* FAQ */}
       <section className="w-full max-w-2xl pb-12">
@@ -386,7 +371,9 @@ export function LandingStep() {
               <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-              No. Credentials are sent over HTTPS and never persisted on disk. Coral queries run locally on your machine — data never leaves it. Generated audio is ephemeral unless you explicitly save or {state.persona === "enterprise" ? "attest" : "mint"} it.
+              {state.persona === "web3"
+                ? "Credentials are sent over HTTPS and never persisted on disk. Generated audio is ephemeral unless you explicitly save or mint it. Public subgraph scores can be attested on-chain."
+                : "Credentials are sent over HTTPS and never persisted on disk. Upload a dbt manifest or connect a catalog with a read-only token. Generated audio is ephemeral unless you save it."}
             </p>
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
@@ -400,11 +387,13 @@ export function LandingStep() {
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
-              <span>What is Coral?</span>
+              <span>{state.persona === "web3" ? "What is Coral?" : "What do I need to connect?"}</span>
               <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-              Coral is an open-source SQL engine that queries 50+ data sources — GitHub, Slack, Jira, Postgres, Stripe, and more. DataBard uses it as the primary data layer: write a SQL query, and we&apos;ll analyze the results and generate a podcast episode. You can also connect specific sources directly (OpenMetadata, DataHub, dbt, Dune) for deeper metadata extraction.
+              {state.persona === "web3"
+                ? "Coral is an open-source SQL engine for 50+ sources. Write a query that joins Dune, GitHub, or Slack, and DataBard turns the result into a briefing. You can also paste a Dune query URL or subgraph endpoint directly."
+                : "A dbt target/manifest.json is enough. If you have OpenMetadata, DataHub, or dbt Cloud, connect those for lineage, owners, and tests. Everything is read-only."}
             </p>
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
@@ -414,7 +403,7 @@ export function LandingStep() {
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
               {state.persona === "enterprise"
-                ? "DataBard is free to try. Generation uses your own API keys (ElevenLabs for audio). No hidden fees."
+                ? "One briefing is free. Weekly digests are $49/month for the whole team — unlimited listeners, no per-seat fee."
                 : "Listening is free. Minting a report on-chain costs a small SOL transaction fee (~0.01 SOL). No wallet needed just to generate and listen."}
             </p>
           </details>
@@ -424,7 +413,7 @@ export function LandingStep() {
               <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
             <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-              Yes. DataBard monitors your connected sources and sends Slack or webhook alerts when health scores drop or tests start failing. You can also schedule weekly digest podcasts — your team gets a fresh audio briefing every Monday morning without anyone opening a dashboard.
+              Yes. Slack or webhook alerts fire when health drops. You can also schedule a weekly briefing — a fresh 2-minute audio every Monday, without anyone opening a dashboard.
             </p>
           </details>
         </div>
@@ -433,9 +422,13 @@ export function LandingStep() {
       {/* Email capture — the "talk to us" moment */}
       <section className="enter-up enter-delay-4 w-full max-w-2xl pb-8">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-center">
-          <h2 className="text-base font-semibold mb-1">Want a verified data health report?</h2>
+          <h2 className="text-base font-semibold mb-1">
+            {state.persona === "web3" ? "Want a briefing on your subgraph?" : "Want a briefing on your warehouse?"}
+          </h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">
-            We&apos;ll set you up with a live briefing on your data — no commitment, no setup.
+            {state.persona === "web3"
+              ? "Send us a Dune dashboard or subgraph URL. We'll run the report and send you the 2-minute briefing — no setup."
+              : "Send a dbt manifest or catalog URL. We'll run the report and send you the briefing — no commitment."}
           </p>
           <LeadCapture
             source="landing_footer"
@@ -475,8 +468,8 @@ export function LandingStep() {
               🔥 Roast my data
             </Link>
             {state.persona === "web3" && (
-              <Link href={workspaceHref("/leaderboard", workspace)} className="hover:text-[var(--text)] transition-colors">
-                Leaderboard
+              <Link href={workspaceHref("/league", workspace)} className="hover:text-[var(--text)] transition-colors">
+                League
               </Link>
             )}
             {state.persona === "web3" && (
@@ -489,14 +482,16 @@ export function LandingStep() {
                 On-chain
               </Link>
             )}
-            <a
-              href="https://withcoral.com/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[var(--text)] transition-colors"
-            >
-              Coral Docs
-            </a>
+            {state.persona === "web3" && (
+              <a
+                href="https://withcoral.com/docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[var(--text)] transition-colors"
+              >
+                Coral Docs
+              </a>
+            )}
             <Link href="/privacy" className="hover:text-[var(--text)] transition-colors">
               Privacy
             </Link>

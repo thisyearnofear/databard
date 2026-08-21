@@ -15,11 +15,15 @@ export function LeadCapture({
   prompt,
   buttonText = "Get started →",
   compact = false,
+  successMessage = "✓ Got it — we'll be in touch within 24 hours.",
+  onSuccess,
 }: {
   source: string;
   prompt: string;
   buttonText?: string;
   compact?: boolean;
+  successMessage?: string;
+  onSuccess?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -39,6 +43,7 @@ export function LeadCapture({
       });
       if (res.ok) {
         setStatus("done");
+        onSuccess?.();
       } else {
         setStatus("error");
       }
@@ -50,7 +55,7 @@ export function LeadCapture({
   if (status === "done") {
     return (
       <div className={`text-sm text-[var(--success)] ${compact ? "" : "text-center"}`}>
-        ✓ Got it — we&apos;ll be in touch within 24 hours.
+        {successMessage}
       </div>
     );
   }

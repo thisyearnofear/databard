@@ -11,15 +11,6 @@ import { CoralForm } from "./sources/CoralForm";
 import { CoralConfigureStep } from "./sources/CoralConfigureStep";
 import { SourceFields } from "./sources/SourceFields";
 
-const DATA_SOURCES: { value: DataSource; label: string; emoji: string }[] = [
-  { value: "openmetadata", label: "OpenMetadata", emoji: "🔍" },
-  { value: "dbt-cloud", label: "dbt Cloud", emoji: "☁️" },
-  { value: "dbt-local", label: "dbt Local", emoji: "💻" },
-  { value: "the-graph", label: "The Graph", emoji: "🔗" },
-  { value: "dune", label: "Dune", emoji: "🏜️" },
-  { value: "coral", label: "Coral", emoji: "🪸" },
-];
-
 export function ConnectStep() {
   const { state, dispatch, showConnect, connected, sourceLabel, sourceHelp } = useWizard();
   const { generatePodcast, generateAnthem } = useGeneration();
@@ -279,7 +270,7 @@ export function ConnectStep() {
       <p className="text-sm text-[var(--text-muted)] mb-5">
         {state.source === "coral"
           ? "Write SQL to join any sources — your analyst will narrate the results."
-          : "Start with one source. Your analyst starts finding issues immediately."}
+          : "Upload a manifest or connect a catalog. Your analyst starts finding issues immediately."}
       </p>
 
       {state.source !== "coral" && (
@@ -296,8 +287,8 @@ export function ConnectStep() {
           <input
             className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors"
             placeholder={state.persona === "web3"
-              ? "Paste a Dune query URL, Subgraph endpoint, or API key…"
-              : "Paste an OpenMetadata URL, dbt token, or subgraph endpoint…"}
+              ? "Paste a Dune query URL, subgraph endpoint, or API key…"
+              : "Paste a DataHub URL, OpenMetadata URL, or upload a manifest below…"}
             onPaste={(e) => {
               const pasted = e.clipboardData.getData("text");
               setTimeout(() => handleSmartPaste(pasted), 0);
@@ -367,40 +358,40 @@ export function ConnectStep() {
           </>
         ) : (
           <>
-            {/* Enterprise: OpenMetadata sandbox is primary */}
+            {/* Teams: dbt manifest is the door that does not need a catalog */}
             <button
               type="button"
               onClick={() => {
-                dispatch({ type: "SET_SOURCE", source: "openmetadata" });
+                dispatch({ type: "SET_SOURCE", source: "dbt-local" });
               }}
               className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-left cursor-pointer transition ${
-                state.source === "openmetadata"
+                state.source === "dbt-local"
                   ? "border-[var(--accent)] bg-[var(--accent)]/10 shadow-sm"
                   : "border-[var(--border)] hover:border-[var(--accent)]"
               }`}
             >
-              <span className="text-xl">🔍</span>
+              <span className="text-xl">💻</span>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-[var(--text)]">OpenMetadata</p>
-                <p className="text-xs text-[var(--text-muted)]">Deep metadata — lineage, PII, quality tests, ownership. Sandbox available.</p>
+                <p className="text-sm font-semibold text-[var(--text)]">dbt manifest</p>
+                <p className="text-xs text-[var(--text-muted)]">Upload target/manifest.json — health score and roast in about 90 seconds.</p>
               </div>
-              {state.source === "openmetadata" && <span className="text-[var(--accent)] text-sm">✓</span>}
+              {state.source === "dbt-local" && <span className="text-[var(--accent)] text-sm">✓</span>}
             </button>
 
-            {state.source === "openmetadata" && !showOtherSources && (
+            {state.source === "dbt-local" && !showOtherSources && (
               <button
                 type="button"
                 onClick={() => setShowOtherSources(true)}
                 className="text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer self-start"
               >
-                Use another connection
+                Use a catalog instead
               </button>
             )}
-            {(showOtherSources || state.source !== "openmetadata") && (
+            {(showOtherSources || state.source !== "dbt-local") && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Choose another connection</p>
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Or connect a catalog</p>
                 <div className="flex flex-wrap gap-1.5">
-                {DATA_SOURCES.filter((ds) => ds.value !== "openmetadata").map((ds) => (
+                {MAIN_SOURCES.filter((ds) => ds.value !== "dbt-local").map((ds) => (
                   <button
                     key={ds.value}
                     type="button"

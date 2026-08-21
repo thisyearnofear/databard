@@ -62,7 +62,12 @@ function RoastPageInner() {
       {/* CTAs */}
       <div className="flex flex-col gap-3 w-full max-w-sm">
         <button
-          onClick={() => { track("roast_cta_click", { cta: "roast" }); dispatch({ type: "SET_STEP", step: "connect" }); }}
+          onClick={() => {
+            track("roast_cta_click", { cta: "roast" });
+            dispatch({ type: "SET_PERSONA", persona: "enterprise" });
+            dispatch({ type: "SET_SOURCE", source: "dbt-local" });
+            dispatch({ type: "SET_STEP", step: "connect" });
+          }}
           className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-6 py-3.5 text-base font-bold transition ease-out hover:scale-[1.02]"
         >
           🔥 Roast my data →

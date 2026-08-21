@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/onchain",
     "/pro",
     "/roast",
+    "/league",
     "/leaderboard",
     "/history",
     "/playlists",
@@ -29,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return staticPages.map((path) => ({
     url: `${base}${path}`,
     lastModified,
-    changeFrequency: path === "" ? "daily" : "weekly",
-    priority: path === "" ? 1.0 : path === "/demo" ? 0.9 : 0.6,
+    changeFrequency: path === "" || path === "/league" ? "daily" : "weekly",
+    priority: path === "" ? 1.0 : path === "/league" || path === "/demo" ? 0.9 : 0.6,
   }));
 }

@@ -21,8 +21,8 @@ export const WORKSPACES = {
       eyebrow: "YOUR AI DATA ANALYST",
       title: "Your data is broken. Your team doesn't know yet. Your analyst does.",
       description: "DataBard connects to your data sources, computes health scores, and tells you what broke, why it broke, and what to do — in a 2-minute briefing your team actually listens to.",
-      demoLabel: "Open this week's briefing",
-      connectLabel: "Connect your analyst to your data",
+      demoLabel: "See this week’s briefing",
+      connectLabel: "Upload a dbt manifest",
     },
   },
   protocols: {
@@ -31,14 +31,14 @@ export const WORKSPACES = {
     nav: [
       { href: "/protocol?workspace=protocols", label: "Briefing" },
       { href: "/onchain", label: "Attestations" },
-      { href: "/leaderboard", label: "Explorer" },
+      { href: "/league", label: "League" },
     ],
     landing: {
       eyebrow: "YOUR AI PROTOCOL ANALYST",
       title: "Protocol health, explained and provable.",
       description: "DataBard connects to your on-chain data, computes health scores, and tells you what changed, why it matters, and what to do — with an attestation trail behind every claim.",
       demoLabel: "Open a protocol briefing",
-      connectLabel: "Query protocol data",
+      connectLabel: "Query your protocol data",
     },
   },
 } as const;
@@ -50,7 +50,7 @@ export function workspaceFromSearch(search: string): Workspace {
 }
 
 export function workspaceFromPathname(pathname: string): Workspace {
-  return pathname === "/onchain" || pathname === "/verify" || pathname === "/leaderboard" || pathname === "/history"
+  return pathname === "/onchain" || pathname === "/verify" || pathname === "/leaderboard" || pathname === "/league" || pathname === "/history"
     ? "protocols"
     : "teams";
 }

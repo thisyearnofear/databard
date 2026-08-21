@@ -7,11 +7,11 @@ test.describe("Wizard Flow", () => {
     // Click connect using stable testid
     await page.getByTestId("connect-button").click();
 
-    // Connect step should show its heading
-    await expect(page.getByRole("heading", { name: "Connect your analyst to your data" })).toBeVisible({ timeout: 3_000 });
+    // Connect step should show its heading (Protocols default → Coral query)
+    await expect(page.getByRole("heading", { name: "Query your data" })).toBeVisible({ timeout: 3_000 });
 
-    // Step indicator should highlight "Connect"
-    await expect(page.getByText("Connect", { exact: true }).first()).toBeVisible();
+    // Step indicator should highlight the first Coral step
+    await expect(page.getByText("Query & ask", { exact: true }).first()).toBeVisible();
   });
 
   test("should show all four step labels in the step indicator", async ({ page }) => {
@@ -20,12 +20,11 @@ test.describe("Wizard Flow", () => {
     // Enter the connect step to reach the step indicator (demo now leaves the wizard)
     await page.getByTestId("connect-button").click();
 
-    // All four step labels should be present in the nav
+    // Coral skips the schema picker — three step labels, not four
     const nav = page.locator("nav[aria-label='Progress']");
-    await expect(nav.getByText("Connect", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Pick a dataset", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Create episode", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Listen / Play", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Query & ask", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Generate", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Briefing", { exact: true })).toBeVisible();
   });
 
   test("should allow navigating back from schema picker", async ({ page }) => {
@@ -39,8 +38,7 @@ test.describe("Wizard Flow", () => {
 
 test.describe("Schema Picker", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    // Mock /api/connect so the sandbox path can reach the schema picker
+    // Mock /api/connect so the OpenMetadata sandbox path can reach the schema picker
     await page.route("**/api/connect", async (route) => {
       await route.fulfill({
         status: 200,
@@ -64,7 +62,8 @@ test.describe("Schema Picker", () => {
         }),
       });
     });
-    await page.getByTestId("connect-button").click();
+    await page.goto("/?workspace=teams&start=connect&mode=sample");
+    await expect(page.getByRole("heading", { name: "Connect your analyst to your data" })).toBeVisible({ timeout: 5_000 });
     await page.getByRole("button", { name: /Connect & Continue/i }).click();
     await page.waitForSelector("[data-tour='research-question']", { timeout: 5_000 });
   });
@@ -95,6 +94,12 @@ test.describe("Episode Player", () => {
 
   test("should render player controls for the demo episode", async ({ page }) => {
     await expect(page.getByTestId("play-button")).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("should show a score card without a wallet prompt", async ({ page }) => {
+    await expect(page.getByRole("article", { name: /health/i })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Send me this every Monday")).toBeVisible();
+    await expect(page.getByText(/connect your solana wallet/i)).toHaveCount(0);
   });
 
   test("should show share button in episode card", async ({ page }) => {

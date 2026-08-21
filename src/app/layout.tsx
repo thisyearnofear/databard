@@ -7,19 +7,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "http://localhost:3000"),
-  title: "DataBard — An AI analyst for your data estate",
-  description: "Point DataBard at any data catalog and one engine computes health scores, lineage risk, and PII flags — delivered as two-host podcast episodes, dashboards, reports, and on-chain attestations.",
+  title: "DataBard — An AI analyst for your data",
+  description: "Health scores, what changed, and a 2-minute briefing your team actually hears. Protocol teams get an attestation trail behind every claim.",
   openGraph: {
-    title: "🎙️ DataBard",
-    description: "An AI analyst for your data estate. Health scores, lineage risk, and governance flags — delivered as podcasts, dashboards, and reports.",
+    title: "DataBard",
+    description: "An AI analyst for protocol and warehouse data. Health scores, trend narratives, and a briefing you can forward in Slack.",
     type: "website",
     siteName: "DataBard",
     images: [{ url: "/api/og", width: 1200, height: 630, alt: "DataBard" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "🎙️ DataBard",
-    description: "An AI analyst for your data estate — podcasts, dashboards, and reports from one analysis engine.",
+    title: "DataBard",
+    description: "An AI analyst for your data — health scores, what changed, and a briefing you can forward.",
   },
 };
 

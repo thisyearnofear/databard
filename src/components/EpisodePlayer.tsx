@@ -16,6 +16,7 @@ import { TeamHistoryTab } from "@/components/player/TeamHistoryTab";
 import { AnthemTab } from "@/components/player/AnthemTab";
 import { MarkdownRenderer } from "@/components/player/MarkdownRenderer";
 import { workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
+import { scoreFromEpisode, shareText } from "@/lib/score-card";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
 type PlayerTab = "segments" | "insights" | "actions" | "research" | "anthem" | "team";
@@ -37,6 +38,7 @@ export function EpisodePlayer({
 }) {
   const searchParams = useSearchParams();
   const workspace = workspaceFromSearch(searchParams.toString());
+  const clipJumpedRef = useRef(false);
   const [currentEpisode, setCurrentEpisode] = useState<Episode>(episode);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(audioUrl);
   const [researchSession, setResearchSession] = useState<ResearchSession | null>(null);
@@ -400,7 +402,7 @@ export function EpisodePlayer({
     audio.currentTime = Number(e.target.value);
   }
 
-  function seekToSegment(i: number) {
+  function seekToSegment(i: number, autoplay = true) {
     const audio = audioRef.current;
     if (!audio || !duration) return;
     if (segmentOffsets && segmentOffsets.length > i) {
@@ -409,8 +411,18 @@ export function EpisodePlayer({
       const segDuration = duration / (currentEpisode.script.length || 1);
       audio.currentTime = i * segDuration;
     }
-    if (!playing) { audio.play(); setPlaying(true); }
+    if (autoplay && !playing) { audio.play(); setPlaying(true); }
   }
+
+  // Jump to a shared finding's segment once duration is known.
+  useEffect(() => {
+    const raw = searchParams.get("seg");
+    if (clipJumpedRef.current || raw == null || !duration) return;
+    const i = Number.parseInt(raw, 10);
+    if (!Number.isFinite(i) || i < 0) return;
+    clipJumpedRef.current = true;
+    seekToSegment(i, false);
+  }, [duration, searchParams]);
 
   function cycleSpeed() {
     const audio = audioRef.current;
@@ -431,47 +443,58 @@ export function EpisodePlayer({
     setTimeout(() => setNudge(null), 8000);
   }
 
+  async function resolveShareUrl(): Promise<string | null> {
+    if (shareUrl) return shareUrl;
+    const match = window.location.pathname.match(/^\/episode\/([^/]+)/);
+    if (match) {
+      const url = `${window.location.origin}/episode/${match[1]}`;
+      setShareUrl(url);
+      return url;
+    }
+
+    let audioBase64: string | undefined;
+    if (currentAudioUrl) {
+      const audioRes = await fetch(currentAudioUrl);
+      const blob = await audioRes.blob();
+      const buffer = await blob.arrayBuffer();
+      audioBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    }
+
+    const res = await fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...currentEpisode, audioBase64 }),
+    });
+    const data = await res.json();
+    if (!data.ok) return null;
+    const url = `${window.location.origin}/episode/${data.id}`;
+    setShareUrl(url);
+    return url;
+  }
+
   async function handleShare() {
     setSharing(true);
     try {
-      // Upload episode for shareable URL
-      let audioBase64: string | undefined;
-      if (currentAudioUrl) {
-        const audioRes = await fetch(currentAudioUrl);
-        const blob = await audioRes.blob();
-        const buffer = await blob.arrayBuffer();
-        audioBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-      }
+      const url = await resolveShareUrl();
+      if (!url) return;
+      const card = scoreFromEpisode(currentEpisode);
 
-      const res = await fetch("/api/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...currentEpisode, audioBase64 }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const url = `${window.location.origin}/episode/${data.id}`;
-        setShareUrl(url);
-
-        // Try native share sheet (mobile)
-        if (navigator.share) {
-          try {
-            await navigator.share({
-              title: `🎙️ DataBard: ${currentEpisode.schemaName}`,
-              text: `Listen to a podcast walkthrough of ${currentEpisode.schemaName} — ${currentEpisode.tableCount} tables, ${currentEpisode.qualitySummary.total} tests`,
-              url,
-            });
-            return;
-          } catch {
-            // User cancelled or not supported — fall through to menu
-          }
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `${card.name} is ${card.score}`,
+            text: `"${card.quote}" — ${card.speaker}`,
+            url,
+          });
+          return;
+        } catch {
+          // User cancelled or not supported — fall through to menu
         }
-
-        // Desktop: show share menu
-        setShowShareMenu(true);
-        setNudge("share");
-        setTimeout(() => setNudge(null), 8000);
       }
+
+      setShowShareMenu(true);
+      setNudge("share");
+      setTimeout(() => setNudge(null), 8000);
     } catch (e) {
       console.error("Share failed:", e);
     } finally {
@@ -481,9 +504,10 @@ export function EpisodePlayer({
 
   function shareVia(platform: string) {
     if (!shareUrl) return;
+    const card = scoreFromEpisode(currentEpisode);
     track("share", { platform, schema: currentEpisode.schemaName });
-    const text = `🎙️ Listen to a DataBard episode on ${currentEpisode.schemaName}`;
-    const encoded = encodeURIComponent(text);
+    const text = shareText(card, shareUrl);
+    const encoded = encodeURIComponent(`${card.name} is ${card.score}. "${card.quote}"`);
     const encodedUrl = encodeURIComponent(shareUrl);
 
     const urls: Record<string, string> = {
@@ -495,7 +519,7 @@ export function EpisodePlayer({
     };
 
     if (platform === "copy") {
-      navigator.clipboard.writeText(shareUrl);
+      navigator.clipboard.writeText(text);
       setShowShareMenu(false);
       return;
     }
@@ -534,22 +558,16 @@ export function EpisodePlayer({
   }
 
   async function handleClip() {
-    const highlight = currentEpisode.script.find((s) =>
-      s.text.toLowerCase().includes("failing") || s.text.toLowerCase().includes("red flag")
-    ) ?? currentEpisode.script[0];
-    const highlightIdx = currentEpisode.script.indexOf(highlight);
-    track("clip_share", { schema: currentEpisode.schemaName, segment: String(highlightIdx) });
+    const card = scoreFromEpisode(currentEpisode);
+    track("clip_share", { schema: currentEpisode.schemaName, segment: String(card.segmentIndex) });
 
-    // Build a deep link to the specific segment
-    const baseUrl = shareUrl ?? window.location.origin + window.location.pathname;
-    const clipUrl = baseUrl.includes("?") ? `${baseUrl}&seg=${highlightIdx}` : `${baseUrl}?seg=${highlightIdx}`;
+    const baseUrl = (await resolveShareUrl()) ?? window.location.origin + window.location.pathname;
+    const clipUrl = baseUrl.includes("?") ? `${baseUrl}&seg=${card.segmentIndex}` : `${baseUrl}?seg=${card.segmentIndex}`;
+    const clipText = shareText(card, clipUrl);
 
-    const clipText = `🎙️ DataBard on ${currentEpisode.schemaName}:\n\n"${highlight.text}"\n— ${highlight.speaker}\n\nListen: ${clipUrl}`;
-
-    // Try native share with the clip text
     if (navigator.share) {
       try {
-        await navigator.share({ title: `DataBard: ${currentEpisode.schemaName}`, text: clipText, url: clipUrl });
+        await navigator.share({ title: `${card.name} is ${card.score}`, text: clipText, url: clipUrl });
         return;
       } catch { /* cancelled */ }
     }
@@ -637,9 +655,9 @@ export function EpisodePlayer({
             <button
               onClick={handleClip}
               className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-2.5 cursor-pointer font-medium transition-colors"
-              title="Share the most critical moment — perfect for Slack and social"
+              title="Share a score card — image + finding, ready for Slack"
             >
-              {clipCopied ? "✓ Copied!" : "🔥 Share moment"}
+              {clipCopied ? "✓ Copied!" : "Share card"}
             </button>
             <button
               onClick={handleShare}

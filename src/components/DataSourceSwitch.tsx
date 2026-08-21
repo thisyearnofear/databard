@@ -36,7 +36,11 @@ export function DataSourceSwitch({ workspace }: { workspace: "teams" | "protocol
     } else if (o.key === "sample") {
       setDataContext({ kind: "sample", label: "Sample data", source: "openmetadata" });
     } else {
-      setDataContext({ kind: "connected", label: "My data", source: "openmetadata" });
+      setDataContext({
+        kind: "connected",
+        label: "My data",
+        source: workspace === "protocols" ? "coral" : "dbt-local",
+      });
     }
     router.push(o.href);
   }

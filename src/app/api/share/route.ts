@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { shares } from "@/lib/store";
+import { SHARE_TTL_SECONDS } from "@/lib/score-card";
 import type { Episode } from "@/lib/types";
 
 interface SharedEpisode extends Episode {
@@ -8,13 +9,13 @@ interface SharedEpisode extends Episode {
 
 /**
  * Share endpoint — stores episode + audio data, returns a shareable ID.
- * Episodes cached for 24 hours on disk.
+ * Cards stay live for three weeks so a Slack forward still opens.
  */
 export async function POST(req: NextRequest) {
   try {
     const body: SharedEpisode = await req.json();
     const id = Math.random().toString(36).substring(2, 10);
-    shares.set(id, body, 86400);
+    shares.set(id, body, SHARE_TTL_SECONDS);
     return NextResponse.json({ ok: true, id });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";

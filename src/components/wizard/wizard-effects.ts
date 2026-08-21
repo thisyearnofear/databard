@@ -58,28 +58,36 @@ export function usePersonaSync(
   dispatch: React.Dispatch<WizardAction>,
   onReady: () => void,
 ) {
-  // Auto-switch source when persona changes
-  useEffect(() => {
-    if (state.persona === "web3" && state.source === "openmetadata") {
-      dispatch({ type: "SET_SOURCE", source: "coral" });
-    } else if (state.persona === "enterprise" && state.source === "coral") {
-      dispatch({ type: "SET_SOURCE", source: "openmetadata" });
-    }
-  }, [state.persona, state.source, dispatch]);
-
-  // Restore persona from URL param or localStorage
+  // Restore persona from URL param or localStorage.
+  // One-time v2 default: Protocols. Visitors who were silently defaulted to
+  // Teams by the old initialState should land on the workspace the pilots use.
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const param = params.get("workspace") ?? params.get("persona");
+      const start = params.get("start");
+      const applySource = (persona: "web3" | "enterprise") => {
+        if (start === "connect") return;
+        dispatch({ type: "SET_SOURCE", source: persona === "web3" ? "coral" : "dbt-local" });
+      };
       if (param === "web3" || param === "onchain" || param === "protocols") {
         dispatch({ type: "SET_PERSONA", persona: "web3" });
+        applySource("web3");
       } else if (param === "enterprise" || param === "teams") {
         dispatch({ type: "SET_PERSONA", persona: "enterprise" });
+        applySource("enterprise");
       } else {
-        const saved = localStorage.getItem("databard:persona");
-        if (saved === "web3" || saved === "enterprise") {
-          dispatch({ type: "SET_PERSONA", persona: saved });
+        const migrated = localStorage.getItem("databard:workspace-default");
+        if (migrated) {
+          const saved = localStorage.getItem("databard:persona");
+          if (saved === "web3" || saved === "enterprise") {
+            dispatch({ type: "SET_PERSONA", persona: saved });
+            applySource(saved);
+          }
+        } else {
+          localStorage.setItem("databard:workspace-default", "protocols");
+          dispatch({ type: "SET_PERSONA", persona: "web3" });
+          applySource("web3");
         }
       }
     } catch { /* ignore — SSR-safe by construction, storage may be unavailable */ }
@@ -157,10 +165,10 @@ type RouterLike = { push: (href: string) => void };
 
 /**
  * Deep-link handler:
- *  - ?start=connect      -> jump to the connect step (source-aware)
- *  - ?start=connect&mode=sample -> OpenMetadata sample data
- *  - ?start=connect&mode=my     -> OpenMetadata custom / your own instance
- *  - ?start=demo         -> run the dashboard demo (seeds demo data, lands on it)
+ *  - ?start=connect      -> jump to the connect step (Coral on Protocols, dbt manifest on Teams)
+ *  - ?start=connect&mode=sample -> OpenMetadata sample catalog
+ *  - ?start=connect&mode=my     -> workspace default (Coral / dbt manifest)
+ *  - ?start=demo         -> seed demo data; Protocols land on this week's league
  */
 export function useDeepLink(dispatch: React.Dispatch<WizardAction>, router: RouterLike) {
   useEffect(() => {
@@ -168,14 +176,14 @@ export function useDeepLink(dispatch: React.Dispatch<WizardAction>, router: Rout
       const params = new URLSearchParams(window.location.search);
       const start = params.get("start");
       if (start === "demo") {
-        const workspace = params.get("workspace") === "protocols" ? "protocols" : "teams";
+        const workspace = params.get("workspace") === "teams" ? "teams" : "protocols";
         (async () => {
           try {
             const res = await fetch("/api/demo/seed", { method: "POST" });
             const data = await res.json();
             if (res.ok && data.ok) {
               setDataContext({ kind: "demo", label: "Demo", detail: "sample briefing", source: "demo", demo: true });
-              router.push(`/protocol?episode=demo&demo=1&workspace=${workspace}`);
+              router.push(workspace === "teams" ? "/protocol?episode=demo-enterprise&demo=1&workspace=teams" : "/league?from=demo");
               return;
             }
           } catch {
@@ -188,8 +196,16 @@ export function useDeepLink(dispatch: React.Dispatch<WizardAction>, router: Rout
       }
       if (start === "connect") {
         const mode = params.get("mode");
-        dispatch({ type: "SET_SOURCE", source: "openmetadata" });
-        dispatch({ type: "SET_OM_MODE", omMode: mode === "sample" ? "sandbox" : "custom" });
+        const workspace = params.get("workspace") ?? params.get("persona");
+        const isProtocols = workspace === "protocols" || workspace === "web3" || workspace === "onchain";
+        if (mode === "sample") {
+          dispatch({ type: "SET_SOURCE", source: "openmetadata" });
+          dispatch({ type: "SET_OM_MODE", omMode: "sandbox" });
+        } else if (isProtocols) {
+          dispatch({ type: "SET_SOURCE", source: "coral" });
+        } else {
+          dispatch({ type: "SET_SOURCE", source: "dbt-local" });
+        }
         dispatch({ type: "SET_STEP", step: "connect" });
       }
     } catch {
