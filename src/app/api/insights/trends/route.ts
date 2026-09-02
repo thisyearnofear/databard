@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { listSnapshots, getSnapshotHistory } from "@/lib/schema-snapshots";
 import { diffInsights, type SchemaDiff } from "@/lib/schema-analysis";
+import { scoreLabel } from "@/lib/product/score-tone";
 
 export interface TrendNarrative {
   schemaFqn: string;
@@ -27,10 +28,14 @@ function buildNarrative(
   healthScoreChange: number,
 ): string {
   if (!diff) {
-    // No history — just describe current state
-    if (healthScore >= 90) return `${schemaName} is healthy at ${healthScore}%. No historical data yet — trends will appear after the next analysis.`;
-    if (healthScore >= 70) return `${schemaName} is at ${healthScore}% — needs attention. No historical data yet — trends will appear after the next analysis.`;
-    return `${schemaName} is critical at ${healthScore}%. No historical data yet — trends will appear after the next analysis.`;
+    // No history — describe current state using the same bands as the colour and
+    // label (scoreLabel), so the sentence never contradicts the score's tone.
+    const label = scoreLabel(healthScore);
+    const state =
+      label === "healthy" ? `is healthy at ${healthScore}%`
+      : label === "at-risk" ? `is at ${healthScore}% — needs attention`
+      : `is critical at ${healthScore}%`;
+    return `${schemaName} ${state}. No historical data yet — trends will appear after the next analysis.`;
   }
 
   const parts: string[] = [];
