@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listSnapshots, getSnapshotHistory } from "@/lib/schema-snapshots";
+import { scoreLabel } from "@/lib/product/score-tone";
 
 /**
  * GET /api/insights — latest engine analysis per schema, with health history.
@@ -55,7 +56,9 @@ export async function GET() {
       recordedAt: snap.recordedAt,
       episodeId: snap.episodeId,
       healthScore: snap.insights.healthScore,
-      healthLabel: snap.insights.healthLabel,
+      // Re-derive from the score: a stored snapshot can predate a threshold
+      // change, and the word must always agree with the colour (scoreTone).
+      healthLabel: scoreLabel(snap.insights.healthScore),
       testCoverage: snap.insights.testCoverage,
       docCoverage: snap.insights.docCoverage,
       failingTests: snap.insights.failingTests,
