@@ -209,12 +209,16 @@ ssh "$REMOTE" bash <<EOF
 
   # Keep DataBard in the shared PM2 dump even if another app later `pm2 save`s
   # while we are down. Matches OnPoint's every-2-min watchdog pattern.
-  # Dollars/stars escaped so this unquoted heredoc does not expand locally.
+  # Dollars are escaped so this unquoted heredoc does not expand them locally.
   echo "   Installing ensure-running cron..."
-  CRON_LINE='\*/2 * * * * /opt/databard/current/scripts/ensure-running.sh'
+  # No backslash before the star: inside this unquoted heredoc `*` is already
+  # literal, and crontab rejects `\*/2` as a bad minute field.
+  CRON_LINE='*/2 * * * * /opt/databard/current/scripts/ensure-running.sh'
   EXISTING=\$(crontab -l 2>/dev/null || true)
   FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v '/opt/databard/current/scripts/ensure-running.sh' || true)
-  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$CRON_LINE"; } | grep -v '^\$' | crontab -
+  # Non-fatal: a crontab hiccup must not abort the deploy before the health gate.
+  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$CRON_LINE"; } | grep -v '^\$' | crontab - \
+    || echo "   ⚠️  crontab install failed — existing crontab left untouched"
 
   # Cleanup old releases (keep last 5)
   echo "   Cleaning up old releases..."
