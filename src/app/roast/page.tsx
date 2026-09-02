@@ -50,7 +50,7 @@ function RoastPageInner() {
             className={`rounded-xl p-4 border ${
               item.severity === "bad"
                 ? "border-[var(--danger)]/30 bg-[var(--danger)]/5"
-                : "border-yellow-500/30 bg-yellow-500/5"
+                : "border-[var(--warning)]/30 bg-[var(--warning)]/5"
             }`}
           >
             <p className="text-sm italic">"{item.quote}"</p>

@@ -103,7 +103,9 @@ test.describe("Episode Player", () => {
   });
 
   test("should show share button in episode card", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "Share", exact: true })).toBeVisible({ timeout: 10_000 });
+    // Scope by title: on mobile viewports the sticky action bar renders a second
+    // "Share" button, so the bare role locator is ambiguous (strict-mode violation).
+    await expect(page.getByTitle("Share episode")).toBeVisible({ timeout: 10_000 });
   });
 
   test("should show mobile action bar on small viewports", async ({ page }) => {

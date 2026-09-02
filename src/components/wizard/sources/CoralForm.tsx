@@ -149,13 +149,13 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
             spellCheck={false}
             className={`relative w-full bg-transparent border rounded-lg px-4 py-3 text-sm font-mono text-transparent caret-[var(--accent)] resize-y min-h-32 focus:outline-none transition-colors ${
               !validation.valid && query.trim()
-                ? "border-yellow-500/50 focus:border-yellow-500"
+                ? "border-[var(--warning)]/50 focus:border-[var(--warning)]"
                 : "border-[var(--border)] focus:border-[var(--accent)]"
             }`}
           />
         </div>
         {!validation.valid && query.trim() && validation.hint && (
-          <p className="text-xs text-yellow-500 flex items-center gap-1 mt-1.5">
+          <p className="text-xs text-[var(--warning)] flex items-center gap-1 mt-1.5">
             <span>⚠️</span>
             <span>{validation.hint}</span>
           </p>
@@ -212,9 +212,9 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
       {previewError && (() => {
         const parsed = parseCoralError(previewError);
         return (
-          <div className="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3 text-xs">
-            <p className="text-red-400 font-medium">{parsed.message}</p>
-            {parsed.hint && <p className="text-red-400/70 mt-1">{parsed.hint}</p>}
+          <div className="bg-[var(--danger)]/5 border border-[var(--danger)]/10 rounded-lg px-4 py-3 text-xs">
+            <p className="text-[var(--danger)] font-medium">{parsed.message}</p>
+            {parsed.hint && <p className="text-[var(--danger)]/70 mt-1">{parsed.hint}</p>}
             {parsed.action && (
               <code className="block mt-1.5 bg-[var(--bg)] border border-[var(--border)] rounded px-2 py-1 text-xs text-[var(--text-muted)] select-all">
                 {parsed.action}

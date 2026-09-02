@@ -60,12 +60,12 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
         placeholder="SELECT * FROM github.issues JOIN slack.messages ON..."
         className={`w-full bg-[var(--bg)] border rounded-lg px-3 py-2.5 text-sm font-mono min-h-32 resize-y focus:outline-none transition-colors ${
           !validation.valid && query.trim()
-            ? "border-yellow-500/50 focus:border-yellow-500"
+            ? "border-[var(--warning)]/50 focus:border-[var(--warning)]"
             : "border-[var(--border)] focus:border-[var(--accent)]"
         }`}
       />
       {!validation.valid && query.trim() && validation.hint && (
-        <p className="text-xs text-yellow-500 flex items-center gap-1 -mt-1">
+        <p className="text-xs text-[var(--warning)] flex items-center gap-1 -mt-1">
           <span>⚠️</span>
           <span>{validation.hint}</span>
         </p>
@@ -110,7 +110,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
         </div>
       )}
       {previewError && (
-        <div className="text-xs text-red-400 bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-1.5">
+        <div className="text-xs text-[var(--danger)] bg-[var(--danger)]/5 border border-[var(--danger)]/10 rounded-lg px-3 py-1.5">
           {previewError}
         </div>
       )}

@@ -139,7 +139,7 @@ export function SourceFields() {
           <input
             className={`bg-[var(--bg)] border rounded-lg px-4 py-2 text-sm focus:outline-none transition-colors ${
               state.duneQueryUrl && !state.duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/))
-                ? "border-yellow-500/50 focus:border-yellow-500"
+                ? "border-[var(--warning)]/50 focus:border-[var(--warning)]"
                 : "border-[var(--border)] focus:border-[var(--accent)]"
             }`}
             value={state.duneQueryUrl}

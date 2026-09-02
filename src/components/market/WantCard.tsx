@@ -4,10 +4,10 @@ import type { Want } from "@/lib/types";
 const FOCUS_LABEL: Record<string, { label: string; tone: string }> = {
   overview:   { label: "Overview",   tone: "text-[var(--text)]" },
   quality:    { label: "Quality",    tone: "text-[var(--danger)]" },
-  coverage:   { label: "Coverage",   tone: "text-yellow-400" },
-  lineage:    { label: "Lineage",    tone: "text-blue-400" },
-  governance: { label: "Governance", tone: "text-purple-400" },
-  freshness:  { label: "Freshness",  tone: "text-cyan-400" },
+  coverage:   { label: "Coverage",   tone: "text-[var(--warning)]" },
+  lineage:    { label: "Lineage",    tone: "text-[var(--accent-light)]" },
+  governance: { label: "Governance", tone: "text-[var(--accent-vivid)]" },
+  freshness:  { label: "Freshness",  tone: "text-[var(--accent-light)]" },
 };
 
 export function WantCard({ want }: { want: Want }) {

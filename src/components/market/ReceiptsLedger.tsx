@@ -76,8 +76,8 @@ const EXPLORER_LINKS: Array<{ key: keyof Deal["explorer"]; label: string; classN
   { key: "deposit", label: "deposit ↗", className: "border-[var(--border)] bg-[var(--bg)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]" },
   { key: "commit", label: "commit ↗", className: "border-[var(--border)] bg-[var(--bg)] hover:border-[var(--accent)]/60 hover:text-[var(--accent)]" },
   { key: "release", label: "release ↗", className: "border-[var(--success)]/40 bg-[var(--success)]/5 hover:border-[var(--success)]/70 text-[var(--success)]" },
-  { key: "mint", label: "mint ↗", className: "border-purple-500/40 bg-purple-500/5 hover:border-purple-500/70 text-purple-400" },
-  { key: "refund", label: "refund ↗", className: "border-yellow-500/40 bg-yellow-500/5 hover:border-yellow-500/70 text-yellow-400" },
+  { key: "mint", label: "mint ↗", className: "border-[var(--accent-vivid)]/40 bg-[var(--accent-vivid)]/5 hover:border-[var(--accent-vivid)]/70 text-[var(--accent-vivid)]" },
+  { key: "refund", label: "refund ↗", className: "border-[var(--warning)]/40 bg-[var(--warning)]/5 hover:border-[var(--warning)]/70 text-[var(--warning)]" },
 ];
 
 function ReceiptCard({ deal }: { deal: Deal }) {
@@ -90,7 +90,7 @@ function ReceiptCard({ deal }: { deal: Deal }) {
     : state === "delivered"
       ? "text-[var(--accent)]"
       : state === "refunded"
-        ? "text-yellow-400"
+        ? "text-[var(--warning)]"
         : "text-[var(--text-muted)]";
 
   return (

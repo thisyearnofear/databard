@@ -43,11 +43,11 @@ export function GraphView({
       </div>
 
       {/* Top row: parent escrow */}
-      <div className="rounded-lg border-2 border-purple-500/70 bg-[var(--bg)] p-3">
+      <div className="rounded-lg border-2 border-[var(--accent-vivid)]/70 bg-[var(--bg)] p-3">
         <div className="flex items-center justify-between text-sm">
           <span>
             <span className="text-[var(--text-muted)]">{parentDeal.want.buyer.label ?? "Consumer"}</span>
-            <span className="mx-2 text-purple-400 font-bold">→</span>
+            <span className="mx-2 text-[var(--accent-vivid)] font-bold">→</span>
             <span className="font-semibold text-[var(--text)]">Digest</span>
           </span>
           <span className="font-mono text-[var(--text)]">{parentPrice} SOL</span>
@@ -82,12 +82,12 @@ export function GraphView({
           {subDeals.map((sub) => {
             const subPrice = (sub.priceLamports / 1e9).toFixed(4);
             return (
-              <div key={sub.wantId} className="rounded border border-cyan-500/50 bg-[var(--bg)] p-2 relative">
+              <div key={sub.wantId} className="rounded border border-[var(--accent-light)]/50 bg-[var(--bg)] p-2 relative">
                 <div className="absolute -left-3 top-1/2 w-3 h-px bg-[var(--border)]" />
                 <div className="flex items-center justify-between text-xs">
                   <span>
                     <span className="text-[var(--text-muted)]">Digest</span>
-                    <span className="mx-1 text-cyan-400 font-bold">→</span>
+                    <span className="mx-1 text-[var(--accent-light)] font-bold">→</span>
                     <span className="text-[var(--text)]">{sub.winningBid.seller.label ?? sub.personaId}</span>
                     <span className="mx-2 text-[var(--text-muted)]">·</span>
                     <span className="font-mono">{sub.want.schemaFqn}</span>

@@ -12,6 +12,7 @@
  */
 import type { Episode } from "./types";
 import type { SchemaInsights, ActionItem } from "./schema-analysis";
+import { scoreTone } from "./product/score-tone";
 
 const PAPER_MCP_URL = "http://127.0.0.1:29979/mcp";
 
@@ -68,7 +69,8 @@ function priorityColor(p: string): string {
 }
 
 function scoreColor(score: number): string {
-  return score >= 70 ? C.success : score >= 40 ? C.warn : C.danger;
+  const tone = scoreTone(score);
+  return tone === "good" ? C.success : tone === "warn" ? C.warn : C.danger;
 }
 
 // ── Slide 1: Overview ──

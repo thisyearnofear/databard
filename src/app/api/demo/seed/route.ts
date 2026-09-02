@@ -19,6 +19,7 @@ import path from "path";
 import { shares, store } from "@/lib/store";
 import { saveSnapshot, type SchemaSnapshot } from "@/lib/schema-snapshots";
 import { analyzeSchema } from "@/lib/schema-analysis";
+import { scoreLabel } from "@/lib/product/score-tone";
 import type { Episode, SchemaMeta, TableMeta, QualityTest, ColumnMeta } from "@/lib/types";
 
 const SEED_FLAG = "demo:seeded:v1";
@@ -78,7 +79,7 @@ function buildSnapshot(
   const recordedAt = new Date(now - daysAgo * DAY);
   const insights = analyzeSchema(meta);
   insights.healthScore = score;
-  insights.healthLabel = score >= 70 ? "healthy" : score >= 40 ? "at-risk" : "critical";
+  insights.healthLabel = scoreLabel(score);
   // analyzeSchema computes staleness against wall-clock "now" — recompute
   // against the snapshot's recordedAt so historical snapshots stay coherent.
   const asOf = recordedAt.getTime();

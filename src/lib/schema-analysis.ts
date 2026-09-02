@@ -4,6 +4,7 @@
  * Both the LLM prompt and template fallback consume these insights.
  */
 import type { SchemaMeta, TableMeta } from "./types";
+import { scoreLabel } from "./product/score-tone";
 
 export type ActionPriority = "critical" | "high" | "medium" | "low";
 export type ActionCategory = "test" | "documentation" | "ownership" | "governance" | "freshness";
@@ -148,7 +149,7 @@ export function analyzeSchema(schema: SchemaMeta): SchemaInsights {
   if (staleTables.length > 0) healthScore -= Math.min(10, staleTables.length * 3);
   healthScore = Math.max(0, Math.min(100, healthScore));
 
-  const healthLabel = healthScore >= 70 ? "healthy" : healthScore >= 40 ? "at-risk" : "critical";
+  const healthLabel = scoreLabel(healthScore);
 
   return {
     healthScore, healthLabel,

@@ -471,7 +471,7 @@ export function ConnectStep() {
               >
                 {state.connectionTested === "testing" && <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--text-muted)]/30 border-t-[var(--text-muted)] rounded-full animate-spin" />}
                 {state.connectionTested === "success" && <span className="text-[var(--success)]">✓</span>}
-                {state.connectionTested === "error" && <span className="text-red-500">✗</span>}
+                {state.connectionTested === "error" && <span className="text-[var(--danger)]">✗</span>}
                 Test Connection
               </button>
             )}
@@ -483,7 +483,7 @@ export function ConnectStep() {
             state.status.startsWith("✓") || state.status.startsWith("Connected")
               ? "text-[var(--success)] bg-[var(--success)]/5"
               : state.status.startsWith("✗") || state.status.startsWith("Error")
-                ? "text-red-400 bg-red-500/5"
+                ? "text-[var(--danger)] bg-[var(--danger)]/5"
                 : "text-[var(--text-muted)]"
           }`}>
             {state.status}

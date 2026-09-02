@@ -81,8 +81,8 @@ export default function FleetPage() {
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]">
                 <span>{report.health.healthy} healthy</span>
-                <span className="text-orange-400">{report.health.atRisk} at risk</span>
-                <span className="text-red-400">{report.health.critical} critical</span>
+                <span className="text-[var(--warning)]">{report.health.atRisk} at risk</span>
+                <span className="text-[var(--danger)]">{report.health.critical} critical</span>
                 <span>{report.ownerless} ownerless</span>
                 <span>{report.untested} untested</span>
                 <span>{report.stale} stale</span>

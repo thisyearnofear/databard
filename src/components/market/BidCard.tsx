@@ -2,9 +2,9 @@
 import type { Bid } from "@/lib/types";
 
 const PERSONA_STYLE: Record<string, { color: string; badge: string; tagline: string }> = {
-  signal:   { color: "border-purple-500", badge: "bg-purple-500/20 text-purple-300", tagline: "Executive brief" },
-  cascade:  { color: "border-amber-500",  badge: "bg-amber-500/20 text-amber-300",   tagline: "Deep-dive"      },
-  newsroom: { color: "border-cyan-500",   badge: "bg-cyan-500/20 text-cyan-300",     tagline: "Breaking flash"  },
+  signal:   { color: "border-[var(--accent-vivid)]", badge: "bg-[var(--accent-vivid)]/20 text-[var(--accent-vivid)]", tagline: "Executive brief" },
+  cascade:  { color: "border-[var(--warning)]",  badge: "bg-[var(--warning)]/20 text-[var(--warning)]",   tagline: "Deep-dive"      },
+  newsroom: { color: "border-[var(--accent-light)]",   badge: "bg-[var(--accent-light)]/20 text-[var(--accent-light)]",     tagline: "Breaking flash"  },
 };
 
 export function BidCard({

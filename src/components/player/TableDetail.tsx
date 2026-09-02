@@ -30,7 +30,7 @@ export function TableDetail({ table, lineage }: { table: TableMeta; lineage: Lin
       {table.glossaryTerms && table.glossaryTerms.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {table.glossaryTerms.map((term) => (
-            <span key={term} className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">📖 {term}</span>
+            <span key={term} className="px-1.5 py-0.5 rounded bg-[var(--accent-light)]/20 text-[var(--accent-light)]">📖 {term}</span>
           ))}
         </div>
       )}

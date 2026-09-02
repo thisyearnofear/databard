@@ -10,6 +10,7 @@
  * not just one schema" layer.
  */
 import type { DataHubDatasetMeta } from "./datahub-adapter";
+import { scoreLabel } from "./product/score-tone";
 
 export type FleetHealthLabel = "healthy" | "at-risk" | "critical";
 
@@ -69,7 +70,7 @@ function tableHealth(d: DataHubDatasetMeta): { score: number; label: FleetHealth
   if (!d.description) score -= 6;
   if (isStale(d.freshness)) score -= 10;
   score = Math.max(0, Math.min(100, score));
-  const label: FleetHealthLabel = score >= 80 ? "healthy" : score >= 50 ? "at-risk" : "critical";
+  const label: FleetHealthLabel = scoreLabel(score);
   return { score, label };
 }
 

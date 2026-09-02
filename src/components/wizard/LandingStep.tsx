@@ -346,8 +346,8 @@ export function LandingStep() {
             <div className="text-[var(--text-muted)] mb-1">-- Find stale PRs across your repos</div>
             <div><span className="text-[var(--accent)]">SELECT</span> number, title, author, created_at</div>
             <div><span className="text-[var(--accent)]">FROM</span> github.pulls</div>
-            <div><span className="text-[var(--accent)]">WHERE</span> state = <span className="text-yellow-400">'open'</span></div>
-            <div>&&nbsp;&nbsp;<span className="text-[var(--accent)]">AND</span> created_at &lt; <span className="text-yellow-400">NOW()</span> - <span className="text-yellow-400">INTERVAL '2 days'</span></div>
+            <div><span className="text-[var(--accent)]">WHERE</span> state = <span className="text-[var(--warning)]">'open'</span></div>
+            <div>&&nbsp;&nbsp;<span className="text-[var(--accent)]">AND</span> created_at &lt; <span className="text-[var(--warning)]">NOW()</span> - <span className="text-[var(--warning)]">INTERVAL '2 days'</span></div>
             <div><span className="text-[var(--accent)]">ORDER BY</span> created_at <span className="text-[var(--accent)]">ASC</span></div>
           </div>
           <div className="flex flex-wrap gap-2 mt-4">

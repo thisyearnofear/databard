@@ -53,3 +53,16 @@ export function scoreColor(score: number): string {
 export function scoreHex(score: number): string {
   return TONE_HEX[scoreTone(score)];
 }
+
+/** The health word that matches a score's tone — one definition for every surface. */
+export type HealthLabel = "healthy" | "at-risk" | "critical";
+
+const TONE_LABEL: Record<ScoreTone, HealthLabel> = {
+  good: "healthy",
+  warn: "at-risk",
+  bad: "critical",
+};
+
+export function scoreLabel(score: number): HealthLabel {
+  return TONE_LABEL[scoreTone(score)];
+}

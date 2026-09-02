@@ -4,6 +4,7 @@ import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { writeBackFindings, fetchFleetDatasets } from "@/lib/datahub-adapter";
 import { buildFleetReport } from "@/lib/fleet-analysis";
+import { scoreLabel } from "@/lib/product/score-tone";
 import { rateLimit } from "@/lib/validation";
 import type { SchemaInsights } from "@/lib/schema-analysis";
 import type { SchemaMeta, TableMeta } from "@/lib/types";
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
         freshness: d.freshness,
       }));
       const meta: SchemaMeta = { fqn: "fleet", name: "fleet", tables, lineage: [] };
-      const label = report.fleetScore >= 80 ? "healthy" : report.fleetScore >= 50 ? "at-risk" : "critical";
+      const label = scoreLabel(report.fleetScore);
       const summaryLine = `DataBard: fleet health ${report.fleetScore}/100 across ${report.totalTables} tables.`;
       const written = await writeBackFindings(
         config.datahub,

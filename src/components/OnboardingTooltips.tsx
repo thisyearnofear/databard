@@ -182,10 +182,10 @@ export function OnboardingTooltip({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — dims but never traps: clicks pass through to the page.
+          Dismissal lives on the "Skip tour" button in the tooltip footer. */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 backdrop-blur-[2px]"
-        onClick={handleSkip}
+        className="fixed inset-0 bg-black/50 z-40 backdrop-blur-[2px] pointer-events-none"
       />
 
       {/* Highlight ring around target */}
