@@ -299,6 +299,9 @@ export interface Episode {
   researchSessionId?: string;
   tableCount: number;
   qualitySummary: { passed: number; failed: number; total: number };
+  /** Frozen engine health score at generation time — the canonical number the
+      score card, transcript, and league must all agree on. */
+  healthScore?: number;
   script: ScriptSegment[];
   /** Optional musical plan if this episode was generated as an Anthem */
   musicPlan?: MusicPlan;

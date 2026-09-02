@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
       researchTrail,
       tableCount: meta.tables.length,
       qualitySummary: { passed: insights.passingTests, failed: insights.failingTests, total: insights.totalTests },
+      healthScore: insights.healthScore,
       script: [], // Will be filled for podcasts
     };
 

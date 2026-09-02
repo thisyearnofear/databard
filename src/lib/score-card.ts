@@ -15,7 +15,8 @@ export interface ScoreCard {
 
 const HOOK = /failing|red flag|stale|no owner|pii|coverage|critical|broke|risk/i;
 
-export function healthScore(episode: Pick<Episode, "qualitySummary">): number {
+export function healthScore(episode: Pick<Episode, "qualitySummary" | "healthScore">): number {
+  if (typeof episode.healthScore === "number") return episode.healthScore;
   const { passed, total } = episode.qualitySummary;
   if (total <= 0) return 0;
   return Math.round((passed / total) * 100);
@@ -30,12 +31,6 @@ function pickSegment(script: ScriptSegment[], segmentIndex?: number | null): { s
   const morgan = script.findIndex((s) => s.speaker.toLowerCase() === "morgan");
   if (morgan >= 0) return { seg: script[morgan], index: morgan };
   return { seg: script[0] ?? { speaker: "Morgan", text: "The data needs a closer look.", topic: "" }, index: 0 };
-}
-
-export function scoreClass(score: number): string {
-  if (score >= 80) return "text-[var(--success)]";
-  if (score >= 50) return "text-[var(--warning)]";
-  return "text-[var(--danger)]";
 }
 
 export function shareText(card: ScoreCard, url: string): string {

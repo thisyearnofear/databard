@@ -64,29 +64,21 @@ All colors live as CSS custom properties in `src/app/globals.css` and are access
 | `--palm` | `#3f6b4a` | `#3f6b4a` | Palm USD / Solana payment buttons |
 | `--palm-light` | `#5a9b68` | `#4d8a5c` | Palm gradient end |
 | `--palm-glow` | `#3f6b4a40` | `#3f6b4a30` | Palm glows |
-| `--briefing-bg` | `#002b36` | `#002b36` | /briefing page background |
-| `--briefing-surface` | `#112130` | `#112130` | /briefing card surfaces |
-| `--briefing-surface-2` | `#001e26` | `#001e26` | /briefing inputs and code blocks |
-| `--briefing-gold` | `#d4af37` | `#d4af37` | /briefing primary accent |
-| `--briefing-teal` | `#2aa198` | `#2aa198` | /briefing links and secondary accent |
-| `--briefing-muted` | `#93a1a1` | `#93a1a1` | /briefing secondary text |
-| `--briefing-dim` | `#586e75` | `#586e75` | /briefing metadata and placeholders |
-| `--briefing-text` | `#fdf6e3` | `#fdf6e3` | /briefing input text |
-| `--briefing-code` | `#b58900` | `#b58900` | /briefing inline code |
-| `--briefing-danger` | `#dc322f` | `#dc322f` | /briefing errors |
 
 ### Semantic color rules
 
-- Health scores use `healthColor(score)` in `src/components/viz.tsx`:
+- Health scores map through `src/lib/product/score-tone.ts` — the one definition of the 80/50 thresholds:
   - `>= 80` → `--success`
   - `>= 50` → `--warning`
   - `< 50` → `--danger`
+  - Use `scoreTextClass` / `scoreTintClass` for classes, `scoreColor` for inline styles, `scoreHex` for server-rendered images (OG, badge, email HTML). Tailwind only emits classes it sees as complete literals, so the helper returns whole class strings from a record — never build a class name by interpolation.
 - Do not hardcode hex colors in components. Every color must resolve through a token.
 - Do not use `color-mix(...)` in components unless the token is intended for opacity variants. Prefer `bg-[var(--accent)]/10` style opacity in Tailwind.
 
 ## 4. Typography
 
 - **Primary:** `system-ui, -apple-system, sans-serif`
+- **Display:** Space Grotesk (self-hosted via `next/font/google`, variable weight) for `h1,h2,h3` and score numerals, exposed as `--font-display` / the `.font-display` class. One face only — it pairs with the mono micro-labels and the pixel charts without adding a second webfont.
 - **Monospace:** `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` for hashes, code, wallet addresses, and small technical labels.
 - **Scale:** Tailwind defaults. Use `text-sm`, `text-xs` for data-dense UI.
 - **Weights:** `font-medium` for labels, `font-semibold` for section headings, `font-bold` for hero numbers.
@@ -122,6 +114,8 @@ Secondary CTA:
 
 Ghost / Link:
 - `text-[var(--text-muted)] hover:text-[var(--text)] transition-colors`
+
+Dither-kit buttons (`src/components/dither-kit/button.tsx`) add `gradient`, `dotted`, `hatched`, and `solid` variants on top of these. Primary CTAs use `variant="solid"` — the dithered fills read as noise at 1x on a filled button; reserve `dotted`/`hatched` for decorative surfaces.
 
 ### Inputs
 
@@ -215,17 +209,17 @@ Key rules:
 
 ## 8. Iconography
 
-- Emoji are used as affordance accents (📊, 🔥, 🔔, ⛓️).
-- Emoji are not substitutes for labels. Always pair with text or an `aria-label`.
-- For future growth, prefer an SVG icon set with a 1.5px stroke, rounded caps, and no fill.
+- Primary surfaces (shell, landing, dashboard, player, league, onchain) use `PixelIcon` from `src/components/dither-kit/icon.tsx` — 8x8 bitmaps rendered as crisp-edged SVG at the same 2px cell as the charts, tinted with the CSS-var tone classes.
+- Emoji survive only on secondary surfaces (wizard source pickers, market, roast, pro) as affordance accents.
+- Icons and emoji are not substitutes for labels. Always pair with text or an `aria-label`.
 
 ## 9. Design Debt & Migration Notes
 
 ### Known issues to clean up
 
-1. **Hardcoded colors outside tokens.** `src/lib/paper-canvas.ts`, `src/lib/notifications.ts` email HTML, `src/app/api/og/route.tsx`, and `src/app/api/badge/[schema]/route.ts` generated images still embed hardcoded hex/RGBA because they render outside the CSS-variable cascade. `src/components/EpisodePlayer.tsx` now resolves `var(--accent)` to HSL for its canvas waveform. These are intentional exceptions; do not introduce `style` attributes in main UI components.
-2. **Inline styles alongside Tailwind.** Main app pages (`/history`, `/leaderboard`, `/protocol`, `/playlists`) have been cleaned. Only dynamic values (`width`, `height`, `left`, `animationDelay`, grid layout) remain in `src/components/viz.tsx`, `src/components/market/HashFingerprint.tsx`, `src/components/OnboardingTooltips.tsx`, `src/components/GenerationProgress.tsx`, `src/components/Skeleton.tsx`, and `src/components/market/WatchdogMonitor.tsx`.
-3. **Missing warning token.** `healthColor` now uses `var(--warning)`; `--warning` is defined in `src/app/globals.css`.
+1. **Hardcoded colors outside tokens.** `src/lib/paper-canvas.ts` keeps its own paper palette (a deliberately separate domain). Server-rendered surfaces that sit outside the CSS-variable cascade — `src/app/api/og/route.tsx`, `src/app/api/badge/[schema]/route.ts`, and the email HTML in `src/lib/notifications.ts` — embed hex, but all of them resolve the score colour through `scoreHex()` in `src/lib/product/score-tone.ts` so the thresholds stay single-sourced. `src/components/EpisodePlayer.tsx` resolves `var(--accent)` to HSL for its canvas waveform. These are intentional exceptions; do not introduce `style` attributes in main UI components.
+2. **Inline styles alongside Tailwind.** Main app pages (`/protocol`, `/league`, `/onchain`, `/market`) have been cleaned. Only dynamic values (`width`, `height`, `left`, `animationDelay`, grid layout) remain in `src/components/viz.tsx`, `src/components/market/HashFingerprint.tsx`, `src/components/OnboardingTooltips.tsx`, `src/components/GenerationProgress.tsx`, `src/components/Skeleton.tsx`, and `src/components/market/WatchdogMonitor.tsx`.
+3. **Missing warning token (resolved).** The 80/50 thresholds and all three tones live in `src/lib/product/score-tone.ts`; `--warning` is defined in `src/app/globals.css`. New score-coloured UI must go through that module rather than re-deriving thresholds.
 4. **Transition `all` over the place.** `transition-all` has been removed from `src/`; remaining generic `transition` classes are intentional for elements that animate multiple properties (e.g., `hover:scale` + `hover:brightness-110`).
 5. **`animate-fade-in` is defined in `globals.css` and used where appropriate.**
 6. **Button press feedback is mostly standardized via `globals.css` `button:active { transform: scale(0.98); }`.** A few components use explicit `active:scale-[0.99]` or `active:scale-[0.97]` for larger CTAs; this is acceptable.
@@ -237,7 +231,7 @@ Key rules:
 ```tsx
 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 hover:border-[var(--accent)]/50 transition-colors">
   <div className="flex items-center gap-2">
-    <span className="text-xl">🕸️</span>
+    <PixelIcon name="chain" size={16} />
     <h3 className="text-lg font-bold">{name}</h3>
   </div>
   <div className="flex items-center gap-4 mt-3">
@@ -271,5 +265,5 @@ Key rules:
 | Dark-first (enforced default) | The product is an analytical tool; dark reduces eye strain and makes status colors pop. Dark is the default via `data-theme="dark"` on `<html>`; light is opt-in via the ThemeToggle. The `prefers-color-scheme: light` media query was removed so the default is always dark regardless of OS setting. |
 | Dithered charts | Distinctive, lightweight, dependency-free, and signals "machine-processed signal" rather than generic dashboard. |
 | CSS variables in Tailwind | Keeps theming simple (enterprise vs. onchain vs. light/dark) and avoids leaking hardcoded colors. |
-| System font | Performance, native feel, and avoids licensing/loading complexity. |
+| System body + one self-hosted display face | Body copy stays on system-ui for performance and native feel. Space Grotesk is self-hosted via `next/font/google` (subset, inlined at build, no runtime font requests) and reserved for headings and score numerals, so the product gets a voice without a font-loading tax. |
 | No `transition-all` | Improves performance and makes intent explicit. |

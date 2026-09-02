@@ -49,10 +49,10 @@ export function workspaceFromSearch(search: string): Workspace {
   return value === "protocols" || value === "web3" || value === "onchain" ? "protocols" : "teams";
 }
 
+const PROTOCOL_ROUTES = new Set(["/onchain", "/verify", "/league"]);
+
 export function workspaceFromPathname(pathname: string): Workspace {
-  return pathname === "/onchain" || pathname === "/verify" || pathname === "/leaderboard" || pathname === "/league" || pathname === "/history"
-    ? "protocols"
-    : "teams";
+  return PROTOCOL_ROUTES.has(pathname) ? "protocols" : "teams";
 }
 
 /** Route-only protocol surfaces always win; shared surfaces use the explicit URL mode. */

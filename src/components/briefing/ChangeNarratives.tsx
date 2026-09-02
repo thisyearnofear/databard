@@ -1,4 +1,5 @@
 import { DitherAvatar } from "@/components/dither-kit";
+import { scoreTextClass } from "@/lib/product/score-tone";
 import type { TrendNarrative } from "@/app/api/insights/trends/route";
 
 function sourceName(schemaFqn: string): string {
@@ -33,7 +34,7 @@ export function ChangeNarratives({ trends }: { trends: TrendNarrative[] }) {
                 </div>
                 <p className="text-xs text-[var(--text-muted)] leading-relaxed">{trend.narrative}</p>
               </div>
-              <span className={`text-lg font-bold tabular-nums shrink-0 ${trend.healthScore >= 80 ? "text-[var(--success)]" : trend.healthScore >= 50 ? "text-[var(--warning)]" : "text-[var(--danger)]"}`}>{trend.healthScore}%</span>
+              <span className={`font-display text-lg font-bold tabular-nums shrink-0 ${scoreTextClass(trend.healthScore)}`}>{trend.healthScore}%</span>
             </div>
           );
         })}

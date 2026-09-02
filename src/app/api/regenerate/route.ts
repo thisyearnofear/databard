@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
       researchSessionId: previousResearchSessionId ?? createdResearchSession?.id,
       tableCount: meta.tables.length,
       qualitySummary: { passed: totalTests - failedTests, failed: failedTests, total: totalTests },
+      healthScore,
       script,
       schemaMeta: meta,
       researchTrail,

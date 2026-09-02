@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setDataContext } from "@/lib/data-context";
+import { PixelIcon, type PixelIconName } from "@/components/dither-kit";
 
 type OptionKey = "demo" | "sample" | "my";
 
 interface Option {
   key: OptionKey;
-  icon: string;
+  icon: PixelIconName;
   label: string;
   desc: string;
   href: string;
@@ -24,9 +25,9 @@ export function DataSourceSwitch({ workspace }: { workspace: "teams" | "protocol
   const router = useRouter();
 
   const options: Option[] = [
-    { key: "demo", icon: "🧪", label: "Try the demo", desc: "Pre-built sample briefing", href: `/?start=demo&workspace=${workspace}` },
-    { key: "sample", icon: "🐚", label: "Sample data", desc: "Hosted sample catalog", href: `/?start=connect&mode=sample&workspace=${workspace}` },
-    { key: "my", icon: "🔌", label: "My data", desc: "Connect your own source", href: `/?start=connect&mode=my&workspace=${workspace}` },
+    { key: "demo", icon: "flask", label: "Try the demo", desc: "Pre-built sample briefing", href: `/?start=demo&workspace=${workspace}` },
+    { key: "sample", icon: "shell", label: "Sample data", desc: "Hosted sample catalog", href: `/?start=connect&mode=sample&workspace=${workspace}` },
+    { key: "my", icon: "plug", label: "My data", desc: "Connect your own source", href: `/?start=connect&mode=my&workspace=${workspace}` },
   ];
 
   function choose(o: Option) {
@@ -46,13 +47,13 @@ export function DataSourceSwitch({ workspace }: { workspace: "teams" | "protocol
   }
 
   return (
-    <div className="relative">
+    <div className="relative hidden sm:block">
       <button
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
         aria-label="Switch data"
       >
-        <span aria-hidden>🗂</span>
+        <PixelIcon name="folder" size={12} />
         <span>Data</span>
         <span aria-hidden className="opacity-60">▾</span>
       </button>
@@ -68,7 +69,7 @@ export function DataSourceSwitch({ workspace }: { workspace: "teams" | "protocol
                 onClick={() => choose(o)}
                 className="w-full text-left flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-[var(--bg)] cursor-pointer transition-colors"
               >
-                <span aria-hidden className="text-base leading-none mt-0.5">{o.icon}</span>
+                <span className="mt-0.5 text-[var(--text-muted)]"><PixelIcon name={o.icon} size={14} /></span>
                 <span>
                   <span className="block text-xs font-medium text-[var(--text)]">{o.label}</span>
                   <span className="block text-[11px] text-[var(--text-muted)]">{o.desc}</span>

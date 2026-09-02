@@ -3,8 +3,8 @@ import type { ActionPriority } from "@/lib/schema-analysis";
 export function PriorityBadge({ priority }: { priority: ActionPriority }) {
   const styles: Record<ActionPriority, string> = {
     critical: "bg-[var(--danger)]/20 text-[var(--danger)]",
-    high: "bg-yellow-500/20 text-yellow-400",
-    medium: "bg-blue-500/20 text-blue-400",
+    high: "bg-[var(--warning)]/20 text-[var(--warning)]",
+    medium: "bg-[var(--accent-light)]/20 text-[var(--accent-light)]",
     low: "bg-[var(--border)] text-[var(--text-muted)]",
   };
   return (

@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { PixelIcon } from "@/components/dither-kit";
 import { resolveSolDomain } from "@/lib/sns";
 
 export function WalletButton() {
@@ -40,7 +41,7 @@ export function WalletButton() {
         onClick={() => setVisible(true)}
         className="h-8 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-xs font-medium hover:border-[var(--accent)] transition-colors cursor-pointer flex items-center gap-1.5"
       >
-        <span>👛</span>
+        <PixelIcon name="wallet" size={12} />
         <span className="hidden sm:inline">Connect Wallet</span>
       </button>
     );

@@ -29,18 +29,6 @@
   --palm-light: #5a9b68;
   --palm-glow: #3f6b4a40;
 
-  /* Briefing (solarized dark) — used by /briefing and BriefingPlayer */
-  --briefing-bg: #002b36;
-  --briefing-surface: #112130;
-  --briefing-surface-2: #001e26;
-  --briefing-gold: #d4af37;
-  --briefing-teal: #2aa198;
-  --briefing-muted: #93a1a1;
-  --briefing-dim: #586e75;
-  --briefing-text: #fdf6e3;
-  --briefing-code: #b58900;
-  --briefing-danger: #dc322f;
-
   /* Motion curves */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -77,17 +65,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography polish — balance headings, pretty body text (no orphans) */
-h1, h2, h3 { text-wrap: balance; }
+/* Typography polish — balance headings, pretty body text (no orphans).
+   Headings and score numerals use the display face (Space Grotesk, self-hosted
+   via next/font and exposed as --font-display); body text stays system-ui. */
+h1, h2, h3 {
+  font-family: var(--font-display, system-ui), system-ui, sans-serif;
+  text-wrap: balance;
+}
 p { text-wrap: pretty; }
 
-/* Clearance for the fixed mobile bottom tab bar (SiteNav) so page content
-   and floating CTAs never sit underneath it. Matches Tailwind's `sm` cutoff. */
-@media (max-width: 639px) {
-  body {
-    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
-  }
-}
+.font-display { font-family: var(--font-display, system-ui), system-ui, sans-serif; }
 
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent); }

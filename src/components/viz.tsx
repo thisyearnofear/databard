@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { scoreColor } from "@/lib/product/score-tone";
+import { PixelIcon, type PixelIconName } from "@/components/dither-kit";
 
 /**
  * Shared data-viz primitives — single source of truth for health bars,
- * trend indicators, and history sparklines. Used by /leaderboard,
- * /protocol (health analytics dashboard), and /history.
+ * trend indicators, and history sparklines. Used by the league index,
+ * /protocol (health analytics dashboard), and /onchain.
  */
 
 // 4x4 Bayer ordered dither matrix, normalized by 16.
@@ -51,10 +53,6 @@ export function rgbToHsl(r: number, g: number, b: number): { h: number; s: numbe
   }
 
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
-}
-
-export function healthColor(score: number): string {
-  return score >= 80 ? "var(--success)" : score >= 50 ? "var(--warning)" : "var(--danger)";
 }
 
 /** Dithered horizontal fill for progress bars and health bars. */
@@ -145,7 +143,7 @@ function DitheredFill({
 
 /** Horizontal 0–100 score bar with % label. Fills its container when width is omitted. */
 export function HealthBar({ score, width }: { score: number; width?: number }) {
-  const color = healthColor(score);
+  const color = scoreColor(score);
   return (
     <div className="flex items-center gap-2" style={width ? undefined : { flex: 1 }}>
       <div className="h-1.5 bg-[var(--border)] rounded-md overflow-hidden" style={{ width: width ? width : undefined, flex: width ? undefined : 1 }}>
@@ -197,7 +195,7 @@ export function Sparkline({ values, width = 96, height = 28 }: { values: number[
     const pad = 2;
     const step = (width - pad * 2) / (values.length - 1);
     const y = (v: number) => pad + (1 - v / 100) * (height - pad * 2);
-    const color = healthColor(values[values.length - 1]);
+    const color = scoreColor(values[values.length - 1]);
     const rgb = resolveColor(color);
     if (!rgb) return;
 
@@ -250,11 +248,11 @@ export function Sparkline({ values, width = 96, height = 28 }: { values: number[
 }
 
 /** Compact stat tile for dashboard summary rows. */
-export function StatTile({ icon, value, label }: { icon: string; value: string | number; label: string }) {
+export function StatTile({ icon, value, label }: { icon: PixelIconName; value: string | number; label: string }) {
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl px-5 py-3 flex-1 min-w-[140px] text-center">
-      <div className="text-lg">{icon}</div>
-      <div className="text-2xl font-extrabold mt-1">{value}</div>
+      <div className="flex justify-center text-[var(--text-muted)]"><PixelIcon name={icon} size={16} /></div>
+      <div className="font-display text-2xl font-extrabold mt-1">{value}</div>
       <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">{label}</div>
     </div>
   );

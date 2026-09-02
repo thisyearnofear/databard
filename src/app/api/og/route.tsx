@@ -2,15 +2,10 @@ import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { shares } from "@/lib/store";
 import { scoreFromEpisode } from "@/lib/score-card";
+import { scoreHex } from "@/lib/product/score-tone";
 import type { Episode } from "@/lib/types";
 
 export const runtime = "nodejs";
-
-function scoreColor(score: number): string {
-  if (score >= 80) return "#5bf58c";
-  if (score >= 50) return "#e8c547";
-  return "#f55b5b";
-}
 
 /**
  * Score card for shared briefings. Slack/X unfurl of /episode/:id.
@@ -27,7 +22,7 @@ export async function GET(req: NextRequest) {
   const score = card?.score;
   const quote = card?.quote ?? "Health scores, what changed, and a briefing you can forward.";
   const speaker = card?.speaker ?? "Morgan";
-  const accent = score == null ? "#7c5bf5" : scoreColor(score);
+  const accent = score == null ? "#7c5bf5" : scoreHex(score);
 
   return new ImageResponse(
     (

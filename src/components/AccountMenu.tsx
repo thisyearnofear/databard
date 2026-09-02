@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccount, type AccountSession } from "@/lib/use-account";
 import { workspaceHref } from "@/lib/product/workspaces";
+import { PixelIcon } from "@/components/dither-kit";
 
 type SignInStep = "email" | "code";
 
@@ -188,8 +189,8 @@ export function AccountMenu({ workspace = "teams" }: { workspace?: "teams" | "pr
           className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
           aria-label="Account"
         >
-          {signedIn ? <span className="text-[var(--accent)]">●</span> : <span>👤</span>}
-          <span className="max-w-[8rem] truncate">{signedIn ? email : "Sign in"}</span>
+          {signedIn ? <span className="text-[var(--accent)]">●</span> : <PixelIcon name="user" size={12} />}
+          <span className="hidden max-w-[8rem] truncate sm:block">{signedIn ? email : "Sign in"}</span>
         </button>
 
         {open && (

@@ -30,6 +30,8 @@ export interface LeagueEdition {
   weekLabel: string;
   weekStart: string;
   generatedAt: string;
+  asOf: string;
+  stale: boolean;
   sample: boolean;
   headline: LeagueHeadline;
   rows: LeagueRow[];
@@ -207,6 +209,10 @@ export function buildLeagueEdition(now = new Date()): LeagueEdition {
       )
     : now;
   const { weekLabel, weekStart } = formatWeekLabel(asOf);
+  const asOfWeek = isoWeekParts(asOf);
+  const nowWeek = isoWeekParts(now);
+  const stale =
+    asOfWeek.year !== nowWeek.year || asOfWeek.week !== nowWeek.week;
   const headline = pickHeadline(rows);
   const permalink = `${PUBLIC_BASE}${LEAGUE_PATH}`;
   const { tweet, emailBlurb } = composeCopy(rows, headline, weekLabel, permalink);
@@ -216,6 +222,8 @@ export function buildLeagueEdition(now = new Date()): LeagueEdition {
     weekLabel,
     weekStart,
     generatedAt: now.toISOString(),
+    asOf: asOf.toISOString(),
+    stale,
     sample,
     headline,
     rows,

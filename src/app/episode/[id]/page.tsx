@@ -40,14 +40,23 @@ function SharedEpisodeInner() {
   const [error, setError] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
   const [clipPlaying, setClipPlaying] = useState(false);
+  const [retry, setRetry] = useState(0);
   const clipRef = useRef<HTMLAudioElement>(null);
   const clipStopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     async function loadEpisode() {
       try {
-        const res = await fetch(`/api/share?id=${id}`);
-        const data = await res.json();
+        let res = await fetch(`/api/share?id=${id}`);
+        let data = await res.json();
+
+        // Demo ids are re-seedable — heal an expired or missing demo share
+        // in place instead of showing a dead end.
+        if (!data.ok && (id === "demo" || id === "demo-enterprise")) {
+          await fetch("/api/demo/seed", { method: "POST" }).catch(() => null);
+          res = await fetch(`/api/share?id=${id}`);
+          data = await res.json();
+        }
 
         if (data.ok) {
           const ep = data.episode as Episode & { audioBase64?: string };
@@ -74,7 +83,7 @@ function SharedEpisodeInner() {
     }
 
     loadEpisode();
-  }, [id, segmentIdx]);
+  }, [id, segmentIdx, retry]);
 
   useEffect(() => {
     return () => {
@@ -118,12 +127,25 @@ function SharedEpisodeInner() {
         <p className="text-[var(--danger)]">{error || "This briefing is no longer live"}</p>
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 max-w-sm text-center">
           <p className="text-sm mb-3">See this week&apos;s public table instead.</p>
-          <a
-            href="/league"
-            className="inline-block bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium"
-          >
-            Open the league →
-          </a>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                setRetry((r) => r + 1);
+              }}
+              className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2 text-sm font-medium cursor-pointer"
+            >
+              Replay the demo →
+            </button>
+            <a
+              href="/league"
+              className="inline-block border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-2 text-sm font-medium"
+            >
+              Open the league →
+            </a>
+          </div>
         </div>
       </main>
     );
@@ -159,23 +181,23 @@ function SharedEpisodeInner() {
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center pb-8">
         <Link
-          href="/league"
-          onClick={() => track("shared_episode_cta_click", { cta: "league", schema: episode.schemaName })}
-          className="bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110 text-center"
-        >
-          This week&apos;s league →
-        </Link>
-        <Link
           href={homeHref(workspace)}
           onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode.schemaName })}
-          className="border border-[var(--border)] px-5 py-2.5 text-sm font-medium hover:border-[var(--accent)] text-center"
+          className="bg-[var(--accent)] rounded-md px-5 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110 text-center"
         >
           Get this on your data
         </Link>
         <Link
+          href="/league"
+          onClick={() => track("shared_episode_cta_click", { cta: "league", schema: episode.schemaName })}
+          className="rounded-md border border-[var(--border)] px-5 py-2.5 text-sm font-medium hover:border-[var(--accent)] text-center"
+        >
+          This week&apos;s league →
+        </Link>
+        <Link
           href={workspaceHref("/protocol", workspace)}
           onClick={() => track("shared_episode_cta_click", { cta: "dashboard", schema: episode.schemaName })}
-          className="border border-[var(--border)] px-5 py-2.5 text-sm font-medium hover:border-[var(--accent)] text-center"
+          className="rounded-md border border-[var(--border)] px-5 py-2.5 text-sm font-medium hover:border-[var(--accent)] text-center"
         >
           Dashboard
         </Link>

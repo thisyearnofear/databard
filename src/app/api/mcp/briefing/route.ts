@@ -86,6 +86,7 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
         failed: insights.failingTests,
         total: insights.totalTests,
       },
+      healthScore: insights.healthScore,
       script,
     };
 

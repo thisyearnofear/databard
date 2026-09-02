@@ -3,6 +3,9 @@
 import { WizardProvider, useWizard, PersonaToggle, LandingStep, ConnectStep, SchemaPicker, GenerationStep, StepIndicator } from "@/components/wizard";
 import { AccountMenu } from "@/components/AccountMenu";
 import { OnboardingTooltip } from "@/components/OnboardingTooltips";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { DitherAvatar } from "@/components/dither-kit";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 
 const EpisodeStep = dynamic(
@@ -56,9 +59,15 @@ export default function Home() {
     <WizardProvider>
       <div className="min-h-screen">
         <div className="fixed top-3 inset-x-0 z-40 mx-auto flex w-[min(100%-2rem,44rem)] items-center justify-between gap-2">
-          <div className="hidden sm:block w-24 shrink-0" aria-hidden />
+          <Link href="/" className="flex shrink-0 items-center gap-2 no-underline">
+            <DitherAvatar name="DataBard" size={22} animate={false} />
+            <span className="font-display hidden text-sm font-bold tracking-tight text-[var(--text)] sm:block">
+              DataBard
+            </span>
+          </Link>
           <PersonaToggle />
-          <div className="flex shrink-0 justify-end w-24">
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <ThemeToggle />
             <LandingAccount />
           </div>
         </div>

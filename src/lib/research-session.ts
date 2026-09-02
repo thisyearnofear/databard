@@ -49,13 +49,6 @@ export function getResearchSession(sessionId: string): ResearchSession | null {
   return store.get<ResearchSession>(sessionKey(sessionId));
 }
 
-export function listResearchSessions(prefix = ""): ResearchSession[] {
-  return store.keys(SESSION_PREFIX)
-    .map((key) => store.get<ResearchSession>(key))
-    .filter((session): session is ResearchSession => Boolean(session))
-    .filter((session) => !prefix || session.schemaFqn.startsWith(prefix) || session.schemaName.toLowerCase().includes(prefix.toLowerCase()));
-}
-
 export function appendResearchBranch(input: {
   sessionId: string;
   question: string;

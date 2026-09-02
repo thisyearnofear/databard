@@ -29,51 +29,6 @@ export function EmptyState({ icon, title, description, action, className = "" }:
   );
 }
 
-// Preset empty states for common use cases
-export function LeaderboardEmpty({ onGenerate }: { onGenerate?: () => void }) {
-  return (
-    <EmptyState
-      icon="🏆"
-      title="No protocols ranked yet"
-      description="Generate your first episode to start the leaderboard and see how your protocols compare."
-      action={onGenerate ? { label: "Generate episode →", onClick: onGenerate } : undefined}
-    />
-  );
-}
-
-export function HistoryEmpty({ onGenerate }: { onGenerate?: () => void }) {
-  return (
-    <EmptyState
-      icon="📼"
-      title="No history yet"
-      description="Your generated episodes will appear here. Start by analyzing a data source."
-      action={onGenerate ? { label: "Generate episode →", onClick: onGenerate } : undefined}
-    />
-  );
-}
-
-export function PlaylistEmpty({ onGenerate }: { onGenerate?: () => void }) {
-  return (
-    <EmptyState
-      icon="📋"
-      title="No playlists yet"
-      description="Create playlists to organize your episodes by topic, team, or frequency."
-      action={onGenerate ? { label: "Generate episode →", onClick: onGenerate } : undefined}
-    />
-  );
-}
-
-export function EpisodesEmpty({ onGenerate }: { onGenerate?: () => void }) {
-  return (
-    <EmptyState
-      icon="🎙️"
-      title="No episodes yet"
-      description="Connect a data source and generate your first episode to hear AI analysis of your schema."
-      action={onGenerate ? { label: "Generate episode →", onClick: onGenerate } : undefined}
-    />
-  );
-}
-
 export function SearchEmpty({ query }: { query: string }) {
   return (
     <EmptyState

@@ -83,7 +83,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/app/protocol/page.tsx` — dashboard (hero output)
 - `src/app/league/page.tsx` — public weekly protocol data-health league
 - `src/lib/league.ts` — league edition builder (live snapshots or seeded roster)
-- `src/lib/score-card.ts` — shareable finding (score + quote); shared TTL = 21 days
+- `src/lib/score-card.ts` — shareable finding (score + quote); prefers the episode's frozen `healthScore`, falls back to the test pass ratio; shared TTL = 21 days
 - `src/components/EpisodePlayer.tsx` — audio player with drill-down + Share card
 - `src/components/MondaySignup.tsx` — one-field Monday email on the finding
 - `src/components/wizard/wizard-context.tsx` — wizard provider (slim, wires together types + reducer + effects)
@@ -92,10 +92,12 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/components/wizard/wizard-effects.ts` — extracted effect hooks (persona sync, connection persistence, mint stats, schema defaults, deep links)
 - `src/components/wizard/LandingStep.tsx` — landing page (default workspace: Protocols)
 - `src/app/roast/page.tsx` — "Roast my data" landing variant
+- `src/lib/product/score-tone.ts` — the one score→colour mapping (80/50 thresholds) for text classes, tints and server-side image hexes
+- `src/components/dither-kit/icon.tsx` — `PixelIcon` glyph set (8×8 bitmaps rendered as crisp-edged SVG); use these instead of emoji on shell, landing, dashboard, player, league and onchain surfaces
 - `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)
 
 ## Theming
-Dark-first. `data-theme="dark"` is set on `<html>` in `layout.tsx`. Light mode is opt-in via the `ThemeToggle` component (dark/light toggle, persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components.
+Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["databard:theme"]` and sets `data-theme` on `<html>` before first paint, so light mode never flashes dark; `data-theme="dark"` stays the no-JS default. Light mode is opt-in via the `ThemeToggle` component (persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components. Type: headings (`h1,h2,h3`) and score numerals use the self-hosted Space Grotesk face via `--font-display` / `.font-display`; body copy stays system-ui.
 
 ## Docs
 - `docs/STRATEGY.md` — north star, competitive positioning, product principles, operating principles (PG framework)

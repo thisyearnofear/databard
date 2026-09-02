@@ -1,6 +1,6 @@
 "use client";
 
-import { scoreClass } from "@/lib/score-card";
+import { scoreTextClass } from "@/lib/product/score-tone";
 import type { ScoreCard } from "@/lib/score-card";
 
 export function ScoreCardView({
@@ -21,7 +21,7 @@ export function ScoreCardView({
         Shared finding
       </p>
       <div className="mt-5 flex items-end gap-4">
-        <p className={`text-[72px] sm:text-[88px] font-bold leading-none tabular-nums tracking-tight ${scoreClass(card.score)}`}>
+        <p className={`font-display text-[72px] sm:text-[88px] font-bold leading-none tabular-nums tracking-tight ${scoreTextClass(card.score)}`}>
           {card.score}
         </p>
         <div className="pb-2 min-w-0">

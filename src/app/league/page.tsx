@@ -13,19 +13,28 @@ export async function generateMetadata(): Promise<Metadata> {
         ? ` ↑${edition.headline.change}`
         : ` ↓${Math.abs(edition.headline.change)}`;
   const title = `${edition.headline.schemaName} ${edition.headline.score}${delta} — protocol data health`;
+  const asOf = edition.stale
+    ? ` Data as of ${new Date(edition.asOf).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })}.`
+    : "";
+  const socialDescription = `${edition.headline.schemaName} is ${edition.headline.score}. ${edition.headline.line}${asOf}`;
   return {
     title,
     description: edition.headline.line,
     openGraph: {
       title: `DataBard League · ${edition.weekLabel}`,
-      description: `${edition.headline.schemaName} is ${edition.headline.score}. ${edition.headline.line}`,
+      description: socialDescription,
       url: edition.permalink,
       images: [{ url: "/api/og/league", width: 1200, height: 630, alt: "DataBard protocol data-health league" }],
     },
     twitter: {
       card: "summary_large_image",
       title: `DataBard League · ${edition.weekLabel}`,
-      description: `${edition.headline.schemaName} is ${edition.headline.score}. ${edition.headline.line}`,
+      description: socialDescription,
       images: ["/api/og/league"],
     },
   };

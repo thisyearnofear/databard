@@ -229,6 +229,7 @@ export function useGeneration() {
                   failed: data.testsFailed,
                   total: data.testsTotal,
                 },
+                healthScore: data.healthScore,
                 script: data.script,
                 schemaMeta: data.schemaMeta,
                 researchQuestion: data.researchQuestion,

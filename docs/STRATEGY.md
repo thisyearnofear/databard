@@ -113,7 +113,7 @@ The product now presents this split as workspaces, not as separate products. Bot
 ### Protocols (GTM beachhead / default)
 - **Who:** Web3 protocol operators, DAO data teams — where inbound interest is strongest today
 - **Pain:** "I need publicly verifiable protocol health" + a public weekly accounting of peer sources
-- **Wedge:** `/league` (weekly table) → briefing → onchain attestation + `/verify` + leaderboard
+- **Wedge:** `/league` (weekly table) → briefing → onchain attestation + `/verify` + the league's Full index
 - **Expansion:** Same analysis engine; Monday email from the finding before Pro billing
 - **Terminology:** Subgraphs, indexers, entities, attestations
 - **Onchain:** Core feature, not afterthought
@@ -216,7 +216,7 @@ competitor analysis, not accelerator feedback.
 
 > *"Get users manually. Go to them. Don't wait for them to come to you."*
 
-The email capture forms on shared episodes, verify, leaderboard, and landing
+The email capture forms on shared episodes, verify, league, and landing
 page are passive — they wait for the user. The first 10 users come from us
 going to them. We have 5 Solana protocol teams named in
 [`docs/GTM.md`](GTM.md) with data already seeded and briefings ready to send.
@@ -257,7 +257,7 @@ If we don't know whether we're default alive, we're default dead.
 
 > *"The initial product should be almost embarrassingly simple."*
 
-DataBard has a wizard, a dashboard, a leaderboard, a market page, an escrow
+DataBard has a wizard, a dashboard, a league index, a market page, an escrow
 program, attestation, verify, alerts, a roast page, clip sharing, badges, OG
 images, Coral integration, email delivery, Stripe. That's not embarrassing.
 That's impressive. But if the synthesis isn't worth acting on, none of the

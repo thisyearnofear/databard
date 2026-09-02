@@ -4,6 +4,7 @@
   "researchQuestion": "What is the biggest risk hiding in this warehouse right now?",
   "tableCount": 6,
   "qualitySummary": { "passed": 8, "failed": 3, "total": 11 },
+  "healthScore": 52,
   "generatedAt": "2026-04-21T12:00:00Z",
   "schemaMeta": {
     "fqn": "analytics.ecommerce",

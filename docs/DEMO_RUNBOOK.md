@@ -45,9 +45,10 @@ and web3 arms.
 - [ ] `npm run build && npm start` (or the deployed URL) — no dev-mode jank.
 - [ ] Hit `POST /api/demo/seed` once (the demo button does this too) and load
       `/league` — ranked table + headline finding. Then `/protocol?workspace=protocols`
-      — 6 sources, trends populated, no `0%` scores anywhere. Then `/leaderboard`.
+      — 6 sources, trends populated, no `0%` scores anywhere. Then the league's
+      **Full index** tab.
 - [ ] Load `/protocol?workspace=teams` and confirm no wallet button, Market, Verify,
-      or leaderboard nav in the header.
+      or league nav in the header.
 - [ ] Phantom installed, set to **devnet**, wallet funded (≥ 0.05 devnet SOL —
       `solana airdrop 1 <pubkey> -u devnet` the day before; faucets rate-limit).
 - [ ] Wallet pre-connected to the site; auto-connect is on.
@@ -91,7 +92,7 @@ and web3 arms.
    On the episode player, click **Share card** → open the shared score card
    (health + finding, Monday signup, no wallet). Line: *"Every shared finding
    is a mini-landing page. The product is its own distribution channel."*
-7. **The leaderboard as registry:** load `/leaderboard` — claim flow. Line:
+7. **The index as registry:** on `/league`, open the **Full index** tab — claim flow. Line:
    *"This is the public registry. Protocols want to be on it because verified
    health is marketing. Their marketing is our acquisition channel."*
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { scoreColor } from "@/lib/product/score-tone";
 
 export function TeamHistoryTab({ schemaName }: { schemaName: string }) {
   const [history, setHistory] = useState<Array<{
@@ -33,8 +34,7 @@ export function TeamHistoryTab({ schemaName }: { schemaName: string }) {
         {history.length} mint{history.length !== 1 ? "s" : ""} across {new Set(history.map((m) => m.walletAddress)).size} wallet{new Set(history.map((m) => m.walletAddress)).size !== 1 ? "s" : ""}
       </p>
       {history.map((m) => {
-        const health = m.healthScore;
-        const color = health >= 80 ? "var(--success)" : health >= 50 ? "var(--warning)" : "var(--danger)";
+        const color = scoreColor(m.healthScore);
         const net = m.network === "mainnet-beta" ? "" : `?cluster=${m.network}`;
         return (
           <div key={m.txSignature} className="bg-[var(--bg)] rounded-lg p-3 border border-[var(--border)] flex items-center gap-3">
@@ -45,7 +45,7 @@ export function TeamHistoryTab({ schemaName }: { schemaName: string }) {
               </div>
               <div className="text-xs text-[var(--text-muted)]">{new Date(m.createdAt).toLocaleString()}</div>
             </div>
-            <span className="font-bold text-[13px]" style={{ color }}>{health}%</span>
+            <span className="font-bold text-[13px]" style={{ color }}>{m.healthScore}%</span>
             <a
               href={`https://explorer.solana.com/tx/${m.txSignature}${net}`}
               target="_blank"

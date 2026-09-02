@@ -9,6 +9,7 @@ import { buildResearchTrail } from "@/lib/research";
 import { track } from "@/lib/track";
 import { costLine } from "@/lib/cost-framing";
 import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips, resolveColor, rgbToHsl } from "@/components/viz";
+import { PixelIcon } from "@/components/dither-kit";
 import { HealthBadge } from "@/components/player/HealthBadge";
 import { TableDetail } from "@/components/player/TableDetail";
 import { PriorityBadge } from "@/components/player/PriorityBadge";
@@ -17,6 +18,7 @@ import { AnthemTab } from "@/components/player/AnthemTab";
 import { MarkdownRenderer } from "@/components/player/MarkdownRenderer";
 import { workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import { scoreFromEpisode, shareText } from "@/lib/score-card";
+import { scoreTextClass } from "@/lib/product/score-tone";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
 type PlayerTab = "segments" | "insights" | "actions" | "research" | "anthem" | "team";
@@ -113,13 +115,18 @@ export function EpisodePlayer({
   // Re-run when minting completes (parent flips `minting` from true → false).
   }, [onMint, currentEpisode.schemaName, minting]);
 
-  // Compute insights and action items from schema metadata
+  // Compute insights and action items from schema metadata. The frozen
+  // generation-time score wins so the card, transcript, and drill-down agree.
   const { insights, actionItems } = useMemo(() => {
     if (!currentEpisode.schemaMeta) return { insights: null, actionItems: [] };
-    const ins = analyzeSchema(currentEpisode.schemaMeta);
+    const computed = analyzeSchema(currentEpisode.schemaMeta);
+    const ins =
+      typeof currentEpisode.healthScore === "number"
+        ? { ...computed, healthScore: currentEpisode.healthScore }
+        : computed;
     const items = generateActionItems(ins);
     return { insights: ins, actionItems: items };
-  }, [currentEpisode.schemaMeta]);
+  }, [currentEpisode.schemaMeta, currentEpisode.healthScore]);
 
   const researchTrail = useMemo(() => {
     if (currentEpisode.researchTrail) return currentEpisode.researchTrail;
@@ -216,20 +223,24 @@ export function EpisodePlayer({
     };
   }, [currentAudioUrl]);
 
-  // Responsive canvas sizing
+  // Responsive canvas sizing. Setting `canvas.width` wipes the bitmap, so the
+  // size is mirrored into state to make the idle painter run again afterwards.
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 80 });
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
     const resize = () => {
-      const w = container.clientWidth;
+      canvas.style.width = "";
+      const w = canvas.clientWidth || container.clientWidth;
       canvas.width = w * window.devicePixelRatio;
       canvas.height = 80 * window.devicePixelRatio;
       canvas.style.width = `${w}px`;
       canvas.style.height = "80px";
       const ctx = canvas.getContext("2d");
       if (ctx) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      setCanvasSize((prev) => (prev.w === w ? prev : { w, h: 80 }));
     };
 
     resize();
@@ -243,7 +254,33 @@ export function EpisodePlayer({
     resolveAccent();
   }, []);
 
-  // Draw static waveform preview when not playing
+  // Idle waveform silhouette — derived from the transcript, not noise: each bar
+  // belongs to the segment covering that share of the script, so the shape shows
+  // where the talking is and the segment boundaries land.
+  const idleBars = useMemo(() => {
+    const bars = 128;
+    const script = currentEpisode.script ?? [];
+    if (!script.length) return [];
+    const weights = script.map((seg) => Math.max(24, seg.text.length));
+    const total = weights.reduce((sum, w) => sum + w, 0);
+    const out: number[] = [];
+    let seg = 0;
+    let acc = 0;
+    for (let i = 0; i < bars; i++) {
+      const at = ((i + 0.5) / bars) * total;
+      while (seg < weights.length - 1 && at >= acc + weights[seg]) {
+        acc += weights[seg];
+        seg++;
+      }
+      const within = (at - acc) / weights[seg];
+      const speech = 0.3 + 0.62 * Math.sin(within * Math.PI); // breath at segment edges
+      const texture = 0.8 + 0.2 * Math.sin(i * 1.9 + seg * 2.3);
+      out.push(Math.max(0.08, speech * texture));
+    }
+    return out;
+  }, [currentEpisode.script]);
+
+  // Draw the static waveform preview when not playing
   useEffect(() => {
     if (playing) return;
     resolveAccent();
@@ -252,30 +289,27 @@ export function EpisodePlayer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const w = canvas.width / window.devicePixelRatio;
-    const h = canvas.height / window.devicePixelRatio;
+    const w = canvasSize.w || canvas.width / window.devicePixelRatio;
+    const h = canvasSize.h || canvas.height / window.devicePixelRatio;
     ctx.clearRect(0, 0, w, h);
+    if (!w || !h) return;
 
-    const bars = 128;
+    const bars = idleBars.length;
+    if (!bars) return;
     const barW = w / bars;
     const mid = h / 2;
     const accent = accentRef.current ?? { h: 258, s: 80, l: 65 };
-
-    // Seeded pseudo-random for consistent look
-    let seed = 42;
-    const rand = () => { seed = (seed * 16807 + 0) % 2147483647; return (seed & 0x7fffffff) / 2147483647; };
+    const played = duration > 0 ? Math.min(1, currentTime / duration) : 0;
 
     for (let i = 0; i < bars; i++) {
-      // Create a natural waveform shape: louder in the middle, quieter at edges
-      const pos = i / bars;
-      const envelope = Math.sin(pos * Math.PI) * 0.7 + 0.15;
-      const noise = rand() * 0.5 + 0.5;
-      const barH = envelope * noise * mid;
-      const alpha = 0.25 + envelope * 0.35;
-      ctx.fillStyle = `hsla(${accent.h}, ${accent.s}%, ${accent.l}%, ${alpha})`;
-      ctx.fillRect(i * barW, mid - barH, barW - 1, barH * 2);
+      const amp = idleBars[i];
+      const barH = amp * mid * 0.92;
+      const done = (i + 0.5) / bars <= played;
+      const alpha = done ? 0.9 : 0.2 + amp * 0.2;
+      ctx.fillStyle = `hsla(${accent.h}, ${accent.s}%, ${Math.min(100, accent.l + (done ? 10 : 0))}%, ${alpha})`;
+      ctx.fillRect(i * barW, mid - barH, Math.max(1, barW - 1), barH * 2);
     }
-  }, [playing]);
+  }, [playing, canvasSize, idleBars, currentTime, duration]);
 
   // Waveform animation
   const drawWaveform = useCallback(() => {
@@ -326,6 +360,7 @@ export function EpisodePlayer({
   }, [currentTime, duration, segmentOffsets, currentEpisode.script.length]);
 
   const activeIdx = getActiveIdx();
+  const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
 
   // Auto-scroll segment list to active segment
   useEffect(() => {
@@ -396,10 +431,26 @@ export function EpisodePlayer({
     setPlaying(!playing);
   }
 
-  function seek(e: React.ChangeEvent<HTMLInputElement>) {
+  function seekTo(seconds: number) {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = Number(e.target.value);
+    audio.currentTime = Math.max(0, Math.min(seconds, duration || seconds));
+  }
+
+  function seekFromPointer(e: React.PointerEvent<HTMLDivElement>) {
+    if (!duration) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    if (!box.width) return;
+    seekTo(((e.clientX - box.left) / box.width) * duration);
+  }
+
+  function seekFromKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!duration) return;
+    const step = e.shiftKey ? 30 : 5;
+    if (e.key === "ArrowLeft") { e.preventDefault(); e.stopPropagation(); seekTo(currentTime - step); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); seekTo(currentTime + step); }
+    else if (e.key === "Home") { e.preventDefault(); e.stopPropagation(); seekTo(0); }
+    else if (e.key === "End") { e.preventDefault(); e.stopPropagation(); seekTo(duration); }
   }
 
   function seekToSegment(i: number, autoplay = true) {
@@ -624,7 +675,10 @@ export function EpisodePlayer({
         <div className="flex items-start justify-between mb-4 gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg sm:text-xl font-semibold truncate">🎙️ {currentEpisode.schemaName}</h2>
+              <h2 className="flex min-w-0 items-center gap-2 text-lg sm:text-xl font-semibold">
+                <PixelIcon name="mic" size={14} className="text-[var(--accent)]" />
+                <span className="truncate">{currentEpisode.schemaName}</span>
+              </h2>
               <HealthBadge summary={currentEpisode.qualitySummary} />
             </div>
             {currentEpisode.researchQuestion && (
@@ -678,7 +732,7 @@ export function EpisodePlayer({
               >
                 {minting ? "…" : (
                   <>
-                    <span>⛓️ Mint</span>
+                    <span className="inline-flex items-center gap-1"><PixelIcon name="chain" size={11} />Mint</span>
                     {schemaMintCount > 0 && (
                       <span className="bg-[var(--accent)]/20 rounded-full px-1.5 py-0.5 text-xs leading-none ml-0.5">
                         {schemaMintCount}×
@@ -695,7 +749,7 @@ export function EpisodePlayer({
                 className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-2.5 cursor-pointer disabled:opacity-50"
                 title="Download 3-slide visual health report as PDF"
               >
-                {reportLoading ? "…" : "📊 Report"}
+                {reportLoading ? "…" : <span className="inline-flex items-center gap-1"><PixelIcon name="chart" size={11} />Report</span>}
               </button>
             )}
 
@@ -730,7 +784,7 @@ export function EpisodePlayer({
               disabled={!currentAudioUrl}
               className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
             >
-              <span className="text-xl">{playing ? "⏸" : "▶"}</span>
+              <PixelIcon name={playing ? "pause" : "play"} size={16} />
               <span className="text-xs">{playing ? "Pause" : "Play"}</span>
             </button>
             <button
@@ -738,7 +792,7 @@ export function EpisodePlayer({
               disabled={sharing}
               className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
             >
-              <span className="text-xl">🔗</span>
+              <PixelIcon name="link" size={16} />
               <span className="text-xs">Share</span>
             </button>
             {onMint && (
@@ -747,7 +801,7 @@ export function EpisodePlayer({
                 disabled={minting}
                 className="flex flex-col items-center gap-1 text-[var(--accent)] disabled:opacity-50"
               >
-                <span className="text-xl">⛓️</span>
+                <PixelIcon name="chain" size={16} />
                 <span className="text-xs">Mint</span>
               </button>
             )}
@@ -774,21 +828,32 @@ export function EpisodePlayer({
               <button
                 data-testid="play-button"
                 onClick={togglePlay}
-                className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-full w-10 h-10 flex items-center justify-center text-lg cursor-pointer shrink-0"
+                className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-full w-10 h-10 flex items-center justify-center cursor-pointer shrink-0"
                 aria-label={playing ? "Pause" : "Play"}
               >
-                {playing ? "⏸" : "▶"}
+                <PixelIcon name={playing ? "pause" : "play"} size={14} />
               </button>
-              <input
-                type="range"
-                min={0}
-                max={duration || 0}
-                step={0.1}
-                value={currentTime}
-                onChange={seek}
-                className="flex-1 accent-[var(--accent)]"
+              <div
+                role="slider"
+                tabIndex={0}
                 aria-label="Seek"
-              />
+                aria-valuemin={0}
+                aria-valuemax={Math.round(duration)}
+                aria-valuenow={Math.round(currentTime)}
+                aria-valuetext={`${fmt(currentTime)} of ${duration > 0 ? fmt(duration) : "unknown"}`}
+                onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); seekFromPointer(e); }}
+                onPointerMove={(e) => { if (e.buttons > 0) seekFromPointer(e); }}
+                onKeyDown={seekFromKey}
+                className="group relative h-6 flex-1 cursor-pointer touch-none select-none focus-visible:outline-none"
+              >
+                <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 bg-[var(--border)]" aria-hidden />
+                <div className="absolute left-0 top-1/2 h-2 -translate-y-1/2 bg-[var(--accent)]/70" style={{ width: `${progress * 100}%` }} aria-hidden />
+                <div
+                  className="absolute top-1/2 h-4 w-1 -translate-x-1/2 -translate-y-1/2 bg-[var(--accent)] group-focus-visible:ring-2 group-focus-visible:ring-[var(--accent)]/60"
+                  style={{ left: `${progress * 100}%` }}
+                  aria-hidden
+                />
+              </div>
               <button
                 onClick={cycleSpeed}
                 className="text-xs font-mono bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded px-1.5 py-0.5 cursor-pointer shrink-0 tabular-nums"
@@ -816,12 +881,15 @@ export function EpisodePlayer({
 
         {/* Contextual nudge */}
         {nudge && (
-          <div className="mt-3 text-center text-xs text-[var(--text-muted)] animate-slide-up">
-            {nudge === "download" && "💡 Want a fresh episode every week? "}
-            {nudge === "share" && "💡 Share it with your whole team automatically — "}
-            <a href="/#pricing" className="text-[var(--accent)] hover:underline">
-              Get DataBard Pro →
-            </a>
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-[var(--text-muted)] animate-slide-up">
+            <PixelIcon name="spark" size={11} className="text-[var(--accent)]" />
+            <span>
+              {nudge === "download" && "Want a fresh episode every week? "}
+              {nudge === "share" && "Share it with your whole team automatically — "}
+              <a href="/#pricing" className="text-[var(--accent)] hover:underline">
+                Get DataBard Pro →
+              </a>
+            </span>
           </div>
         )}
       </div>
@@ -838,8 +906,8 @@ export function EpisodePlayer({
             { id: "actions" as const, label: "Actions", count: actionItems.length > 0 ? `${actionItems.length - checkedActions.size}` : undefined },
             { id: "insights" as const, label: "Briefing", count: insights ? `${insights.healthScore}` : undefined },
             { id: "segments" as const, label: "Transcript" },
-            ...(currentEpisode.musicPlan ? [{ id: "anthem" as const, label: "🎵 Anthem" }] : []),
-            { id: "team" as const, label: "👥 Team" },
+            ...(currentEpisode.musicPlan ? [{ id: "anthem" as const, label: "Anthem" }] : []),
+            { id: "team" as const, label: "Team" },
           ]).map((tab) => (
             <button
               key={tab.id}
@@ -1017,11 +1085,7 @@ export function EpisodePlayer({
           <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
             {/* Health score */}
             <div className="flex items-center gap-4">
-              <div className={`text-3xl font-bold tabular-nums ${
-                insights.healthLabel === "healthy" ? "text-[var(--success)]"
-                : insights.healthLabel === "at-risk" ? "text-yellow-400"
-                : "text-[var(--danger)]"
-              }`}>
+              <div className={`text-3xl font-bold tabular-nums ${scoreTextClass(insights.healthScore)}`}>
                 {insights.healthScore}
               </div>
               <div className="flex-1">
@@ -1064,9 +1128,10 @@ export function EpisodePlayer({
 
             <Link
               href={workspaceHref("/protocol", workspace)}
-              className="block text-center text-xs text-[var(--accent)] hover:underline pt-1"
+              className="flex items-center justify-center gap-1.5 text-center text-xs text-[var(--accent)] hover:underline pt-1"
             >
-              📊 Track this schema over time on the dashboard →
+              <PixelIcon name="chart" size={11} />
+              Track this schema over time on the dashboard →
             </Link>
           </div>
         )}
@@ -1204,7 +1269,7 @@ export function EpisodePlayer({
                     <span className="text-[var(--text-muted)] whitespace-normal">
                       {seg.text}
                     </span>
-                    {table && <span className="text-[var(--accent)] shrink-0 text-xs">📊</span>}
+                    {table && <PixelIcon name="chart" size={10} className="shrink-0 self-center text-[var(--accent)]" />}
                   </button>
                   {table && (
                     <TableDetail table={table} lineage={currentEpisode.schemaMeta!.lineage} />

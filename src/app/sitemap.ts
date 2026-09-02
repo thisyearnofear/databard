@@ -8,21 +8,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticPages = [
     "",
-    "/demo",
     "/protocol",
     "/market",
     "/onchain",
     "/pro",
     "/roast",
     "/league",
-    "/leaderboard",
-    "/history",
-    "/playlists",
+    "/fleet",
     "/verify",
-    "/briefing",
     "/alerts",
-    "/labs",
-    "/research",
     "/privacy",
     "/terms",
   ];
@@ -31,6 +25,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${base}${path}`,
     lastModified,
     changeFrequency: path === "" || path === "/league" ? "daily" : "weekly",
-    priority: path === "" ? 1.0 : path === "/league" || path === "/demo" ? 0.9 : 0.6,
+    priority: path === "" ? 1.0 : path === "/league" ? 0.9 : 0.6,
   }));
 }

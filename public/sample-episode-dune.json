@@ -4,6 +4,7 @@
   "researchQuestion": "What are the biggest risks hiding in Uniswap's onchain data?",
   "tableCount": 6,
   "qualitySummary": { "passed": 8, "failed": 3, "total": 11 },
+  "healthScore": 61,
   "generatedAt": "2026-05-06T10:00:00Z",
   "schemaMeta": {
     "fqn": "dune.uniswap",

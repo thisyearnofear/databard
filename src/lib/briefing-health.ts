@@ -1,9 +1,13 @@
+import { scoreTone, type ScoreTone } from "@/lib/product/score-tone";
+
 /** Shared health presentation semantics for briefing surfaces. */
 export type HealthTone = "green" | "orange" | "red";
 export type HealthTrend = "up" | "down" | "stable";
 
+const TONE_NAME: Record<ScoreTone, HealthTone> = { good: "green", warn: "orange", bad: "red" };
+
 export function healthTone(score: number): HealthTone {
-  return score >= 80 ? "green" : score >= 50 ? "orange" : "red";
+  return TONE_NAME[scoreTone(score)];
 }
 
 export function healthTrend(history: number[]): HealthTrend {

@@ -2,7 +2,7 @@
  * POST /api/demo/seed — idempotently seed deterministic demo data.
  *
  * Seeds two things:
- *  1. Demo episodes (always re-written — share entries expire in 24h):
+ *  1. Demo episodes (always re-written — share entries expire in 7 days):
  *     - "demo"            → public/sample-episode-dune.json + /demo-episode-dune.mp3
  *     - "demo-enterprise" → public/sample-episode.json      + /demo-episode.mp3
  *     Both stored via the shares mechanism with a 7-day TTL.
@@ -22,7 +22,7 @@ import { analyzeSchema } from "@/lib/schema-analysis";
 import type { Episode, SchemaMeta, TableMeta, QualityTest, ColumnMeta } from "@/lib/types";
 
 const SEED_FLAG = "demo:seeded:v1";
-const SEED_FLAG_TTL = 86400 * 90; // matches snapshot TTL
+const SEED_FLAG_TTL = 86400 * 6; // re-seed the demo arc inside every ISO week
 const SHARE_TTL = 86400 * 7; // 7 days
 const DAY = 86400_000;
 const HOUR = 3600_000;
@@ -425,8 +425,8 @@ async function readDemoEpisode(file: string, audioUrl: string): Promise<Episode>
 
 export async function POST() {
   try {
-    // Share entries expire after 24h in normal use — always re-write them so
-    // repeated demos never hit an expired episode.
+    // Share entries expire after 7 days — always re-write them so repeated
+    // demos never hit an expired episode.
     const [dune, enterprise] = await Promise.all([
       readDemoEpisode("sample-episode-dune.json", "/demo-episode-dune.mp3"),
       readDemoEpisode("sample-episode.json", "/demo-episode.mp3"),

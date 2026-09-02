@@ -210,7 +210,7 @@ export function DitherButton({
           style={bloomStyle}
         />
       )}
-      <span className="relative">{children}</span>
+      <span className="relative inline-flex items-center justify-center gap-1.5">{children}</span>
     </button>
   )
 }

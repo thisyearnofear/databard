@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
+import { Space_Grotesk } from "next/font/google";
 import { AppProviders } from "@/components/AppProviders";
 import { ClientProviders } from "@/components/ClientProviders";
 import { ToastProvider } from "@/components/Toast";
 import { HeaderBar } from "@/components/HeaderBar";
 import "./globals.css";
+
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+/** Applies the persisted theme before first paint — ThemeToggle is not mounted
+ *  on "/" or "/episode/*", so without this those routes flash the wrong theme. */
+const THEME_BOOTSTRAP = `try{var t=localStorage.getItem("databard:theme");document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark")}catch(e){}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "http://localhost:3000"),
@@ -25,8 +37,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="dark">
+    <html lang="en" data-theme="dark" className={display.variable}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="alternate" type="application/rss+xml" title="DataBard Podcast Feed" href="/api/feed" />
         {/* Plausible analytics — only loads if NEXT_PUBLIC_PLAUSIBLE_DOMAIN is set */}

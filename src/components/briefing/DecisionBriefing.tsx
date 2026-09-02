@@ -1,4 +1,4 @@
-import { DitherAvatar, DitherButton } from "@/components/dither-kit";
+import { DitherAvatar, DitherButton, PixelIcon } from "@/components/dither-kit";
 import { costLine } from "@/lib/cost-framing";
 import type { SourceCard } from "./types";
 
@@ -56,7 +56,8 @@ export function DecisionBriefing({ cards, isProtocols, onListen }: DecisionBrief
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Recommended action</p>
           <p className="mt-2 text-sm font-medium leading-snug">{nextAction}</p>
           {episodeId && (
-            <DitherButton color="purple" variant="gradient" onClick={() => onListen(episodeId)} className="mt-4 px-3 py-2 text-xs font-semibold">
+            <DitherButton color="purple" variant="solid" onClick={() => onListen(episodeId)} className="mt-4 px-3 py-2 text-xs font-semibold">
+              <PixelIcon name="play" size={10} />
               Listen to the briefing
             </DitherButton>
           )}

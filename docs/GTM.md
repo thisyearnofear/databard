@@ -173,7 +173,7 @@ Use this during interviews to be honest about the current state. Don't oversell 
 | Episode / card sharing | Live | Score card OG (`/api/og`), 21-day share TTL, ~15s finding clip, no wallet on shared page |
 | Public league | Live | `/league` + `/api/league` + `/api/og/league` — weekly accounting magnet |
 | Monday from the finding | Live | Email capture on finding surfaces; Pro still for multi-schema digests |
-| On-chain attestation | Live (Protocols) | Mint health reports on Solana, verify on /verify, leaderboard |
+| On-chain attestation | Live (Protocols) | Mint health reports on Solana, verify on /verify, league Full index |
 | Pro subscription | Live | $49/month via Stripe |
 | A2MCP tools (agent-callable) | Live | `databard_health_check` (free), `databard_briefing` (1 USDT via x402), `databard_write_back` (free) |
 | DataHub write-back | Live | Writes governance docs, health/defect tags, suggested ownership back into DataHub graph |
@@ -320,7 +320,7 @@ These are guesses. The interviews and analytics will tell us the real numbers.
 > *"Get users manually. Go to them. Don't wait for them to come to you."*
 > — Paul Graham
 
-The email capture forms on shared episodes, verify, leaderboard, and landing
+The email capture forms on shared episodes, verify, league, and landing
 page are passive — they wait for the user. The first 10 users come from us
 going to them. This is the list.
 

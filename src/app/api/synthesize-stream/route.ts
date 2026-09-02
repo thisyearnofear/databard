@@ -219,6 +219,7 @@ export async function POST(req: NextRequest) {
             tableCount: meta.tables.length,
             testsTotal: totalTests,
             testsFailed: failedTests,
+            healthScore: insights.healthScore,
             script: fullScript,
             schemaMeta: meta,
             researchTrail,

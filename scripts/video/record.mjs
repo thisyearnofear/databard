@@ -3,19 +3,18 @@
  * Record the demo video via Playwright.
  *
  * Walks a scripted tour of the DataBard marketplace: /market Watchdog auction,
- * head-to-head race, Consumer → Digest graph, /loop audit trail, /market/receipts
- * ledger. Playwright records the tab; ffmpeg later mixes in the ElevenLabs voice track.
+ * head-to-head race, Consumer → Digest graph, and the settlement receipts ledger.
+ * Playwright records the tab; ffmpeg later mixes in the ElevenLabs voice track.
  *
- * Beats (approximate wall-clock; total ≈ 100s):
+ * Beats (approximate wall-clock; total ≈ 90s):
  *   0:00  /market — Watchdog track, delta meter jitters
  *   0:04  trigger cycle → bids fly in
  *   0:20  buyer rationale streams, winner pulses
  *   0:32  escrow lifecycle: DEPOSITED → DELIVERED → RELEASED
  *   0:44  cut to /market Head-to-head, trigger, two races run in parallel
- *   1:04  cut to /loop — audit trail with green/red iteration cards
- *   1:14  cut to /market/receipts — public ledger, hover a mint link
- *   1:24  cut back to /market Watchdog, hover an Explorer link on a settled deal
- *   1:34  fade out
+ *   1:04  /market Settlement receipts tab — public ledger, hover a mint link
+ *   1:14  cut back to /market Watchdog, hover an Explorer link on a settled deal
+ *   1:24  fade out
  */
 import { chromium } from "playwright";
 import { resolve, join } from "path";
@@ -87,20 +86,14 @@ async function main() {
     await page.mouse.wheel(0, 300).catch(() => {});
     await beat(page, 4000, "scrolled to combined episode receipt");
 
-    // ── Beat 4 — /loop audit trail ──────────────────────────────────
-    await goto(page, "/loop", "verification audit trail");
-    await beat(page, 8000, "iterations + commits visible");
-    await page.mouse.wheel(0, 400).catch(() => {});
-    await beat(page, 3000, "scroll through more iterations");
-
-    // ── Beat 5 — /market/receipts public ledger ─────────────────────
-    await goto(page, "/market/receipts", "settlement ledger");
+    // ── Beat 4 — /market settlement receipts ledger ─────────────────
+    await click(page, "text=Settlement receipts", "switch to receipts");
     await beat(page, 6000, "50 settled deals visible");
     // Hover a mint link to draw attention
     await page.hover("a:has-text('mint ↗')").catch(() => {});
     await beat(page, 3000, "on-chain mint attestations");
 
-    // ── Beat 6 — back to /market, fade-out beat ─────────────────────
+    // ── Beat 5 — back to /market, fade-out beat ─────────────────────
     await goto(page, "/market", "back to the auction");
     await beat(page, 4000, "fade out");
   } catch (err) {

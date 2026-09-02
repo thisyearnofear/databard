@@ -12,6 +12,8 @@
  * because many cloud providers block outbound port 465.
  */
 
+import { scoreHex } from "@/lib/product/score-tone";
+
 export interface DigestNotification {
   schemaName: string;
   healthScore: number;
@@ -60,7 +62,7 @@ export async function sendDigestEmail(notification: DigestNotification): Promise
           html: `<div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
             <h2 style="margin-bottom: 0.5rem;">Your weekly data health briefing</h2>
             <p style="color: #666; margin-bottom: 1rem;">${schemaName}</p>
-            <div style="font-size: 2rem; font-weight: bold; color: ${healthScore >= 80 ? "#22c55e" : healthScore >= 50 ? "#eab308" : "#ef4444"};">${healthScore}/100</div>
+            <div style="font-size: 2rem; font-weight: bold; color: ${scoreHex(healthScore)};">${healthScore}/100</div>
             ${healthScoreChange ? `<p style="color: ${healthScoreChange > 0 ? "#22c55e" : "#ef4444"}; font-size: 0.875rem;">${healthScoreChange > 0 ? "↑" : "↓"} ${Math.abs(healthScoreChange)} from last week</p>` : ""}
             <p style="margin: 1rem 0; color: #444;">${summary}</p>
             <a href="${episodeUrl}" style="display: inline-block; background: #6366f1; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; margin: 0.5rem 0;">▶ Listen to briefing</a>
@@ -103,7 +105,7 @@ export async function sendDigestEmail(notification: DigestNotification): Promise
           html: `<div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
             <h2 style="margin-bottom: 0.5rem;">Your weekly data health briefing</h2>
             <p style="color: #666; margin-bottom: 1rem;">${schemaName}</p>
-            <div style="font-size: 2rem; font-weight: bold; color: ${healthScore >= 80 ? "#22c55e" : healthScore >= 50 ? "#eab308" : "#ef4444"};">${healthScore}/100</div>
+            <div style="font-size: 2rem; font-weight: bold; color: ${scoreHex(healthScore)};">${healthScore}/100</div>
             ${healthScoreChange ? `<p style="color: ${healthScoreChange > 0 ? "#22c55e" : "#ef4444"}; font-size: 0.875rem;">${healthScoreChange > 0 ? "↑" : "↓"} ${Math.abs(healthScoreChange)} from last week</p>` : ""}
             <p style="margin: 1rem 0; color: #444;">${summary}</p>
             <a href="${episodeUrl}" style="display: inline-block; background: #6366f1; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; margin: 0.5rem 0;">▶ Listen to briefing</a>

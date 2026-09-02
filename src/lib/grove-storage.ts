@@ -43,11 +43,13 @@ export async function uploadEpisodeToGrove(
     researchQuestion: episode.researchQuestion,
     tableCount: episode.tableCount,
     qualitySummary: episode.qualitySummary,
-    healthScore: episode.qualitySummary
-      ? Math.round(
-          (episode.qualitySummary.passed / Math.max(episode.qualitySummary.total, 1)) * 100
-        )
-      : null,
+    healthScore:
+      episode.healthScore ??
+      (episode.qualitySummary
+        ? Math.round(
+            (episode.qualitySummary.passed / Math.max(episode.qualitySummary.total, 1)) * 100
+          )
+        : null),
     script: episode.script,
     musicPlan: episode.musicPlan ?? null,
     generatedAt: new Date().toISOString(),

@@ -13,7 +13,7 @@ const SolanaProvider = dynamic(
   { ssr: false }
 );
 
-const SOLANA_PATHS = new Set(["/onchain", "/verify", "/leaderboard", "/history"]);
+const SOLANA_PATHS = new Set(["/onchain", "/verify"]);
 const LOCATION_CHANGE_EVENT = "databard:location-change";
 
 let historyEventsPatched = false;

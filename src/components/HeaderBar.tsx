@@ -33,7 +33,7 @@ function HeaderBarInner() {
     <header className="sticky top-3 z-50 mx-auto mt-3 w-[min(100%-2rem,68rem)]">
       <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur px-3 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
         <Link href={homeHref(workspace)} aria-label="Back to DataBard home" className="inline-flex shrink-0 items-center py-1 text-sm font-semibold tracking-tight hover:text-[var(--accent)] transition-colors">
-          DataBard <span className="ml-1 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-muted)]">Home</span>
+          DataBard <span className="ml-1 hidden text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-muted)] sm:inline">Home</span>
         </Link>
         <div className="flex shrink-0 rounded-md border border-[var(--border)] p-0.5" aria-label="Workspace">
           {(["teams", "protocols"] as const).map((target) => (

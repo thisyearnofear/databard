@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { PixelIcon } from "@/components/dither-kit";
 
 type Theme = "light" | "dark" | "system";
 
@@ -24,8 +25,6 @@ export function ThemeToggle() {
     document.documentElement.setAttribute("data-theme", next);
   }
 
-  const icon = theme === "dark" ? "🌙" : theme === "light" ? "☀️" : "💻";
-
   return (
     <button
       onClick={cycle}
@@ -33,7 +32,7 @@ export function ThemeToggle() {
       title={`Theme: ${theme}`}
       aria-label={`Switch theme (current: ${theme})`}
     >
-      {icon}
+      <PixelIcon name={theme === "light" ? "sun" : "moon"} size={14} />
     </button>
   );
 }

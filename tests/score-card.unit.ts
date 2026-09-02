@@ -19,8 +19,14 @@ const episode: Episode = {
 };
 
 describe("score-card", () => {
-  it("scores from pass rate", () => {
+  it("falls back to the pass rate when no score was frozen", () => {
     assert.equal(healthScore(episode), 68);
+  });
+
+  it("prefers the frozen engine health score over the pass ratio", () => {
+    const frozen = { ...episode, healthScore: 61 };
+    assert.equal(healthScore(frozen), 61);
+    assert.equal(scoreFromEpisode(frozen).score, 61);
   });
 
   it("picks the hooked line as the share quote", () => {

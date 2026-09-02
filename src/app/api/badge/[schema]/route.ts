@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLatestSnapshot } from "@/lib/schema-snapshots";
 import { getTeamHistory } from "@/lib/mint-stats";
+import { scoreTone, type ScoreTone } from "@/lib/product/score-tone";
 
 /**
  * GET /api/badge/{schema} — shields-style SVG health badge for READMEs and docs.
@@ -11,9 +12,12 @@ import { getTeamHistory } from "@/lib/mint-stats";
  * Solana mint (marked ⛓ verified). Every embedded badge is a live backlink.
  */
 
-function badgeColor(score: number): string {
-  return score >= 80 ? "#22c55e" : score >= 50 ? "#eab308" : "#ef4444";
-}
+/** White label text sits on this fill, so it is darker than the app's tokens. */
+const BADGE_HEX: Record<ScoreTone, string> = {
+  good: "#22c55e",
+  warn: "#eab308",
+  bad: "#ef4444",
+};
 
 function renderBadge(label: string, value: string, color: string): string {
   const charW = 6.5;
@@ -55,7 +59,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sch
 
     const svg = score === null
       ? renderBadge("data health", "not indexed", "#9ca3af")
-      : renderBadge("data health", `${score}%${verified ? " ⛓" : ""}`, badgeColor(score));
+      : renderBadge("data health", `${score}%${verified ? " ⛓" : ""}`, BADGE_HEX[scoreTone(score)]);
 
     return new NextResponse(svg, {
       headers: {

@@ -35,6 +35,7 @@ export {
 } from "./gradient"
 export { Grid } from "./grid"
 export { Legend } from "./legend"
+export { PixelIcon, type PixelIconName, type PixelIconProps } from "./icon"
 export type { DitherColor } from "./palette"
 export type { PixelBloom, PixelColor } from "./pixel"
 export { Pie, type PieProps } from "./pie"

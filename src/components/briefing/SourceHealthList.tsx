@@ -3,7 +3,7 @@ import { costLine } from "@/lib/cost-framing";
 import { healthTone } from "@/lib/briefing-health";
 import { BadgePanel } from "@/components/BadgePanel";
 import { HealthBar, TrendBadge, CoverageBar, MiniStat, CriticalTablesList, HotspotChips } from "@/components/viz";
-import { Sparkline as DitherSparkline, DitherAvatar, DitherButton } from "@/components/dither-kit";
+import { Sparkline as DitherSparkline, DitherAvatar, DitherButton, PixelIcon } from "@/components/dither-kit";
 import type { SourceCard } from "./types";
 
 function sourceLabel(card: SourceCard) {
@@ -61,7 +61,7 @@ export function SourceHealthList({ cards, isProtocols, hoveredCard, onHoverChang
                 {cost && <div className="text-xs text-[var(--danger)] mt-2">{cost}</div>}
               </div>
               {episodeId && <div className="flex gap-2 items-center">
-                <DitherButton color="purple" variant="gradient" onClick={() => onListen(episodeId)} className="px-4 py-2 text-sm font-medium">▶ Listen</DitherButton>
+                <DitherButton color="purple" variant="solid" onClick={() => onListen(episodeId)} className="px-4 py-2 text-sm font-medium"><PixelIcon name="play" size={10} />Listen</DitherButton>
                 <Link href={`/episode/${episodeId}`} className="text-[var(--text-muted)] hover:text-[var(--accent)] text-xs transition-colors">Full report →</Link>
               </div>}
             </div>

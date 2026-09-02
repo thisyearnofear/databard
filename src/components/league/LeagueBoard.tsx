@@ -6,7 +6,8 @@ import { track } from "@/lib/track";
 import { MondaySignup } from "@/components/MondaySignup";
 import { LeadCapture } from "@/components/LeadCapture";
 import { HealthBar } from "@/components/viz";
-import { scoreClass } from "@/lib/score-card";
+import { scoreTextClass } from "@/lib/product/score-tone";
+import { LeaderboardIndex } from "./LeaderboardIndex";
 import type { LeagueEdition } from "@/lib/league";
 import { homeHref, workspaceHref } from "@/lib/product/workspaces";
 
@@ -57,6 +58,7 @@ export function LeagueBoard() {
   const [edition, setEdition] = useState<LeagueEdition | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fromDemo, setFromDemo] = useState(false);
+  const [tab, setTab] = useState<"week" | "index">("week");
 
   useEffect(() => {
     setFromDemo(new URLSearchParams(window.location.search).get("from") === "demo");
@@ -81,15 +83,48 @@ export function LeagueBoard() {
         </Link>
 
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)] mt-6">
-          Weekly accounting · public sources
+          {edition?.stale ? "Latest edition · public sources" : "Weekly accounting · public sources"}
         </p>
         <h1 className="text-[28px] sm:text-[34px] font-extrabold tracking-tight mt-2">
           State of protocol data health
         </h1>
         <p className="text-sm text-[var(--text-muted)] mt-2">
-          {edition ? edition.weekLabel : "This week’s scan of public Solana sources."}
+          {edition
+            ? `${edition.weekLabel}${
+                edition.stale
+                  ? ` · data as of ${new Date(edition.asOf).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    })}`
+                  : ""
+              }`
+            : "This week’s scan of public Solana sources."}
         </p>
 
+        <div className="mt-6 flex w-fit items-center gap-1 border border-[var(--border)] bg-[var(--surface)] p-1">
+          {([["week", edition?.stale ? "Latest edition" : "This week"], ["index", "Full index"]] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              aria-pressed={tab === key}
+              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                tab === key ? "bg-[var(--accent)] text-[var(--bg)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "index" ? (
+          <div className="mt-8">
+            <LeaderboardIndex />
+          </div>
+        ) : (
+          <>
         {fromDemo && edition && (
           <section
             className="mt-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-4"
@@ -143,7 +178,7 @@ export function LeagueBoard() {
               aria-labelledby="headline-title"
             >
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--danger)]">
-                This week’s finding
+                {edition.stale ? "Latest finding" : "This week’s finding"}
               </p>
               <div className="flex items-start justify-between gap-4 mt-3">
                 <div className="min-w-0">
@@ -155,7 +190,7 @@ export function LeagueBoard() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className={`text-4xl font-bold tabular-nums ${scoreClass(edition.headline.score)}`}>
+                  <div className={`font-display text-4xl font-bold tabular-nums ${scoreTextClass(edition.headline.score)}`}>
                     {edition.headline.score}
                   </div>
                   <Change value={edition.headline.change} />
@@ -168,7 +203,14 @@ export function LeagueBoard() {
 
             <section className="mt-8" aria-labelledby="table-title">
               <div className="flex items-baseline justify-between gap-3 mb-3">
-                <h2 id="table-title" className="text-sm font-semibold">Ranked sources</h2>
+                <h2 id="table-title" className="text-sm font-semibold flex items-center gap-2">
+                  Ranked sources
+                  {edition.sample && (
+                    <span className="rounded border border-[var(--border)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                      sample roster
+                    </span>
+                  )}
+                </h2>
                 <p className="font-mono text-xs text-[var(--text-muted)]">avg {edition.average}</p>
               </div>
               <ol className="flex flex-col gap-2">
@@ -217,9 +259,9 @@ export function LeagueBoard() {
               {edition.sample
                 ? "This edition uses DataBard’s public-protocol roster while a live scan is warming up. Numbers match the engine’s last seeded snapshots of those sources."
                 : "Scores are computed by DataBard’s engine from catalog and subgraph metadata it can see — freshness, tests, coverage, lineage. This is not an official protocol audit. If a number is wrong, that is the conversation."}
-              {" "}
-              <Link href="/leaderboard" className="hover:text-[var(--text)]">Full index with claim →</Link>
             </p>
+          </>
+        )}
           </>
         )}
       </div>

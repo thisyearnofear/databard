@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { MintRecord } from "@/lib/mint-stats";
-import { DitherButton, DitherGradient } from "@/components/dither-kit";
+import { DitherButton, DitherGradient, PixelIcon } from "@/components/dither-kit";
 import { LeadCapture } from "@/components/LeadCapture";
 import { homeHref } from "@/lib/product/workspaces";
 
@@ -173,7 +173,7 @@ function VerifyPageInner() {
           <DitherButton
             type="submit"
             color="purple"
-            variant="gradient"
+            variant="solid"
             bloom="low"
             disabled={loading || !tx.trim()}
             className="px-6 py-3 text-sm font-semibold shrink-0"
@@ -315,7 +315,7 @@ function VerifyPageInner() {
               <div className="bg-[var(--surface)] border border-[var(--warning)]/40 rounded-2xl p-6 animate-slide-up hover-depth">
                 <div className="flex items-center gap-3 mb-1">
                   <span className="w-9 h-9 rounded-full bg-[var(--warning)]/15 text-[var(--warning)] flex items-center justify-center text-lg shrink-0">
-                    ⏳
+                    <PixelIcon name="clock" size={16} />
                   </span>
                   <div>
                     <p className="text-base font-bold text-[var(--warning)]">

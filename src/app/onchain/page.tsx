@@ -3,8 +3,123 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
 import type { MintRecord, MintStats } from "@/lib/mint-stats";
+import { HealthBar } from "@/components/viz";
+import { PixelIcon } from "@/components/dither-kit";
 import { homeHref, workspaceHref } from "@/lib/product/workspaces";
+import { scoreTextClass, scoreTintClass } from "@/lib/product/score-tone";
+
+interface HistoryRecord {
+  schemaName: string;
+  healthScore: number;
+  episodeId: string;
+  txSignature: string;
+  network: string;
+  createdAt: string;
+  groveCid: string | null;
+  groveMetadataUrl: string | null;
+  groveAudioUrl: string | null;
+  solDomain: string | null;
+}
+
+function explorerUrl(sig: string, network: string) {
+  return network === "mainnet-beta"
+    ? `https://explorer.solana.com/tx/${sig}`
+    : `https://explorer.solana.com/tx/${sig}?cluster=${network}`;
+}
+
+/** Wallet-scoped mint list — the owned half of the old /history route. */
+function WalletHistory() {
+  const { publicKey } = useWallet();
+  const [records, setRecords] = useState<HistoryRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!publicKey) { setRecords([]); return; }
+    setLoading(true);
+    setError(null);
+    fetch(`/api/onchain/history?wallet=${publicKey.toBase58()}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) setRecords(d.records);
+        else setError(d.error || "Failed to load your episodes");
+      })
+      .catch(() => setError("Network error"))
+      .finally(() => setLoading(false));
+  }, [publicKey]);
+
+  if (!publicKey) return null;
+
+  return (
+    <section className="w-full max-w-4xl space-y-3" aria-label="Your on-chain episodes">
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        Your episodes
+        {records.length > 0 && (
+          <span className="ml-2 normal-case tracking-normal">{records.length} mint{records.length !== 1 ? "s" : ""}</span>
+        )}
+      </h2>
+
+      {loading && <p className="text-xs text-[var(--text-muted)]">Loading your episode history…</p>}
+      {error && (
+        <div className="p-4 bg-[var(--danger)]/10 text-[var(--danger)] rounded-xl text-sm border border-[var(--danger)]/20">
+          {error}
+        </div>
+      )}
+      {!loading && !error && records.length === 0 && (
+        <p className="text-xs text-[var(--text-muted)]">
+          Nothing minted from this wallet yet. Generate an episode and mint it — the record is permanent and replayable from here.
+        </p>
+      )}
+
+      {records.map((r) => (
+        <div key={r.txSignature} className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="min-w-0">
+              <div className="font-bold text-base truncate">{r.schemaName}</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5 font-mono truncate">
+                {r.solDomain ?? r.txSignature.slice(0, 12) + "…" }
+              </div>
+            </div>
+            <div className="text-xs text-[var(--text-muted)] whitespace-nowrap">
+              {new Date(r.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+            </div>
+          </div>
+
+          <div className="mb-3.5">
+            <HealthBar score={r.healthScore} />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {r.episodeId && (
+              <Link href={`/episode/${r.episodeId}`} className="text-xs px-3 py-2 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold">
+                View episode
+              </Link>
+            )}
+            {r.groveMetadataUrl && (
+              <a href={r.groveMetadataUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-2 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold">
+                Grove metadata
+              </a>
+            )}
+            {r.groveAudioUrl && (
+              <a href={r.groveAudioUrl} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-2 rounded-md bg-[var(--accent)]/15 text-[var(--accent)] no-underline font-semibold">
+                Grove audio
+              </a>
+            )}
+            <a href={explorerUrl(r.txSignature, r.network)} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-2 rounded-md bg-[var(--bg)] text-[var(--text-muted)] no-underline">
+              Solana Explorer
+            </a>
+          </div>
+
+          {r.groveCid && (
+            <div className="mt-2.5 text-xs text-[var(--text-muted)] font-mono break-all">IPFS: {r.groveCid}</div>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
 
 function OnChainWallContent() {
   const searchParams = useSearchParams();
@@ -122,11 +237,7 @@ function OnChainWallContent() {
                         >
                           {record.schemaName}
                         </Link>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          record.healthScore >= 90 ? "bg-[var(--success)]/10 text-[var(--success)]"
-                          : record.healthScore >= 70 ? "bg-yellow-500/10 text-yellow-400"
-                          : "bg-[var(--danger)]/10 text-[var(--danger)]"
-                        }`}>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scoreTintClass(record.healthScore)}`}>
                           {record.healthScore}% Healthy
                         </span>
                       </div>
@@ -208,13 +319,13 @@ function OnChainWallContent() {
               <h3 className="text-sm font-bold">Onchain Primitives</h3>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text)]">🔐 Attestation</p>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]"><PixelIcon name="chain" size={11} className="text-[var(--accent)]" />Attestation</p>
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
                     Each health report is hashed and anchored on Solana via the Memo program. The hash proves the report existed at a specific time with a specific score.
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text)]">✅ Verification</p>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]"><PixelIcon name="search" size={11} className="text-[var(--accent)]" />Verification</p>
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
                     Anyone can verify a report by comparing the on-chain hash against the current report. Mismatch = tampering detected.
                   </p>
@@ -223,7 +334,7 @@ function OnChainWallContent() {
                   </Link>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text)]">📜 Audit Trail</p>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]"><PixelIcon name="book" size={11} className="text-[var(--accent)]" />Audit Trail</p>
                   <p className="text-xs text-[var(--text-muted)] leading-relaxed mt-0.5">
                     Multiple attestations over time create a permanent health history — auditors can track improvements and regressions without trusting DataBard's servers.
                   </p>
@@ -251,9 +362,7 @@ function OnChainWallContent() {
                {stats?.recent[0] && (
                  <div>
                    <div className="text-xs text-[var(--text-muted)] mb-1">Latest Health</div>
-                   <div className={`text-xl font-bold ${
-                     stats.recent[0].healthScore >= 90 ? "text-[var(--success)]" : "text-yellow-400"
-                   }`}>
+                   <div className={`font-display text-xl font-bold ${scoreTextClass(stats.recent[0].healthScore)}`}>
                      {stats.recent[0].healthScore}%
                    </div>
                  </div>
@@ -268,6 +377,8 @@ function OnChainWallContent() {
            </div>
         )}
       </div>
+
+      <WalletHistory />
     </>
   );
 }
@@ -287,7 +398,7 @@ export default function OnChainWall() {
       <footer className="text-xs text-[var(--text-muted)] pt-8 pb-4 flex gap-3">
         <Link href={workspaceHref("/league", "protocols")} className="hover:text-[var(--text)] transition-colors">League</Link>
         <span>·</span>
-        <Link href={workspaceHref("/protocol", "protocols")} className="hover:text-[var(--text)] transition-colors">📡 Protocol dashboard</Link>
+        <Link href={workspaceHref("/protocol", "protocols")} className="hover:text-[var(--text)] transition-colors">Protocol dashboard</Link>
         <span>·</span>
         <span>Powered by Solana Memo Program · {new Date().getFullYear()} DataBard</span>
       </footer>

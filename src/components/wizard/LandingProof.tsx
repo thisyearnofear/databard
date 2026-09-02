@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CountUp } from "@/components/CountUp";
 import type { TrendNarrative } from "@/app/api/insights/trends/route";
 import { workspaceHref, type Workspace } from "@/lib/product/workspaces";
+import { scoreTextClass } from "@/lib/product/score-tone";
 
 /**
  * Seeded Orca finding from the demo snapshots (83 → 68). Shown when the
@@ -17,16 +18,10 @@ const FALLBACK_PROTOCOL_PROOF = {
   healthScore: 68,
   healthScoreChange: -7,
   narrative:
-    "Tick bounds failing. Swap quotes stale for 72 hours. Bad ticks mean bad quotes.",
+    "Health dropped 7 points this week. Tick bounds failing. Swap quotes stale for 72 hours. Bad ticks mean bad quotes.",
 };
 
 const PROTOCOL_SOURCE = /orca|marinade|jupiter|raydium|dune|uniswap|subgraph|graph/i;
-
-function scoreClass(score: number): string {
-  if (score >= 80) return "text-[var(--success)]";
-  if (score >= 50) return "text-[var(--warning)]";
-  return "text-[var(--danger)]";
-}
 
 function pickProtocolTrend(narratives: TrendNarrative[]): TrendNarrative | null {
   const declining = narratives.filter((n) => n.healthScoreChange < 0);
@@ -94,7 +89,6 @@ export function LandingProof({
     return <section className="w-full max-w-2xl pb-10 min-h-[8.5rem]" aria-hidden />;
   }
 
-  const dropped = Math.abs(proof.healthScoreChange);
   const href = workspaceHref("/protocol", "protocols");
 
   return (
@@ -110,15 +104,12 @@ export function LandingProof({
             </p>
             <h2 className="text-xl font-bold mt-2 truncate">{proof.schemaName}</h2>
             <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
-              {dropped > 0
-                ? `Health dropped ${dropped} point${dropped === 1 ? "" : "s"} this week. `
-                : ""}
               {proof.narrative}
             </p>
             <p className="text-xs font-medium text-[var(--accent)] mt-3">Open the briefing →</p>
           </div>
           <div className="shrink-0 text-right">
-            <div className={`text-4xl font-bold tabular-nums ${scoreClass(proof.healthScore)}`}>
+            <div className={`font-display text-4xl font-bold tabular-nums ${scoreTextClass(proof.healthScore)}`}>
               <CountUp value={proof.healthScore} />
             </div>
             <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] mt-1">

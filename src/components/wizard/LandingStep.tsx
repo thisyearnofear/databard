@@ -8,6 +8,7 @@ import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
 import { setDataContext } from "@/lib/data-context";
 import { StatTile } from "@/components/viz";
+import { PixelIcon } from "@/components/dither-kit";
 import { LeadCapture } from "@/components/LeadCapture";
 import { LandingProof } from "./LandingProof";
 import type { Episode } from "@/lib/types";
@@ -176,7 +177,7 @@ export function LandingStep() {
             href={workspaceHref("/protocol", workspace)}
             className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 text-[var(--danger)] border border-[var(--danger)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
           >
-            <span>🔥</span>
+            <PixelIcon name="flame" size={12} />
             <span>
               Right now, across {totals.sources} source{totals.sources !== 1 ? "s" : ""} DataBard watches: {costHighlights(totals)[0]}
             </span>
@@ -189,7 +190,7 @@ export function LandingStep() {
             href={workspaceHref("/onchain", workspace)}
             className="relative z-10 mt-6 inline-flex items-center gap-2 text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 rounded-full px-3 py-1.5 font-medium transition-colors"
           >
-            <span>⛓️</span>
+            <PixelIcon name="chain" size={12} />
             <span><b>{state.mintStats.total.toLocaleString()}</b> reports minted on Solana</span>
           </Link>
         )}
@@ -243,10 +244,10 @@ export function LandingStep() {
         <section className="w-full max-w-2xl pb-10">
           <Link href={workspaceHref("/protocol", workspace)} className="block group">
             <div className="flex flex-wrap gap-3 justify-center">
-              <StatTile icon="📊" value={totals.sources} label="Sources watched" />
-              <StatTile icon="⚠️" value={totals.failingTests} label="Failing tests" />
-              <StatTile icon="🕐" value={totals.staleTables} label="Stale tables" />
-              <StatTile icon="📖" value={totals.undocumentedTables} label="Undocumented" />
+              <StatTile icon="chart" value={totals.sources} label="Sources watched" />
+              <StatTile icon="warning" value={totals.failingTests} label="Failing tests" />
+              <StatTile icon="clock" value={totals.staleTables} label="Stale tables" />
+              <StatTile icon="book" value={totals.undocumentedTables} label="Undocumented" />
             </div>
             <p className="text-center text-xs text-[var(--text-muted)] mt-2 group-hover:text-[var(--accent)] transition-colors">
               Live data from the dashboard →
@@ -290,7 +291,7 @@ export function LandingStep() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
           {/* Pillar 1: Synthesis */}
           <div className="text-center">
-            <div className="text-2xl mb-2">🧠</div>
+            <div className="mb-2 flex justify-center text-[var(--accent)]"><PixelIcon name="spark" size={20} /></div>
             <h3 className="text-sm font-semibold mb-1">Synthesis, not raw data</h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               {state.persona === "enterprise"
@@ -300,7 +301,7 @@ export function LandingStep() {
           </div>
           {/* Pillar 2: Always watching */}
           <div className="text-center">
-            <div className="text-2xl mb-2">🔔</div>
+            <div className="mb-2 flex justify-center text-[var(--accent)]"><PixelIcon name="bell" size={20} /></div>
             <h3 className="text-sm font-semibold mb-1">Always watching</h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               Your analyst checks your data 24/7 and reaches out via Slack or webhook when it finds something. Weekly briefings keep your team informed without a dashboard tab open.
@@ -309,7 +310,7 @@ export function LandingStep() {
           </div>
           {/* Pillar 3: weekly delivery (Teams) or attestation (Protocols) */}
           <div className="text-center">
-            <div className="text-2xl mb-2">{state.persona === "web3" ? "⛓️" : "📬"}</div>
+            <div className="mb-2 flex justify-center text-[var(--accent)]"><PixelIcon name={state.persona === "web3" ? "chain" : "mail"} size={20} /></div>
             <h3 className="text-sm font-semibold mb-1">
               {state.persona === "web3" ? "Verifiable by design" : "In the Monday inbox"}
             </h3>
@@ -335,7 +336,7 @@ export function LandingStep() {
       <section className="enter-up enter-delay-3 w-full max-w-2xl pb-12">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">🪸</span>
+            <span className="text-[var(--accent)]"><PixelIcon name="search" size={16} /></span>
             <h2 className="text-lg font-semibold">Query 50+ sources with SQL</h2>
           </div>
           <p className="text-sm text-[var(--text-muted)] mb-4">
@@ -464,8 +465,9 @@ export function LandingStep() {
             <Link href="/labs" className="hover:text-[var(--text)] transition-colors">
               Labs
             </Link>
-            <Link href="/roast" className="hover:text-[var(--text)] transition-colors">
-              🔥 Roast my data
+            <Link href="/roast" className="inline-flex items-center gap-1.5 hover:text-[var(--text)] transition-colors">
+              <PixelIcon name="flame" size={11} className="text-[var(--danger)]" />
+              Roast my data
             </Link>
             {state.persona === "web3" && (
               <Link href={workspaceHref("/league", workspace)} className="hover:text-[var(--text)] transition-colors">

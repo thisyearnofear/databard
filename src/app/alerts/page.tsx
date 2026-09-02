@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { InsightSummary } from "@/app/api/insights/route";
 import type { AlertSubscription } from "@/lib/mint-stats";
+import { scoreTextClass } from "@/lib/product/score-tone";
 
 const inputClass = "w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors";
 
@@ -215,11 +216,7 @@ export default function AlertsPage() {
                       </div>
                     </div>
                     {currentHealth != null && (
-                      <span className={`text-sm font-bold tabular-nums ${
-                        currentHealth >= 80 ? "text-[var(--success)]"
-                        : currentHealth >= 50 ? "text-yellow-400"
-                        : "text-[var(--danger)]"
-                      }`}>
+                      <span className={`text-sm font-bold tabular-nums ${scoreTextClass(currentHealth)}`}>
                         {currentHealth}%
                       </span>
                     )}

@@ -30,7 +30,7 @@ async function main() {
 
   // Scene 2: Dashboard - click "Try the demo"
   console.log("Scene 2: Dashboard");
-  await page.goto(`${BASE}/demo`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/?start=demo`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1000);
   // Click the demo button to seed and go to protocol
   const demoBtn = page.locator("text=Try the demo").first();
@@ -59,9 +59,10 @@ async function main() {
     await page.screenshot({ path: path.join(OUT, "04-listen-button.png"), fullPage: false });
   }
 
-  // Scene 4: Leaderboard
-  console.log("Scene 4: Leaderboard");
-  await page.goto(`${BASE}/leaderboard`, { waitUntil: "networkidle" });
+  // Scene 4: League full index (the old leaderboard route)
+  console.log("Scene 4: League full index");
+  await page.goto(`${BASE}/league`, { waitUntil: "networkidle" });
+  await page.click("text=Full index").catch(() => {});
   await page.waitForTimeout(2000);
   await page.screenshot({ path: path.join(OUT, "05-leaderboard.png"), fullPage: false });
 

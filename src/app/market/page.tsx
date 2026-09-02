@@ -12,6 +12,7 @@ import { WatchdogMonitor, type MonitorState } from "@/components/market/Watchdog
 import { AuctionStage, type StagePhase } from "@/components/market/AuctionStage";
 import { ActivityFeed } from "@/components/market/ActivityFeed";
 import { GraphView } from "@/components/market/GraphView";
+import { ReceiptsLedger } from "@/components/market/ReceiptsLedger";
 
 // Fake delta oscillator params — visual only; the real trigger is the server-side computeDelta.
 const IDLE_DELTA_RANGE: [number, number] = [0.08, 0.15];
@@ -29,7 +30,14 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-type Track = "watchdog" | "graph" | "head-to-head";
+type Track = "watchdog" | "graph" | "head-to-head" | "receipts";
+
+const TRACKS: Array<{ key: Track; label: string }> = [
+  { key: "watchdog", label: "Watchdog auction" },
+  { key: "graph", label: "Consumer → Digest graph" },
+  { key: "head-to-head", label: "Head-to-head race" },
+  { key: "receipts", label: "Settlement receipts" },
+];
 
 interface RaceSide {
   wantId: string | null;
@@ -114,12 +122,14 @@ export default function MarketPage() {
   }, [countdown, monitorState]);
 
   async function runCycle() {
-    if (trackRef.current === "watchdog") {
-      await runWatchdogCycle();
-    } else if (trackRef.current === "graph") {
+    if (trackRef.current === "graph") {
       await runGraphCycle();
-    } else {
+    } else if (trackRef.current === "head-to-head") {
       await runHeadToHeadCycle();
+    } else {
+      // Watchdog track — also runs while the receipts ledger is open, so the
+      // ledger keeps filling with freshly settled deals.
+      await runWatchdogCycle();
     }
   }
 
@@ -335,40 +345,22 @@ export default function MarketPage() {
             Live on devnet · ErwrNVN…sauYmfgdK ↗
           </a>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setTrack("watchdog")}
-            className={[
-              "px-3 py-2.5 rounded text-sm border",
-              track === "watchdog"
-                ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
-                : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
-            ].join(" ")}
-          >
-            Watchdog auction
-          </button>
-          <button
-            onClick={() => setTrack("graph")}
-            className={[
-              "px-3 py-2.5 rounded text-sm border",
-              track === "graph"
-                ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
-                : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
-            ].join(" ")}
-          >
-            Consumer → Digest graph
-          </button>
-          <button
-            onClick={() => setTrack("head-to-head")}
-            className={[
-              "px-3 py-2.5 rounded text-sm border",
-              track === "head-to-head"
-                ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
-                : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
-            ].join(" ")}
-          >
-            Head-to-head race
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {TRACKS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTrack(key)}
+              aria-pressed={track === key}
+              className={[
+                "px-3 py-2.5 rounded text-sm border",
+                track === key
+                  ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]"
+                  : "bg-[var(--surface)] text-[var(--text)] border-[var(--border)]",
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -460,6 +452,15 @@ export default function MarketPage() {
                   the market responded to buyer budget in real time.
                 </div>
               )}
+            </section>
+          )}
+
+          {track === "receipts" && (
+            <section className="space-y-3">
+              <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">
+                Every settled deal · verifiable outside DataBard via its Explorer links
+              </div>
+              <ReceiptsLedger />
             </section>
           )}
         </div>

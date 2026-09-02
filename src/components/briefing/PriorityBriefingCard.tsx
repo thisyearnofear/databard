@@ -1,4 +1,4 @@
-import { DitherAvatar, DitherButton, DitherGradient } from "@/components/dither-kit";
+import { DitherAvatar, DitherButton, DitherGradient, PixelIcon } from "@/components/dither-kit";
 import { MondaySignup } from "@/components/MondaySignup";
 import type { BriefingEpisodeMeta } from "./types";
 
@@ -23,8 +23,9 @@ export function PriorityBriefingCard({ episode, isProtocols, onListen }: Priorit
             </p>
           </div>
         </div>
-        <DitherButton color="purple" variant="gradient" bloom="low" onClick={onListen} className="px-5 py-2.5 text-sm font-semibold shrink-0">
-          ▶ Listen to the briefing
+        <DitherButton color="purple" variant="solid" bloom="low" onClick={onListen} className="px-5 py-2.5 text-sm font-semibold shrink-0">
+          <PixelIcon name="play" size={11} />
+          Listen to the briefing
         </DitherButton>
       </div>
       <div className="relative mt-4 pt-4 border-t border-[var(--accent)]/20">
