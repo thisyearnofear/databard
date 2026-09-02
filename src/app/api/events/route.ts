@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordEvent, getEventStats, EVENT_TYPES, type EventType } from "@/lib/events";
+import { recordPageView, getPageviewStats } from "@/lib/pageviews";
 import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/events — record an anonymous usage event ({ type, meta? }).
- * GET  /api/events — aggregate stats (counts by type, listen completion rate).
+ * GET  /api/events — aggregate stats (counts by type, listen completion rate)
+ *                    plus the pageview denominator (total, last7d, by path/source).
  *
  * The behavioral substrate for product decisions: hypotheses get tested
  * against what users actually did, not what they said they'd do.
@@ -30,7 +32,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await recordEvent(type, meta);
+    // page_view is the traffic denominator — its own rolling file so high-volume
+    // pageviews never evict the low-volume funnel ledger. Everything else is a funnel event.
+    if (type === "page_view") await recordPageView(meta);
+    else await recordEvent(type, meta);
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
@@ -40,8 +45,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    const stats = await getEventStats();
-    return NextResponse.json({ ok: true, stats });
+    const [stats, pageviews] = await Promise.all([getEventStats(), getPageviewStats()]);
+    return NextResponse.json({ ok: true, stats, pageviews });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

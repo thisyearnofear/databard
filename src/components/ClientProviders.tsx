@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { workspaceFromSearch } from "@/lib/product/workspaces";
+import { track } from "@/lib/track";
 
 // Dynamic import: SolanaProvider pulls in @solana/web3.js, wallet adapters,
 // and 400+ transitive packages. Wrapping with dynamic({ ssr: false }) keeps
@@ -63,6 +64,17 @@ export function ClientProviders({ children }: { children: ReactNode }) {
   const search = useSyncExternalStore(subscribeToSearchChanges, currentSearch, () => "");
   // Wallet code belongs on actual on-chain surfaces, not shared score cards.
   const solanaEnabled = needsSolanaProvider(pathname, search);
+
+  // Universal pageview denominator. Keyed on pathname only (not query), so SPA
+  // query changes like the workspace toggle don't double-count, and the ref
+  // guards against re-firing the same route on remount.
+  const lastTracked = useRef("");
+  useEffect(() => {
+    if (pathname && pathname !== lastTracked.current) {
+      lastTracked.current = pathname;
+      track("page_view", { path: pathname });
+    }
+  }, [pathname]);
 
   return solanaEnabled ? <SolanaProvider>{children}</SolanaProvider> : <>{children}</>;
 }

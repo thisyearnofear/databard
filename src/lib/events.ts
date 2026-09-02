@@ -7,6 +7,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { getDataPath } from "./data-dir";
+import { serial } from "./serial-queue";
 
 const EVENTS_FILE = getDataPath("events.json");
 const MAX_EVENTS = 10_000; // rolling window — oldest dropped beyond this
@@ -25,6 +26,7 @@ export const EVENT_TYPES = [
   "feedback_yes",
   "feedback_no",
   // Funnel events (GTM instrumentation)
+  "page_view",                // universal route denominator — stored in pageviews.json, not the funnel ledger
   "landing_cta_click",        // which CTA: demo vs connect
   "demo_play",                // zero-friction demo played
   "persona_toggle",           // enterprise vs onchain switch
@@ -62,10 +64,12 @@ async function readAll(): Promise<UsageEvent[]> {
 }
 
 export async function recordEvent(type: EventType, meta?: Record<string, string>): Promise<void> {
-  const all = await readAll();
-  all.push({ type, ...(meta ? { meta } : {}), createdAt: new Date().toISOString() });
-  const trimmed = all.length > MAX_EVENTS ? all.slice(-MAX_EVENTS) : all;
-  await fs.writeFile(EVENTS_FILE, JSON.stringify(trimmed), "utf-8");
+  await serial("events", async () => {
+    const all = await readAll();
+    all.push({ type, ...(meta ? { meta } : {}), createdAt: new Date().toISOString() });
+    const trimmed = all.length > MAX_EVENTS ? all.slice(-MAX_EVENTS) : all;
+    await fs.writeFile(EVENTS_FILE, JSON.stringify(trimmed), "utf-8");
+  });
 }
 
 export interface EventStats {
@@ -76,7 +80,7 @@ export interface EventStats {
 }
 
 export async function getEventStats(): Promise<EventStats> {
-  const all = await readAll();
+  const all = await serial("events", readAll);
   const byType: Record<string, number> = {};
   for (const e of all) byType[e.type] = (byType[e.type] ?? 0) + 1;
   const starts = byType["listen_start"] ?? 0;

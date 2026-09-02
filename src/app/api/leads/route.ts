@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { getDataPath } from "@/lib/data-dir";
+import { serial } from "@/lib/serial-queue";
 
 const LEADS_FILE = getDataPath("leads.json");
 
@@ -36,22 +37,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid email format" }, { status: 400 });
     }
 
-    await ensureFile();
-
-    const raw = await fs.readFile(LEADS_FILE, "utf-8");
-    const leads: Lead[] = JSON.parse(raw);
-
-    // Deduplicate by email
-    if (leads.some((l) => l.email.toLowerCase() === email.toLowerCase())) {
-      return NextResponse.json({ ok: true, message: "Already registered" });
-    }
-
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? req.headers.get("x-real-ip") ?? null;
 
-    leads.push({ email, source: String(source), createdAt: new Date().toISOString(), ip });
-    await fs.writeFile(LEADS_FILE, JSON.stringify(leads, null, 2), "utf-8");
+    // Serialize the read-check-write so two concurrent signups can't clobber each
+    // other and drop a lead — the highest-value record we capture.
+    const duplicate = await serial("leads", async () => {
+      await ensureFile();
+      const raw = await fs.readFile(LEADS_FILE, "utf-8");
+      const leads: Lead[] = JSON.parse(raw);
+      if (leads.some((l) => l.email.toLowerCase() === email.toLowerCase())) return true;
+      leads.push({ email, source: String(source), createdAt: new Date().toISOString(), ip });
+      await fs.writeFile(LEADS_FILE, JSON.stringify(leads, null, 2), "utf-8");
+      return false;
+    });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(duplicate ? { ok: true, message: "Already registered" } : { ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
