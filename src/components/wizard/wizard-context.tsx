@@ -83,7 +83,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     "dbt-cloud": "Find Account ID and Project ID in your dbt Cloud URL. Generate a token at Account Settings → API Access.",
     "dbt-local": "Run `dbt compile` first, then point to the generated manifest.json in your target/ directory.",
     "the-graph": "Paste any subgraph endpoint URL. DataBard introspects the GraphQL schema and treats entities as tables.",
-    dune: "Enter your Dune API key and your Dune username. DataBard runs your queries and analyzes the results to create data-rich episodes.",
+    dune: "Enter your Dune API key and username. DataBard runs your queries and analyzes the results — this needs a Dune plan that includes API execution. No paid Dune plan? Connect Coral to query 50+ sources with no Dune key.",
     coral: "Query 50+ sources via SQL — GitHub, Slack, Jira, Postgres, Notion, Stripe, and more. Join across sources in a single query.",
     datahub: "Connect your DataHub GMS instance (server URL + optional personal access token). DataBard reads the context graph — datasets, lineage, owners, tags, assertions — and synthesises it into briefings and health scores.",
   };

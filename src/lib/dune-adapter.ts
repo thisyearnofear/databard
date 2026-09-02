@@ -90,6 +90,39 @@ export function getDuneTableStats(fqn: string): Record<string, TableStatSummary>
 const DUNE_API_BASE = "https://api.dune.com/api/v1";
 const NUMERIC_TYPES = new Set(["int", "integer", "long", "bigint", "double", "float", "decimal", "number"]);
 
+/** A Dune API failure that carries its HTTP status, so callers can tell a
+ *  transient blip from something the user must act on (bad key, gated plan). */
+class DuneApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = "DuneApiError";
+  }
+  /** Auth / permission / payment failures — retrying won't help; surface them. */
+  get hard(): boolean {
+    return this.status === 401 || this.status === 402 || this.status === 403;
+  }
+}
+
+/** Turn a Dune HTTP status into an honest, actionable message. Reports what Dune
+ *  actually returned (no guesses about their pricing), and steers gated users to
+ *  Coral — key-free SQL across 50+ sources — instead of a silent, hollow analysis. */
+function duneErrorMessage(status: number, statusText: string): string {
+  switch (status) {
+    case 401:
+      return "Dune rejected your API key (401). Double-check it under Dune → Settings → API keys.";
+    case 402:
+      return "Running this query through the Dune API requires a paid Dune plan (402). Upgrade your Dune plan, or connect Coral to query 50+ sources with no Dune key.";
+    case 403:
+      return "Your Dune key isn't allowed to run this query (403) — it may be private to another account, or your plan doesn't include API execution. Coral queries 50+ sources with no Dune key.";
+    case 404:
+      return "Dune query not found (404). Check the query ID.";
+    case 429:
+      return "Dune rate limit reached (429). Wait a minute and try again.";
+    default:
+      return `Dune API error: ${status} ${statusText}`;
+  }
+}
+
 // ── HTTP helpers with retry + timeout ──
 
 async function duneGet<T>(path: string, apiKey: string, retries = 3): Promise<T> {
@@ -104,11 +137,14 @@ async function duneGet<T>(path: string, apiKey: string, retries = 3): Promise<T>
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
-      if (!res.ok) throw new Error(`Dune API error: ${res.status} ${res.statusText}`);
+      if (!res.ok) throw new DuneApiError(res.status, duneErrorMessage(res.status, res.statusText));
       return res.json() as Promise<T>;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
-      if (attempt < retries - 1 && !(e instanceof Error && e.message.includes("40"))) {
+      // Retry transient failures (network, timeout, 5xx, 429). Never retry a hard
+      // 4xx — a bad key or gated plan won't fix itself on the next attempt.
+      const noRetry = e instanceof DuneApiError && e.status >= 400 && e.status < 500 && e.status !== 429;
+      if (attempt < retries - 1 && !noRetry) {
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         continue;
       }
@@ -125,7 +161,7 @@ async function dunePost<T>(path: string, body: Record<string, unknown>, apiKey: 
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   });
-  if (!res.ok) throw new Error(`Dune API error: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw new DuneApiError(res.status, duneErrorMessage(res.status, res.statusText));
   return res.json() as Promise<T>;
 }
 
@@ -166,7 +202,10 @@ async function executeAndFetchResults(
       apiKey
     );
     executionId = execRes.execution_id;
-  } catch {
+  } catch (e) {
+    // A gated plan or bad key is the user's to act on — surface it. Anything
+    // transient (rate limit, 5xx, network) degrades quietly to metadata-only.
+    if (e instanceof DuneApiError && e.hard) throw e;
     return null;
   }
 
@@ -337,14 +376,21 @@ export async function fetchDuneBatch(queryIds: number[], apiKey: string): Promis
 
   // Execute non-parameterized queries (limit concurrency to 3)
   const statsMap = new Map<number, TableStatSummary>();
+  let execNote: string | undefined;
   const executable = queries.filter((q) => !q.parameters || q.parameters.length === 0);
   
   const executeBatch = async (batch: DuneQuery[]) => {
     await Promise.all(
       batch.map(async (q) => {
-        const result = await executeAndFetchResults(q.query_id, apiKey);
-        if (result && result.rows.length > 0) {
-          statsMap.set(q.query_id, computeColumnStats(result.rows, result.meta));
+        try {
+          const result = await executeAndFetchResults(q.query_id, apiKey);
+          if (result && result.rows.length > 0) {
+            statsMap.set(q.query_id, computeColumnStats(result.rows, result.meta));
+          }
+        } catch (e) {
+          // Execution gated (e.g. a Dune plan without API execution). Keep going on
+          // metadata, but remember why so the episode is honest about the gap.
+          if (e instanceof DuneApiError && e.hard && !execNote) execNote = e.message;
         }
       })
     );
@@ -372,7 +418,9 @@ export async function fetchDuneBatch(queryIds: number[], apiKey: string): Promis
   const result: SchemaMeta = {
     fqn,
     name: `Dune Batch (${queries.length} queries)`,
-    description: `Custom batch of Dune queries: ${queries.map(q => q.name).join(", ")}`,
+    description: execNote
+      ? `Custom batch of Dune queries: ${queries.map(q => q.name).join(", ")}. Live query execution was unavailable — ${execNote} This episode analyzed query metadata (names, columns) only, not live result rows.`
+      : `Custom batch of Dune queries: ${queries.map(q => q.name).join(", ")}`,
     tables,
     lineage: [],
   };
@@ -438,12 +486,19 @@ export async function fetchDuneMeta(config: DuneConfig, namespaceOverride?: stri
 
   // Execute queries in parallel (concurrency limit 3)
   const statsMap = new Map<number, TableStatSummary>();
+  let execNote: string | undefined;
   const executeBatch = async (batch: DuneQuery[]) => {
     await Promise.all(
       batch.map(async (q) => {
-        const result = await executeAndFetchResults(q.query_id, config.apiKey);
-        if (result && result.rows.length > 0) {
-          statsMap.set(q.query_id, computeColumnStats(result.rows, result.meta));
+        try {
+          const result = await executeAndFetchResults(q.query_id, config.apiKey);
+          if (result && result.rows.length > 0) {
+            statsMap.set(q.query_id, computeColumnStats(result.rows, result.meta));
+          }
+        } catch (e) {
+          // Execution gated (e.g. a Dune plan without API execution). Keep going on
+          // metadata, but remember why so the episode is honest about the gap.
+          if (e instanceof DuneApiError && e.hard && !execNote) execNote = e.message;
         }
       })
     );
@@ -471,7 +526,9 @@ export async function fetchDuneMeta(config: DuneConfig, namespaceOverride?: stri
   const result: SchemaMeta = {
     fqn,
     name: namespace,
-    description: `Dune Analytics queries for ${namespace}`,
+    description: execNote
+      ? `Dune Analytics queries for ${namespace}. Live query execution was unavailable — ${execNote} This episode analyzed query metadata (names, columns, descriptions) only, not live result rows.`
+      : `Dune Analytics queries for ${namespace}`,
     tables,
     lineage: [],
   };
