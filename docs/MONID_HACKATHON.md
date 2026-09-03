@@ -57,7 +57,10 @@ without a code change. **Step 0 below is the gate.**
    `pathParams` / `queryParams` / `body` shape.
 2. **Run** — `src/lib/monid-adapter.ts` shells to the `monid` CLI
    (`execFile`, never a shell — the Coral precedent) with `run -p … -e … -j
-   --wait`, env-first `MONID_API_KEY` + optional body override.
+   --wait` (flag shapes verified against `monid run --help`, CLI 0.1.7: `-i`
+   body JSON, `--query`/`--path` take a **single JSON string** each). Key
+   delivery is env-first `MONID_API_KEY` + optional body override, implemented
+   via a per-run throwaway credential store (see Credentials below).
 3. **Map** — `parseMonidRun` + `extractRows` normalise the arbitrary result
    shape (named container → top-level array → nested object-array →
    array-of-arrays + header → single flat object → honest `[]`), then
@@ -88,26 +91,56 @@ DataBard is already an agent-native analyst on OKX.AI A2MCP. Monid slots in as a
 endpoint at runtime (`discover` → `inspect` → `run`) and DataBard scores whatever
 rows come back. The credential model is **env-first with a body override**
 (`MONID_API_KEY` on the server, or `monid.apiKey` in the request), mirroring the
-Coral/Dune adapters. Monid's own SKILL.md precedence — *"fills the gaps, does not
+Coral/Dune adapters. Note the CLI (0.1.7) itself reads **no key env var** — it
+uses a YAML credential store under `~/.config/monid/` — so the adapter
+materialises a throwaway 0600 store per run and points `XDG_CONFIG_HOME` at it
+(verified live against the installed CLI). Monid's own SKILL.md precedence — *"fills the gaps, does not
 replace tools the user already has"* — matches how we treat it: a long-tail reach
 adapter, not a replacement for the Tier 1 sources.
+
+## Progress (as of Sep 3, 2026)
+
+- **Shipped & deployed** (commit `bf7e956` on `main`, prod health-gated 200):
+  generic `monid` source across all A2MCP endpoints, config builders, and the
+  measured-cost receipt (`monidCost`) on health-check + briefing.
+- **Adapter verified against the real CLI** — the free, no-key half of Step 0 is
+  DONE. Installed `@monid-ai/cli` 0.1.7 and confirmed/fix three things:
+  1. `--query`/`--path` take a single JSON string (the adapter originally sent
+     `k=v` pairs — fixed in `buildRunArgs`, now exported + unit-tested).
+  2. The CLI ignores `MONID_API_KEY`; key delivery now materialises a temp
+     `XDG_CONFIG_HOME` credential store per run (verified live: a fake key via
+     the store reaches the API and fails as `auth`, not `no-key`).
+  3. Error classification matches the CLI's actual messages ("No active API key"
+     → hard `no-key`; "API key is expired or invalid" → hard `auth`).
+- **Gates green:** `tsc` clean, 36/36 offline unit tests, bundle 85MB.
+- **Next steps (in order):**
+  1. **User adds their Monid key** — `monid keys add -k <KEY> -l databard`
+     (local). The confirming `run` spends cents — gate it on the user's OK.
+  2. **Step 0 discovery (spending half)** — `monid discover` → `inspect` → one
+     confirming `run` fixes the kill target + concrete `provider`/`endpoint`.
+  3. **Part G wizard UI** — wire the `ConnectStep` picker once the target is fixed.
+  4. **Re-verify the Dune Plus price**, then shoot the `<90s` video + social push.
 
 ## Setup
 
 **Install the Monid CLI + key (Step 0 gate — user-run, spends cents on `run`):**
 ```bash
 npm i -g @monid-ai/cli
-monid keys add -k <MONID_KEY> && monid keys list && monid balance
+monid keys add -k <MONID_KEY> -l databard && monid keys list && monid balance
 # FREE — let the catalog pick the target:
 monid discover -q "on-chain token price and volume time series for a data health score" -l 10 -s 0.5 -j
 monid inspect -p <provider> -e <endpoint> -j      # note pathParams / queryParams / body
 monid run -p <provider> -e <endpoint> -i '<bodyJSON>' --wait -j   # SPENDS cents — confirms shape + cost field
 ```
+> CLI 0.1.x flag notes (verified): `keys add` requires `-l/--label`;
+> `--query`/`--path` on `run` take a single JSON string each; `--wait [timeout]`
+> is in seconds (max 120).
 
 **Run DataBard:**
 ```bash
 npm install
-# server env (or pass monid.apiKey per request):
+# server env (or pass monid.apiKey per request). The CLI reads NO key env var —
+# the adapter materialises a temp credential store from MONID_API_KEY per run:
 export MONID_API_KEY=<key>
 npm run dev     # localhost:3000
 ```
@@ -154,9 +187,10 @@ API key…"* — as HTTP **400**, not a stack trace or a 500.
 - [x] A2MCP discovery advertises `monid` (`/api/mcp/tools` — source enum + `monid` schema + `monidCost` output)
 - [x] Measured-cost receipt on `/api/mcp/health-check` **and** `/api/mcp/briefing`
 - [x] Honest error taxonomy (hard → actionable 400; soft → degrade with a note, keep the receipt)
-- [x] `tsc`-clean + deterministic unit tests (`tests/monid-adapter.unit.ts`, 32 tests, offline)
+- [x] `tsc`-clean + deterministic unit tests (`tests/monid-adapter.unit.ts`, 36 tests, offline)
 - [x] Docs: this packet, `AGENTS.md`, `DATA_SOURCES_ARCHITECTURE.md`, `.env.example`
-- [ ] **DEFERRED — Step 0 discovery** (`monid discover`/`inspect`/`run`): needs the user's Monid key + spends their balance; fixes the kill target + the concrete `provider`/`endpoint`
+- [x] **Adapter verified against the real CLI** (0.1.7): flag shapes, key delivery via temp credential store, error classification — shipped as `bf7e956` and deployed (prod tools endpoint 200)
+- [ ] **DEFERRED — Step 0 discovery, spending half** (`monid discover`/`inspect`/`run`): the free CLI-verification half is done; the discovery + confirming `run` still needs the user's Monid key and **spends their balance** — fixes the kill target + the concrete `provider`/`endpoint`
 - [ ] **DEFERRED — Live health-check verification** against a real endpoint (the confirming `run` spends cents)
 - [ ] **DEFERRED — Wizard UI (Part G):** Monid is driven via A2MCP for now; wire the picker fields once discovery fixes the target
 - [ ] **DEFERRED — Re-verify the Dune Plus price** at `dune.com/pricing` (do not fabricate)

@@ -199,7 +199,8 @@ through as a receipt. See `docs/MONID_HACKATHON.md`.
 ### How it works
 - `src/lib/monid-adapter.ts` shells to the `monid` CLI via `execFile` (never a
   shell — the Coral precedent): `run -p <provider> -e <endpoint> -j --wait`
-  (+ `-i <bodyJSON>`, `--query k=v`, `--path k=v`). `parseMonidRun` → `extractRows`
+  (+ `-i <bodyJSON>`; `--query`/`--path` take a **single JSON string** each —
+  verified against `monid run --help`, CLI 0.1.7). `parseMonidRun` → `extractRows`
   → `inferColumns` → `buildMonidSchema` produce one `SchemaMeta` table from an
   arbitrary result shape (named container → top-level array → nested object-array
   → array-of-arrays + header → single flat object → honest `[]`).
@@ -213,8 +214,11 @@ through as a receipt. See `docs/MONID_HACKATHON.md`.
 
 ### Credentials (env-first + body override)
 - `MONID_API_KEY` — server env (preferred). A request may override with
-  `monid.apiKey`. Env-first means server-side runs spend **our** balance, so the
-  existing rate limit (60/hr/IP on health-check) is the guard.
+  `monid.apiKey`. **The CLI (0.1.7) reads NO key env var** — it uses a YAML
+  credential store under `~/.config/monid/` — so the adapter materialises a
+  throwaway 0600 store per run and points `XDG_CONFIG_HOME` at it (verified live
+  against the installed CLI). Env-first means server-side runs spend **our**
+  balance, so the existing rate limit (60/hr/IP on health-check) is the guard.
 - `MONID_BIN` (default `monid`), `MONID_TIMEOUT_MS` (default 130000 — must exceed
   the CLI's max `--wait` of 120s), `MONID_MAX_BUFFER` (default 10MB). The CLI must
   be installed on the server (`npm i -g @monid-ai/cli`); see `.env.example`.
@@ -225,10 +229,18 @@ balance / bad-request) are surfaced as actionable HTTP **400** (never a 500 or a
 stack trace); **soft** (timeout / rate-limit / exec / empty / parse) degrade via an
 `execNote` in the schema description, keeping the cost receipt.
 
-### Status / gates (DEFERRED — do not run without the user)
-- **Step 0 discovery is the gate:** `monid discover`/`inspect`/`run` need the
-  user's Monid key, and the confirming `run` **spends their balance** (cents). It
-  fixes the kill target + the concrete `provider`/`endpoint` used in the demo.
+### Status / gates (verified Sep 3, 2026)
+- **CLI verification DONE (the free, no-key half of Step 0):** installed
+  `@monid-ai/cli` 0.1.7 and verified/fix the adapter against it — JSON
+  `--query`/`--path` flags, temp-credential-store key delivery, error
+  classification ("No active API key" → hard `no-key`; "API key is expired or
+  invalid" → hard `auth`). Shipped as `bf7e956`, deployed, prod tools 200.
+  Details + next steps in `docs/MONID_HACKATHON.md` (Progress section).
+- **Step 0 discovery (spending half) is the remaining gate:** `monid
+  discover`/`inspect`/`run` need the user's Monid key (`monid keys add -k <KEY>
+  -l databard` — note `keys add` requires a label), and the confirming `run`
+  **spends their balance** (cents). It fixes the kill target + the concrete
+  `provider`/`endpoint` used in the demo.
 - **Wizard UI (Part G) is not built:** Monid is driven via the A2MCP endpoints for
   now. The `monid` keys exist in the label/help maps (so `tsc` passes) but Monid is
   intentionally **not** in the `ConnectStep` picker — wire it once discovery fixes
@@ -237,5 +249,5 @@ stack trace); **soft** (timeout / rate-limit / exec / empty / parse) degrade via
   5-platform posting checklist live in `docs/MONID_HACKATHON.md`. **Re-verify the
   Dune Plus price at `dune.com/pricing` before it appears in any copy** — do not
   fabricate it (sources disagree: $349 vs ~$390).
-- Unit-tested offline: `tests/monid-adapter.unit.ts` (32 tests over the pure
+- Unit-tested offline: `tests/monid-adapter.unit.ts` (36 tests over the pure
   mapping layer — no CLI, no key).
