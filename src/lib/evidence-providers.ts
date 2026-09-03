@@ -24,6 +24,7 @@ export function buildEvidenceContext(config: ConnectionConfig): EvidenceSourceCo
     dune: "Dune workspace",
     coral: "Coral Unified SQL",
     datahub: "DataHub context graph",
+    monid: "Monid metered endpoint",
   };
 
   return {

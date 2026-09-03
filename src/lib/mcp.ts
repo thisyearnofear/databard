@@ -24,6 +24,8 @@ export interface McpRequestInput {
   theGraph?: { subgraphUrl: string; apiKey?: string };
   dune?: { apiKey: string; namespace?: string };
   coral?: { query: string; localFiles?: { path: string; name: string }[] };
+  /** Monid metered endpoint — provider + endpoint discovered via `monid discover`/`inspect`. */
+  monid?: ConnectionConfig["monid"];
   researchQuestion?: string;
   /** Briefing only: "podcast" (two-speaker, default) or "executive-summary". */
   outputFormat?: "podcast" | "executive-summary";
@@ -62,6 +64,7 @@ export function parseMcpInput(body: unknown): ParsedMcpInput {
     theGraph: b.theGraph,
     dune: b.dune,
     coral: b.coral,
+    monid: b.monid,
   };
 
   let researchQuestion: string | undefined;

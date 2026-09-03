@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
 import { parseMcpInput } from "@/lib/mcp";
+import { getMonidCost, MonidCliError } from "@/lib/monid-adapter";
 import { ValidationError, rateLimit } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -36,6 +37,11 @@ export async function POST(req: NextRequest) {
     const meta = await fetchSchemaMeta(config, schemaFqn);
     const insights = analyzeSchema(meta);
     const actions = generateActionItems(insights);
+
+    // Monid runs are metered — surface the measured per-run cost as a receipt.
+    // This is the "kill" evidence: an agent-paid per-call cost that can sit next
+    // to a human-seat price. Only monid populates the sidecar.
+    const monidCost = config.source === "monid" ? getMonidCost(schemaFqn) : undefined;
 
     return NextResponse.json({
       ok: true,
@@ -73,11 +79,17 @@ export async function POST(req: NextRequest) {
         table: a.table,
         effort: a.effort,
       })),
+      ...(monidCost ? { monidCost } : {}),
     });
   } catch (e) {
     if (e instanceof ValidationError) {
       const status = e.message.startsWith("Rate limit") ? 429 : 400;
       return NextResponse.json({ ok: false, error: e.message }, { status });
+    }
+    // A hard Monid failure (CLI missing, no/bad key, no balance, bad request) is
+    // the caller's to act on — 400 with the actionable message, not a 500.
+    if (e instanceof MonidCliError && e.hard) {
+      return NextResponse.json({ ok: false, error: e.message, kind: e.kind }, { status: 400 });
     }
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

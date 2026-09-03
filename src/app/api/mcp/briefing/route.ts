@@ -7,6 +7,7 @@ import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
 import { buildResearchTrail } from "@/lib/research";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { getDuneTableStats } from "@/lib/dune-adapter";
+import { getMonidCost, MonidCliError } from "@/lib/monid-adapter";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
 import type { Episode } from "@/lib/types";
 import { parseMcpInput } from "@/lib/mcp";
@@ -47,6 +48,9 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       buildEvidenceContext(config)
     );
     const tableStats = config.source === "dune" ? getDuneTableStats(schemaFqn) : undefined;
+    // Monid data reach is metered — carry the measured cost into the paid briefing
+    // so the receipt sits next to the x402 price the caller just paid.
+    const monidCost = config.source === "monid" ? getMonidCost(schemaFqn) : undefined;
 
     const script = await generateScript(meta, {
       researchQuestion,
@@ -137,11 +141,17 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       audio: audio.toString("base64"),
       audioFormat: "mp3",
       audioUrl,
+      ...(monidCost ? { monidCost } : {}),
     });
   } catch (e) {
     if (e instanceof ValidationError) {
       // 400 → withX402 skips settlement, caller is not charged.
       return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+    }
+    // A hard Monid failure (CLI missing, no/bad key, no balance) is user-actionable
+    // → 400, and withX402 skips settlement so the caller is never charged for it.
+    if (e instanceof MonidCliError && e.hard) {
+      return NextResponse.json({ ok: false, error: e.message, kind: e.kind }, { status: 400 });
     }
     const msg = e instanceof Error ? e.message : "Unknown error";
     // 500 → withX402 skips settlement, caller is not charged.

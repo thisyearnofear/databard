@@ -75,6 +75,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     dune: "Dune",
     coral: "Coral",
     datahub: "DataHub",
+    monid: "Monid",
   };
 
   // Source help text
@@ -86,6 +87,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     dune: "Enter your Dune API key and username. DataBard runs your queries and analyzes the results — this needs a Dune plan that includes API execution. No paid Dune plan? Connect Coral to query 50+ sources with no Dune key.",
     coral: "Query 50+ sources via SQL — GitHub, Slack, Jira, Postgres, Notion, Stripe, and more. Join across sources in a single query.",
     datahub: "Connect your DataHub GMS instance (server URL + optional personal access token). DataBard reads the context graph — datasets, lineage, owners, tags, assertions — and synthesises it into briefings and health scores.",
+    monid: "Run any Monid metered endpoint (one API key, 1,900+ tools). Give a provider + endpoint from `monid discover`/`inspect`; DataBard runs it, maps the result rows to a health score, and reports the measured per-run cost.",
   };
 
   // Active context string

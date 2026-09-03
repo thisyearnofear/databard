@@ -17,7 +17,7 @@ const connectionSchema = {
   properties: {
     source: {
       type: "string",
-      enum: ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune", "coral", "datahub"],
+      enum: ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune", "coral", "datahub", "monid"],
       default: "openmetadata",
     },
     schemaFqn: { type: "string", description: "Fully-qualified schema name, e.g. \"db.sales\" or \"prod.analytics\"." },
@@ -59,6 +59,21 @@ const connectionSchema = {
         localFiles: { type: "array", items: { type: "object", properties: { path: { type: "string" }, name: { type: "string" } } } },
       },
       required: ["query"],
+    },
+    monid: {
+      type: "object",
+      description:
+        "Monid metered endpoint (the OpenRouter for agent tools). provider + endpoint come from `monid discover` then `monid inspect`; inputs is the JSON request body, query/path are extra params. apiKey is optional — the server's MONID_API_KEY is used when omitted. Each run reports its measured cost.",
+      properties: {
+        apiKey: { type: "string" },
+        provider: { type: "string" },
+        endpoint: { type: "string" },
+        inputs: { type: "object", additionalProperties: true },
+        query: { type: "object", additionalProperties: { type: "string" } },
+        path: { type: "object", additionalProperties: { type: "string" } },
+        wait: { type: "boolean" },
+      },
+      required: ["provider", "endpoint"],
     },
   },
   required: ["source", "schemaFqn"],
@@ -112,6 +127,20 @@ const healthOutputSchema = {
           table: { type: "string" },
           effort: { type: "string" },
         },
+      },
+    },
+    monidCost: {
+      type: "object",
+      description:
+        "Present only when source is \"monid\": the measured per-run cost receipt for the endpoint that produced this health score.",
+      properties: {
+        costUsd: { type: "number", description: "Measured cost of the run in USD (omitted when Monid didn't report one)." },
+        provider: { type: "string" },
+        endpoint: { type: "string" },
+        runId: { type: "string" },
+        rowCount: { type: "number" },
+        ok: { type: "boolean" },
+        note: { type: "string", description: "Set when the run degraded (timeout / empty / non-tabular) instead of returning live rows." },
       },
     },
   },

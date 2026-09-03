@@ -2,12 +2,13 @@
 
 ## Design Principle
 
-DataBard uses a **dual-path** data architecture optimised for the end user:
+DataBard uses a **triple-path** data architecture optimised for the end user:
 
 1. **First-class adapters** for the top 6 sources — deep integration with full feature support
 2. **Coral as the "Bring Your Own Source" escape hatch** — lets users connect anything else via SQL without waiting on us to build an adapter
+3. **Monid as the metered-catalog reach layer** — one key, 1,900+ pay-per-call endpoints; an agent picks any endpoint at runtime and DataBard scores whatever rows come back, with the measured per-run cost as a receipt
 
-This is a user-first decision. First-class adapters deliver better error messages, deeper metadata extraction (lineage, PII, owners, profiler data), and zero extra dependencies. Coral gives users immediate access to the long tail of sources we haven't built adapters for yet.
+This is a user-first decision. First-class adapters deliver better error messages, deeper metadata extraction (lineage, PII, owners, profiler data), and zero extra dependencies. Coral gives users immediate access to the long tail of sources we haven't built adapters for yet. Monid reaches the *metered* long tail — third-party APIs an agent pays for per call — and makes that spend visible.
 
 ## Tier 1: First-Class Adapters (all shipped)
 
@@ -63,6 +64,40 @@ User selects "Coral" source
 | Source coverage | 6 sources | 50+ sources |
 | Cross-source joins | No | Yes |
 
+## Tier 2b: Monid — The Metered Long-Tail (shipped)
+
+Monid ("OpenRouter for agent tools") is a **hybrid**: it shells to a CLI like
+Coral, but maps the run's **result rows** into `SchemaMeta` like Dune — and
+carries the **measured per-run cost** through as a first-class receipt. It is
+generic by design: `provider` + `endpoint` come from `monid discover`/`inspect`
+at runtime, so nothing is hardcoded to one vendor.
+
+| | Coral (Tier 2) | Monid (Tier 2b) |
+|---|---|---|
+| Reach | 50+ sources via SQL | 1,900+ metered endpoints via one key |
+| Input | a SQL query | provider + endpoint + inputs (JSON body / query / path) |
+| Mechanism | Coral binary or gateway | `monid` CLI (`execFile`, never a shell) |
+| Result → `SchemaMeta` | columns inferred from rows | columns inferred + freshness + reported row count |
+| Cost model | your Coral plan | **per-call, metered** — surfaced as `monidCost` |
+| Credential | Coral config | `MONID_API_KEY` (env-first) or `monid.apiKey` (body) |
+| Best for | cross-source SQL joins | paying per call for a third-party data reach an agent chose |
+
+### Where Monid fits in the pipeline
+
+```
+Agent/user picks a Monid endpoint (monid discover → monid inspect)
+  → monid-adapter.ts runs it via the CLI (run -p … -e … -j --wait)
+  → parseMonidRun → extractRows → inferColumns → buildMonidSchema
+  → one SchemaMeta table + a getMonidCost(fqn) measured-cost receipt
+  → normal DataBard pipeline (analysis → script → audio)
+  → /api/mcp/health-check and /api/mcp/briefing return monidCost
+```
+
+Honest errors: **hard** failures (CLI missing, no/bad key, no balance, bad
+request) surface as actionable HTTP 400; **soft** failures (timeout, transient,
+empty) degrade with a note in the schema description and keep the receipt. See
+`docs/MONID_HACKATHON.md`.
+
 ## When to Promote Coral → First-Class
 
 Graduation tracking is live (`src/lib/coral-graduation.ts`). The `/api/coral/preview` route fires `trackCoralUsage()` on every query, accumulating anonymous source counts in `data/coral-sources.json`. Sources crossing the threshold (10 requests) are flagged for Tier 1 promotion.
@@ -76,20 +111,15 @@ A source should get a dedicated adapter when:
 ## Architecture Diagram
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                   metadata-adapter.ts                      │
-│                  (unified entry point)                     │
-├──────────────┬───────────┬──────────┬──────────┬─────────┤
-│ OpenMetadata │    dbt    │The Graph │   Dune   │  Coral  │
-│  (Tier 1 ✅) │(Tier 1 ✅)│(Tier 1 ✅)│(Tier 1 ✅)│(Tier 2 ✅)|
-│              │           │          │          │         │
-│ Full depth   │Full depth │Full depth│Full depth│ Generic │
-│ HTTP only    │File/HTTP  │GraphQL   │HTTP      │CLI/GW   │
-└──────┬───────┴─────┬─────┴────┬─────┴────┬─────┴────┬────┘
-       │             │          │          │          │
-       ▼             ▼          ▼          ▼          ▼
-   OM REST API   manifest   GraphQL    Dune REST   Coral SQL
-                  .json    introspect    API       (any source)
+metadata-adapter.ts (the unified entry point) dispatches on config.source:
+
+  openmetadata          → OM REST API         Tier 1 ✅   full depth · HTTP only
+  dbt-cloud / dbt-local → manifest.json       Tier 1 ✅   full depth · file/HTTP
+  the-graph             → GraphQL introspect  Tier 1 ✅   full depth · entity lineage
+  dune                  → Dune REST API       Tier 1 ✅   result rows + column stats
+  datahub               → GMS GraphQL         Tier 1 ✅   full depth + write-back
+  coral                 → Coral SQL           Tier 2 ✅   generic · CLI/gateway · 50+ sources
+  monid                 → monid run (CLI)     Tier 2b ✅  generic · metered · rows + cost receipt
 ```
 
 ## Future: Coral as Enhancement Layer

@@ -8,7 +8,7 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 - `npm run build` — production build (81 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
-- `npm run test:unit` — rate-limit, datahub-adapter, fleet-analysis, account, score-card (`package.json`)
+- `npm run test:unit` — rate-limit, datahub-adapter, fleet-analysis, account, score-card, serial-queue, monid-adapter (`package.json`)
 - `./scripts/deploy.sh` — local build → tarball → `snel-bot` (`/opt/databard`), PM2 reload, health gate, installs `ensure-running` cron. Do **not** `npm install` on the box.
 - `npx playwright install` — install required browsers
 - `npx playwright test --project=chromium` — run a single browser project
@@ -79,6 +79,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/app/api/mcp/briefing/route.ts` — PAID A2MCP tool (x402): full synthesis (script + audio + health)
 - `src/app/api/mcp/tools/route.ts` — A2MCP service discovery (tool list + JSON schemas)
 - `src/lib/datahub-adapter.ts` — DataHub GMS adapter: GraphQL read (datasets, lineage, owners, tags, assertions, profile) + write-back (tags + AI descriptions)
+- `src/lib/monid-adapter.ts` — Monid metered-endpoint adapter: shells to the `monid` CLI (execFile), maps arbitrary run results → `SchemaMeta`, captures the measured per-run cost (`getMonidCost` sidecar)
 - `src/app/api/mcp/writeback/route.ts` — FREE A2MCP tool: writes findings back into the DataHub context graph
 - `src/app/protocol/page.tsx` — dashboard (hero output)
 - `src/app/league/page.tsx` — public weekly protocol data-health league
@@ -107,6 +108,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 - `docs/PLAN.md` — development roadmap (Phases 1-9)
 - `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture
 - `docs/DATAHUB_HACKATHON.md` — DataHub Agent Hackathon submission packet (pitch, judging-criteria map, setup, demo shot list)
+- `docs/MONID_HACKATHON.md` — Monid "We Kill" hackathon packet (generic metered-endpoint kill, measured-cost receipt, deferred video/social checklist)
 - `docs/AZURE.md` — Azure OpenAI migration guide
 
 ## OKX.AI A2MCP ASP
@@ -185,3 +187,55 @@ curl -i -X POST https://databard.persidian.com/api/mcp/writeback \
 - Identities live on XLayer only (`eip155:196`); never pass `--chain` to identity commands.
 - The recurring-digest half of DataBard (scheduled digests, persisted connections, alerts) does NOT fit A2MCP — only the one-shot synthesis is exposed as the ASP.
 - fal.ai key for avatar generation is stored in the macOS keychain (service `fal.ai`, account `$USER`); retrieve with `security find-generic-password -s "fal.ai" -w` (may prompt via GUI on macOS).
+
+## Monid integration (We Kill hackathon)
+DataBard is entered in Monid's **"We Kill" hackathon** (Sep 1–10, 2026). Monid is
+the "OpenRouter for agent tools" — one API key, 1,900+ metered endpoints, per-call
+cost in the run result. We added a **generic** `monid` data source: any
+`provider` + `endpoint` (from `monid discover`/`inspect`) is run live, its result
+rows are mapped to a health score, and the **measured per-run cost** is carried
+through as a receipt. See `docs/MONID_HACKATHON.md`.
+
+### How it works
+- `src/lib/monid-adapter.ts` shells to the `monid` CLI via `execFile` (never a
+  shell — the Coral precedent): `run -p <provider> -e <endpoint> -j --wait`
+  (+ `-i <bodyJSON>`, `--query k=v`, `--path k=v`). `parseMonidRun` → `extractRows`
+  → `inferColumns` → `buildMonidSchema` produce one `SchemaMeta` table from an
+  arbitrary result shape (named container → top-level array → nested object-array
+  → array-of-arrays + header → single flat object → honest `[]`).
+- Routed through `metadata-adapter.ts` (`listSchemas` + `fetchSchemaMeta`) and
+  threaded through every config builder (`mcp.ts`, `/api/connect`, `pipeline.ts`,
+  `synthesize`, `synthesize-stream`, `validate-schema`).
+- **Cost receipt:** `getMonidCost(schemaFqn)` (retrieve-and-consume sidecar, like
+  `getDuneTableStats`) is surfaced as `monidCost` on `/api/mcp/health-check` and
+  `/api/mcp/briefing`. `/api/mcp/tools` advertises `monid` in the source enum, the
+  connection schema, and the health output schema.
+
+### Credentials (env-first + body override)
+- `MONID_API_KEY` — server env (preferred). A request may override with
+  `monid.apiKey`. Env-first means server-side runs spend **our** balance, so the
+  existing rate limit (60/hr/IP on health-check) is the guard.
+- `MONID_BIN` (default `monid`), `MONID_TIMEOUT_MS` (default 130000 — must exceed
+  the CLI's max `--wait` of 120s), `MONID_MAX_BUFFER` (default 10MB). The CLI must
+  be installed on the server (`npm i -g @monid-ai/cli`); see `.env.example`.
+
+### Honest errors
+`MonidCliError` classifies failures: **hard** (not-installed / no-key / auth /
+balance / bad-request) are surfaced as actionable HTTP **400** (never a 500 or a
+stack trace); **soft** (timeout / rate-limit / exec / empty / parse) degrade via an
+`execNote` in the schema description, keeping the cost receipt.
+
+### Status / gates (DEFERRED — do not run without the user)
+- **Step 0 discovery is the gate:** `monid discover`/`inspect`/`run` need the
+  user's Monid key, and the confirming `run` **spends their balance** (cents). It
+  fixes the kill target + the concrete `provider`/`endpoint` used in the demo.
+- **Wizard UI (Part G) is not built:** Monid is driven via the A2MCP endpoints for
+  now. The `monid` keys exist in the label/help maps (so `tsc` passes) but Monid is
+  intentionally **not** in the `ConnectStep` picker — wire it once discovery fixes
+  the target.
+- **Video + social are deferred** (scope: build + docs now). The `<90s` shot list +
+  5-platform posting checklist live in `docs/MONID_HACKATHON.md`. **Re-verify the
+  Dune Plus price at `dune.com/pricing` before it appears in any copy** — do not
+  fabricate it (sources disagree: $349 vs ~$390).
+- Unit-tested offline: `tests/monid-adapter.unit.ts` (32 tests over the pure
+  mapping layer — no CLI, no key).

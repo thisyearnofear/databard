@@ -9,6 +9,7 @@ import { fetchTheGraphMeta, listTheGraphSchemas } from "./the-graph-adapter";
 import { fetchDuneMeta, listDuneSchemas, fetchSingleDuneQuery, fetchDuneBatch } from "./dune-adapter";
 import { fetchCoralMeta } from "./coral-adapter";
 import { fetchSchemaMeta as fetchDataHubMeta, listSchemas as listDataHubSchemas } from "./datahub-adapter";
+import { fetchMonidMeta, listMonidSchemas } from "./monid-adapter";
 
 async function getDbtBundle(config: ConnectionConfig) {
   if (config.source === "dbt-cloud") {
@@ -48,6 +49,10 @@ export async function listSchemas(config: ConnectionConfig): Promise<string[]> {
   if (config.source === "coral") {
     // Coral is a single-query source — return a virtual schema so the wizard can proceed
     return ["coral.unified"];
+  }
+  if (config.source === "monid") {
+    if (!config.monid) throw new Error("Monid config missing");
+    return listMonidSchemas(config.monid);
   }
 
   const { manifest, runResults } = await getDbtBundle(config);
@@ -90,6 +95,10 @@ export async function fetchSchemaMeta(config: ConnectionConfig, schemaFqn: strin
       }
     }
     return fetchDuneMeta(config.dune, subPath);
+  }
+  if (config.source === "monid") {
+    if (!config.monid) throw new Error("Monid config missing");
+    return fetchMonidMeta(config.monid, schemaFqn);
   }
 
   const { manifest, runResults } = await getDbtBundle(config);

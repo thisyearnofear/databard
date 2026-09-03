@@ -103,6 +103,8 @@ export async function POST(req: NextRequest) {
             theGraph: body.theGraph,
             dune: body.dune,
             coral: body.coral,
+            datahub: body.datahub,
+            monid: body.monid,
           };
 
           // Fetch metadata and generate script

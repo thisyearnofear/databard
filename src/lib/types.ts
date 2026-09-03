@@ -1,6 +1,6 @@
 /** Shared domain types — single source of truth */
 
-export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune" | "coral" | "datahub";
+export type DataSource = "openmetadata" | "dbt-cloud" | "dbt-local" | "the-graph" | "dune" | "coral" | "datahub" | "monid";
 
 export interface OMConnection {
   url: string;
@@ -35,6 +35,23 @@ export interface CoralConnection {
   localFiles?: { path: string; name: string }[];
 }
 
+export interface MonidConnection {
+  /** Monid API key. Optional — falls back to server env MONID_API_KEY. */
+  apiKey?: string;
+  /** Discovered provider slug, e.g. "apify" (from `monid discover`). */
+  provider: string;
+  /** Discovered endpoint path, e.g. "/apidojo/tweet-scraper". */
+  endpoint: string;
+  /** Body JSON for `monid run -i`. */
+  inputs?: Record<string, unknown>;
+  /** Query params → repeated `--query k=v`. */
+  query?: Record<string, string>;
+  /** Path params → repeated `--path k=v`. */
+  path?: Record<string, string>;
+  /** Block for completion (default true) → `--wait`. */
+  wait?: boolean;
+}
+
 export interface ConnectionConfig {
   source: DataSource;
   openmetadata?: OMConnection;
@@ -44,6 +61,7 @@ export interface ConnectionConfig {
   theGraph?: TheGraphConnection;
   dune?: DuneConnection;
   coral?: CoralConnection;
+  monid?: MonidConnection;
 }
 
 export interface ColumnMeta {
