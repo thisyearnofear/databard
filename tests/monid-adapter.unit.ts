@@ -12,6 +12,7 @@ import {
   inferColumns,
   parseMonidRun,
   buildMonidSchema,
+  buildRunArgs,
   monidErrorMessage,
   MonidCliError,
 } from "../src/lib/monid-adapter";
@@ -215,6 +216,39 @@ describe("buildMonidSchema", () => {
     assert.ok(t.description?.includes("The Monid run timed out."));
     assert.ok(t.description?.includes("Measured cost: unavailable."));
     assert.equal(t.columns.length, 0);
+  });
+});
+
+describe("buildRunArgs", () => {
+  it("emits the CLI 0.1.7 flag shapes (verified against `monid run --help`)", () => {
+    assert.deepEqual(
+      buildRunArgs({ provider: "apify", endpoint: "/apidojo/tweet-scraper" }),
+      ["run", "-p", "apify", "-e", "/apidojo/tweet-scraper", "-j", "--wait"],
+    );
+  });
+
+  it("sends the body as one -i JSON string", () => {
+    const args = buildRunArgs({ provider: "p", endpoint: "e", inputs: { limit: 5 } });
+    assert.deepEqual(args.slice(-2), ["-i", JSON.stringify({ limit: 5 })]);
+  });
+
+  it("sends query and path params as single JSON strings, not k=v pairs", () => {
+    const args = buildRunArgs({
+      provider: "p",
+      endpoint: "e",
+      query: { symbol: "BTC", days: "30" },
+      path: { version: "v1" },
+    });
+    assert.ok(args.includes("--query"));
+    assert.deepEqual(args[args.indexOf("--query") + 1], JSON.stringify({ symbol: "BTC", days: "30" }));
+    assert.ok(args.includes("--path"));
+    assert.deepEqual(args[args.indexOf("--path") + 1], JSON.stringify({ version: "v1" }));
+    assert.ok(!args.some((a) => a.includes("=")), "no k=v fragments should appear");
+  });
+
+  it("omits --wait when wait is false", () => {
+    const args = buildRunArgs({ provider: "p", endpoint: "e", wait: false });
+    assert.ok(!args.includes("--wait"));
   });
 });
 

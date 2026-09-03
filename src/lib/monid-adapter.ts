@@ -10,6 +10,9 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { createHash } from "crypto";
+import { mkdtemp, mkdir, writeFile, rm } from "fs/promises";
+import os from "os";
+import path from "path";
 import type { SchemaMeta, TableMeta, ColumnMeta, QualityTest, MonidConnection } from "./types";
 import { metaCache } from "./store";
 
@@ -377,14 +380,15 @@ export function buildMonidSchema(conn: MonidConnection, run: MonidRunResult, exe
 
 // ── CLI exec (mirrors coral-adapter) ───────────────────────────────────────
 
-// Flag syntax (`-j`, `--wait`, `--query k=v`) per monid SKILL.md; confirm exact
-// forms with `monid run --help` in Step 0 once a concrete endpoint is picked.
-function buildRunArgs(conn: MonidConnection): string[] {
+// Flag syntax verified against `monid run --help` (CLI 0.1.7): `-p/-e` required,
+// `-i` body JSON, `--query`/`--path` take a SINGLE JSON string each (not k=v),
+// `-j` JSON out, `--wait` optional timeout in seconds.
+export function buildRunArgs(conn: MonidConnection): string[] {
   const args = ["run", "-p", conn.provider, "-e", conn.endpoint, "-j"];
   if (conn.wait !== false) args.push("--wait");
   if (conn.inputs && Object.keys(conn.inputs).length > 0) args.push("-i", JSON.stringify(conn.inputs));
-  for (const [k, v] of Object.entries(conn.query ?? {})) args.push("--query", `${k}=${v}`);
-  for (const [k, v] of Object.entries(conn.path ?? {})) args.push("--path", `${k}=${v}`);
+  if (conn.query && Object.keys(conn.query).length > 0) args.push("--query", JSON.stringify(conn.query));
+  if (conn.path && Object.keys(conn.path).length > 0) args.push("--path", JSON.stringify(conn.path));
   return args;
 }
 
@@ -393,8 +397,8 @@ function classifyExecError(e: unknown): MonidCliError {
   if (err?.code === "ENOENT") return new MonidCliError("not-installed", monidErrorMessage("not-installed"));
   if (err?.killed || err?.signal === "SIGTERM") return new MonidCliError("timeout", monidErrorMessage("timeout"));
   const text = `${err?.stderr ?? ""} ${err?.stdout ?? ""} ${err?.message ?? ""}`.toLowerCase();
-  if (/no api key|api key required|not authenticated|missing.{0,12}key|no key/.test(text)) return new MonidCliError("no-key", monidErrorMessage("no-key"));
-  if (/unauthorized|invalid api key|authentication|forbidden|\b401\b|\b403\b/.test(text)) return new MonidCliError("auth", monidErrorMessage("auth"));
+  if (/no active api key|no api key|api key required|not authenticated|missing.{0,12}key|no key/.test(text)) return new MonidCliError("no-key", monidErrorMessage("no-key"));
+  if (/unauthorized|invalid api key|api key is expired|authentication|forbidden|\b401\b|\b403\b/.test(text)) return new MonidCliError("auth", monidErrorMessage("auth"));
   if (/insufficient|balance|payment required|\b402\b|not enough credit/.test(text)) return new MonidCliError("balance", monidErrorMessage("balance"));
   if (/rate.?limit|too many requests|\b429\b/.test(text)) return new MonidCliError("rate-limit", monidErrorMessage("rate-limit"));
   const detail = (err?.stderr || err?.message || "the monid CLI exited with an error").toString().trim().slice(0, 300);
@@ -403,13 +407,33 @@ function classifyExecError(e: unknown): MonidCliError {
 
 async function runMonidCli(args: string[], apiKey?: string): Promise<string> {
   const env: NodeJS.ProcessEnv = { ...process.env, NO_COLOR: "1" };
+  // monid CLI v0.1.x does NOT read MONID_API_KEY — it reads an active key from
+  // `<XDG_CONFIG_HOME|~/.config>/monid/config.yaml` + `credentials.yaml` (mode
+  // 0600, YAML, verified against the CLI source). To honour an env-provided or
+  // per-request key, materialise a throwaway credential store and point
+  // XDG_CONFIG_HOME at it for this one exec.
   const key = apiKey ?? process.env.MONID_API_KEY; // env-first, body override
-  if (key) env.MONID_API_KEY = key;
+  let tmpDir: string | undefined;
+  if (key) {
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), "databard-monid-"));
+    const monidDir = path.join(tmpDir, "monid");
+    await mkdir(monidDir, { recursive: true });
+    const q = (s: string) => JSON.stringify(s); // a JSON string is a valid YAML double-quoted scalar
+    await writeFile(path.join(monidDir, "config.yaml"), `version: "0.1.7"\nactive_key: databard\n`);
+    await writeFile(
+      path.join(monidDir, "credentials.yaml"),
+      `keys:\n  databard:\n    key: ${q(key)}\n    prefix: ""\n    added_at: ${q(new Date().toISOString())}\n`,
+      { mode: 0o600 },
+    );
+    env.XDG_CONFIG_HOME = tmpDir;
+  }
   try {
     const { stdout } = await execFileAsync(MONID_BIN, args, { timeout: MONID_TIMEOUT_MS, maxBuffer: MONID_MAX_BUFFER, env });
     return stdout;
   } catch (e) {
     throw classifyExecError(e);
+  } finally {
+    if (tmpDir) await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

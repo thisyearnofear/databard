@@ -44,9 +44,9 @@ export interface MonidConnection {
   endpoint: string;
   /** Body JSON for `monid run -i`. */
   inputs?: Record<string, unknown>;
-  /** Query params → repeated `--query k=v`. */
+  /** Query params → single `--query '<json>'` (CLI 0.1.7 takes a JSON string). */
   query?: Record<string, string>;
-  /** Path params → repeated `--path k=v`. */
+  /** Path params → single `--path '<json>'`. */
   path?: Record<string, string>;
   /** Block for completion (default true) → `--wait`. */
   wait?: boolean;
