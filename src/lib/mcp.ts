@@ -29,6 +29,8 @@ export interface McpRequestInput {
   researchQuestion?: string;
   /** Briefing only: "podcast" (two-speaker, default) or "executive-summary". */
   outputFormat?: "podcast" | "executive-summary";
+  /** Briefing only: how to deliver the narrated audio. Default "inline" (base64). */
+  audio?: "inline" | "url" | "none";
 }
 
 export interface ParsedMcpInput {
@@ -42,6 +44,8 @@ export interface ParsedMcpInput {
   adjustedResearchQuestion: boolean;
   /** Caller explicitly requested the demo analysis (`demo: true`). */
   forceDemo: boolean;
+  /** Briefing audio delivery: "inline" (base64, default) | "url" | "none" (skip TTS). */
+  audio: "inline" | "url" | "none";
 }
 
 /** The FQN the demo fallback fixture resolves to — used when the caller omits one. */
@@ -219,6 +223,10 @@ export function parseMcpInput(body: unknown): ParsedMcpInput {
       ? "executive-summary"
       : "podcast";
 
+  const audioRaw = (record.audio ?? record.audioDelivery) as string | undefined;
+  const audio: "inline" | "url" | "none" =
+    audioRaw === "url" || audioRaw === "none" ? audioRaw : "inline";
+
   return {
     config,
     schemaFqn,
@@ -227,5 +235,6 @@ export function parseMcpInput(body: unknown): ParsedMcpInput {
     defaultedFqn,
     adjustedResearchQuestion,
     forceDemo: record.demo === true,
+    audio,
   };
 }

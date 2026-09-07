@@ -106,8 +106,13 @@ const healthOutputSchema = {
   properties: {
     ok: { type: "boolean" },
     tool: { type: "string", const: "databard.health-check" },
+    serviceVersion: { type: "number" },
+    generatedAt: { type: "string" },
     schemaFqn: { type: "string" },
     schemaName: { type: "string" },
+    summary: { type: "string", description: "Plain-text takeaway the calling agent can quote verbatim." },
+    keyFindings: { type: "array", items: { type: "string" }, description: "Top findings as short strings." },
+    nextStep: { type: "string", description: "The single most urgent recommended action." },
     tableCount: { type: "number" },
     health: {
       type: "object",
@@ -182,9 +187,11 @@ const briefingOutputSchema = {
         properties: { speaker: { type: "string" }, topic: { type: "string" }, text: { type: "string" } },
       },
     },
-    audio: { type: "string", description: "Base64-encoded MP3 of the briefing.", contentEncoding: "base64" },
-    audioFormat: { type: "string", const: "mp3" },
-    audioUrl: { type: "string", description: "Public Grove/IPFS URL when upload succeeds." },
+    audio: { type: "string", nullable: true, description: "Base64-encoded MP3 (only when audioDelivery is \"inline\").", contentEncoding: "base64" },
+    audioFormat: { type: "string", nullable: true, const: "mp3" },
+    audioDelivery: { type: "string", enum: ["inline", "url", "none"] },
+    audioUrl: { type: "string", nullable: true, description: "Public Grove/IPFS URL when audio was requested and upload succeeds." },
+    monidCost: { type: "object", description: "Measured per-run cost receipt (monid source only)." },
   },
 } as const;
 
@@ -285,6 +292,13 @@ const TOOLS = [
             "Optional focus question for the briefing. 8-240 chars recommended; shorter questions are ignored, longer ones truncated — never an error.",
         },
         outputFormat: { type: "string", enum: ["podcast", "executive-summary"], default: "podcast" },
+        audio: {
+          type: "string",
+          enum: ["inline", "url", "none"],
+          default: "inline",
+          description:
+            "Audio delivery. \"none\" = text-only briefing (fastest; recommended for LLM callers). \"url\" = hosted MP3 link (recommended when the human wants to listen). \"inline\" = base64 MP3 in the response (large). The text script, summary and keyFindings are always returned regardless.",
+        },
       },
       examples: [
         {
@@ -292,6 +306,7 @@ const TOOLS = [
           demo: true,
           researchQuestion: "What are the biggest risks hiding in this schema?",
           outputFormat: "executive-summary",
+          audio: "url",
         },
         {
           source: "openmetadata",

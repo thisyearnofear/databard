@@ -46,7 +46,7 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
     } catch {
       body = {};
     }
-    const { config, schemaFqn, researchQuestion, outputFormat, forceDemo } = parseMcpInput(body);
+    const { config, schemaFqn, researchQuestion, outputFormat, forceDemo, audio: audioMode } = parseMcpInput(body);
 
     // Degrade to the labelled demo fixture when the source is unreachable —
     // marketplace reviewers have no credentials, and a 400 after payment is
@@ -70,24 +70,32 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       format: outputFormat,
     });
 
-    let audioBuffers: Buffer[];
-    try {
-      audioBuffers = await synthesizeEpisode(script);
-    } catch (apiError: unknown) {
-      const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
-      // Free-tier TTS 402 → web-automation fallback (same as /api/synthesize).
-      if (
-        errorMsg.includes("402") ||
-        errorMsg.includes("payment_required") ||
-        errorMsg.includes("paid_plan_required")
-      ) {
-        const { synthesizeEpisodeViaWeb } = await import("@/lib/audio-engine-providers");
-        audioBuffers = await synthesizeEpisodeViaWeb(script);
-      } else {
-        throw apiError;
+    // Audio is optional: "none" skips TTS entirely (fastest, text-only briefing),
+    // "url" returns a Grove link with inline base64 as fallback, "inline" (default)
+    // returns base64 MP3. LLM callers should prefer "url" or "none" — an inline
+    // MP3 is unreadable context to a model.
+    const audioModeResolved = audioMode;
+    let audio: Buffer | undefined;
+    if (audioModeResolved !== "none") {
+      let audioBuffers: Buffer[];
+      try {
+        audioBuffers = await synthesizeEpisode(script);
+      } catch (apiError: unknown) {
+        const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
+        // Free-tier TTS 402 → web-automation fallback (same as /api/synthesize).
+        if (
+          errorMsg.includes("402") ||
+          errorMsg.includes("payment_required") ||
+          errorMsg.includes("paid_plan_required")
+        ) {
+          const { synthesizeEpisodeViaWeb } = await import("@/lib/audio-engine-providers");
+          audioBuffers = await synthesizeEpisodeViaWeb(script);
+        } else {
+          throw apiError;
+        }
       }
+      audio = Buffer.concat(audioBuffers);
     }
-    const audio = Buffer.concat(audioBuffers);
 
     const episode: Episode = {
       schemaFqn,
@@ -104,20 +112,45 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       script,
     };
 
-    // Non-fatal: deliver the inline base64 audio regardless; the URL is a bonus.
+    // Non-fatal: deliver the audio regardless; the URL is a bonus.
     let audioUrl: string | undefined;
-    try {
-      const grove = await uploadEpisodeToGrove(episode, audio);
-      audioUrl = grove.audioUrl;
-    } catch (groveErr) {
-      console.warn("[MCP briefing] Grove upload failed (non-fatal):", groveErr);
+    if (audio) {
+      try {
+        const grove = await uploadEpisodeToGrove(episode, audio);
+        audioUrl = grove.audioUrl;
+      } catch (groveErr) {
+        console.warn("[MCP briefing] Grove upload failed (non-fatal):", groveErr);
+      }
     }
 
     const actions = generateActionItems(insights);
 
+    // Agent-first payload: a quotable plain-text summary + machine-readable
+    // key findings. The calling LLM relays these verbatim; the script and
+    // audio are the depth layer for its human.
+    const topAction = actions[0];
+    const summary =
+      `${meta.name} scores ${insights.healthScore}/100 (${insights.healthLabel}). ` +
+      `${insights.failingTests} failing test${insights.failingTests === 1 ? "" : "s"} ` +
+      `across ${meta.tables.length} tables` +
+      (insights.criticalTables.length
+        ? `; highest-risk table: ${insights.criticalTables[0].table.name} (${insights.criticalTables[0].downstreamCount} downstream dependents)`
+        : "") +
+      (topAction ? `. Most urgent next step: ${topAction.title}.` : ".");
+    const keyFindings = [
+      `Health score ${insights.healthScore}/100 — ${insights.healthLabel}`,
+      `${insights.failingTests} failing / ${insights.totalTests} total quality tests (coverage ${insights.testCoverage}%)`,
+      `${insights.staleTables} stale tables, doc coverage ${insights.docCoverage}%`,
+      ...insights.criticalTables.slice(0, 2).map(
+        (ct) => `Critical table ${ct.table.name}: ${ct.failingTests} failing tests, ${ct.downstreamCount} downstream dependents`
+      ),
+    ].slice(0, 5);
+
     return NextResponse.json({
       ok: true,
       tool: "databard.briefing",
+      serviceVersion: 2,
+      generatedAt: new Date().toISOString(),
       schemaFqn,
       schemaName: meta.name,
       ...(demo ? { demo: true, connectionNotice } : {}),
@@ -144,13 +177,16 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
         table: a.table,
         effort: a.effort,
       })),
+      summary,
+      keyFindings,
+      ...(topAction ? { nextStep: topAction.title } : {}),
       script: script.map((s) => ({
         speaker: s.speaker,
         topic: s.topic,
         text: s.text,
       })),
-      audio: audio.toString("base64"),
-      audioFormat: "mp3",
+      audioDelivery: audioModeResolved,
+      ...(audio ? { audio: audio.toString("base64"), audioFormat: "mp3" } : { audio: null, audioFormat: null }),
       audioUrl,
       ...(monidCost ? { monidCost } : {}),
     });

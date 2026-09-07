@@ -52,12 +52,36 @@ export async function POST(req: NextRequest) {
     // to a human-seat price. Only monid populates the sidecar.
     const monidCost = config.source === "monid" ? getMonidCost(schemaFqn) : undefined;
 
+    // Agent-first payload: quotable summary + findings the calling LLM can
+    // relay verbatim, plus a natural upsell to the paid briefing.
+    const topAction = actions[0];
+    const summary =
+      `${meta.name} scores ${insights.healthScore}/100 (${insights.healthLabel}): ` +
+      `${insights.failingTests} failing test${insights.failingTests === 1 ? "" : "s"} across ${meta.tables.length} tables` +
+      (insights.criticalTables.length
+        ? `; highest risk: ${insights.criticalTables[0].table.name} (${insights.criticalTables[0].downstreamCount} downstream)`
+        : "") +
+      (topAction ? `. Start with: ${topAction.title}.` : ".");
+    const keyFindings = [
+      `Health score ${insights.healthScore}/100 — ${insights.healthLabel}`,
+      `${insights.failingTests} failing / ${insights.totalTests} total quality tests (coverage ${insights.testCoverage}%)`,
+      `${insights.staleTables.length} stale tables, doc coverage ${insights.docCoverage}%`,
+      ...insights.criticalTables.slice(0, 2).map(
+        (ct) => `Critical table ${ct.table.name}: ${ct.failingTests} failing tests, ${ct.downstreamCount} downstream dependents`
+      ),
+    ].slice(0, 5);
+
     return NextResponse.json({
       ok: true,
       tool: "databard.health-check",
+      serviceVersion: 2,
+      generatedAt: new Date().toISOString(),
       schemaFqn,
       schemaName: meta.name,
       ...(demo ? { demo: true, connectionNotice } : {}),
+      summary,
+      keyFindings,
+      ...(topAction ? { nextStep: topAction.title } : {}),
       tableCount: meta.tables.length,
       health: {
         score: insights.healthScore,
