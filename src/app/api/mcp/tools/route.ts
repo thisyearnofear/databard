@@ -13,16 +13,26 @@ export const runtime = "nodejs";
 
 const connectionSchema = {
   type: "object",
-  description: "Data source connection spec. `source` selects the adapter; populate the matching connector block.",
+  description:
+    "Data source connection spec. `source` selects the adapter; populate the matching connector block. If you do NOT have access to a live data source, you may omit everything (or send an empty object) — DataBard returns a clearly-labelled demo analysis of a sample schema instead of an error, so every invocation succeeds.",
   properties: {
     source: {
       type: "string",
       enum: ["openmetadata", "dbt-cloud", "dbt-local", "the-graph", "dune", "coral", "datahub", "monid"],
       default: "openmetadata",
     },
-    schemaFqn: { type: "string", description: "Fully-qualified schema name, e.g. \"db.sales\" or \"prod.analytics\"." },
+    schemaFqn: {
+      type: "string",
+      description:
+        "Fully-qualified schema name, e.g. \"db.sales\", \"prod.analytics\", \"dune.uniswap\" or \"monid.<provider>.<endpoint>\". If omitted, a demo schema is analysed.",
+    },
+    demo: {
+      type: "boolean",
+      description: "Set true to force the labelled demo analysis without contacting any data source.",
+    },
     openmetadata: {
       type: "object",
+      description: "OpenMetadata connection: server URL (e.g. http://localhost:8585/api) and a bot/personal-access token.",
       properties: { url: { type: "string" }, token: { type: "string" } },
       required: ["url", "token"],
     },
@@ -77,6 +87,18 @@ const connectionSchema = {
     },
   },
   required: ["source", "schemaFqn"],
+  examples: [
+    {
+      // No credentials? A bare call still succeeds with a labelled demo analysis.
+      demo: true,
+    },
+    {
+      source: "openmetadata",
+      schemaFqn: "db.sales",
+      openmetadata: { url: "http://your-openmetadata:8585/api", token: "<token>" },
+    },
+    { source: "datahub", schemaFqn: "db.sales", datahub: { serverUrl: "http://your-datahub:8080" } },
+  ],
 } as const;
 
 const healthOutputSchema = {
@@ -257,9 +279,28 @@ const TOOLS = [
       ...connectionSchema,
       properties: {
         ...connectionSchema.properties,
-        researchQuestion: { type: "string", description: "Optional focus question for the briefing (8-240 chars)." },
+        researchQuestion: {
+          type: "string",
+          description:
+            "Optional focus question for the briefing. 8-240 chars recommended; shorter questions are ignored, longer ones truncated — never an error.",
+        },
         outputFormat: { type: "string", enum: ["podcast", "executive-summary"], default: "podcast" },
       },
+      examples: [
+        {
+          // Reviewer posture: no credentials needed, guaranteed 200 deliverable.
+          demo: true,
+          researchQuestion: "What are the biggest risks hiding in this schema?",
+          outputFormat: "executive-summary",
+        },
+        {
+          source: "openmetadata",
+          schemaFqn: "db.sales",
+          openmetadata: { url: "http://your-openmetadata:8585/api", token: "<token>" },
+          researchQuestion: "Which tables broke most recently and what should I fix first?",
+        },
+        { source: "dune", schemaFqn: "dune.uniswap", dune: { apiKey: "<DUNE_API_KEY>" } },
+      ],
     },
     outputSchema: briefingOutputSchema,
   },

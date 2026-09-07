@@ -7,10 +7,11 @@ import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
 import { buildResearchTrail } from "@/lib/research";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { getDuneTableStats } from "@/lib/dune-adapter";
-import { getMonidCost, MonidCliError } from "@/lib/monid-adapter";
+import { parseMcpInput } from "@/lib/mcp";
+import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
+import { getMonidCost } from "@/lib/monid-adapter";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
 import type { Episode } from "@/lib/types";
-import { parseMcpInput } from "@/lib/mcp";
 import { ValidationError } from "@/lib/validation";
 import { x402Server, briefingRouteConfig, x402Configured } from "@/lib/x402";
 
@@ -38,10 +39,19 @@ export const runtime = "nodejs";
  */
 async function briefingHandler(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = await req.json();
-    const { config, schemaFqn, researchQuestion, outputFormat } = parseMcpInput(body);
+    // A non-JSON or empty body still gets a (demo) briefing — never a 400/500.
+    let body: unknown = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    const { config, schemaFqn, researchQuestion, outputFormat, forceDemo } = parseMcpInput(body);
 
-    const meta = await fetchSchemaMeta(config, schemaFqn);
+    // Degrade to the labelled demo fixture when the source is unreachable —
+    // marketplace reviewers have no credentials, and a 400 after payment is
+    // exactly what failed the first OKX listing review.
+    const { meta, demo, connectionNotice } = await fetchSchemaMetaLenient(config, schemaFqn, { forceDemo });
     const insights = analyzeSchema(meta);
     const researchTrail = await enrichResearchTrail(
       buildResearchTrail(meta, insights, researchQuestion),
@@ -110,6 +120,7 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       tool: "databard.briefing",
       schemaFqn,
       schemaName: meta.name,
+      ...(demo ? { demo: true, connectionNotice } : {}),
       researchQuestion,
       outputFormat,
       health: {
@@ -146,12 +157,8 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
   } catch (e) {
     if (e instanceof ValidationError) {
       // 400 → withX402 skips settlement, caller is not charged.
+      // (Rare: parseMcpInput is lenient, but keep a guard for the impossible.)
       return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
-    }
-    // A hard Monid failure (CLI missing, no/bad key, no balance) is user-actionable
-    // → 400, and withX402 skips settlement so the caller is never charged for it.
-    if (e instanceof MonidCliError && e.hard) {
-      return NextResponse.json({ ok: false, error: e.message, kind: e.kind }, { status: 400 });
     }
     const msg = e instanceof Error ? e.message : "Unknown error";
     // 500 → withX402 skips settlement, caller is not charged.

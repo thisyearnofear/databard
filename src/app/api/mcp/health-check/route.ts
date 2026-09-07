@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
 import { parseMcpInput } from "@/lib/mcp";
+import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
 import { getMonidCost, MonidCliError } from "@/lib/monid-adapter";
 import { ValidationError, rateLimit } from "@/lib/validation";
 
@@ -31,10 +32,18 @@ export async function POST(req: NextRequest) {
     // not on us, but the metadata fetch + analysis isn't free.
     rateLimit(req, { maxRequests: 60, windowMs: 3600000 });
 
-    const body = await req.json();
-    const { config, schemaFqn } = parseMcpInput(body);
+    // A non-JSON or empty body still gets a (demo) analysis — never a 400/500.
+    let body: unknown = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    const { config, schemaFqn, forceDemo } = parseMcpInput(body);
 
-    const meta = await fetchSchemaMeta(config, schemaFqn);
+    // Degrade to the labelled demo fixture when the source is unreachable —
+    // reviewer agents have no credentials, so this is the success path.
+    const { meta, demo, connectionNotice } = await fetchSchemaMetaLenient(config, schemaFqn, { forceDemo });
     const insights = analyzeSchema(meta);
     const actions = generateActionItems(insights);
 
@@ -48,6 +57,7 @@ export async function POST(req: NextRequest) {
       tool: "databard.health-check",
       schemaFqn,
       schemaName: meta.name,
+      ...(demo ? { demo: true, connectionNotice } : {}),
       tableCount: meta.tables.length,
       health: {
         score: insights.healthScore,

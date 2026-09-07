@@ -109,6 +109,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 - `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture
 - `docs/DATAHUB_HACKATHON.md` — DataHub Agent Hackathon submission packet (pitch, judging-criteria map, setup, demo shot list)
 - `docs/MONID_HACKATHON.md` — Monid "We Kill" hackathon packet (generic metered-endpoint kill, measured-cost receipt, deferred video/social checklist)
+- `docs/CANDIDATE_TRACKER.md` — PARKED until after Monid: Campaign Lab candidate-website longitudinal tracker (separate vertical experiment, not the data-health roadmap)
 - `docs/AZURE.md` — Azure OpenAI migration guide
 
 ## OKX.AI A2MCP ASP
@@ -138,18 +139,38 @@ Without these, `/api/mcp/briefing` returns **503** (not a 402) so a misconfigure
 ```
 curl -i https://databard.persidian.com/api/mcp/tools                          # expect HTTP 200
 curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
-  -H 'content-type: application/json' \
-  -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'   # expect HTTP 200
+  -H 'content-type: application/json' -d '{}'                                 # expect HTTP 200 (labelled demo analysis, demo:true)
 curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
-  -H 'content-type: application/json' \
-  -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'   # expect HTTP 402 + PAYMENT-REQUIRED header
+  -H 'content-type: application/json' -d '{}'                                 # expect HTTP 402 + PAYMENT-REQUIRED header (then 200 demo after payment)
 curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
   -H 'content-type: application/json' \
-  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (DataHub source)
+  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (DataHub source; demo fallback if unreachable)
 curl -i -X POST https://databard.persidian.com/api/mcp/writeback \
   -H 'content-type: application/json' \
   -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (write back to DataHub graph)
 ```
+
+### OKX listing review round 1 — REJECTED, fixed (Sep 2026)
+Verdict: "Payment successful but service returned HTTP 400 — suspected missing
+parameters / incorrect invocation method." Root cause: the reviewer agent paid
+for `databard_briefing` and invoked it with best-guess params; the old surface
+was brittle — `schemaFqn` had to contain a dot (400 otherwise),
+`researchQuestion` had to be 8–240 chars (400 otherwise), no parameter aliases,
+no `{arguments:...}` envelope unwrapping, and an unreachable data source →
+error. A reviewer with no credentials could never succeed. Fixes (in code):
+- `src/lib/mcp.ts` — lenient parser: envelope unwrapping (`arguments`/`input`/
+  `params`/…), FQN aliases (`schema`/`fqn`/`dataset`/`schema_fqn`/…), source
+  spelling normalisation + connector-block fallback, missing FQN → `demo.uniswap`
+  (no 400), researchQuestion dropped/truncated instead of 400ing.
+- `src/lib/mcp-demo.ts` — `fetchSchemaMetaLenient`: unreachable source → the
+  labelled Uniswap demo fixture with `demo: true` + actionable
+  `connectionNotice`, as a **200**. `demo: true` in the body forces it.
+- `src/app/api/mcp/tools/route.ts` — input schemas now carry `examples`
+  (including the bare `{demo:true}` reviewer posture) and explicit "omit
+  everything for a demo analysis" guidance.
+- Unit-tested: `tests/mcp-parse.unit.ts` (12 tests, in `test:unit`).
+Before resubmitting: deploy, run the self-check above against prod, then
+resubmit the listing through the Agent conversation as the email instructs.
 
 ### Registration status (DONE — pending final OKX review)
 - **ASP identity #9878** — `DataBard`, registered on X Layer (chainIndex 196).

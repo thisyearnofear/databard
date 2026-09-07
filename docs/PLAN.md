@@ -135,6 +135,11 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md). This is a sep
 - [ ] Defer live Xero/QuickBooks integrations and zero-knowledge proofs until a pilot demonstrates a specific, recurring need
 
 ### Phase 9: Future
+- [ ] **Candidate Website Tracker (parked)** — Campaign Lab brief: turn the 2024
+      candidate-site scrape into a longitudinal messaging-shift dataset. Separate
+      vertical experiment, NOT the data-health roadmap. Scoping + reuse map in
+      [`docs/CANDIDATE_TRACKER.md`](CANDIDATE_TRACKER.md). Revisit only after Monid
+      submission and Phase 7 validation.
 - [ ] Azure migration — inference on Azure OpenAI, hosting on Container Apps ([`docs/AZURE.md`](docs/AZURE.md))
 - [ ] Microsoft Purview Tier-1 adapter ([`docs/PURVIEW_ADAPTER.md`](docs/PURVIEW_ADAPTER.md))
 - [ ] Custom voice personalities
