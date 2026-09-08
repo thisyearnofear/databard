@@ -7,7 +7,7 @@ function normalizeMonidBlock(
   block: McpRequestInput["monid"],
 ): McpRequestInput["monid"] {
   if (!block || typeof block !== "object") return block;
-  const b = block as Record<string, unknown>;
+  const b = block as unknown as Record<string, unknown>;
   const pick = (primary: unknown, alias: unknown): unknown =>
     primary !== undefined ? primary : alias;
   return {

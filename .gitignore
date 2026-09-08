@@ -12,9 +12,13 @@ __pycache__/
 .pytest_cache/
 *.pyc
 
-# Video build artefacts (final MP4 lives in docs/ and IS tracked)
-/video/
-videos/
+# Video build artefacts (Remotion scaffold in video/ IS tracked; renders/media are not)
+/video/out/
+/videos/
+video/node_modules/
+video/*.mp3
+video/*.webm
+video/*.mp4
 
 # Rust / Anchor build artifacts
 contracts/escrow/target/
