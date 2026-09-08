@@ -82,6 +82,21 @@ export async function POST(req: NextRequest) {
       summary,
       keyFindings,
       ...(topAction ? { nextStep: topAction.title } : {}),
+      // The upsell: this free check is the numbers — the paid briefing is the
+      // story (two-speaker script + narrated MP3). Machine-readable so the
+      // calling agent can offer it to its human or chain the call itself.
+      upgrade: {
+        tool: "databard_briefing",
+        endpoint: "/api/mcp/briefing",
+        priceUsd: "1.00",
+        includes: [
+          "two-speaker briefing script (Alex + Morgan)",
+          "narrated MP3 audio (url or inline)",
+          "trend narrative plus the health score and actions above",
+        ],
+        howToCall:
+          'POST the same body to /api/mcp/briefing (x402 pay-per-call, exact USDT0 on X Layer). Prefer audio "url" or "none" — "inline" base64 is unreadable context to a model.',
+      },
       tableCount: meta.tables.length,
       health: {
         score: insights.healthScore,

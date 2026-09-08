@@ -19,7 +19,10 @@ function getVoices(override?: VoiceConfig) {
   } as const;
 }
 
-const MODEL = "eleven_multilingual_v2";
+// Default TTS model for the flagship/subscription product. The $1 briefing
+// overrides per-call (Flash) — see BRIEFING_TTS_MODEL. Set
+// ELEVENLABS_TTS_MODEL to change the global default for all callers.
+const DEFAULT_TTS_MODEL = process.env.ELEVENLABS_TTS_MODEL ?? "eleven_multilingual_v2";
 const AUDIO_CACHE_TTL = 86400; // 24 hours
 
 let client: ElevenLabsClient | null = null;
@@ -132,9 +135,11 @@ export async function synthesizeSpeech(
   prevText?: string,
   nextText?: string,
   voiceOverride?: VoiceConfig,
+  modelOverride?: string,
 ): Promise<Buffer> {
   const voices = getVoices(voiceOverride);
-  const cacheKey = `audio:speech:${voices[segment.speaker]}:${hashKey(segment.text)}`;
+  const model = modelOverride ?? DEFAULT_TTS_MODEL;
+  const cacheKey = `audio:speech:${model}:${voices[segment.speaker]}:${hashKey(segment.text)}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
@@ -143,7 +148,7 @@ export async function synthesizeSpeech(
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${voices[segment.speaker]}?output_format=mp3_44100_128`;
   const body = {
     text: segment.text,
-    model_id: MODEL,
+    model_id: model,
     ...(prevText && { previous_text: prevText }),
     ...(nextText && { next_text: nextText }),
   };
@@ -212,35 +217,56 @@ export async function synthesizeSfx(prompt: string, durationSeconds = 2): Promis
 }
 
 /** Estimate ElevenLabs API calls for a script */
-export function estimateCost(script: ScriptSegment[]): { segments: number; sfxCalls: number; totalCalls: number } {
+export function estimateCost(
+  script: ScriptSegment[],
+  sfx: EpisodeSfxMode = "full",
+): { segments: number; sfxCalls: number; totalCalls: number } {
+  if (sfx === "none") return { segments: script.length, sfxCalls: 0, totalCalls: script.length };
   let sfxCalls = 2; // intro + outro
-  for (let i = 1; i < script.length; i++) {
-    if (script[i].topic !== script[i - 1].topic) sfxCalls++;
+  if (sfx === "full") {
+    for (let i = 1; i < script.length; i++) {
+      if (script[i].topic !== script[i - 1].topic) sfxCalls++;
+    }
   }
   return { segments: script.length, sfxCalls, totalCalls: script.length + sfxCalls };
 }
+
+/**
+ * SFX dress for synthesizeEpisode. "full" is the legacy produced-podcast cut
+ * (intro + per-topic whoosh + outro); "bookends" keeps intro + outro only;
+ * "none" skips SFX entirely. SFX gens ($0.12 each) are the surprise cost
+ * driver, so the $1 pay-per-call briefing defaults to "bookends" via
+ * BRIEFING_SFX_MODE (UNIT_ECONOMICS.md).
+ */
+export type EpisodeSfxMode = "full" | "bookends" | "none";
 
 /** Synthesize full episode: intro sfx + speech segments + transition sfx + outro sfx */
 export async function synthesizeEpisode(
   script: ScriptSegment[],
   voiceOverride?: VoiceConfig,
+  sfx: EpisodeSfxMode = "full",
+  model?: string,
 ): Promise<Buffer[]> {
   const buffers: Buffer[] = [];
 
-  buffers.push(await synthesizeSfx("podcast intro jingle, upbeat tech vibes, short", 3));
+  if (sfx !== "none") {
+    buffers.push(await synthesizeSfx("podcast intro jingle, upbeat tech vibes, short", 3));
+  }
 
   for (let i = 0; i < script.length; i++) {
     const prev = i > 0 ? script[i - 1].text : undefined;
     const next = i < script.length - 1 ? script[i + 1].text : undefined;
 
-    if (i > 0 && script[i].topic !== script[i - 1].topic) {
+    if (sfx === "full" && i > 0 && script[i].topic !== script[i - 1].topic) {
       buffers.push(await synthesizeSfx("short subtle whoosh transition sound", 1));
     }
 
-    buffers.push(await synthesizeSpeech(script[i], prev, next, voiceOverride));
+    buffers.push(await synthesizeSpeech(script[i], prev, next, voiceOverride, model));
   }
 
-  buffers.push(await synthesizeSfx("podcast outro jingle, mellow fade out, short", 3));
+  if (sfx !== "none") {
+    buffers.push(await synthesizeSfx("podcast outro jingle, mellow fade out, short", 3));
+  }
 
   return buffers;
 }

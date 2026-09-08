@@ -77,9 +77,18 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
     const audioModeResolved = audioMode;
     let audio: Buffer | undefined;
     if (audioModeResolved !== "none") {
+      // Cost controls for the $1 call (UNIT_ECONOMICS.md): Flash TTS
+      // (~50% cheaper speech) + bookends SFX (intro + outro only — the
+      // per-topic whooshes are the cost driver). The $49 subscription
+      // product keeps premium voices + full SFX; these envs scope the
+      // cheap path to this route only.
+      const rawMode = (process.env.BRIEFING_SFX_MODE ?? "bookends").toLowerCase();
+      const sfxMode = rawMode === "full" || rawMode === "none" ? rawMode : "bookends";
+      const ttsModel =
+        process.env.BRIEFING_TTS_MODEL ?? process.env.ELEVENLABS_TTS_MODEL ?? "eleven_flash_v2_5";
       let audioBuffers: Buffer[];
       try {
-        audioBuffers = await synthesizeEpisode(script);
+        audioBuffers = await synthesizeEpisode(script, undefined, sfxMode, ttsModel);
       } catch (apiError: unknown) {
         const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
         // Free-tier TTS 402 → web-automation fallback (same as /api/synthesize).

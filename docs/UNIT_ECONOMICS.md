@@ -76,8 +76,8 @@ For agents rather than humans. The `databard_briefing` MCP tool charges **$1.00 
 
 | Tool | Price | Cost | Margin |
 |---|---|---|---|
-| `databard_health_check` | Free | ~$0.00 (no LLM/audio) | — |
-| `databard_briefing` | $1.00 | ~$0.80 | ~$0.20 |
+| `databard_health_check` | Free | ~$0.00 (no LLM/audio) | — (acquisition; every response carries the `upgrade` upsell block for the briefing) |
+| `databard_briefing` | $1.00 | ~$0.30–0.35 (Flash TTS + bookends SFX, scoped to this route via `BRIEFING_TTS_MODEL` / `BRIEFING_SFX_MODE`; subscriptions keep premium voices) | ~$0.65 (~65%) |
 | `databard_write_back` | Free | ~$0.00 (no LLM/audio) | — |
 
 At 100 briefing calls/month that's ~$20 additional margin on top of the subscription business.

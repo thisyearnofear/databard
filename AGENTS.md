@@ -123,7 +123,7 @@ DataBard is registered as an Agent Service Provider (ASP) on OKX.AI, exposing th
 
 ### Pricing
 - Health check: free (`fee: "0"`).
-- Briefing: `exact` EIP-3009 USDT0 transfer on X Layer (`eip155:196`), default `$1.00`/call (set `BRIEFING_PRICE_USD`). Cost-per-briefing is ~$0.80, so ~$0.20 margin per call. Settlement only happens after the handler returns <400, so failed synthesis never charges the caller.
+- Briefing: `exact` EIP-3009 USDT0 transfer on X Layer (`eip155:196`), default `$1.00`/call (set `BRIEFING_PRICE_USD`). Cost-per-briefing is ~$0.30–0.35 (Flash TTS + bookends SFX via `BRIEFING_SFX_MODE`), so ~$0.65 margin per call. Settlement only happens after the handler returns <400, so failed synthesis never charges the caller.
 
 ### x402 server setup (`src/lib/x402.ts`)
 Uses the OKX Payment SDK (`@okxweb3/x402-core` + `@okxweb3/x402-evm` + `@okxweb3/x402-next`). The paid route is wrapped with `withX402(handler, briefingRouteConfig, x402Server)` — the SDK handles the 402 challenge (base64 `PAYMENT-REQUIRED` header), signature verification, and on-chain settlement via the OKX facilitator (`syncSettle: true` waits for confirmation).

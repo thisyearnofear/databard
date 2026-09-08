@@ -113,6 +113,18 @@ const healthOutputSchema = {
     summary: { type: "string", description: "Plain-text takeaway the calling agent can quote verbatim." },
     keyFindings: { type: "array", items: { type: "string" }, description: "Top findings as short strings." },
     nextStep: { type: "string", description: "The single most urgent recommended action." },
+    upgrade: {
+      type: "object",
+      description:
+        "Paid follow-up: the databard_briefing tool turns this free score into a two-speaker script plus narrated MP3 ($1.00/call, x402).",
+      properties: {
+        tool: { type: "string", const: "databard_briefing" },
+        endpoint: { type: "string" },
+        priceUsd: { type: "string" },
+        includes: { type: "array", items: { type: "string" } },
+        howToCall: { type: "string" },
+      },
+    },
     tableCount: { type: "number" },
     health: {
       type: "object",
