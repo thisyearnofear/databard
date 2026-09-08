@@ -150,7 +150,7 @@ curl -i -X POST https://databard.persidian.com/api/mcp/writeback \
   -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (write back to DataHub graph)
 ```
 
-### OKX listing review round 1 — REJECTED, fixed (Sep 2026) — RESUBMITTED Sep 7, 2026 (pending round 2)
+### OKX listing review round 1 — REJECTED, fixed (Sep 2026) — round 2 PASSED: **LISTED Sep 2026** ✅
 Verdict: "Payment successful but service returned HTTP 400 — suspected missing
 parameters / incorrect invocation method." Root cause: the reviewer agent paid
 for `databard_briefing` and invoked it with best-guess params; the old surface
@@ -180,6 +180,10 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
   the readiness gate). Response: `submitApproval: { approvalStatus: 2, success:
   true }` = under review. Watch: `onchainos agent get-agents --agent-ids 9878`.
   If round 2 fails, ask OKX for the reviewer's exact invocation payload.
+- **LISTED (Sep 8, 2026):** round 2 review passed — email confirmation received,
+  `approvalStatus` flipped to `4` (approved) on agent #9878. DataBard is now
+  visible/searchable on OKX.AI and eligible for recommendation. No further
+  registration steps remain; future updates go through the Agent conversation.
 Before resubmitting: deploy, run the self-check above against prod, then
 resubmit the listing through the Agent conversation as the email instructs.
 
@@ -202,7 +206,7 @@ resubmit the listing through the Agent conversation as the email instructs.
 - Local `.env` is gitignored; the deploy script never ships it. Never `npm install` on `snel-bot` for this app.
 
 ### Remaining steps (user actions)
-1. Wait for OKX final approval (status flips to "listed" — check with `onchainos agent get-agents --agent-ids 9878`).
+1. ~~Wait for OKX final approval~~ **DONE — listed Sep 8, 2026.**
 2. Record a 90s X demo post with `#OKXAI` — see `docs/OKX_AI_ASP.md` for the shot list.
 3. Submit the [OKX.AI Genesis Hackathon Google form](https://forms.gle/mddEUagmDbyV37ws8) (deadline was Jul 28 23:59 UTC; may be extended — verify before submitting).
 
