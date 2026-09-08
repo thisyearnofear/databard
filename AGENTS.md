@@ -265,25 +265,31 @@ balance / bad-request) are surfaced as actionable HTTP **400** (never a 500 or a
 stack trace); **soft** (timeout / rate-limit / exec / empty / parse) degrade via an
 `execNote` in the schema description, keeping the cost receipt.
 
-### Status / gates (verified Sep 3, 2026)
-- **CLI verification DONE (the free, no-key half of Step 0):** installed
-  `@monid-ai/cli` 0.1.7 and verified/fix the adapter against it — JSON
-  `--query`/`--path` flags, temp-credential-store key delivery, error
-  classification ("No active API key" → hard `no-key`; "API key is expired or
-  invalid" → hard `auth`). Shipped as `bf7e956`, deployed, prod tools 200.
-  Details + next steps in `docs/MONID_HACKATHON.md` (Progress section).
-- **Step 0 discovery (spending half) is the remaining gate:** `monid
-  discover`/`inspect`/`run` need the user's Monid key (`monid keys add -k <KEY>
-  -l databard` — note `keys add` requires a label), and the confirming `run`
-  **spends their balance** (cents). It fixes the kill target + the concrete
-  `provider`/`endpoint` used in the demo.
+### Status / gates (verified Sep 8, 2026 — SUBMISSION-READY)
+- **Step 0 discovery DONE (spending half):** key added (label `databard`, also
+  secured in the macOS keychain, service `monid`; balance $1.00). **Kill target
+  locked: `surf /dex/token/price`** ($0.006/call, stable, verified — 43 OHLCV
+  rows, PEPE 4h×7d) with **`defillama /coins/prices/current/{coins}`** as the
+  free companion ($0/call, 3 token prices). Confirming runs: defillama
+  `01M20QRJE03VJZ2RTRSA74S2YH` ($0), surf `01M20R1KGAP4KS66DPAF3JR5F1` ($0.006).
+- **Live verification DONE — local AND prod:** `POST /api/mcp/health-check` with
+  `source:"monid"` returns a real analysis (score 95/100, 43 rows) plus the
+  measured-cost receipt. **Prod is verifiable by any judge with one curl** (see
+  the curl in `docs/MONID_HACKATHON.md`). Prod needs `MONID_API_KEY` +
+  `MONID_BIN=/home/deploy/.local/bin/monid` in `/opt/databard/.env` and the CLI
+  installed on the box (`npm i -g @monid-ai/cli --prefix ~/.local` — global npm
+  is not writable there). Each prod Monid health-check spends ~$0.006 of our
+  balance; the 60/hr/IP rate limit is the guard.
+- **Agent-first alias fix:** `mcp.ts` accepts Monid-inspect-style
+  `queryParams`/`pathParams`/`body` keys as aliases for `query`/`path`/`inputs`
+  (+2 tests; `tests/mcp-parse.unit.ts` now 15 passing). Unreachable source still
+  degrades to the labelled demo (200, `demo:true`).
 - **Wizard UI (Part G) is not built:** Monid is driven via the A2MCP endpoints for
   now. The `monid` keys exist in the label/help maps (so `tsc` passes) but Monid is
-  intentionally **not** in the `ConnectStep` picker — wire it once discovery fixes
-  the target.
-- **Video + social are deferred** (scope: build + docs now). The `<90s` shot list +
+  intentionally **not** in the `ConnectStep` picker.
+- **Video + social remain** (user actions). The `<90s` shot list +
   5-platform posting checklist live in `docs/MONID_HACKATHON.md`. **Re-verify the
-  Dune Plus price at `dune.com/pricing` before it appears in any copy** — do not
-  fabricate it (sources disagree: $349 vs ~$390).
+  Dune Plus price at `dune.com/pricing` before it appears in any copy** — the page
+  is JS-rendered and scrapes empty; keep "≈$349–390/mo" or omit the number.
 - Unit-tested offline: `tests/monid-adapter.unit.ts` (36 tests over the pure
   mapping layer — no CLI, no key).
