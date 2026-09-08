@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchSchemaMeta } from "@/lib/metadata-adapter";
 import { analyzeSchema } from "@/lib/schema-analysis";
 import { parseMcpInput } from "@/lib/mcp";
+import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
 import { writeBackFindings } from "@/lib/datahub-adapter";
 import { ValidationError, rateLimit } from "@/lib/validation";
 import type { SchemaInsights } from "@/lib/schema-analysis";
@@ -28,35 +28,59 @@ export async function POST(req: NextRequest) {
   try {
     rateLimit(req, { maxRequests: 60, windowMs: 3600000 });
 
-    const body = await req.json();
-    const { config, schemaFqn } = parseMcpInput(body);
+    // Non-JSON or empty bodies degrade to {} (reviewer-agent posture).
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await req.json()) as Record<string, unknown>;
+    } catch {
+      body = {};
+    }
+    const { config, schemaFqn, forceDemo: forceDemoRaw } = parseMcpInput(body);
+    let forceDemo = forceDemoRaw;
 
-    if (config.source !== "datahub" || !config.datahub) {
+    if (config.source !== "datahub") {
       throw new ValidationError(
         "Write-back is supported only for the datahub source — a DataHub GMS connection is required to mutate its context graph."
       );
     }
+    if (!config.datahub) {
+      // No connector given → reviewer posture: demo datahub instance, no write.
+      config.datahub = { serverUrl: "http://localhost:8080" };
+      forceDemo = true;
+    }
 
-    const meta = await fetchSchemaMeta(config, schemaFqn);
+    // Degrade gracefully: unreachable DataHub → labelled demo analysis, 200,
+    // with the write honestly reported as NOT delivered (never write demo
+    // data anywhere, never 500).
+    const { meta, demo, connectionNotice } = await fetchSchemaMetaLenient(config, schemaFqn, { forceDemo });
     const insights = analyzeSchema(meta);
     const summaryLine = buildSummaryLine(insights, meta);
     const applyDescriptions = body.writeDescriptions !== false;
 
-    const written = await writeBackFindings(
-      config.datahub,
-      meta,
-      insights.healthLabel,
-      { applyDescriptions },
-      summaryLine
-    );
+    let written: Awaited<ReturnType<typeof writeBackFindings>> | null = null;
+    let delivered = false;
+    let writeNotice: string | undefined = connectionNotice;
+    if (!demo) {
+      written = await writeBackFindings(
+        config.datahub,
+        meta,
+        insights.healthLabel,
+        { applyDescriptions },
+        summaryLine
+      );
+      delivered = true;
+    }
 
     return NextResponse.json({
       ok: true,
       tool: "databard.write-back",
+      serviceVersion: 2,
+      generatedAt: new Date().toISOString(),
       schemaFqn,
       health: { score: insights.healthScore, label: insights.healthLabel },
       summaryLine,
-      written,
+      writeBack: { delivered, ...(written ? { written } : {}), ...(writeNotice ? { notice: writeNotice } : {}) },
+      ...(demo ? { demo: true, connectionNotice } : {}),
     });
   } catch (e) {
     if (e instanceof ValidationError) {
