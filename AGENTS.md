@@ -150,7 +150,7 @@ curl -i -X POST https://databard.persidian.com/api/mcp/writeback \
   -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'   # expect HTTP 200 (write back to DataHub graph)
 ```
 
-### OKX listing review round 1 — REJECTED, fixed (Sep 2026)
+### OKX listing review round 1 — REJECTED, fixed (Sep 2026) — RESUBMITTED Sep 7, 2026 (pending round 2)
 Verdict: "Payment successful but service returned HTTP 400 — suspected missing
 parameters / incorrect invocation method." Root cause: the reviewer agent paid
 for `databard_briefing` and invoked it with best-guess params; the old surface
@@ -169,6 +169,17 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
   (including the bare `{demo:true}` reviewer posture) and explicit "omit
   everything for a demo analysis" guidance.
 - Unit-tested: `tests/mcp-parse.unit.ts` (12 tests, in `test:unit`).
+- **Agent-first upgrade shipped before resubmitting** (commits `0c794ad`, `6e0627a`):
+  `summary` / `keyFindings` / `nextStep` + `serviceVersion`/`generatedAt` on both
+  routes; `audio: "inline"|"url"|"none"` on the briefing (none skips TTS);
+  writeback degrades to a labelled demo (200, `writeBack.delivered: false`) instead
+  of 500ing on an unreachable DataHub. Prod self-check re-verified after deploy.
+- **RESUBMITTED Sep 7, 2026** via `onchainos agent activate --agent-id 9878
+  --preferred-language en-US` (had to restart the `okx-a2a` daemon first — it dies
+  with the terminal session; `okx-a2a doctor` / `daemon start` if activate fails
+  the readiness gate). Response: `submitApproval: { approvalStatus: 2, success:
+  true }` = under review. Watch: `onchainos agent get-agents --agent-ids 9878`.
+  If round 2 fails, ask OKX for the reviewer's exact invocation payload.
 Before resubmitting: deploy, run the self-check above against prod, then
 resubmit the listing through the Agent conversation as the email instructs.
 
