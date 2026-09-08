@@ -1,4 +1,26 @@
 /**
+ * Accept the param names `monid inspect` prints (`queryParams`/`pathParams`/`body`)
+ * as aliases for the adapter's `query`/`path`/`inputs`, so a calling agent can
+ * paste inspect output straight into the tool call. Explicit adapter keys win.
+ */
+function normalizeMonidBlock(
+  block: McpRequestInput["monid"],
+): McpRequestInput["monid"] {
+  if (!block || typeof block !== "object") return block;
+  const b = block as Record<string, unknown>;
+  const pick = (primary: unknown, alias: unknown): unknown =>
+    primary !== undefined ? primary : alias;
+  return {
+    ...b,
+    provider: b.provider as string,
+    endpoint: b.endpoint as string,
+    query: pick(b.query, b.queryParams) as Record<string, string> | undefined,
+    path: pick(b.path, b.pathParams) as Record<string, string> | undefined,
+    inputs: pick(b.inputs, b.body ?? b.bodyParams) as Record<string, unknown> | undefined,
+  } as McpRequestInput["monid"];
+}
+
+/**
  * Shared helpers for the /api/mcp/* A2MCP endpoints.
  *
  * The MCP tools are one-shot: each call carries the full connection spec +
@@ -199,7 +221,7 @@ export function parseMcpInput(body: unknown): ParsedMcpInput {
     theGraph: asBlock(record.theGraph ?? record.the_graph),
     dune: asBlock(record.dune),
     coral: asBlock(record.coral),
-    monid: asBlock(record.monid),
+    monid: normalizeMonidBlock(asBlock(record.monid)),
   };
 
   // researchQuestion: drop if too short, truncate if too long — never a 400.

@@ -190,9 +190,10 @@ API key…"* — as HTTP **400**, not a stack trace or a 500.
 - [x] `tsc`-clean + deterministic unit tests (`tests/monid-adapter.unit.ts`, 36 tests, offline)
 - [x] Docs: this packet, `AGENTS.md`, `DATA_SOURCES_ARCHITECTURE.md`, `.env.example`
 - [x] **Adapter verified against the real CLI** (0.1.7): flag shapes, key delivery via temp credential store, error classification — shipped as `bf7e956` and deployed (prod tools endpoint 200)
-- [ ] **DEFERRED — Step 0 discovery, spending half** (`monid discover`/`inspect`/`run`): the free CLI-verification half is done; the discovery + confirming `run` still needs the user's Monid key and **spends their balance** — fixes the kill target + the concrete `provider`/`endpoint`
-- [ ] **DEFERRED — Live health-check verification** against a real endpoint (the confirming `run` spends cents)
-- [ ] **DEFERRED — Wizard UI (Part G):** Monid is driven via A2MCP for now; wire the picker fields once discovery fixes the target
+- [x] **Step 0 discovery DONE (Sep 8, 2026):** `monid discover`/`inspect`/`run` executed live with the user's key (label `databard`, key stored in `~/.config/monid/` + macOS keychain, service `monid`). **Kill target locked: `surf /dex/token/price`** ($0.006/call, stable, verified, 43 OHLCV rows for `ethereum:0x6982…1933` PEPE 4h×7d) with **`defillama /coins/prices/current/{coins}`** as the free companion ($0/call, stable, verified — 3 token prices). Confirming runs: defillama runId `01M20QRJE03VJZ2RTRSA74S2YH` (cost $0), surf runId `01M20R1KGAP4KS66DPAF3JR5F1` (cost $0.006 — balance $1.00 → $0.99).
+- [x] **Live health-check verification DONE:** `POST /api/mcp/health-check` with `source:"monid"` against the surf endpoint returned **health score 95/100 (healthy)** from 43 live rows with the measured-cost receipt (`monidCost: {provider:"surf", runId:…, rowCount:43, ok:true}`). Negative path also exercised: a call missing required inputs degrades honestly (`monidCost.ok:false` + note), still 200.
+- [x] **Agent-first alias fix (Sep 8):** `src/lib/mcp.ts` now accepts `monid inspect`-style `queryParams`/`pathParams`/`body` keys as aliases for `query`/`path`/`inputs`, so a calling agent can paste inspect output straight into the tool call (+2 unit tests, `tests/mcp-parse.unit.ts` now 15 passing).
+- [ ] **Wizard UI (Part G):** Monid is driven via A2MCP for now; wire the picker fields (lower priority than shipping)
 - [ ] **DEFERRED — Re-verify the Dune Plus price** at `dune.com/pricing` (do not fabricate)
 - [ ] **DEFERRED — `<90s` demo video** (shot list above)
 - [ ] **DEFERRED — Social push:** first post on each of X / LinkedIn / Instagram / TikTok / YouTube with `#monid` + the register URL within 24h (Reach 250 + Viral 200)

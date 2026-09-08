@@ -111,6 +111,37 @@ describe("parseMcpInput — leniency (OKX review fix)", () => {
   it("keeps a recognised source even when other blocks are absent", () => {
     assert.equal(parseMcpInput({ source: "monid" }).config.source, "monid");
   });
+
+  it("accepts monid inspect-style param aliases (queryParams/pathParams/body)", () => {
+    const p = parseMcpInput({
+      source: "monid",
+      schemaFqn: "monid.surf.ohlcv",
+      monid: {
+        provider: "surf",
+        endpoint: "/dex/token/price",
+        queryParams: { chain: "ethereum" },
+        pathParams: { version: "v1" },
+        body: { limit: 5 },
+      },
+    } as never);
+    assert.equal(p.config.monid?.query?.chain, "ethereum");
+    assert.equal((p.config.monid?.path as Record<string, unknown>)?.version, "v1");
+    assert.equal((p.config.monid?.inputs as Record<string, unknown>)?.limit, 5);
+  });
+
+  it("prefers explicit adapter keys over inspect-style aliases", () => {
+    const p = parseMcpInput({
+      source: "monid",
+      schemaFqn: "monid.x",
+      monid: {
+        provider: "surf",
+        endpoint: "/e",
+        query: { a: "1" },
+        queryParams: { b: "2" },
+      },
+    } as never);
+    assert.deepEqual(p.config.monid?.query, { a: "1" });
+  });
 });
 
 console.log("mcp-parse.unit: all assertions passed");
