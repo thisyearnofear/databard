@@ -179,6 +179,35 @@ Per demo run: ~$1 in + ~$0.20–$0.40 out = ~$0.60–$0.80 margin if we bill
 $1. Cost for 5 demo runs at the live finale: ~$3. **Pre-fund the wallet
 with $20 USDT0 on X Layer before Sep 25.**
 
+### Economics & sustainability
+
+**Margin:** ~88% gross margin per call ($1.00 revenue − ~$0.12 COGS).
+This is the best margin in the DataBard suite because there is no TTS or
+LLM cost — just HTTP calls and a tiny on-chain write.
+
+**Sustainability guardrails (built into `probe-runner.ts`):**
+
+1. **Outbound spend cap** (`MAX_OUTBOUND_SPEND_USD = $0.50`): before each
+   paid call, the runner checks remaining budget. If cumulative cost would
+   exceed the cap, remaining paid candidates are skipped and marked
+   `"skipped": "spend cap reached"`. Worst-case COGS is bounded well below
+   the $1.00 price.
+2. **1-hour result cache**: repeat probes for the same endpoint + body
+   within one hour return the cached result without re-spending. Multiple
+   callers asking about the same service trigger only one outbound call.
+3. **No LLM / no TTS**: the probe pipeline is pure HTTP + JSON parsing,
+   keeping variable cost near zero regardless of volume.
+4. **User-supplied candidates capped at 10**, each subject to the same
+   spend cap, so a malicious or careless caller cannot force unbounded
+   outbound payments.
+
+**Break-even on Probe alone:** at 5 calls/day ($150/month revenue, ~$18/month
+COGS) the tool contributes ~$132/month margin before fixed costs.
+
+**Reusing the existing Agentic Wallet** (`0x5e32…711e`) for outbound probe
+payments avoids managing a separate funded wallet. Just ensure it holds ≥ $10
+USDT0 for outbound probe payments.
+
 ## Shipping schedule
 
 | Day | Owner | Deliverable |

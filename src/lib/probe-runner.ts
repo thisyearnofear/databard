@@ -50,6 +50,30 @@ export interface ProbeResult {
 
 const PROBE_TIMEOUT_MS = 15_000;
 const MAX_BODY_SNIPPET = 2_000;
+const MAX_OUTBOUND_SPEND_USD = 0.50;
+
+// ── Simple in-memory cache (1-hour TTL) ───────────────────────────────────
+
+const probeCache = new Map<string, { result: ProbeResult; expiresAt: number }>();
+const CACHE_TTL_MS = 3_600_000; // 1 hour
+
+function cacheKey(candidate: ProbeCandidate): string {
+  return `${candidate.method ?? "POST"}:${candidate.endpoint}:${JSON.stringify(candidate.body ?? {})}`;
+}
+
+function getCached(key: string): ProbeResult | null {
+  const entry = probeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    probeCache.delete(key);
+    return null;
+  }
+  return entry.result;
+}
+
+function setCache(key: string, result: ProbeResult): void {
+  probeCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
+}
 
 // ── x402 client (lazy-loaded to avoid import cost when not needed) ─────────
 
@@ -122,10 +146,42 @@ async function attemptX402Payment(
 
 /**
  * Probe a single A2MCP endpoint and return structured metrics.
+ * Checks cache first; respects the cumulative spend cap.
  */
 export async function probeEndpoint(
-  candidate: ProbeCandidate
+  candidate: ProbeCandidate,
+  spendRemaining: { value: number }
 ): Promise<ProbeResult> {
+  // Check cache first
+  const key = cacheKey(candidate);
+  const cached = getCached(key);
+  if (cached) return cached;
+
+  // Skip paid calls if spend cap would be exceeded
+  const cost = candidate.knownPriceUsd ?? 0;
+  if (cost > 0 && cost > spendRemaining.value) {
+    return {
+      candidate,
+      metrics: {
+        reachable: false,
+        statusCode: 0,
+        latencyMs: 0,
+        hasInputSchema: false,
+        hasExamples: false,
+        hasDescription: false,
+        toolCount: 0,
+        hasTimestamp: false,
+        timestampAgeMinutes: null,
+        priceUsd: cost,
+        responseFieldCount: 0,
+        isDemo: false,
+        hasError: false,
+      },
+      statusCode: 0,
+      error: "Skipped: outbound spend cap reached",
+    };
+  }
+
   const url = candidate.endpoint;
   const method = candidate.method ?? "POST";
   const start = Date.now();
@@ -219,12 +275,17 @@ export async function probeEndpoint(
       }
     }
 
-    return {
+    // Deduct from spend budget
+    spendRemaining.value -= cost;
+
+    const result: ProbeResult = {
       candidate,
       metrics,
       rawSnippet: bodyText.slice(0, MAX_BODY_SNIPPET),
       statusCode,
     };
+    setCache(key, result);
+    return result;
   } catch (err: unknown) {
     const latencyMs = Date.now() - start;
     const errorMsg =
@@ -256,6 +317,7 @@ export async function probeEndpoint(
 
 /**
  * Probe multiple candidates in parallel with a concurrency limit.
+ * Enforces a cumulative outbound spend cap across all candidates.
  */
 export async function probeAll(
   candidates: ProbeCandidate[],
@@ -263,12 +325,13 @@ export async function probeAll(
 ): Promise<ProbeResult[]> {
   const results: ProbeResult[] = [];
   const queue = [...candidates];
+  const spendRemaining = { value: MAX_OUTBOUND_SPEND_USD };
 
   async function worker() {
     while (queue.length > 0) {
       const candidate = queue.shift();
       if (!candidate) break;
-      results.push(await probeEndpoint(candidate));
+      results.push(await probeEndpoint(candidate, spendRemaining));
     }
   }
 

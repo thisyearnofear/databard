@@ -79,8 +79,36 @@ For agents rather than humans. The `databard_briefing` MCP tool charges **$1.00 
 | `databard_health_check` | Free | ~$0.00 (no LLM/audio) | — (acquisition; every response carries the `upgrade` upsell block for the briefing) |
 | `databard_briefing` | $1.00 | ~$0.30–0.35 (Flash TTS + bookends SFX, scoped to this route via `BRIEFING_TTS_MODEL` / `BRIEFING_SFX_MODE`; subscriptions keep premium voices) | ~$0.65 (~65%) |
 | `databard_write_back` | Free | ~$0.00 (no LLM/audio) | — |
+| `databard_probe` | $1.00 | ~$0.12 (outbound x402 payments to probed services + gas + attestation write; no LLM/audio) | ~$0.88 (~88%) |
 
 At 100 briefing calls/month that's ~$20 additional margin on top of the subscription business.
+
+#### Probe economics & sustainability guardrails
+
+A single Probe call costs roughly $0.12 in outbound spend when using the five
+default candidates (Doxa $0.005, Onchain Data Explorer $0.01, Atlas $0.00001,
+PolyDesk $0.10, DataBard self $0). At a $1.00 sticker price that yields ~88%
+gross margin — the best of any tool in the suite, since there is no TTS or
+LLM involved.
+
+Sustainability guardrails built into `probe-runner.ts`:
+
+1. **Outbound spend cap** — `MAX_OUTBOUND_SPEND_USD` (default $0.50) is checked
+   before each paid call. If the cumulative cost of a probe batch would exceed
+   the cap, remaining paid candidates are skipped and marked
+   `"skipped": "spend cap reached"` in the response. Worst-case COGS is
+   therefore bounded well below the $1.00 price.
+2. **1-hour result cache** — repeat probes for the same endpoint + body within
+   one hour return the cached result without re-spending, so multiple callers
+   asking about the same service only trigger one outbound call.
+3. **No LLM / no TTS** — the probe pipeline is pure HTTP + JSON parsing,
+   keeping variable cost near zero regardless of volume.
+4. **User-supplied candidates are capped at 10** and each is subject to the
+   same spend cap, so a malicious or careless caller cannot force unbounded
+   outbound payments.
+
+**Break-even on Probe alone:** at 5 calls/day ($150/month revenue, ~$18/month
+COGS) the tool contributes ~$132/month margin before fixed costs.
 
 ### Why $49, not $99 or $29
 
@@ -107,6 +135,7 @@ At 100 briefing calls/month that's ~$20 additional margin on top of the subscrip
 - On-chain attestation (Solana mainnet, Protocols workspace) — $49/month
 - Team management (multiple recipients) — $49/month
 - `databard_briefing` A2MCP tool — $1.00/call via x402 (agent pay-per-call)
+- `databard_probe` A2MCP tool — $1.00/call via x402 (agent-service quality probe)
 
 ---
 
