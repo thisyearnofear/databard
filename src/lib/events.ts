@@ -41,6 +41,7 @@ export const EVENT_TYPES = [
   "league_page_view",         // visited /league (weekly accounting magnet)
   "league_share_copy",        // copied tweet, email, or permalink
   "monday_signup",            // email on the finding: send this every Monday
+  "probe_run",                // DataBard Probe executed against agent services
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

@@ -73,8 +73,13 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/notifications.ts` — email delivery for scheduled digests
 - `src/lib/script-generator.ts` — LLM script generation (Alex + Morgan)
 - `src/lib/schema-analysis.ts` — health score, critical tables, trend diffs
-- `src/lib/x402.ts` — OKX x402 payment server setup (facilitator + resource server + briefing route config)
+- `src/lib/x402.ts` — OKX x402 payment server setup (facilitator + resource server + briefing & probe route configs)
 - `src/lib/mcp.ts` — shared A2MCP input parser (one-shot connection config from request body)
+- `src/lib/probe-runner.ts` — DataBard Probe: fetches & measures A2MCP endpoints, x402 client payment, returns ProbeMetrics
+- `src/lib/probe-scorer.ts` — composite 6-dimension quality score (schema, latency, freshness, price/value, reliability, credentials)
+- `src/lib/probe-attestation.ts` — writes verdict hash to X Layer via viem (zero-value self-send)
+- `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402): probes candidate services, returns ranked verdict + optional on-chain attestation
+- `src/app/probe/page.tsx` — Probe demo UI (question input, ranked result cards)
 - `src/app/api/mcp/health-check/route.ts` — FREE A2MCP tool: schema health score + recommended actions
 - `src/app/api/mcp/briefing/route.ts` — PAID A2MCP tool (x402): full synthesis (script + audio + health)
 - `src/app/api/mcp/tools/route.ts` — A2MCP service discovery (tool list + JSON schemas)
@@ -111,6 +116,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 - `docs/MONID_HACKATHON.md` — Monid "We Kill" hackathon packet (generic metered-endpoint kill, measured-cost receipt, deferred video/social checklist)
 - `docs/CANDIDATE_TRACKER.md` — PARKED until after Monid: Campaign Lab candidate-website longitudinal tracker (separate vertical experiment, not the data-health roadmap)
 - `docs/AZURE.md` — Azure OpenAI migration guide
+- `docs/OKX_DEV_DAY_2026.md` — OKX Dev Day 2026 hackathon: DataBard Probe (agent-service quality oracle on X Layer)
 
 ## OKX.AI A2MCP ASP
 DataBard is registered as an Agent Service Provider (ASP) on OKX.AI, exposing the synthesis engine as two A2MCP (Agent-to-MCP) pay-per-call / free tools. The endpoints are stateless one-shot wrappers over the same libs the wizard/synthesize pipeline uses — no session dependency.

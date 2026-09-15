@@ -29,6 +29,7 @@ export const X402_NETWORK = "eip155:196"; // X Layer mainnet
 // references in .env files, so "$1.00" becomes ".00". Use "1.00" (no $) in .env;
 // the SDK's parseMoneyToDecimal handles both "$1.00" and "1.00" formats.
 export const BRIEFING_PRICE = process.env.BRIEFING_PRICE_USD || "$1.00";
+export const PROBE_PRICE = process.env.PROBE_PRICE_USD || "$1.00";
 
 export const x402Configured = Boolean(
   process.env.PAY_TO_ADDRESS &&
@@ -64,5 +65,17 @@ export const briefingRouteConfig: RouteConfig = {
     price: BRIEFING_PRICE,
   },
   description: "Data Briefing — AI data analyst synthesis (script + audio + health score + recommended actions)",
+  mimeType: "application/json",
+};
+
+export const probeRouteConfig: RouteConfig = {
+  accepts: {
+    scheme: "exact",
+    network: X402_NETWORK,
+    payTo: process.env.PAY_TO_ADDRESS || "",
+    price: PROBE_PRICE,
+  },
+  description:
+    "DataBard Probe — probes A2MCP agent services, scores quality (schema, latency, freshness, price-value, reliability, credentials), and returns a ranked verdict with on-chain attestation.",
   mimeType: "application/json",
 };
