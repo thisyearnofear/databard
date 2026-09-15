@@ -243,9 +243,10 @@ joins, assign Sep 22–24 (UI polish + video) to them.
    `./client` and `@okxweb3/x402-evm` exports `./exact/client` (confirmed
    from package-lock.json). We can programmatically pay other A2MCP services
    from the server. Need a funded wallet (private key in env `PROBE_PAYER_PK`)
-   with USDT0 on X Layer. **Reuse the existing Agentic Wallet**
-   (`0x5e32740122999bb98a50055d68593f94d2a0711e`) — no separate wallet needed.
-   Ensure it holds ≥ $10 USDT0 for outbound probe payments.
+   with USDT0 on X Layer. A **dedicated wallet** has been provisioned:
+   `0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8`. Fund it with ≥ $10 USDT0
+   before the first live demo. Private key stored in `.env` (gitignored) and
+   `/opt/databard/.env` on prod.
 
 2. **Endpoint availability on demo day.** We use real, live A2MCP endpoints
    (Doxa, OKX Onchain Data Explorer, Atlas, PolyDesk). If one is down during
@@ -253,10 +254,9 @@ joins, assign Sep 22–24 (UI polish + video) to them.
    Monid endpoints (surf, defillama) are the backup set since we control the
    adapter and API key.
 
-3. **Attestation wallet key handling.** The X Layer write needs the
-   Builder Code payout private key (or a hot wallet). Don't ship the key
-   in the repo. Use a server-side env var (`PROBE_ATTESTATION_PK`),
-   documented alongside the existing x402 env vars.
+3. **Attestation wallet key handling.** The X Layer write uses the same
+   dedicated probe wallet (`PROBE_PAYER_PK`). Never commit the key to the
+   repo; it lives only in `.env` (gitignored) and `/opt/databard/.env` on prod.
 
 4. **Time.** 10 days, solo. The score formula + UI is the bulk of the
    work. If we slip, cut the UI polish, not the score formula or the
