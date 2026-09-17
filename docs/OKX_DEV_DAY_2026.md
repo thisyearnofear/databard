@@ -370,10 +370,32 @@ joins, assign Sep 22–24 (UI polish + video) to them.
   Agentic-Wallet line.
 - **Quality gates**: `tsc` clean, 28/28 scorer tests, `npm run test:unit` green,
   production build 84 pages, bundle guard passing.
-    (flags: demo fallback data + no advertised input schema — correct, since
-    health-check was called bare)
-- **Not yet exercised live**: server-side outbound payment to third-party
-  x402 candidates (the fixed SDK path in `probe-runner.ts` is type-checked and
-  unit-tested only). A full default-set run costs ~$1.12 (fee + Doxa/OKLink/
-  Atlas/PolyDesk outbound, under the $0.50 cap). Run when ready:
-  `node scripts/probe-smoke.mjs` (no args = default candidates)
+- **Deployed** (release `20260917_115836`, commit `e1778fe`), health gate 200.
+- **SSRF guard verified** offline: loopback / localhost / 169.254.169.254 /
+  192.168.x / 172.16–31.x / non-http schemes all blocked before network I/O;
+  public URLs pass the guard.
+- **Free preview live** (`POST /api/probe/preview`): 5 candidates scored with
+  zero outbound spend; OKLink + Atlas honestly flagged `402 challenge` /
+  "Payments disabled for this run"; Doxa honestly unreachable (score 0).
+- **FULL-CANDIDATE PAID RUN PASSED** (the core hackathon feature, first live
+  test of outbound x402 payments):
+  - inbound: unpaid → 402, paid retry → 200, settlement `paymentId 15608979`,
+    tx `0xe989c69580812e902f863491eb38638be8cb17afa1c9f138d948281cd91dc66a`
+  - outbound paid **to real third-party services**: Atlas Data API ($0.00001)
+    and OKLink Token Metadata ($0.01) — both `challengeReceived: true,
+    paid: true`; OKLink settlement tx captured from its `PAYMENT-RESPONSE`
+    header: `0x06cc938fd75fa009e1b581781c0b9c0d4fb1ff0e70597cb24678d24e88bdae66`
+  - verdict: self 71 (good) > Atlas 58 > OKLink 50 > PolyDesk 42 (free,
+    reachable, no x402 challenge) > Doxa 0 (unreachable — honest)
+  - cost receipt: `outboundSpentUsd 0.01` of `0.5` cap, `paidCount 2`
+  - cache verified payment-mode-aware: a repeat paid run served PolyDesk +
+    self from cache (`fromCache: true`) without re-spending
+- **Tools discovery**: `/api/mcp/tools` now lists `databard_probe` with full
+  input/output schemas and examples.
+- UI at `/probe` (nav: Protocols workspace + landing footer) verified 200;
+  compiled bundle contains the free-preview button, 402 explainer, cost line
+  and x402/cached badges.
+- **Smoke re-run after the first full run**: a second paid call (within the
+  1-hour TTL) returned 200 and served PolyDesk from the paid-mode cache
+  (`fromCache: true`) instead of re-probing it — the payment-mode-aware cache
+  prevents double-spend on repeated verdicts.
