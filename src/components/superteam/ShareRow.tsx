@@ -10,7 +10,7 @@ function CopyButton({
 }: {
   label: string;
   text: string;
-  channel: "tweet" | "linkedin" | "email" | "link";
+  channel: "tweet" | "linkedin" | "email" | "link" | "receipt";
 }) {
   const [done, setDone] = useState(false);
 
@@ -41,11 +41,14 @@ export function ShareRow({
   linkedin,
   email,
   link,
+  receipt,
 }: {
   tweet: string;
   linkedin: string;
   email: string;
   link: string;
+  /** Canonical `databard.evidence-receipt` JSON — copyable so it travels with the numbers. */
+  receipt: string;
 }) {
   useEffect(() => {
     track("superteam_page_view", {});
@@ -57,6 +60,7 @@ export function ShareRow({
       <CopyButton label="Copy LinkedIn" text={linkedin} channel="linkedin" />
       <CopyButton label="Copy email" text={email} channel="email" />
       <CopyButton label="Copy link" text={link} channel="link" />
+      <CopyButton label="Copy evidence receipt" text={receipt} channel="receipt" />
     </div>
   );
 }

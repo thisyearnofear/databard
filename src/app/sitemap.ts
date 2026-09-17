@@ -17,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/fleet",
     "/verify",
     "/alerts",
+    "/superteam",
     "/privacy",
     "/terms",
   ];
@@ -24,7 +25,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return staticPages.map((path) => ({
     url: `${base}${path}`,
     lastModified,
-    changeFrequency: path === "" || path === "/league" ? "daily" : "weekly",
-    priority: path === "" ? 1.0 : path === "/league" ? 0.9 : 0.6,
+    changeFrequency: path === "" || path === "/league" || path === "/superteam" ? "daily" : "weekly",
+    priority:
+      path === "" ? 1.0 : path === "/league" ? 0.9 : path === "/superteam" ? 0.8 : 0.6,
   }));
 }

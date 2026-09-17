@@ -3,7 +3,7 @@ import Link from "next/link";
 import { loadEarnEdition } from "@/lib/superteam-earn";
 import { ShareRow } from "@/components/superteam/ShareRow";
 import { ChapterRaceChart } from "@/components/superteam/ChapterRaceChart";
-import { LeadCapture } from "@/components/LeadCapture";
+import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { DitherAvatar, PixelIcon } from "@/components/dither-kit";
 import { homeHref, workspaceHref } from "@/lib/product/workspaces";
 
@@ -78,6 +78,7 @@ export default async function SuperteamPage() {
               linkedin={edition.linkedin}
               email={edition.emailBlurb}
               link={edition.permalink}
+              receipt={JSON.stringify(edition.receipt, null, 2)}
             />
           </div>
         )}
@@ -129,6 +130,12 @@ export default async function SuperteamPage() {
                   </div>
                 </div>
               </div>
+              <p className="mt-4 text-[10px] leading-relaxed text-[var(--text-muted)]">
+                Counted from listings published under the{" "}
+                <span className="font-mono">Superteam UK</span> sponsor account. Campaigns the desk
+                co-hosts under another sponsor&apos;s listing are not counted here — so{" "}
+                {edition.uk.listings} listings is a floor on UK activity, not a ceiling.
+              </p>
             </section>
 
             <div className="mt-6">
@@ -159,9 +166,44 @@ export default async function SuperteamPage() {
               <div className="border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
                 <h2 className="text-sm font-semibold">Live from Superteam UK right now</h2>
                 {edition.uk.liveNow.length === 0 ? (
-                  <p className="text-xs text-[var(--text-muted)] mt-3">
-                    No open UK listings past their deadline check right now — the desk restocks often.
-                  </p>
+                  <div className="mt-3">
+                    <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                      Nothing open at this moment. The UK desk publishes in bursts — the streak and
+                      the totals above are the better signal.
+                    </p>
+                    {edition.uk.recent.length > 0 && (
+                      <>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-4 mb-2">
+                          Most recently closed
+                        </p>
+                        <ul className="flex flex-col gap-2.5">
+                          {edition.uk.recent.map((l) => (
+                            <li key={l.url} className="text-xs leading-relaxed">
+                              <a
+                                href={l.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[var(--accent)] hover:underline"
+                              >
+                                {l.title}
+                              </a>
+                              <span className="text-[var(--text-muted)]">
+                                {" "}· {l.reward}
+                                {l.deadline
+                                  ? ` · closed ${new Date(l.deadline).toLocaleDateString("en-GB", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                      timeZone: "UTC",
+                                    })}`
+                                  : ""}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2.5">
                     {edition.uk.liveNow.map((l) => (
@@ -341,10 +383,10 @@ export default async function SuperteamPage() {
               <h2 className="text-sm font-semibold">Want this kind of accounting on your ecosystem?</h2>
               <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
                 DataBard turns any data source into a synthesized briefing — scores, narratives,
-                shareable artifacts. Leave an email or connect a source.
+                shareable artifacts. Run the demo or connect a source — no email needed.
               </p>
               <div className="mt-4">
-                <LeadCapture source="superteam_page" prompt="" buttonText="Request a briefing →" />
+                <IntegrationCTA source="superteam_page" connectHref={workspaceHref("/?start=connect", "protocols")} />
               </div>
               <p className="mt-4 text-xs">
                 <Link href={workspaceHref("/?start=connect", "protocols")} className="text-[var(--accent)] hover:underline">
@@ -353,13 +395,35 @@ export default async function SuperteamPage() {
               </p>
             </section>
 
+            <section className="mt-8 border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Evidence receipt · databard.evidence-receipt v1
+              </p>
+              <p className="mt-3 font-mono text-[11px] break-all text-[var(--text)]">
+                {edition.receipt.payloadHash}
+              </p>
+              <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                SHA-256 over the canonical (key-sorted) JSON of these{" "}
+                {edition.totals.listings.toLocaleString("en-US")} listings plus the computed result,
+                observed {new Date(edition.observedAt).toISOString()}. Copy it with the button above
+                and check it offline with{" "}
+                <span className="font-mono">verifyEvidenceReceipt()</span> from{" "}
+                <span className="font-mono">databard.evidence-receipt</span>. It proves these numbers
+                correspond to exactly that listing set — it does not authenticate the issuer, and it
+                does not make Superteam&apos;s own data true.
+              </p>
+            </section>
+
             <p className="mt-8 text-[11px] leading-relaxed text-[var(--text-muted)]">
               {edition.source === "snapshot"
-                ? `Computed from a snapshot of Superteam Earn's public listings API taken ${new Date(edition.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}. `
+                ? `Computed from a snapshot of Superteam Earn's public listings API taken ${new Date(edition.observedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}. `
                 : "Computed live from Superteam Earn's public listings API. "}
               USD figures cover stablecoin-denominated rewards only (USDC/USDG/USDT); token-denominated
-              bounties count as listings, not dollars. The race chart counts each listing by its
-              deadline month. Independent computation — not an official Superteam report. If a
+              bounties count as listings, not dollars. The race chart buckets each listing by the month
+              its deadline fell in — Earn&apos;s API exposes no posted-at date, so that axis measures when
+              bounties closed, not when they were announced. Attribution is by sponsor-account name, so
+              UK activity run under another sponsor&apos;s listing is not counted here and the UK figures
+              are floors, not ceilings. Independent computation — not an official Superteam report. If a
               number looks wrong, that is the conversation.
             </p>
           </>

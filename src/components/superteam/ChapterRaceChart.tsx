@@ -48,9 +48,10 @@ export function ChapterRaceChart({ race }: { race: RaceSeries }) {
           <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
             The chapter race
           </div>
-          <h2 className="text-sm font-semibold mt-0.5">Cumulative listings, by deadline month</h2>
+          <h2 className="text-sm font-semibold mt-0.5">Cumulative listings, by closing month</h2>
           <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Every listing Earn has ever published, counted when its bounty closed.
+            Every listing Earn has published, counted in the month its bounty closed. Earn&apos;s API
+            has no posted-at date, so this is a closings race, not an announcements race.
           </p>
         </div>
         <span className="font-mono text-xs text-[var(--text-muted)]">

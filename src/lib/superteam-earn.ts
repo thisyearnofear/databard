@@ -17,10 +17,14 @@
  */
 import { promises as fs } from "fs";
 import path from "path";
+import { createEvidenceReceipt, hashEvidence, type EvidenceReceipt } from "@/lib/evidence-receipt";
 
 export const EARN_API_URL = "https://superteam.fun/api/listings?take=2000&status=all";
 const SNAPSHOT_FILE = path.join(process.cwd(), "src/lib/superteam-earn.snapshot.json");
 const FETCH_TIMEOUT_MS = 10_000;
+
+/** Bump when the computation below changes, so receipts stay comparable. */
+export const EARN_REPORT_VERSION = 1;
 
 const STABLE_TOKENS = new Set(["USDC", "USDG", "USDT", "USD"]);
 const CHAPTER_RE = /^superteam/i;
@@ -67,6 +71,8 @@ export interface RaceSeries {
 
 export interface EarnEdition {
   generatedAt: string;
+  /** When the underlying listings were read (`generatedAt` is when the edition was composed). */
+  observedAt: string;
   source: "live" | "snapshot";
   totals: {
     listings: number;
@@ -89,15 +95,28 @@ export interface EarnEdition {
     leadSinceMonth: string | null;
     liveNow: EarnListingCard[];
     biggest: EarnListingCard[];
+    /** Most recently closed UK listings — the fallback when nothing is open. */
+    recent: EarnListingCard[];
   };
   chapters: ChapterRow[];
   race: RaceSeries;
   story: string[];
-  headline: { claim: string; line: string };
+  /**
+   * `claim` is the page headline, `card` is the OG/tweet one-liner. Both derive
+   * from one constant so the card can never drift from the page it links to.
+   */
+  headline: { claim: string; line: string; card: string };
   permalink: string;
   tweet: string;
   linkedin: string;
   emailBlurb: string;
+  /**
+   * Unsigned `databard.evidence-receipt` v1 over the inputs and the computed
+   * edition. Integrity only: it proves the numbers on the page correspond to
+   * exactly this listing set — it does not authenticate the issuer or the
+   * truth of Superteam's own data.
+   */
+  receipt: EvidenceReceipt;
 }
 
 const PUBLIC_BASE = (process.env.NEXT_PUBLIC_URL || "https://databard.persidian.com").replace(/\/$/, "");
@@ -259,7 +278,12 @@ function ukLeadSince(listings: EarnListing[]): string | null {
 }
 
 /** Pure computation — same path for live data and the committed snapshot. */
-export function computeEarnEdition(listings: EarnListing[], now = new Date()): EarnEdition {
+export function computeEarnEdition(
+  listings: EarnListing[],
+  now = new Date(),
+  opts: { source?: "live" | "snapshot"; observedAt?: string; requestedAt?: string } = {},
+): EarnEdition {
+  const source = opts.source ?? "live";
   const sponsors = new Map<string, { listings: number; usdRewards: number; submissions: number; liveNow: number }>();
   let submissions = 0;
   let usdRewards = 0;
@@ -307,6 +331,10 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
     .filter((l) => isStableToken(l.token))
     .sort((a, b) => (b.rewardAmount ?? 0) - (a.rewardAmount ?? 0))
     .slice(0, 5);
+  const recent = [...ukListings]
+    .filter((l) => !deadlineAfter(l, now) && l.deadline)
+    .sort((a, b) => (b.deadline ?? "").localeCompare(a.deadline ?? ""))
+    .slice(0, 4);
 
   const ukMonths = new Set(ukListings.map((l) => monthKey(l.deadline)).filter((k): k is string => !!k));
   const leadSince = ukLeadSince(listings);
@@ -327,6 +355,7 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
     leadSinceMonth: leadSince,
     liveNow: live.slice(0, 6).map(toCard),
     biggest: biggest.map(toCard),
+    recent: recent.map(toCard),
   };
 
   const topRewards = chapters.slice(0, 4);
@@ -335,7 +364,7 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
   const story: string[] = [];
   if (leadSince) {
     story.push(
-      `The UK took the listings lead in ${monthLong(leadSince)} and hasn't handed it back — every sponsor, not just chapters.`,
+      `The UK desk has closed more bounties than any other sponsor every month since ${monthLong(leadSince)} — every sponsor, not just chapters.`,
     );
   }
   if (rewardLeader && rewardLeader.name !== "Superteam UK") {
@@ -352,12 +381,19 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
     );
   }
 
+  // One constant, two renderers (page headline + OG card) — they cannot drift.
+  const listingsLeadClaim =
+    "has published more Earn listings than any other sponsor in the network";
   const headline = {
     claim:
       rankByListings === 1
-        ? "Superteam UK posts more Earn opportunities than any sponsor in the network"
+        ? `Superteam UK ${listingsLeadClaim}`
         : `Superteam UK ranks #${rankByListings} by listings in the Earn economy`,
     line: `${uk.listings} listings · ${money(uk.usdRewards)} in USD rewards · ${uk.submissions.toLocaleString("en-US")} builder submissions — #${uk.rankByRewards || "?"} of ${chapters.length} chapters by reward volume.`,
+    card:
+      rankByListings === 1
+        ? `Superteam UK ${listingsLeadClaim}.`
+        : `#${rankByListings} by listings in the Earn economy.`,
   };
 
   const permalink = `${PUBLIC_BASE}${SUPERTEAM_PATH}`;
@@ -366,19 +402,21 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
   const tweet = [
     "The Superteam Earn economy, measured:",
     "",
-    `@SuperteamUK posts more opportunities than any other chapter — ${uk.listings} listings, ${money(uk.usdRewards)} in rewards, ${count(uk.submissions)} submissions.`,
+    `@SuperteamUK ${listingsLeadClaim} — ${uk.listings} listings, ${money(uk.usdRewards)} in USD-denominated rewards, ${count(uk.submissions)} submissions (all-time).`,
     "",
     `Reward leaders: ${leaders}`,
     "",
-    `Full table → ${permalink}`,
+    `Method + table → ${permalink}`,
   ].join("\n");
 
   const linkedin = [
     `We ran the numbers on the Superteam Earn economy — ${listings.length.toLocaleString("en-US")} public listings, ${count(submissions)} builder submissions.`,
     "",
-    `Superteam UK stands out: ${uk.listings} opportunities posted (more than any other chapter), ${money(uk.usdRewards)} in USD-denominated rewards, ${uk.submissions.toLocaleString("en-US")} submissions.`,
+    `Superteam UK stands out: ${uk.listings} listings published (more than any other sponsor), ${money(uk.usdRewards)} in USD-denominated rewards, ${uk.submissions.toLocaleString("en-US")} submissions.`,
     "",
     `By reward volume: ${leaders}.`,
+    "",
+    `Attribution is by sponsor-account name, so UK activity run under another sponsor's listing is not counted — treat these as floors, not ceilings.`,
     "",
     `Table + method: ${permalink}`,
   ].join("\n");
@@ -386,16 +424,19 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
   const emailBlurb = [
     `We computed a public accounting of the Superteam Earn economy from the listings API (${listings.length.toLocaleString("en-US")} listings, ${count(submissions)} submissions).`,
     "",
-    `Superteam UK: ${uk.listings} listings (#${uk.rankByListings} of all sponsors), ${money(uk.usdRewards)} in USD rewards, ${uk.submissions.toLocaleString("en-US")} submissions — #${uk.rankByRewards || "?"} chapter by reward volume.`,
+    `Superteam UK: ${uk.listings} listings (#${uk.rankByListings} of all sponsors), ${money(uk.usdRewards)} in USD-denominated rewards, ${uk.submissions.toLocaleString("en-US")} submissions — #${uk.rankByRewards || "?"} chapter by reward volume.`,
+    "",
+    `Attribution is by sponsor name, so these are floors, not ceilings. USD totals cover stablecoin-denominated rewards only.`,
     "",
     `The table is public — no login: ${permalink}`,
     "",
     "We run this same synthesis on any data source. If a number looks wrong, that is the conversation.",
   ].join("\n");
 
-  return {
-    generatedAt: now.toISOString(),
-    source: "live",
+  const edition: Omit<EarnEdition, "receipt"> = {
+    generatedAt: opts.requestedAt ?? now.toISOString(),
+    observedAt: opts.observedAt ?? now.toISOString(),
+    source,
     totals: {
       listings: listings.length,
       sponsors: sponsors.size,
@@ -415,6 +456,26 @@ export function computeEarnEdition(listings: EarnListing[], now = new Date()): E
     linkedin,
     emailBlurb,
   };
+
+  // Hash exactly what an offline consumer receives (JSON-normalised, so
+  // `undefined` can never leak into the canonical form).
+  const result = JSON.parse(JSON.stringify(edition));
+  const receipt = createEvidenceReceipt({
+    issuer: "databard",
+    analysis: { report: "superteam-earn-economy", reportVersion: EARN_REPORT_VERSION },
+    generatedAt: edition.generatedAt,
+    request: { source: "superteam-earn-listings", url: EARN_API_URL },
+    evidence: {
+      kind: "earn-listings",
+      delivery: source,
+      observedAt: edition.observedAt,
+      listings: listings.length,
+      listingsHash: hashEvidence(JSON.parse(JSON.stringify(listings))),
+    },
+    resultHash: hashEvidence(result),
+  });
+
+  return { ...edition, receipt };
 }
 
 export async function fetchEarnListings(): Promise<EarnListing[]> {
@@ -438,13 +499,18 @@ interface SnapshotFile {
 export async function loadEarnEdition(now = new Date()): Promise<EarnEdition> {
   try {
     const listings = await fetchEarnListings();
-    return computeEarnEdition(listings, now);
+    return computeEarnEdition(listings, now, { source: "live", observedAt: now.toISOString() });
   } catch {
     try {
       const raw = await fs.readFile(SNAPSHOT_FILE, "utf-8");
       const snap = JSON.parse(raw) as SnapshotFile;
-      const edition = computeEarnEdition(snap.listings, new Date(snap.snapshotAsOf));
-      return { ...edition, source: "snapshot", generatedAt: now.toISOString() };
+      // Evaluate deadlines as of the snapshot and label the receipt honestly:
+      // these numbers come from `snapshotAsOf`, not from this request.
+      return computeEarnEdition(snap.listings, new Date(snap.snapshotAsOf), {
+        source: "snapshot",
+        observedAt: snap.snapshotAsOf,
+        requestedAt: now.toISOString(),
+      });
     } catch {
       throw new Error("Superteam Earn data unavailable (live fetch failed, no snapshot)");
     }

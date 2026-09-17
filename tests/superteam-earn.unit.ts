@@ -6,6 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { computeEarnEdition, isStableToken, type EarnListing } from "../src/lib/superteam-earn";
+import { hashEvidence, verifyEvidenceReceipt } from "../src/lib/evidence-receipt";
 
 const NOW = new Date("2026-09-17T12:00:00Z");
 
@@ -75,7 +76,9 @@ describe("computeEarnEdition", () => {
     // UK has 2 listings vs Nigeria's 1 vs Jupiter's 1 → #1 by listing count
     assert.equal(e.uk.rankByListings, 1);
     assert.equal(e.uk.rankByRewards, 2);
-    assert.match(e.headline.claim, /more Earn opportunities/);
+    // Past tense + all-time: the count is of published listings, not a live rate.
+    assert.match(e.headline.claim, /more Earn listings/);
+    assert.match(e.headline.claim, /has published/);
   });
 
   it("liveNow counts deadline in the future, not the API status field", () => {
@@ -147,7 +150,9 @@ describe("computeEarnEdition", () => {
     // Mar ends 2–2 (tie), Apr is the first month UK is solely ahead
     assert.equal(e.uk.leadSinceMonth, "2026-04");
     assert.equal(e.uk.streakMonths, 2); // Mar + Apr consecutive
-    assert.match(e.story.join(" "), /lead in Apr 2026/);
+    // The axis is closing month, not posting month — say so.
+    assert.match(e.story.join(" "), /since Apr 2026/);
+    assert.match(e.story.join(" "), /closed more bounties/);
   });
 
   it("omits the lead claim when UK has never held it", () => {
@@ -157,6 +162,77 @@ describe("computeEarnEdition", () => {
       listing({ deadline: "2026-01-10T00:00:00Z", sponsor: { name: "Superteam UK" } }),
     ]);
     assert.equal(e.uk.leadSinceMonth, null);
-    assert.ok(!e.story.some((s) => /took the listings lead/.test(s)));
+    assert.ok(!e.story.some((s) => /closed more bounties than any other sponsor/.test(s)));
+  });
+
+  it("lists the most recently closed UK listings when nothing is open", () => {
+    const e = computeEarnEdition(
+      [
+        listing({ title: "Older", deadline: "2026-01-10T00:00:00Z" }),
+        listing({ title: "Newer", deadline: "2026-03-10T00:00:00Z" }),
+        listing({ title: "Still open", deadline: "2026-12-10T00:00:00Z" }),
+        listing({ title: "No deadline", deadline: null }),
+      ],
+      NOW,
+    );
+    assert.equal(e.uk.liveNow.length, 1);
+    // Newest-closed first, future and undated excluded.
+    assert.deepEqual(e.uk.recent.map((l) => l.title), ["Newer", "Older"]);
+  });
+
+  it("keeps the OG card claim identical to the page headline and states the caveats", () => {
+    const e = computeEarnEdition([listing({ rewardAmount: 95_600, _count: { Submission: 1491 } })]);
+    assert.equal(e.headline.card, `${e.headline.claim}.`);
+    assert.match(e.tweet, /USD-denominated rewards/);
+    assert.match(e.tweet, /Method \+ table/);
+    assert.match(e.tweet, /all-time/);
+    assert.match(e.linkedin, /floors, not ceilings/);
+    assert.match(e.emailBlurb, /floors, not ceilings/);
+  });
+});
+
+describe("evidence receipt", () => {
+  it("emits a self-verifying receipt over the listing input and the computed result", () => {
+    const listings = [listing({ rewardAmount: 100 })];
+    const e = computeEarnEdition(listings);
+    assert.equal(e.receipt.format, "databard.evidence-receipt");
+    assert.equal(e.receipt.version, 1);
+    assert.equal(e.receipt.hashAlgorithm, "sha256");
+    assert.ok(verifyEvidenceReceipt(e.receipt), "receipt must self-verify");
+
+    const evidence = e.receipt.payload.evidence as Record<string, unknown>;
+    assert.equal(evidence.kind, "earn-listings");
+    assert.equal(evidence.delivery, "live");
+    assert.equal(evidence.listings, 1);
+    assert.equal(evidence.listingsHash, hashEvidence(JSON.parse(JSON.stringify(listings))));
+
+    const { receipt: _receipt, ...result } = e;
+    void _receipt;
+    assert.equal(e.receipt.payload.resultHash, hashEvidence(JSON.parse(JSON.stringify(result))));
+    // A supplied preimage that disagrees with the receipt must fail.
+    assert.ok(verifyEvidenceReceipt(e.receipt, { result }));
+    assert.equal(verifyEvidenceReceipt(e.receipt, { result: { ...result, uk: {} } }), false);
+  });
+
+  it("fails verification when any hashed number is altered", () => {
+    const e = computeEarnEdition([listing()]);
+    const tampered = JSON.parse(JSON.stringify(e.receipt)) as typeof e.receipt;
+    (tampered.payload as Record<string, unknown>).resultHash = "0".repeat(64);
+    assert.equal(verifyEvidenceReceipt(tampered), false);
+  });
+
+  it("labels snapshot delivery, composition time and observation time separately", () => {
+    const e = computeEarnEdition([listing()], NOW, {
+      source: "snapshot",
+      observedAt: "2026-09-01T00:00:00Z",
+      requestedAt: "2026-09-17T12:00:00Z",
+    });
+    assert.equal(e.source, "snapshot");
+    assert.equal(e.observedAt, "2026-09-01T00:00:00Z");
+    assert.equal(e.generatedAt, "2026-09-17T12:00:00Z");
+    const evidence = e.receipt.payload.evidence as Record<string, unknown>;
+    assert.equal(evidence.delivery, "snapshot");
+    assert.equal(evidence.observedAt, "2026-09-01T00:00:00Z");
+    assert.ok(verifyEvidenceReceipt(e.receipt));
   });
 });

@@ -65,7 +65,7 @@ export async function GET() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
               <div style={{ fontSize: "40px", fontWeight: 700 }}>{`#${edition.uk.rankByListings}`}</div>
               <div style={{ fontSize: "14px", color: "#8888a0", letterSpacing: "0.16em", textTransform: "uppercase" }}>
-                UK by listings
+                UK by listings · all-time
               </div>
             </div>
           </div>
@@ -78,14 +78,14 @@ export async function GET() {
               {`${edition.uk.listings} listings · ${fmtUsd(edition.uk.usdRewards)}`}
             </div>
             <div style={{ fontSize: "22px", color: "#b0b0c8", marginTop: "10px", maxWidth: "980px" }}>
-              {`${edition.uk.submissions.toLocaleString("en-US")} builder submissions — more opportunities posted than any other chapter.`}
+              {`${edition.uk.submissions.toLocaleString("en-US")} builder submissions — ${edition.headline.card}`}
             </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", marginTop: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <div style={{ fontSize: "14px", color: "#8888a0", letterSpacing: "0.18em", textTransform: "uppercase" }}>
-                The chapter race · cumulative listings
+                The chapter race · cumulative listings by closing month
               </div>
               <div style={{ display: "flex", gap: "16px" }}>
                 {race.keys.map((k) => (
