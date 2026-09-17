@@ -27,7 +27,9 @@ dist/
 .databard/
 .blackboxcli/
 
-# AI directories
+# AI directories and their local installation lock (not shared project tooling)
+.agents/
+/skills-lock.json
 .junie/
 .initia/
 .kiro/
