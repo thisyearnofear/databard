@@ -1,14 +1,14 @@
 # Monid "We Kill" Hackathon — DataBard Submission Packet
 
-**Project:** DataBard — an AI data analyst that turns **any Monid metered
-endpoint** into a data-health score, an audio briefing, and prioritised
-recommended actions, with the **measured per-run cost** carried through as the
-receipt.
+**Project:** DataBard — an AI data analyst that maps **supported Monid metered
+endpoint results** to a data-health score, prioritised recommended actions, and
+optional narration, with the **provider-reported usage cost** carried through as
+a separate accounting field (`monidCost` — not the total cost or the price of a
+briefing).
 
-**Pitch:** *"Monid is the OpenRouter for agent tools — one key, 1,900+ metered
-endpoints, per-call cost in the run result. DataBard is the analyst that reads
-any of them, scores the data's health, narrates the finding, and shows the exact
-cents it cost to reach it."*
+**Pitch:** *"DataBard turns supported Monid endpoint results into health findings,
+recommendations, and optional narration. It reports the upstream usage cost
+separately from the price and cost of producing the complete briefing."*
 
 Built for the **A2MCP** (Agent-to-MCP) surface: `databard_health_check` (free)
 and `databard_briefing` (x402-paid) now accept `source: "monid"` and return a
@@ -35,18 +35,13 @@ with healthy, cheap, **row-returning** endpoints. The adapter is deliberately
 **generic** (provider + endpoint + inputs → `SchemaMeta`) so the target can move
 without a code change. **Step 0 below is the gate.**
 
-### Verified facts to use (and not overstate)
+### Historical competitor claims — not approved for publication
 
-- **Monid** = "OpenRouter for agent tools": one API key, 1,900+ metered
-  endpoints, per-call cost returned in the run result. CLI `@monid-ai/cli`
-  (`monid discover / inspect / run --wait -j`, `monid balance`, `monid keys`).
-- **Dune tiers** (candidate incumbent): Free / Plus ≈ **$349–390/mo** /
-  Premium ≈ $1,990/mo / Enterprise. Two facts worth citing: *"failed query
-  executions are still billed"*, and the **free tier goes view-only on
-  Sep 10, 2026** (reported by KuCoin + CryptoBriefing).
-- ⚠️ **Do NOT fabricate the Dune price.** Sources disagree ($349 vs ~$390).
-  **Re-verify the exact Plus price at `dune.com/pricing` before it appears in any
-  video or submission.** Until then, write "≈$349–390/mo" or omit the number.
+Older drafts cited Dune prices around $349–390/month and reports of a free-tier
+change on September 10. Neither price nor current tier restrictions has been
+re-verified against a primary source in this pass. Omit both claims from current
+narration/captions until verified and dated. Do not imply that a metered data
+fetch is a feature-equivalent substitute for a Dune subscription.
 
 ---
 
@@ -98,7 +93,27 @@ materialises a throwaway 0600 store per run and points `XDG_CONFIG_HOME` at it
 replace tools the user already has"* — matches how we treat it: a long-tail reach
 adapter, not a replacement for the Tier 1 sources.
 
-## Progress (as of Sep 3, 2026)
+## Current status — alignment review, September 17, 2026
+
+The September 8 integration runs below are historical observations, not a claim
+that a fresh run will return the same rows, score or price. The $0.006 figure is
+upstream Monid usage cost only; it excludes synthesis, TTS, hosting and the
+customer-facing briefing price.
+
+`monidCost` is provider-reported accounting; `evidenceReceipt` is an unsigned
+integrity receipt implemented in the repository's health-check response. The
+new Solana receipt adapter is library-only, with HTTP/UI integration pending.
+None proves the analysis is true. See [Portable Evidence](PORTABLE_EVIDENCE.md).
+
+Video notes previously reported a V3 render, but neither the silent master nor
+final MP4/audio manifest is present in this checkout. Regeneration, review,
+approval and social publication remain pending. Old V2 SDL2 notes are historical,
+not a verified current blocker. See [Video status](MONID_VIDEO_SCRIPT.md).
+
+## Progress archive (as of Sep 3, 2026)
+
+The next steps in this archived section were superseded by the September 8
+checklist below; do not repeat credential setup or paid discovery based on it.
 
 - **Shipped & deployed** (commit `bf7e956` on `main`, prod health-gated 200):
   generic `monid` source across all A2MCP endpoints, config builders, and the
@@ -157,11 +172,11 @@ curl -s -X POST http://localhost:3000/api/mcp/health-check \
 actionable message — *"The Monid CLI (`monid`) isn't installed…"* / *"No Monid
 API key…"* — as HTTP **400**, not a stack trace or a 500.
 
-## Demo — one story, under 90s (DEFERRED: shot list only)
+## Archived demo outline — superseded, not approved copy
 
-> The video is **not shot yet** (scope decision: build + docs now, video later).
-> This is the numbered shot list to execute once Step 0 fixes the target and the
-> Dune price is re-verified.
+> This older shot list is retained for context. Its pricing comparison and
+> workflow-equivalence claims must not be reused without validation. Use the
+> current narration and release gates in `MONID_VIDEO_SCRIPT.md`.
 
 1. **(0:00) The seat (10s)** — "Monitoring data health is a paid seat. Dune Plus
    is ≈$349–390/mo *(re-verify before recording)*, and failed query executions
@@ -194,6 +209,7 @@ API key…"* — as HTTP **400**, not a stack trace or a 500.
 - [x] **Prod live verification DONE (Sep 8, 2026):** after installing the CLI on the box (`~/.local` prefix) and adding `MONID_API_KEY` + `MONID_BIN` to `/opt/databard/.env`, **`https://databard.persidian.com/api/mcp/health-check` with `source:"monid"` returns the real analysis — score 95/100, 43 rows, measured-cost receipt with runId `01M20SCQV43Y9KDJXWEYS01FY8`** (HTTP 200, no demo flag). Any judge can verify with one curl. Note: every prod Monid health-check spends ~$0.006 of our balance; the 60/hr/IP rate limit is the guard.
 - [x] **Agent-first alias fix (Sep 8):** `src/lib/mcp.ts` now accepts `monid inspect`-style `queryParams`/`pathParams`/`body` keys as aliases for `query`/`path`/`inputs`, so a calling agent can paste inspect output straight into the tool call (+2 unit tests, `tests/mcp-parse.unit.ts` now 15 passing).
 - [ ] **Wizard UI (Part G):** Monid is driven via A2MCP for now; wire the picker fields (lower priority than shipping)
-- [ ] **DEFERRED — Re-verify the Dune Plus price** at `dune.com/pricing` (do not fabricate)
-- [ ] **DEFERRED — `<90s` demo video** (shot list above)
-- [ ] **DEFERRED — Social push:** first post on each of X / LinkedIn / Instagram / TikTok / YouTube with `#monid` + the register URL within 24h (Reach 250 + Viral 200)
+- [x] **Demo video scaffolded** (`video/src/DataGarden.tsx`) — "The Data Garden" narrative with 6 scenes, real data props
+- [ ] **DEFERRED — Re-verify the Dune Plus price** at `dune.com/pricing` (do not fabricate) before final video push
+- [ ] **Video regeneration and approval:** historical V3 render reported, but master/final/audio manifest absent from this checkout. Restore or render the master, validate timing, generate/mux audio, and review the final cut. See `MONID_VIDEO_SCRIPT.md`.
+- [ ] **DEFERRED — Social push:** first post on each of X / LinkedIn / Instagram / TikTok / YouTube with `#monid` + the register URL within 24h (Reach 250 + Viral 200). Captions/script ready in `MONID_VIDEO_SCRIPT.md`.

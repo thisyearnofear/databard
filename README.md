@@ -9,6 +9,8 @@ DataBard closes that gap: it reads your data catalogue, computes health scores, 
 > **[▶ Try the live demo](https://databard.persidian.com)** — no signup required
 
 > **Built for the [DataHub Agent Hackathon](https://datahub.devpost.com/)** — reads DataHub's context graph, synthesises the estate, and writes back governance docs + ownership tags. *"DataHub gives the agent context; DataBard makes the agent act."*
+>
+> **Also entered in [Monid's "We Kill" hackathon](docs/MONID_HACKATHON.md)** — maps supported endpoint results to health findings and recommendations, with provider-reported usage costs. Narrated briefings are a separate output. [Video status and regeneration prerequisites](docs/MONID_VIDEO_SCRIPT.md).
 
 ---
 
@@ -25,6 +27,8 @@ npm run dev
 ```
 
 Open [localhost:3000](http://localhost:3000) → default workspace is **Protocols** (switch to Teams anytime) → Try the demo (lands on this week's [league](https://databard.persidian.com/league)) or connect a source → Dashboard / briefing → Share a score card.
+
+**Roast my data:** [/roast](https://databard.persidian.com/roast) — the emotional hook variant; same product, different framing. Shareable by design.
 
 **Connect DataHub:** pick 🧭 DataHub in the wizard (Teams), paste a GMS URL, connect. Run the fleet town hall at [/fleet](http://localhost:3000/fleet). Every capability is also agent-callable via the MCP tools (`GET /api/mcp/tools`).
 
@@ -58,6 +62,7 @@ Data source (DataHub, OpenMetadata, dbt, The Graph, Dune)
 | The Graph | `src/lib/the-graph-adapter.ts` | ✅ Shipped |
 | Dune Analytics | `src/lib/dune-adapter.ts` | ✅ Shipped |
 | Coral (50+ sources via SQL) | `src/lib/coral-adapter.ts` | ✅ Shipped (escape hatch for long-tail sources) |
+| Monid (1,900+ metered endpoints) | `src/lib/monid-adapter.ts` | ✅ Shipped (per-call cost receipt) |
 
 See [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) for the tiered adapter design and graduation tracking.
 
@@ -78,9 +83,20 @@ See [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) for
 
 ---
 
-## OKX.AI — agent-to-agent marketplace
+## Portable evidence, optional chains
 
-DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP) on OKX.AI (ASP #9878, pending final review). The synthesis engine is exposed as two A2MCP tools any MCP-compatible agent can call:
+Source selection, payment method, and evidence anchoring are independent choices.
+No wallet is required to run the analyst or check receipt integrity offline.
+
+- `monidCost` reports the upstream endpoint's measured usage cost, not the total analysis/TTS cost or customer price.
+- `evidenceReceipt` is an unsigned, chain-neutral integrity receipt, implemented on health-check in the repository. It does not authenticate DataBard or prove analytical correctness.
+- The Solana adapter prepares hash-only Memo transactions and checks RPC-reported inclusion and the expected wallet signer. It is tested at library level; HTTP/UI integration remains pending. Existing Solana and X Layer paths are unchanged.
+
+See [Portable Evidence](docs/PORTABLE_EVIDENCE.md) for scope and trust limits. Repository support does not mean deployed support; pushing does not deploy.
+
+## A2MCP — agent-callable endpoints
+
+DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP #9878, **listed Sep 8 2026**) on OKX.AI. The synthesis engine is exposed as A2MCP tools any MCP-compatible agent can call:
 
 | Tool | Price | Endpoint |
 |---|---|---|
@@ -90,15 +106,20 @@ DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP) 
 | Service discovery | — | `GET /api/mcp/tools` |
 
 ```bash
-# Free health check
+# Free, explicitly labelled demo — no data-source credentials required
 curl -X POST https://databard.persidian.com/api/mcp/health-check \
   -H 'content-type: application/json' \
-  -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080"}}'
+  -d '{"demo":true}'
 
-# Paid briefing — returns 402 + PAYMENT-REQUIRED; agents settle via x402
+# Paid briefing (x402) — returns 402 + PAYMENT-REQUIRED if unpaid;
+# after payment returns script + audio (base64 MP3 + Grove URL) + health + actions
 curl -i -X POST https://databard.persidian.com/api/mcp/briefing \
   -H 'content-type: application/json' \
   -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
+
+# Inspect the Monid input schema before constructing a live request.
+# The historical successful run also supplied endpoint-specific query parameters.
+monid inspect -p surf -e /dex/token/price -j
 ```
 
 ---
@@ -138,6 +159,9 @@ Free: demo, ad-hoc briefings, shared score cards, `/league`, leaderboard, health
 | [`docs/UNIT_ECONOMICS.md`](docs/UNIT_ECONOMICS.md) | Cost-per-briefing, pricing, margin analysis |
 | [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) | Tiered adapter design, Coral graduation tracking |
 | [`docs/DATAHUB_HACKATHON.md`](docs/DATAHUB_HACKATHON.md) | DataHub hackathon submission packet, demo script, judging-criteria map |
+| [`docs/MONID_HACKATHON.md`](docs/MONID_HACKATHON.md) | Monid "We Kill" hackathon packet, kill framing, judging-criteria map |
+| [`docs/MONID_VIDEO_SCRIPT.md`](docs/MONID_VIDEO_SCRIPT.md) | Video script archive + current render/approval status |
+| [`docs/OKX_AI_ASP.md`](docs/OKX_AI_ASP.md) | OKX.AI ASP registration, listing review rounds, shot list |
 | [`docs/AZURE.md`](docs/AZURE.md) | Azure OpenAI + Container Apps migration guide |
 
 ---

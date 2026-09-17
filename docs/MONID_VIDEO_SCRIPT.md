@@ -1,5 +1,13 @@
 # MONID HACKATHON — VIDEO SCRIPT v2: "The Data Garden"
 
+> **Status — historical draft, Sep 17, 2026.** The word-for-word script and
+> platform captions below are archived copy: they contain unverified competitor
+> claims and the $0.006 data-fetch framing that must not be published as-is (see
+> `MONID_HACKATHON.md`, "Historical competitor claims"). The approved-for-work
+> narration lives in `scripts/video/kindness-tts.mjs` (`CLIPS`). No silent
+> master, final MP4, or audio manifest exists in this checkout — all render,
+> review, and publication steps below are **pending**, not done.
+
 **Format:** Remotion-rendered 16:9 master, ~85s, caption-safe (burned-in subs)
 **Aesthetic:** Cottagecore field-guide / paper-cutout meadow. Warm greens, butter
 yellow, terracotta, grain overlay. Terminal windows sit ON paper cards inside the
@@ -84,15 +92,57 @@ Real curl shown on screen:
 → score 95, 43 rows, `monidCost` receipt. Any judge can run it before the video
 ends.
 
-## Production status
-- `video/` — Remotion composition scaffolded; real numbers wired as props.
-  Render with `cd video && npm run render` (see `video/README.md`).
-- Fallback path (no render): static illustrated frames + Ken Burns + this script
-  in any editor; all copy is final here.
+## Production status (as of Sep 9, 2026)
+
+### V3 — branded master plan (historical render reported; regeneration pending)
+**Approach:** Dropped the cottagecore garden. Rebuild in DataBard's product
+tokens (dark `#0a0a0f`, Space Grotesk, accent `#7c5bf5`, success `#5bf58c`,
+Bayer dither health bar, Alex purple / Morgan green). Same kindness thesis;
+visual language matches `/protocol` and the score card.
+
+| Artifact | Detail |
+|---|---|
+| `video/out/databard-kindness-silent.mp4` | **85s · 1920×1080 · silent · approve this** |
+| `video/out/review/*.png` | One still per beat |
+| Garden V1/V2 | Archived drafts only — do not ship |
+
+**Scene map (85s):** Hook 8s → Seat 12s → Reach 12s → One call 16s → Receipt 16s → Briefing 12s → Close 9s.
+
+**Next after approval (regeneration prerequisites — none of these artifacts are
+present in this checkout):** restore or re-render `video/out/databard-kindness-silent.mp4`
+(85s, 1920×1080), then run
+`node scripts/video/kindness-tts.mjs --check --mux` (offline validation of
+master, timing, and cache). Use `--generate --mux --reuse` only when paid TTS
+is approved. Cache entries are invalidated by text, voice, model, settings or
+output-format changes and checked against audio hashes. A first run without
+cached audio is expected to fail the offline check; it is
+not a requirement to pass it before explicitly approving generation.
+`ELEVENLABS_API_KEY` is required for new audio. Requires `ffmpeg`/`ffprobe` on PATH.
+
+Offline helper tests run in `npm run test:unit`. For the isolated, synthetic
+end-to-end test (FFmpeg required), run
+`DATABARD_TEST_MEDIA=1 node --test tests/kindness-audio.unit.mjs`. It copies the
+scripts to a temporary workspace, mocks all TTS calls, checks output streams
+and duration, and removes its fixtures. No real narration or final cut is
+validated by this test.
+
+### Earlier drafts (superseded)
+- V1 SVG garden: `video/out/databard-monid.mp4` (88s)
+- V2 AI-background attempt: plates in `video/public/s*_hd.jpg`; never correctly in the cut; abandoned for brand integrity
+
+### Runtime notes
+```bash
+cd video
+npx remotion render src/index.ts DataGarden out/frames-kindness \
+  --sequence --image-format png \
+  --browser-executable node_modules/.remotion/.chromium/mac_arm-1002410/chrome-mac/Chromium.app/Contents/MacOS/Chromium
+ffmpeg -y -framerate 30 -i out/frames-kindness/element-%04d.png \
+  -c:v libx264 -pix_fmt yuv420p -crf 18 out/databard-kindness-silent.mp4
+```
 
 ---
 
-## Platform captions (post with `#monid` + register URL within 24h)
+## Platform captions — UNREVIEWED DRAFT (unverified claims above; rewrite before posting)
 
 **X / Twitter**
 > Thank you, Dune. We killed them with kindness.
@@ -122,3 +172,24 @@ ends.
 
 **YouTube (long-form title)**
 > We Kill (Them With Kindness) — DataBard × Monid, the $0.006 data analyst
+
+## Asset inventory
+
+### Generated backgrounds (Runware FLUX.1 [schnell])
+| File | Scene | Dimensions |
+|---|---|---|
+| `s1_dawn_meadow_hd.jpg` | S1 — Foundation | 1920×1088 |
+| `s2_seed_drift_hd.jpg` | S2 — The Seed | 1920×1088 |
+| `s3_bloom_close_hd.jpg` | S3 — The Bloom | 1920×1088 |
+| `s4_receipt_scene_hd.jpg` | S4 — The Receipt | 1920×1088 |
+| `s5_songbirds_hd.jpg` | S5 — The Song | 1920×1088 |
+| `s6_wide_close_hd.jpg` | S6 — The Close | 1920×1088 |
+
+All stored in `video/public/` for Remotion `staticFile()` resolution.
+
+### Rendered output
+| File | Duration | Size |
+|---|---|---|
+| `video/out/databard-monid.mp4` | 88s | 3.4MB (V1, SVG-only) |
+| `video/out/databard-monid-v2.mp4` | 88s | 6.6MB (V2, AI backgrounds) |
+| `video/out/frames/` | 2640 PNGs | ~1920×1088 each |
