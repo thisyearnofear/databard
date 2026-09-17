@@ -317,5 +317,17 @@ joins, assign Sep 22–24 (UI polish + video) to them.
   sign verdict hashes if attestation is enabled.
 - **Env**: `PROBE_PAYER_PK` present in local `.env` and server `/opt/databard/.env`.
 - **Quality gates**: `tsc --noEmit` clean; 28/28 probe-scorer unit tests pass.
-- **Next**: deploy, then run live smoke test — unpaid `POST /api/agent/probe`
-  should return 402; paid call via `scripts/probe-smoke.mjs` should return 200.
+- **Deployed**: commit `39e2165` shipped via `deploy.sh`, health gate 200.
+- **Live paid smoke test PASSED** (`scripts/probe-smoke.mjs`, free self-candidate only):
+  - unpaid POST → **402** + `PAYMENT-REQUIRED` header (exact, eip155:196, $1.00, USDT0)
+  - paid retry via SDK client → **200**, settlement confirmed on-chain:
+    `paymentId 15607032`, tx `0x83a206ea8c423bcbf1ad6261575d87021523d16957def33efa07bd0d67a36a2f`
+    (payer `0x49D5…FA8D8` → payee personal wallet)
+  - verdict: DataBard self health-check scored 71/100 "good"
+    (flags: demo fallback data + no advertised input schema — correct, since
+    health-check was called bare)
+- **Not yet exercised live**: server-side outbound payment to third-party
+  x402 candidates (the fixed SDK path in `probe-runner.ts` is type-checked and
+  unit-tested only). A full default-set run costs ~$1.12 (fee + Doxa/OKLink/
+  Atlas/PolyDesk outbound, under the $0.50 cap). Run when ready:
+  `node scripts/probe-smoke.mjs` (no args = default candidates)
