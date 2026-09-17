@@ -35,6 +35,19 @@ export interface ProbeCandidate {
   agentAddress?: string;
 }
 
+export interface ProbePayment {
+  /** The endpoint returned 402 Payment Required */
+  challengeReceived: boolean;
+  /** A payment was signed and the retry succeeded */
+  paid: boolean;
+  /** On-chain settlement tx hash from the PAYMENT-RESPONSE header, when present */
+  settlementTx?: string;
+  /** USD amount paid (from the challenge or the known price) */
+  amountUsd?: number;
+  /** Why a challenge could not be paid */
+  error?: string;
+}
+
 export interface ProbeResult {
   candidate: ProbeCandidate;
   metrics: ProbeMetrics;
@@ -44,21 +57,26 @@ export interface ProbeResult {
   statusCode: number;
   /** Error message if the probe failed */
   error?: string;
+  /** x402 payment flow outcome (present only when the endpoint challenged with 402 or was paid) */
+  payment?: ProbePayment;
+  /** True when served from the 1-hour cache */
+  fromCache?: boolean;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const PROBE_TIMEOUT_MS = 15_000;
 const MAX_BODY_SNIPPET = 2_000;
-const MAX_OUTBOUND_SPEND_USD = 0.50;
+export const MAX_OUTBOUND_SPEND_USD = 0.50;
 
 // ── Simple in-memory cache (1-hour TTL) ───────────────────────────────────
 
 const probeCache = new Map<string, { result: ProbeResult; expiresAt: number }>();
 const CACHE_TTL_MS = 3_600_000; // 1 hour
 
-function cacheKey(candidate: ProbeCandidate): string {
-  return `${candidate.method ?? "POST"}:${candidate.endpoint}:${JSON.stringify(candidate.body ?? {})}`;
+function cacheKey(candidate: ProbeCandidate, allowPayments: boolean): string {
+  const mode = allowPayments ? "paid" : "free";
+  return `${mode}:${candidate.method ?? "POST"}:${candidate.endpoint}:${JSON.stringify(candidate.body ?? {})}`;
 }
 
 function getCached(key: string): ProbeResult | null {
@@ -73,6 +91,47 @@ function getCached(key: string): ProbeResult | null {
 
 function setCache(key: string, result: ProbeResult): void {
   probeCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+// ── SSRF guard ─────────────────────────────────────────────────────────────
+
+/** Hostnames / IP ranges the runner must never probe (SSRF + cloud metadata). */
+function assertPublicUrl(rawUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid endpoint URL");
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("Only http(s) endpoints can be probed");
+  }
+  const host = url.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host === "metadata.google.internal" ||
+    host === "[::1]" ||
+    host === "::1" ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^0\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    host === "172.16.0.1"
+  ) {
+    throw new Error("Private/loopback endpoints cannot be probed");
+  }
+  // 172.16.0.0/12 private range
+  const m = host.match(/^172\.(\d+)\./);
+  if (m) {
+    const second = Number(m[1]);
+    if (second >= 16 && second <= 31) {
+      throw new Error("Private/loopback endpoints cannot be probed");
+    }
+  }
 }
 
 // ── x402 client (lazy-loaded to avoid import cost when not needed) ─────────
@@ -161,12 +220,39 @@ async function attemptX402Payment(
  */
 export async function probeEndpoint(
   candidate: ProbeCandidate,
-  spendRemaining: { value: number }
+  spendRemaining: { value: number },
+  allowPayments = true
 ): Promise<ProbeResult> {
   // Check cache first
-  const key = cacheKey(candidate);
+  const key = cacheKey(candidate, allowPayments);
   const cached = getCached(key);
-  if (cached) return cached;
+  if (cached) return { ...cached, fromCache: true };
+
+  // Reject non-public URLs before any network I/O (SSRF guard)
+  try {
+    assertPublicUrl(candidate.endpoint);
+  } catch (e) {
+    return {
+      candidate,
+      metrics: {
+        reachable: false,
+        statusCode: 0,
+        latencyMs: 0,
+        hasInputSchema: false,
+        hasExamples: false,
+        hasDescription: false,
+        toolCount: 0,
+        hasTimestamp: false,
+        timestampAgeMinutes: null,
+        priceUsd: candidate.knownPriceUsd ?? null,
+        responseFieldCount: 0,
+        isDemo: false,
+        hasError: true,
+      },
+      statusCode: 0,
+      error: e instanceof Error ? e.message : "Invalid endpoint",
+    };
+  }
 
   // Skip paid calls if spend cap would be exceeded
   const cost = candidate.knownPriceUsd ?? 0;
@@ -221,11 +307,15 @@ export async function probeEndpoint(
     clearTimeout(timeout);
 
     // Handle 402: attempt x402 payment and retry
+    const payment: ProbePayment = { challengeReceived: false, paid: false };
     if (response.status === 402) {
+      payment.challengeReceived = true;
       const paymentRequired = response.headers.get("PAYMENT-REQUIRED") ||
         response.headers.get("payment-required");
 
-      if (paymentRequired) {
+      if (!allowPayments) {
+        payment.error = "Payments disabled for this run";
+      } else if (paymentRequired) {
         const paymentHeaders = await attemptX402Payment(paymentRequired);
         if (paymentHeaders) {
           // Retry with payment (PAYMENT-SIGNATURE header from the SDK)
@@ -244,7 +334,33 @@ export async function probeEndpoint(
           retryOpts.signal = retryController.signal;
           response = await fetch(url, retryOpts);
           clearTimeout(retryTimeout);
+
+          if (response.status < 400) {
+            payment.paid = true;
+            payment.amountUsd = candidate.knownPriceUsd ?? undefined;
+            const settleHeader =
+              response.headers.get("PAYMENT-RESPONSE") ||
+              response.headers.get("payment-response");
+            if (settleHeader) {
+              try {
+                const settle = JSON.parse(
+                  Buffer.from(settleHeader, "base64").toString("utf-8")
+                );
+                if (typeof settle?.transaction === "string") {
+                  payment.settlementTx = settle.transaction;
+                }
+              } catch {
+                // settlement header not parseable — non-fatal
+              }
+            }
+          } else {
+            payment.error = `Payment sent but endpoint returned ${response.status}`;
+          }
+        } else {
+          payment.error = "Unable to sign x402 payment (missing PROBE_PAYER_PK or SDK error)";
         }
+      } else {
+        payment.error = "402 without PAYMENT-REQUIRED header";
       }
     }
 
@@ -286,14 +402,17 @@ export async function probeEndpoint(
       }
     }
 
-    // Deduct from spend budget
-    spendRemaining.value -= cost;
+    // Deduct from spend budget only when we actually paid
+    if (payment.paid) {
+      spendRemaining.value -= cost;
+    }
 
     const result: ProbeResult = {
       candidate,
       metrics,
       rawSnippet: bodyText.slice(0, MAX_BODY_SNIPPET),
       statusCode,
+      ...(payment.challengeReceived || payment.paid ? { payment } : {}),
     };
     setCache(key, result);
     return result;
@@ -332,8 +451,9 @@ export async function probeEndpoint(
  */
 export async function probeAll(
   candidates: ProbeCandidate[],
-  concurrency = 4
+  opts: { concurrency?: number; allowPayments?: boolean } = {}
 ): Promise<ProbeResult[]> {
+  const { concurrency = 4, allowPayments = true } = opts;
   const results: ProbeResult[] = [];
   const queue = [...candidates];
   const spendRemaining = { value: MAX_OUTBOUND_SPEND_USD };
@@ -342,7 +462,7 @@ export async function probeAll(
     while (queue.length > 0) {
       const candidate = queue.shift();
       if (!candidate) break;
-      results.push(await probeEndpoint(candidate, spendRemaining));
+      results.push(await probeEndpoint(candidate, spendRemaining, allowPayments));
     }
   }
 

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withX402 } from "@okxweb3/x402-next";
 import { rateLimit, ValidationError } from "@/lib/validation";
-import { probeAll, DEFAULT_CANDIDATES, type ProbeCandidate } from "@/lib/probe-runner";
+import { probeAll, DEFAULT_CANDIDATES, MAX_OUTBOUND_SPEND_USD, type ProbeCandidate } from "@/lib/probe-runner";
 import { scoreProbe } from "@/lib/probe-scorer";
-import { attestVerdict, hashVerdict } from "@/lib/probe-attestation";
-import { x402Server, probeRouteConfig, x402Configured } from "@/lib/x402";
+import { attestVerdict } from "@/lib/probe-attestation";
+import { x402Server, probeRouteConfig, x402Configured, PROBE_PRICE } from "@/lib/x402";
+import { recordEvent } from "@/lib/events";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,9 @@ export const runtime = "nodejs";
  */
 async function probeHandler(req: NextRequest): Promise<NextResponse> {
   try {
+    // Rate-limit paid runs per IP to prevent runaway spend and abuse.
+    rateLimit(req, { maxRequests: 12, windowMs: 3600000 });
+
     let body: Record<string, unknown> = {};
     try {
       body = await req.json();
@@ -51,6 +55,7 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
               : undefined,
           knownPriceUsd: typeof c.knownPriceUsd === "number" ? c.knownPriceUsd : null,
           agentId: typeof c.agentId === "string" ? c.agentId : undefined,
+          agentAddress: typeof c.agentAddress === "string" ? c.agentAddress : undefined,
         }));
     }
 
@@ -59,7 +64,7 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
     const shouldAttest = body.attest === true;
 
     // Run all probes in parallel (concurrency-limited inside probeAll)
-    const results = await probeAll(candidates);
+    const results = await probeAll(candidates, { allowPayments: true });
 
     // Score each result
     const scored = results.map((r) => ({
@@ -70,16 +75,25 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
       score: scoreProbe(r.metrics),
       reachable: r.metrics.reachable,
       error: r.error,
+      payment: r.payment ?? null,
+      fromCache: r.fromCache ?? false,
     }));
 
     // Rank by total score descending
     scored.sort((a, b) => b.score.total - a.score.total);
 
     const generatedAt = new Date().toISOString();
+    const unreachableCount = scored.filter((s) => !s.reachable).length;
+    const paidCount = scored.filter((s) => s.payment?.paid).length;
+    const cachedCount = scored.filter((s) => s.fromCache).length;
+    const outboundSpend = scored.reduce(
+      (sum, s) => sum + (s.payment?.paid ? (s.knownPriceUsd ?? 0) : 0),
+      0
+    );
     const summary =
       `Probed ${scored.length} service${scored.length === 1 ? "" : "s"}. ` +
       `Top pick: ${scored[0]?.name ?? "n/a"} (${scored[0]?.score.total ?? 0}/100). ` +
-      `${scored.filter((s) => !s.reachable).length} unreachable.`;
+      `${unreachableCount} unreachable, ${paidCount} paid, ${cachedCount} cached.`;
 
     const verdict = {
       question,
@@ -95,23 +109,43 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
 
     // Optionally write attestation on-chain
     let attestationTx: string | null = null;
+    let attestationError: string | null = null;
     if (shouldAttest) {
       try {
         const att = await attestVerdict(verdict);
         attestationTx = att.txHash;
       } catch (attErr) {
+        attestationError = attErr instanceof Error ? attErr.message : "Attestation failed";
         console.warn("[probe] Attestation failed (non-fatal):", attErr);
       }
     }
 
+    void recordEvent("probe_run", {
+      candidates: String(candidates.length),
+      top: String(scored[0]?.name ?? "none").slice(0, 120),
+      attest: shouldAttest ? "yes" : "no",
+      paidOutbound: paidCount > 0 ? "yes" : "no",
+    });
+
     return NextResponse.json({
       ok: true,
       tool: "databard.probe",
-      serviceVersion: 1,
+      serviceVersion: 2,
       generatedAt,
       question,
       summary,
-      attestationTx,
+      cost: {
+        priceUsd: PROBE_PRICE,
+        outboundSpentUsd: Number(outboundSpend.toFixed(4)),
+        outboundCapUsd: MAX_OUTBOUND_SPEND_USD,
+        cachedCount,
+        paidCount,
+      },
+      attestation: {
+        requested: shouldAttest,
+        txHash: attestationTx,
+        error: attestationError,
+      },
       ranked: scored.map((s, i) => ({
         rank: i + 1,
         name: s.name,
@@ -124,6 +158,8 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
         reachable: s.reachable,
         knownPriceUsd: s.knownPriceUsd,
         error: s.error ?? null,
+        payment: s.payment,
+        fromCache: s.fromCache,
       })),
     });
   } catch (e) {

@@ -31,6 +31,7 @@ export const WORKSPACES = {
     nav: [
       { href: "/protocol?workspace=protocols", label: "Briefing" },
       { href: "/onchain", label: "Attestations" },
+      { href: "/probe", label: "Probe" },
       { href: "/league", label: "League" },
     ],
     landing: {

@@ -465,6 +465,10 @@ export function LandingStep() {
             <Link href="/labs" className="hover:text-[var(--text)] transition-colors">
               Labs
             </Link>
+            <Link href="/probe" className="inline-flex items-center gap-1.5 hover:text-[var(--text)] transition-colors">
+              <PixelIcon name="search" size={11} className="text-[var(--accent)]" />
+              Probe
+            </Link>
             <Link href="/roast" className="inline-flex items-center gap-1.5 hover:text-[var(--text)] transition-colors">
               <PixelIcon name="flame" size={11} className="text-[var(--danger)]" />
               Roast my data

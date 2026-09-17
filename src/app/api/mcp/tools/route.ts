@@ -274,6 +274,130 @@ const fleetOutputSchema = {
   },
 } as const;
 
+const probeInputSchema = {
+  type: "object",
+  description:
+    "Probe request. All fields are optional: omit everything to run the curated default candidate set (real OKX.AI A2MCP services). DataBard pays any outbound x402 fees itself, capped at $0.50 per run, and never fabricates results — unreachable endpoints are reported honestly.",
+  properties: {
+    question: {
+      type: "string",
+      description: "Optional intent behind the probe, e.g. \"I need a reliable on-chain token-price feed\". Max 500 chars.",
+    },
+    candidates: {
+      type: "array",
+      maxItems: 10,
+      description: "Optional list of A2MCP endpoints to probe. If omitted, the curated default set is used.",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Human-readable service name." },
+          endpoint: { type: "string", description: "Full http(s) URL of the A2MCP endpoint." },
+          method: { type: "string", enum: ["GET", "POST"], default: "POST" },
+          body: { type: "object", additionalProperties: true, description: "Optional JSON body for the probe call." },
+          knownPriceUsd: { type: "number", description: "Listed per-call price in USD, if known (0 = free)." },
+          agentId: { type: "string", description: "Agent ID on OKX.AI, if known." },
+          agentAddress: { type: "string", description: "Agent wallet/communication address for optional Ligis credential check." },
+        },
+        required: ["endpoint"],
+      },
+    },
+    attest: {
+      type: "boolean",
+      default: false,
+      description: "If true, writes the verdict hash to X Layer as a zero-value self-send for on-chain verification.",
+    },
+  },
+  examples: [
+    {},
+    { question: "I need a reliable on-chain token-price feed" },
+    {
+      question: "Which schema validator should my agent trust?",
+      candidates: [
+        {
+          name: "Doxa",
+          endpoint: "https://doxa.ivaronix.xyz/a2mcp/schema.validate",
+          method: "POST",
+          body: { url: "https://example.com" },
+          knownPriceUsd: 0.005,
+          agentId: "9626",
+          agentAddress: "0xcd4db585b9FdCbb44aA06ce57Aa72Bc1a92B8111",
+        },
+      ],
+      attest: true,
+    },
+  ],
+} as const;
+
+const probeOutputSchema = {
+  type: "object",
+  properties: {
+    ok: { type: "boolean" },
+    tool: { type: "string", const: "databard.probe" },
+    serviceVersion: { type: "number" },
+    generatedAt: { type: "string" },
+    question: { type: "string" },
+    summary: { type: "string", description: "Plain-text takeaway the calling agent can quote verbatim." },
+    cost: {
+      type: "object",
+      properties: {
+        priceUsd: { type: "string", description: "Price paid for this probe call." },
+        outboundSpentUsd: { type: "number", description: "Actual USD DataBard spent probing paid candidates." },
+        outboundCapUsd: { type: "number", description: "Hard cap on outbound spend per run." },
+        cachedCount: { type: "number" },
+        paidCount: { type: "number" },
+      },
+    },
+    attestation: {
+      type: "object",
+      properties: {
+        requested: { type: "boolean" },
+        txHash: { type: "string", nullable: true, description: "X Layer transaction anchoring the verdict hash." },
+        error: { type: "string", nullable: true },
+      },
+    },
+    ranked: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          rank: { type: "number" },
+          name: { type: "string" },
+          endpoint: { type: "string" },
+          agentId: { type: "string" },
+          score: { type: "number", minimum: 0, maximum: 100 },
+          label: { type: "string", enum: ["excellent", "good", "fair", "poor", "unreachable"] },
+          breakdown: {
+            type: "object",
+            properties: {
+              schemaCompleteness: { type: "number" },
+              latency: { type: "number" },
+              freshness: { type: "number" },
+              priceValue: { type: "number" },
+              reliability: { type: "number" },
+              credentials: { type: "number" },
+            },
+          },
+          flags: { type: "array", items: { type: "string" } },
+          reachable: { type: "boolean" },
+          knownPriceUsd: { type: "number", nullable: true },
+          payment: {
+            type: "object",
+            nullable: true,
+            properties: {
+              challengeReceived: { type: "boolean" },
+              paid: { type: "boolean" },
+              settlementTx: { type: "string" },
+              amountUsd: { type: "number" },
+              error: { type: "string" },
+            },
+          },
+          error: { type: "string", nullable: true },
+        },
+      },
+    },
+  },
+} as const;
+
 const TOOLS = [
   {
     name: "databard_health_check",
@@ -342,6 +466,17 @@ const TOOLS = [
     pricing: "free",
     inputSchema: writebackInputSchema,
     outputSchema: writebackOutputSchema,
+  },
+  {
+    name: "databard_probe",
+    summary: "Probe and rank A2MCP agent services before paying them. Paid per call via x402.",
+    description:
+      "DataBard Probe is a quality oracle for the agent economy: it probes candidate A2MCP endpoints (yours or the curated default set), measures schema completeness, latency, freshness, price-value, reliability, and optional Ligis credential verification, then returns a ranked verdict. DataBard pays any outbound x402 fees itself (capped at $0.50/run, 1-hour cache) and never fabricates results — unreachable services are reported honestly. Optionally anchors the verdict hash on X Layer.",
+    method: "POST",
+    endpoint: "/api/agent/probe",
+    pricing: "x402 pay-per-call (exact, USDT0 on X Layer eip155:196), $1.00",
+    inputSchema: probeInputSchema,
+    outputSchema: probeOutputSchema,
   },
   {
     name: "databard_fleet_briefing",

@@ -55,6 +55,7 @@ Two-layer analytics system:
 - `league_share_copy` — copied tweet, email, or permalink from the league
 - `roast_page_view` — visited /roast
 - `roast_cta_click` — clicked "Roast my data" on /roast
+- `probe_run` — Probe executed (meta: mode=preview for the free route, candidate count, top pick, attest flag)
 
 ### Adding new events
 1. Add the event type to `EVENT_TYPES` in `src/lib/events.ts`
@@ -78,8 +79,10 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/probe-runner.ts` — DataBard Probe: fetches & measures A2MCP endpoints, x402 client payment, returns ProbeMetrics
 - `src/lib/probe-scorer.ts` — composite 6-dimension quality score (schema, latency, freshness, price/value, reliability, credentials)
 - `src/lib/probe-attestation.ts` — writes verdict hash to X Layer via viem (zero-value self-send); signs with `PROBE_ATTESTATION_PK`, falling back to `PROBE_PAYER_PK`
-- `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402): probes candidate services, returns ranked verdict + optional on-chain attestation
-- `src/app/probe/page.tsx` — Probe demo UI (question input, ranked result cards)
+- `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402, $1): probes candidate services, returns ranked verdict + cost receipt + optional on-chain attestation
+- `src/app/api/probe/preview/route.ts` — FREE preview of Probe (default candidates, outbound payments disabled, 10/hr rate limit) for browser demos
+- `src/app/probe/page.tsx` — Probe demo UI (question input, free preview, paid-endpoint check with 402 explainer, ranked result cards, cost + attestation)
+- `src/components/probe/ResultCard.tsx` — probe result card (score, 6-dimension breakdown, x402 paid/402-challenge/cached badges, flags)
 - `src/app/api/mcp/health-check/route.ts` — FREE A2MCP tool: schema health score + recommended actions
 - `src/app/api/mcp/briefing/route.ts` — PAID A2MCP tool (x402): full synthesis (script + audio + health)
 - `src/app/api/mcp/tools/route.ts` — A2MCP service discovery (tool list + JSON schemas)

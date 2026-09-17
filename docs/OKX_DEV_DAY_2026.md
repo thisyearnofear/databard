@@ -204,9 +204,28 @@ LLM cost — just HTTP calls and a tiny on-chain write.
 **Break-even on Probe alone:** at 5 calls/day ($150/month revenue, ~$18/month
 COGS) the tool contributes ~$132/month margin before fixed costs.
 
-**Reusing the existing Agentic Wallet** (`0x5e32…711e`) for outbound probe
-payments avoids managing a separate funded wallet. Just ensure it holds ≥ $10
-USDT0 for outbound probe payments.
+**Outbound wallet:** a dedicated probe wallet (`0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8`,
+funded with 10 USDT0 + 0.01 OKB on X Layer) holds the `PROBE_PAYER_PK`. It is
+separate from the revenue-receiving `PAY_TO_ADDRESS`, so probe spend is auditable
+and can never drain earnings. Just ensure it holds ≥ $10 USDT0 for outbound
+probe payments.
+
+**Why $1.00 (value-based pricing rationale):** the buyer is an agent about to
+spend *its own* money on an unknown service. One bad choice — an unreachable
+endpoint, a stale feed, a schema the agent can't parse — costs that agent at
+least one failed paid call ($0.05–$1) plus retries and wrong data downstream.
+A $1.00 quality verdict on up to 10 candidates is therefore cheap insurance:
+it is priced against the decision it protects, not against its own COGS. The
+cost ladder that makes this legible:
+
+| Tier | Price | What you get |
+|---|---|---|
+| Free preview (`/api/probe/preview`) | $0 | Same scorer on the curated candidate set, no outbound payments — paid services show an honest "402 challenge" flag. Rate-limited 10/hr. |
+| Standard probe (`/api/agent/probe`) | $1.00 | Full probe incl. outbound x402 payments (capped $0.50), ranked verdict, cost receipt, `probe_run` telemetry. |
+| Attested probe (`attest: true`) | $1.00 + gas | Same as standard plus the verdict hash anchored on X Layer for verifiable provenance. |
+
+The free tier is the discovery driver (mirrors `databard_health_check`); the
+paid tier is where the margin lives.
 
 ## Shipping schedule
 
@@ -324,6 +343,33 @@ joins, assign Sep 22–24 (UI polish + video) to them.
     `paymentId 15607032`, tx `0x83a206ea8c423bcbf1ad6261575d87021523d16957def33efa07bd0d67a36a2f`
     (payer `0x49D5…FA8D8` → payee personal wallet)
   - verdict: DataBard self health-check scored 71/100 "good"
+
+### Sep 18, 2026 — 9/10 upgrade
+- **Agent discoverability**: `databard_probe` added to `/api/mcp/tools` with
+  full input/output schemas + examples (agents can now discover and call it
+  like any other A2MCP tool).
+- **Free preview route**: `POST /api/probe/preview` — same scorer on the
+  default candidate set with outbound payments disabled; paid services return
+  an honest "402 challenge" flag. Rate-limited 10/hr. This is the browser demo
+  path.
+- **UI rewrite** (`/probe`): hero + how-it-works, question input, "Run free
+  preview" and "Check paid agent endpoint" buttons, 402 explainer panel with
+  decoded challenge, cost receipt line, attestation link to OKLink explorer,
+  ResultCard now shows x402 paid / 402-challenge / cached badges.
+- **Navigation**: Probe added to the Protocols workspace nav and the landing
+  footer.
+- **Hardening**: SSRF guard in `probe-runner.ts` (blocks localhost/private
+  ranges before any network I/O), `probeAll` `allowPayments` option, settlement
+  tx capture from the outbound `PAYMENT-RESPONSE` header, `rateLimit` +
+  `probe_run` event + `agentAddress` mapping in the paid route.
+- **Response v2**: paid route now returns `cost` (price, outbound spent, cap,
+  cached/paid counts), `attestation` object (requested/txHash/error), and
+  per-candidate `payment` + `fromCache`.
+- **Docs**: value-based pricing rationale + cost ladder in
+  `docs/OKX_DEV_DAY_2026.md`; dedicated probe wallet replaces the stale
+  Agentic-Wallet line.
+- **Quality gates**: `tsc` clean, 28/28 scorer tests, `npm run test:unit` green,
+  production build 84 pages, bundle guard passing.
     (flags: demo fallback data + no advertised input schema — correct, since
     health-check was called bare)
 - **Not yet exercised live**: server-side outbound payment to third-party
