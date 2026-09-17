@@ -13,13 +13,18 @@ export function useConnectionPersistence(
   state: WizardState,
   dispatch: React.Dispatch<WizardAction>,
 ) {
-  // Restore connection config from localStorage on mount
+  // Restore connection config from localStorage on mount.
+  // Skip source restore when ?start=connect is driving the step — that deep
+  // link owns the workspace default (Coral on Protocols, dbt on Teams), and
+  // a leftover coral entry would otherwise win the race and show the wrong UI.
   useEffect(() => {
     try {
+      const params = new URLSearchParams(window.location.search);
+      const connectOwnsSource = params.get("start") === "connect";
       const saved = localStorage.getItem("databard:connection");
       if (saved) {
         const cfg = JSON.parse(saved);
-        if (cfg.source) dispatch({ type: "SET_SOURCE", source: cfg.source });
+        if (cfg.source && !connectOwnsSource) dispatch({ type: "SET_SOURCE", source: cfg.source });
         if (cfg.omMode === "sandbox" || cfg.omMode === "custom") dispatch({ type: "SET_OM_MODE", omMode: cfg.omMode });
         if (cfg.researchQuestion) dispatch({ type: "SET_RESEARCH_QUESTION", question: cfg.researchQuestion });
         if (cfg.omUrl) dispatch({ type: "SET_OM_URL", url: cfg.omUrl });
@@ -101,12 +106,22 @@ export function usePersonaSync(
     } catch { /* quota exceeded or private mode */ }
   }, [state.persona]);
 
-  // Keep URL workspace param in sync
+  // Keep URL workspace param in sync. Skip while an explicit ?workspace=
+  // disagrees with persona — persona restore is still catching up on that tick,
+  // and rewriting here would flip teams→protocols (or vice versa) too early.
   useEffect(() => {
     if (typeof window === "undefined" || window.location.pathname !== "/") return;
     const params = new URLSearchParams(window.location.search);
     const workspace = state.persona === "web3" ? "protocols" : "teams";
     if (params.get("workspace") === workspace) return;
+    const explicit = params.get("workspace") ?? params.get("persona");
+    if (explicit) {
+      const explicitPersona =
+        explicit === "protocols" || explicit === "web3" || explicit === "onchain"
+          ? "web3"
+          : "enterprise";
+      if (explicitPersona !== state.persona) return;
+    }
     params.set("workspace", workspace);
     window.history.replaceState({}, "", `/?${params.toString()}`);
     window.dispatchEvent(new Event("databard:workspacechange"));

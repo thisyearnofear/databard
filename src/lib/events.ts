@@ -42,6 +42,10 @@ export const EVENT_TYPES = [
   "league_share_copy",        // copied tweet, email, or permalink
   "monday_signup",            // email on the finding: send this every Monday
   "probe_run",                // DataBard Probe executed against agent services
+  // Story-layer events (Phase 1 progressive disclosure)
+  "story_expand",             // opened a Why-it-matters / Details disclosure
+  "evidence_open",            // opened evidence from a story context
+  "finding_share",            // per-segment finding shared
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

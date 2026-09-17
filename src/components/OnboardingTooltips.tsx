@@ -42,7 +42,7 @@ const DEFAULT_STEPS: TooltipStep[] = [
     id: "player",
     target: "[data-tour='episode-player']",
     title: "Your Briefing",
-    content: "Every claim is backed by evidence — click any segment to drill into the columns, tests, and lineage behind it. Tabs surface insights, prioritized actions, and the on-chain attestation.",
+    content: "Every claim is backed by evidence — click any segment to drill into the columns, tests, and lineage behind it. Story, evidence, and actions tabs keep the narrative first and the proof one tap away.",
     position: "top",
   },
 ];

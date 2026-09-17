@@ -18,10 +18,12 @@ import { AnthemTab } from "@/components/player/AnthemTab";
 import { MarkdownRenderer } from "@/components/player/MarkdownRenderer";
 import { workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import { scoreFromEpisode, shareText } from "@/lib/score-card";
+import { bottomLine } from "@/lib/story";
 import { scoreTextClass } from "@/lib/product/score-tone";
 
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
-type PlayerTab = "segments" | "insights" | "actions" | "research" | "anthem" | "team";
+type StoryTab = "story" | "evidence" | "actions";
+type PlayerTab = StoryTab | "anthem" | "team";
 
 export function EpisodePlayer({
    episode, 
@@ -69,7 +71,9 @@ export function EpisodePlayer({
   const [nudge, setNudge] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<PlayerTab>(currentEpisode.musicPlan ? "anthem" : "segments");
+  const [activeTab, setActiveTab] = useState<PlayerTab>("story");
+  const [evidenceSection, setEvidenceSection] = useState<string | null>(null);
+  const line = bottomLine(currentEpisode);
   // Post-listen feedback prompt (discovery signal at the moment of value)
   const [feedbackStage, setFeedbackStage] = useState<"hidden" | "ask" | "email" | "done">("hidden");
   const [feedbackEmail, setFeedbackEmail] = useState("");
@@ -608,9 +612,9 @@ export function EpisodePlayer({
     }
   }
 
-  async function handleClip() {
-    const card = scoreFromEpisode(currentEpisode);
-    track("clip_share", { schema: currentEpisode.schemaName, segment: String(card.segmentIndex) });
+  async function handleClip(segmentIndex?: number | null) {
+    const card = scoreFromEpisode(currentEpisode, segmentIndex ?? null);
+    track(segmentIndex != null ? "finding_share" : "clip_share", { schema: currentEpisode.schemaName, segment: String(card.segmentIndex) });
 
     const baseUrl = (await resolveShareUrl()) ?? window.location.origin + window.location.pathname;
     const clipUrl = baseUrl.includes("?") ? `${baseUrl}&seg=${card.segmentIndex}` : `${baseUrl}?seg=${card.segmentIndex}`;
@@ -658,7 +662,7 @@ export function EpisodePlayer({
       setCurrentAudioUrl(nextAudioUrl);
       setResearchSession(data.session ?? null);
       setFollowUpQuestion("");
-      setActiveTab("research");
+      setActiveTab("story");
     } catch (error) {
       setBranchError(error instanceof Error ? error.message : "Failed to create follow-up branch");
     } finally {
@@ -694,6 +698,7 @@ export function EpisodePlayer({
             <p className="text-xs sm:text-sm text-[var(--text-muted)]">
               {currentEpisode.tableCount} tables · {currentEpisode.qualitySummary.total} tests
             </p>
+            {line && <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[var(--text-muted)]"><span className="font-medium text-[var(--text)]">Bottom line: </span>{line}</p>}
           </div>
           <div className="flex items-center gap-1.5 shrink-0 relative">
             {currentAudioUrl && (
@@ -707,7 +712,7 @@ export function EpisodePlayer({
               </button>
             )}
             <button
-              onClick={handleClip}
+              onClick={() => void handleClip()}
               className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-2.5 cursor-pointer font-medium transition-colors"
               title="Share a score card — image + finding, ready for Slack"
             >
@@ -897,23 +902,20 @@ export function EpisodePlayer({
       {/* Mobile bottom padding to prevent content from being hidden behind fixed bottom bar */}
       <div className="md:hidden h-16" />
 
-      {/* Tabbed panel: Insights | Actions | Segments */}
+      {/* Tabbed panel: Story | Evidence | Actions (+ More for Anthem/Team) */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden">
         {/* Tab bar */}
         <div className="flex border-b border-[var(--border)]">
           {([
-            { id: "research" as const, label: "Research", count: researchTrail ? `${researchTrail.plan.length}` : undefined },
+            { id: "story" as const, label: "Story" },
+            { id: "evidence" as const, label: "Evidence", count: insights ? `${insights.failingTests}` : undefined },
             { id: "actions" as const, label: "Actions", count: actionItems.length > 0 ? `${actionItems.length - checkedActions.size}` : undefined },
-            { id: "insights" as const, label: "Briefing", count: insights ? `${insights.healthScore}` : undefined },
-            { id: "segments" as const, label: "Transcript" },
-            ...(currentEpisode.musicPlan ? [{ id: "anthem" as const, label: "Anthem" }] : []),
-            { id: "team" as const, label: "Team" },
           ]).map((tab) => (
             <button
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id);
-                if (tab.id === "insights") track("insights_view", { schema: currentEpisode.schemaName });
+                if (tab.id === "evidence") track("insights_view", { schema: currentEpisode.schemaName });
               }}
               className={`flex-1 px-3 py-2.5 text-xs font-medium cursor-pointer transition-colors relative ${
                 activeTab === tab.id
@@ -931,10 +933,19 @@ export function EpisodePlayer({
               )}
             </button>
           ))}
+          <details className="relative flex items-center">
+            <summary className="px-3 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer list-none">More ▸</summary>
+            <div className="absolute right-0 top-full z-20 flex flex-col min-w-32 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl py-1">
+              {currentEpisode.musicPlan && (
+                <button onClick={() => setActiveTab("anthem")} className="px-4 py-2 text-xs text-left text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)] cursor-pointer">Anthem</button>
+              )}
+              <button onClick={() => setActiveTab("team")} className="px-4 py-2 text-xs text-left text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)] cursor-pointer">Team history</button>
+            </div>
+          </details>
         </div>
 
         {/* Insights tab */}
-        {activeTab === "research" && researchTrail && (
+        {activeTab === "story" && researchTrail && (
           <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
             <div className="bg-[var(--bg)] rounded-lg p-4 border border-[var(--border)]">
               <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Your question</div>
@@ -1073,7 +1084,7 @@ export function EpisodePlayer({
           </div>
         )}
 
-        {activeTab === "research" && !researchTrail && (
+        {activeTab === "story" && !researchTrail && currentEpisode.script.length === 0 && (
           <div className="p-6 text-center text-sm text-[var(--text-muted)]">
             <p>No research trail available yet.</p>
             <p className="text-xs mt-1">Generate a fresh episode to see the planner and evidence trail.</p>
@@ -1081,7 +1092,7 @@ export function EpisodePlayer({
         )}
 
         {/* Insights tab */}
-        {activeTab === "insights" && insights && (
+        {activeTab === "evidence" && insights && (
           <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
             {/* Health score */}
             <div className="flex items-center gap-4">
@@ -1126,6 +1137,41 @@ export function EpisodePlayer({
 
             <HotspotChips hotspots={insights.lineageHotspots} />
 
+            {currentEpisode.schemaMeta && (
+            <div id="player-tables">
+              <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2">Tables</div>
+              <div className="flex flex-col gap-1.5">
+                {currentEpisode.schemaMeta.tables.map((table) => {
+                  const failed = table.qualityTests.filter((t) => t.status === "Failed").length;
+                  return (
+                    <button
+                      key={table.name}
+                      onClick={() => {
+                        setEvidenceSection(evidenceSection === table.name ? null : table.name);
+                        track("evidence_open", { surface: "episode", from: "tables" });
+                      }}
+                      className="flex items-center gap-2 text-xs bg-[var(--bg)] rounded-lg px-3 py-2 text-left cursor-pointer hover:border-[var(--accent)]/40 border border-transparent transition-colors"
+                    >
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${failed > 0 ? "bg-[var(--danger)]" : "bg-[var(--success)]"}`} />
+                      <span className="font-medium truncate">{table.name}</span>
+                      <span className="text-[var(--text-muted)] ml-auto shrink-0">
+                        {table.owner ?? "Unassigned"}{failed > 0 ? ` · ${failed} failing` : ""}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {evidenceSection && currentEpisode.schemaMeta.tables.some((t) => t.name === evidenceSection) && (
+                <div className="mt-2">
+                  <TableDetail
+                    table={currentEpisode.schemaMeta.tables.find((t) => t.name === evidenceSection)!}
+                    lineage={currentEpisode.schemaMeta.lineage}
+                  />
+                </div>
+              )}
+            </div>
+            )}
+
             <Link
               href={workspaceHref("/protocol", workspace)}
               className="flex items-center justify-center gap-1.5 text-center text-xs text-[var(--accent)] hover:underline pt-1"
@@ -1137,7 +1183,7 @@ export function EpisodePlayer({
         )}
 
         {/* Insights fallback when no schemaMeta */}
-        {activeTab === "insights" && !insights && (
+        {activeTab === "evidence" && !insights && (
           <div className="p-6 text-center text-sm text-[var(--text-muted)]">
             <p>Schema metadata not available for this episode.</p>
             <p className="text-xs mt-1">Connect to a data source to see full insights.</p>
@@ -1240,7 +1286,7 @@ export function EpisodePlayer({
         )}
 
         {/* Segments tab (transcript) */}
-        {activeTab === "segments" && (
+        {activeTab === "story" && (
           <div ref={segListRef} className="p-4 max-h-[60vh] overflow-y-auto scroll-smooth">
             {currentEpisode.script.map((seg: ScriptSegment, i: number) => {
               const isExpanded = expandedSeg === i;
@@ -1266,11 +1312,31 @@ export function EpisodePlayer({
                     <span className={`font-medium shrink-0 ${seg.speaker === "Alex" ? "text-[var(--accent)]" : "text-[var(--success)]"}`}>
                       {seg.speaker}
                     </span>
-                    <span className="text-[var(--text-muted)] whitespace-normal">
+                    <span className="flex-1 text-[var(--text-muted)] whitespace-normal">
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{seg.topic}</span>
                       {seg.text}
                     </span>
                     {table && <PixelIcon name="chart" size={10} className="shrink-0 self-center text-[var(--accent)]" />}
                   </button>
+                  <div className="ml-1 mt-1 flex items-center gap-3 text-xs">
+                    <button
+                      onClick={() => {
+                        setActiveTab("evidence");
+                        const evidenceTable = currentEpisode.schemaMeta?.tables.find((t) => t.name === seg.topic);
+                        setEvidenceSection(evidenceTable?.name ?? null);
+                        track("evidence_open", { surface: "episode", from: "segment", table: evidenceTable?.name ?? "" });
+                      }}
+                      className="text-[var(--accent)] hover:underline cursor-pointer"
+                    >
+                      Evidence for this claim →
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); void handleClip(i); }}
+                      className="text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer transition-colors"
+                    >
+                      Share this finding
+                    </button>
+                  </div>
                   {table && (
                     <TableDetail table={table} lineage={currentEpisode.schemaMeta!.lineage} />
                   )}

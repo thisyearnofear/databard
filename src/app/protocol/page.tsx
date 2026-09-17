@@ -10,9 +10,9 @@ import { track } from "@/lib/track";
 import { useDataContext } from "@/lib/data-context";
 import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import { briefingSourceName, healthTrend } from "@/lib/briefing-health";
+import { chartCaption } from "@/lib/story";
 import { DashboardHeader } from "@/components/briefing/DashboardHeader";
-import { PriorityBriefingCard } from "@/components/briefing/PriorityBriefingCard";
-import { DecisionBriefing } from "@/components/briefing/DecisionBriefing";
+import { BriefingHero } from "@/components/briefing/BriefingHero";
 import { DashboardSummary } from "@/components/briefing/DashboardSummary";
 import { ChangeNarratives } from "@/components/briefing/ChangeNarratives";
 import { SourceHealthList } from "@/components/briefing/SourceHealthList";
@@ -33,7 +33,7 @@ import {
 const SERIES_COLORS: DitherColor[] = ["purple", "green", "orange", "blue", "pink"];
 
 /** Fleet health — one dithered area series per tracked source, scrub to compare. */
-function FleetHealthChart({ cards }: { cards: SourceCard[] }) {
+function FleetHealthChart({ cards, caption }: { cards: SourceCard[]; caption: string }) {
   const { rows, config } = useMemo(() => {
     const series = cards.filter((c) => c.healthHistory.length >= 2).slice(0, 4);
     if (series.length === 0) return { rows: [], config: {} };
@@ -67,6 +67,7 @@ function FleetHealthChart({ cards }: { cards: SourceCard[] }) {
         <div>
           <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Fleet health</div>
           <h2 className="text-sm font-semibold mt-0.5">Every source, last {rows.length} snapshots</h2>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">{caption}</p>
         </div>
         <span className="font-mono text-xs text-[var(--text-muted)]">scrub to compare · hover a legend entry to spotlight</span>
       </div>
@@ -214,7 +215,6 @@ function ProtocolDashboardInner() {
 
       <div className="relative max-w-[900px] mx-auto">
         <DashboardHeader isProtocols={isProtocols} />
-        <WriteBackAction />
 
         {isDemo && (
           <section className="mb-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-3" aria-label="Sample briefing">
@@ -233,14 +233,19 @@ function ProtocolDashboardInner() {
           </section>
         )}
 
-        {/* Fresh episode banner — "Listen to this analysis" */}
-        {episodeId && episodeMeta && <PriorityBriefingCard
+        {/* L0 decision hero — one decision, one consequence, one primary action */}
+        {!loading && (cards.length > 0 || (episodeId && episodeMeta)) && <BriefingHero
           episode={episodeMeta}
+          cards={cards}
+          avgHealth={avgHealth}
           isProtocols={isProtocols}
-          onListen={() => {
+          onListenEpisode={() => {
+            if (!episodeId || !episodeMeta) return;
             track("dashboard_listen_click", { schema: episodeMeta.schemaName });
             router.push(workspaceHref(`/episode/${episodeId}`, workspace));
           }}
+          onListenSource={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
+          onReadStory={() => document.getElementById("story")?.scrollIntoView({ behavior: "smooth" })}
         />}
 
         {loading && (
@@ -249,7 +254,7 @@ function ProtocolDashboardInner() {
           </div>
         )}
 
-        {!loading && cards.length === 0 && (
+        {!loading && cards.length === 0 && !(episodeId && episodeMeta) && (
           <div className="hover-depth bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
             <p className="text-[var(--text-muted)] mb-4 text-sm">No data sources analyzed yet.</p>
             <Link href={homeHref(workspace)} className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block">
@@ -258,28 +263,23 @@ function ProtocolDashboardInner() {
           </div>
         )}
 
-        {!loading && cards.length > 0 && <DecisionBriefing
-          cards={cards}
-          isProtocols={isProtocols}
-          onListen={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
-        />}
+        {!loading && cards.length > 0 && <section id="story" aria-label="The story this week" className="scroll-mt-8">
+          <ChangeNarratives trends={trends} cards={cards} />
+        </section>}
 
-        {/* Summary counters — dithered sparks over mono labels */}
-        {!loading && cards.length > 0 && <DashboardSummary cards={cards} avgHealth={avgHealth} totalFailing={totalFailing} totalMints={totalMints} isProtocols={isProtocols} />}
-
-        {/* What changed this week — trend narratives */}
-        {!loading && <ChangeNarratives trends={trends} />}
-
-        {/* Evidence follows the decision narrative; it should not compete with it. */}
-        {!loading && <FleetHealthChart cards={cards} />}
-
-        {!loading && <SourceHealthList
-          cards={cards}
-          isProtocols={isProtocols}
-          hoveredCard={hoveredCard}
-          onHoverChange={setHoveredCard}
-          onListen={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
-        />}
+        {/* L2 evidence — counters, chart, and source cards sit behind the story */}
+        {!loading && cards.length > 0 && <section aria-label="Evidence behind the briefing above">
+          <DashboardSummary cards={cards} avgHealth={avgHealth} totalFailing={totalFailing} totalMints={totalMints} isProtocols={isProtocols} />
+          <FleetHealthChart cards={cards} caption={chartCaption(cards)} />
+          <WriteBackAction />
+          <SourceHealthList
+            cards={cards}
+            isProtocols={isProtocols}
+            hoveredCard={hoveredCard}
+            onHoverChange={setHoveredCard}
+            onListen={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
+          />
+        </section>}
       </div>
 
       {isProtocols && <footer className="relative text-center pt-12 pb-4">
