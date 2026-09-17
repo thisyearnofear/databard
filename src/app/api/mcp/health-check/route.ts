@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchSchemaMeta } from "@/lib/metadata-adapter";
+import { createEvidenceReceipt, hashEvidence } from "@/lib/evidence-receipt";
 import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
 import { parseMcpInput } from "@/lib/mcp";
 import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     // Degrade to the labelled demo fixture when the source is unreachable —
     // reviewer agents have no credentials, so this is the success path.
     const { meta, demo, connectionNotice } = await fetchSchemaMetaLenient(config, schemaFqn, { forceDemo });
+    const observedAt = new Date().toISOString();
     const insights = analyzeSchema(meta);
     const actions = generateActionItems(insights);
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
       ),
     ].slice(0, 5);
 
-    return NextResponse.json({
+    const response = {
       ok: true,
       tool: "databard.health-check",
       serviceVersion: 2,
@@ -129,7 +130,30 @@ export async function POST(req: NextRequest) {
         effort: a.effort,
       })),
       ...(monidCost ? { monidCost } : {}),
+    };
+    // Hash exactly what JSON consumers receive (optional undefined fields are omitted).
+    // Do not include config: connector URLs, credentials and query bodies are private.
+    const result = JSON.parse(JSON.stringify(response));
+    const evidenceReceipt = createEvidenceReceipt({
+      issuer: "databard",
+      analysis: { tool: response.tool, serviceVersion: response.serviceVersion },
+      generatedAt: response.generatedAt,
+      request: { source: config.source, schemaFqn },
+      evidence: {
+        kind: "schema-metadata",
+        source: demo ? "demo-fixture" : config.source,
+        schemaFqn: meta.fqn,
+        demo,
+        observedAt,
+        freshness: meta.tables.map((table) => ({
+          table: table.fqn,
+          reportedUpdatedAt: table.freshness ?? null,
+        })),
+        snapshotHash: hashEvidence(JSON.parse(JSON.stringify(meta))),
+      },
+      resultHash: hashEvidence(result),
     });
+    return NextResponse.json({ ...result, evidenceReceipt });
   } catch (e) {
     if (e instanceof ValidationError) {
       const status = e.message.startsWith("Rate limit") ? 429 : 400;

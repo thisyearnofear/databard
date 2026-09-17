@@ -120,6 +120,20 @@ Beachhead = Protocols (interest is web3-heavy). Close the viral/retention loop w
 - [ ] Wait for OKX final approval (status flips to "listed" — check with `onchainos agent get-agents --agent-ids 9878`)
 - [ ] Record 90s X demo post with `#OKXAI` (shot list in [`docs/OKX_AI_ASP.md`](OKX_AI_ASP.md))
 
+### Phase 7.1: Portable Evidence — World’s Fair Delivery Slice
+
+Direction: **chain-agnostic evidence, Solana-native execution**. See [Portable Evidence](PORTABLE_EVIDENCE.md) for the format, compatibility boundaries and acceptance gates.
+
+- [ ] Confirm existing-project eligibility and detailed competition rules; record pre-existing/new work
+- [x] Versioned chain-neutral receipt, deterministic hashing and offline integrity verification
+- [x] Additive health-check receipt and discovery schema, with demo/privacy/round-trip tests
+- [ ] Separate attestation and payment adapters; remove chain types from shared boundaries without breaking existing APIs
+- [x] Solana adapter library: unsigned Memo preparation and RPC-backed expected-wallet verification, tested offline
+- [ ] Wire adapter into existing HTTP/UI paths with consent and route-level tests; preserve legacy hashes
+- [ ] Complete issuer trust configuration, retry/idempotency and operational verification
+- [ ] One real protocol-operator workflow, measured time saved and repeat-use feedback
+- [ ] Harden token-payment verification and review escrow before meaningful funds; not the demo critical path
+
 ### Phase 8: Field-Sales Allocation Discovery — Validate Before Building
 
 See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md). This is a separate vertical experiment, not a replacement for the data-health roadmap.

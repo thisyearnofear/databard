@@ -160,6 +160,19 @@ See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decisi
 
 6. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analyst positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
 
+## Chain-Agnostic Evidence, Solana-Native Execution
+
+**Decision — September 17, 2026:** DataBard is an AI analyst with portable evidence and verifiable delivery, not a multichain dashboard. Source selection, payment method, and evidence anchoring are independent choices. The core analyst must work without a wallet or blockchain.
+
+- Produce a versioned, chain-neutral evidence receipt before selecting an attestation network. Support offline integrity verification; keep raw metadata, credentials, and private connection details out of public anchors.
+- Make Solana the best-supported verification and delivery implementation, not a prerequisite. Strengthen the existing Memo-based workflow before introducing another custom contract.
+- Separate attestation adapters from payment adapters. Stripe, x402 immediate payment, and Solana escrow have different capabilities and must not pretend to share identical settlement semantics.
+- Be precise about trust: a hash detects changes relative to a trusted digest; an issuer signature establishes authorship; a confirmed chain commitment establishes inclusion. None proves that source data or analytical conclusions are correct.
+- Validate one protocol-operator workflow: investigate a changed metric, explain it with evidence, and export a receipt independently verifiable against Solana. Measure time saved and operator usefulness, not chain count.
+- World’s Fair is a focused delivery opportunity, not a reason to rebuild the product as a marketplace. Existing-project eligibility and detailed track rules remain unverified; confirm before submission. Do not put escrow expansion on the critical path.
+
+Implementation sequence and acceptance gates: [Portable Evidence & World’s Fair](PORTABLE_EVIDENCE.md).
+
 ## What We're Not
 
 - **Not a data observability platform.** We don't compete with Monte Carlo. We're an AI analyst that can ingest observability data and act on it.

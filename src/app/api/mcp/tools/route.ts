@@ -408,7 +408,26 @@ const TOOLS = [
     endpoint: "/api/mcp/health-check",
     pricing: "free",
     inputSchema: connectionSchema,
-    outputSchema: healthOutputSchema,
+    outputSchema: {
+      ...healthOutputSchema,
+      properties: {
+        ...healthOutputSchema.properties,
+        evidenceReceipt: {
+          type: "object",
+          description: "Unsigned, chain-neutral integrity receipt. Hash checks do not authenticate the issuer or prove analytical correctness. resultHash covers this response without evidenceReceipt; snapshotHash covers the JSON metadata snapshot (not embedded).",
+          required: ["format", "version", "canonicalization", "hashAlgorithm", "payload", "payloadHash"],
+          additionalProperties: false,
+          properties: {
+            format: { type: "string", const: "databard.evidence-receipt" },
+            version: { type: "integer", const: 1 },
+            canonicalization: { type: "string", const: "databard-json-v1" },
+            hashAlgorithm: { type: "string", const: "sha256" },
+            payload: { type: "object", additionalProperties: true },
+            payloadHash: { type: "string", pattern: "^[a-f0-9]{64}$" },
+          },
+        },
+      },
+    },
   },
   {
     name: "databard_briefing",
