@@ -479,6 +479,11 @@ export function LandingStep() {
               </Link>
             )}
             {state.persona === "web3" && (
+              <Link href="/superteam" className="hover:text-[var(--text)] transition-colors">
+                Superteam
+              </Link>
+            )}
+            {state.persona === "web3" && (
               <Link href={workspaceHref("/market", workspace)} className="hover:text-[var(--text)] transition-colors">
                 Market
               </Link>

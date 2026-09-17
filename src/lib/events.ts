@@ -40,6 +40,8 @@ export const EVENT_TYPES = [
   "roast_cta_click",          // clicked "Roast my data" on /roast
   "league_page_view",         // visited /league (weekly accounting magnet)
   "league_share_copy",        // copied tweet, email, or permalink
+  "superteam_page_view",      // visited /superteam (Earn economy accounting)
+  "superteam_share_copy",     // copied Superteam tweet, LinkedIn, email, or link
   "monday_signup",            // email on the finding: send this every Monday
   "probe_run",                // DataBard Probe executed against agent services
   // Story-layer events (Phase 1 progressive disclosure)

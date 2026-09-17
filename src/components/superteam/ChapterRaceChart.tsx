@@ -1,0 +1,74 @@
+"use client";
+
+import { useMemo } from "react";
+import {
+  LineChart,
+  Line,
+  Grid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  DitherGradient,
+  type ChartConfig,
+  type DitherColor,
+} from "@/components/dither-kit";
+import type { RaceSeries } from "@/lib/superteam-earn";
+
+const RACE_COLORS: Record<string, DitherColor> = {
+  "Superteam UK": "purple",
+};
+const OTHER_COLORS: DitherColor[] = ["blue", "green", "orange", "pink"];
+
+/**
+ * The chapter race — cumulative Earn listings by deadline month, one dithered
+ * line per chapter. UK is the highlighted series; scrub to compare, hover a
+ * legend entry to spotlight it.
+ */
+export function ChapterRaceChart({ race }: { race: RaceSeries }) {
+  const config = useMemo<ChartConfig>(() => {
+    const out: ChartConfig = {};
+    let i = 0;
+    for (const key of race.keys) {
+      out[key] = {
+        label: key.replace("Superteam ", "") || key,
+        color: RACE_COLORS[key] ?? OTHER_COLORS[i++ % OTHER_COLORS.length],
+      };
+    }
+    return out;
+  }, [race.keys]);
+
+  if (race.rows.length < 2) return null;
+
+  return (
+    <div className="hover-depth relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 overflow-hidden">
+      <DitherGradient from="purple" direction="down" cell={3} opacity={0.14} className="absolute inset-x-0 top-0 h-20" />
+      <div className="relative flex items-baseline justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">
+            The chapter race
+          </div>
+          <h2 className="text-sm font-semibold mt-0.5">Cumulative listings, by deadline month</h2>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Every listing Earn has ever published, counted when its bounty closed.
+          </p>
+        </div>
+        <span className="font-mono text-xs text-[var(--text-muted)]">
+          scrub to compare · hover a legend entry to spotlight
+        </span>
+      </div>
+      <div className="relative h-56 w-full pt-4">
+        <LineChart data={race.rows} config={config} animate bloom="low" margins={{ top: 18, right: 8, bottom: 22, left: 30 }}>
+          <Grid />
+          <XAxis dataKey="t" maxTicks={8} />
+          <YAxis tickFormatter={(v) => `${v}`} />
+          {race.keys.map((key) => (
+            <Line key={key} dataKey={key} />
+          ))}
+          <Legend />
+          <Tooltip labelKey="t" variant="frosted-glass" />
+        </LineChart>
+      </div>
+    </div>
+  );
+}
