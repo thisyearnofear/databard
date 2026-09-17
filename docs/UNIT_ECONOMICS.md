@@ -95,12 +95,19 @@ Sustainability guardrails built into `probe-runner.ts`:
 
 1. **Outbound spend cap** — `MAX_OUTBOUND_SPEND_USD` (default $0.50) is checked
    before each paid call. If the cumulative cost of a probe batch would exceed
-   the cap, remaining paid candidates are skipped and marked
-   `"skipped": "spend cap reached"` in the response. Worst-case COGS is
-   therefore bounded well below the $1.00 price.
+   the cap, remaining paid candidates are skipped with
+   `error: "Skipped: outbound spend cap reached"` in the response. Worst-case
+   COGS is therefore bounded well below the $1.00 price.
+   Live observation (Sep 18 full-candidate run): actual outbound spend was
+   $0.01001 (OKLink $0.01 + Atlas $0.00001) — PolyDesk answers without an
+   x402 challenge and Doxa was unreachable, so the $0.12 estimate is a
+   conservative ceiling, not the norm.
 2. **1-hour result cache** — repeat probes for the same endpoint + body within
    one hour return the cached result without re-spending, so multiple callers
-   asking about the same service only trigger one outbound call.
+   asking about the same service only trigger one outbound call. Cache keys
+   are payment-mode-aware (`paid:` / `free:` prefix), so free previews can
+   never poison paid results or vice versa.
+   A hard-failure probe (fetch error / SSRF rejection) is never cached.
 3. **No LLM / no TTS** — the probe pipeline is pure HTTP + JSON parsing,
    keeping variable cost near zero regardless of volume.
 4. **User-supplied candidates are capped at 10** and each is subject to the
@@ -123,6 +130,8 @@ COGS) the tool contributes ~$132/month margin before fixed costs.
 - Shared episode viewing
 - Leaderboard browsing
 - Verify page (public good)
+- Probe free preview (`/api/probe/preview`, 10/hr) — same scorer, no outbound
+  payments; paid candidates surface an honest "402 challenge" flag
 - Health badge (embeddable, free forever — it's a distribution surface)
 - `databard_health_check` A2MCP tool
 - `databard_write_back` A2MCP tool

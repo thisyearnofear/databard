@@ -134,6 +134,25 @@ same demo.
 | `src/components/probe/ResultCard.tsx` | The score card with attestation explorer link. |
 | `tests/probe-scorer.unit.ts` | Scoring edge cases (missing fields, ties, paid vs free weight). |
 
+**Shipped vs plan deltas** (the table above is the design intent; final
+implementation):
+- Scorer weights are schema 25 / latency 18 / freshness 17 / price-value 13 /
+  reliability 13 / credentials 14 (six dimensions; Ligis credential check is
+  the sixth, not "error rate over 24h" — a single probe run has no history).
+- Outbound payments sign with the dedicated probe wallet
+  (`PROBE_PAYER_PK` = `0x49D5…FA8D8`), not the Builder Code payout wallet; the
+  attestation key falls back from `PROBE_ATTESTATION_PK` to it.
+- `/api/agent/probe/[id]` (verdict history) is NOT built — verdicts are
+  stateless; the on-chain attestation is the history.
+- UI is question input + "Run free preview" + "Check paid agent endpoint"
+  (with a 402 explainer), not a candidate-picker — candidates come from the
+  request body (agent path) or the curated default set.
+- `POST /api/probe/preview` was added (free, no outbound payments, 10/hr) as
+  the browser demo path.
+- Hardening added beyond the plan: SSRF guard (private/loopback URLs rejected
+  before network I/O), payment-mode-aware 1-hour cache (free and paid probes
+  never share entries), `rateLimit` + `probe_run` event on the paid route.
+
 ### Reused (don't touch)
 
 - `src/lib/x402.ts` — paid-endpoint wrapping (already in production)
