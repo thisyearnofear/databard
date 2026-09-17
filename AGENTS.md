@@ -77,7 +77,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/mcp.ts` — shared A2MCP input parser (one-shot connection config from request body)
 - `src/lib/probe-runner.ts` — DataBard Probe: fetches & measures A2MCP endpoints, x402 client payment, returns ProbeMetrics
 - `src/lib/probe-scorer.ts` — composite 6-dimension quality score (schema, latency, freshness, price/value, reliability, credentials)
-- `src/lib/probe-attestation.ts` — writes verdict hash to X Layer via viem (zero-value self-send)
+- `src/lib/probe-attestation.ts` — writes verdict hash to X Layer via viem (zero-value self-send); signs with `PROBE_ATTESTATION_PK`, falling back to `PROBE_PAYER_PK`
 - `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402): probes candidate services, returns ranked verdict + optional on-chain attestation
 - `src/app/probe/page.tsx` — Probe demo UI (question input, ranked result cards)
 - `src/app/api/mcp/health-check/route.ts` — FREE A2MCP tool: schema health score + recommended actions
@@ -101,6 +101,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/product/score-tone.ts` — the one score→colour mapping (80/50 thresholds) for text classes, tints and server-side image hexes
 - `src/components/dither-kit/icon.tsx` — `PixelIcon` glyph set (8×8 bitmaps rendered as crisp-edged SVG); use these instead of emoji on shell, landing, dashboard, player, league and onchain surfaces
 - `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)
+- `scripts/probe-smoke.mjs` — paid x402 smoke test for `/api/agent/probe` (pays the challenge with `PROBE_PAYER_PK` from `.env`, prints the verdict)
 
 ## Theming
 Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["databard:theme"]` and sets `data-theme` on `<html>` before first paint, so light mode never flashes dark; `data-theme="dark"` stays the no-JS default. Light mode is opt-in via the `ThemeToggle` component (persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components. Type: headings (`h1,h2,h3`) and score numerals use the self-hosted Space Grotesk face via `--font-display` / `.font-display`; body copy stays system-ui.

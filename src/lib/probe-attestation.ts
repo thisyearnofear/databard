@@ -8,6 +8,8 @@
  *
  * Requires env:
  *   PROBE_ATTESTATION_PK  — private key of the wallet that signs the tx
+ *                           (falls back to PROBE_PAYER_PK — same dedicated
+ *                           probe wallet pays outbound probes and attestations)
  *   PROBE_RPC_URL         — X Layer RPC (defaults to https://xlayerrpc.okx.com)
  */
 
@@ -38,10 +40,10 @@ export function hashVerdict(verdict: unknown): string {
 export async function attestVerdict(
   verdict: unknown
 ): Promise<AttestationResult> {
-  const pk = process.env.PROBE_ATTESTATION_PK;
+  const pk = process.env.PROBE_ATTESTATION_PK ?? process.env.PROBE_PAYER_PK;
   if (!pk) {
     throw new Error(
-      "PROBE_ATTESTATION_PK not set — cannot write attestation to X Layer."
+      "Neither PROBE_ATTESTATION_PK nor PROBE_PAYER_PK is set — cannot write attestation to X Layer."
     );
   }
 

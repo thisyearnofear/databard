@@ -303,3 +303,19 @@ joins, assign Sep 22–24 (UI polish + video) to them.
    evidence mandatory?
 4. Should we register DataBard Probe as a third service on ASP #9878, or
    create a new ASP identity for the hackathon submission?
+
+## Progress log
+
+### Sep 17, 2026
+- **Wallet funded & verified**: dedicated probe wallet `0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8`
+  holds **10 USDT0** + **0.01 OKB** on X Layer (checked via RPC).
+- **x402 client fixed**: `attemptX402Payment` in `probe-runner.ts` now uses the
+  real OKX SDK (`x402Client` + `registerExactEvmScheme` + `x402HTTPClient`)
+  instead of guessed API; returns `PAYMENT-SIGNATURE` header for retries.
+- **Attestation fallback**: `probe-attestation.ts` falls back from
+  `PROBE_ATTESTATION_PK` to `PROBE_PAYER_PK`, so the same dedicated wallet can
+  sign verdict hashes if attestation is enabled.
+- **Env**: `PROBE_PAYER_PK` present in local `.env` and server `/opt/databard/.env`.
+- **Quality gates**: `tsc --noEmit` clean; 28/28 probe-scorer unit tests pass.
+- **Next**: deploy, then run live smoke test — unpaid `POST /api/agent/probe`
+  should return 402; paid call via `scripts/probe-smoke.mjs` should return 200.

@@ -77,66 +77,77 @@ function setCache(key: string, result: ProbeResult): void {
 
 // ── x402 client (lazy-loaded to avoid import cost when not needed) ─────────
 
-interface X402PaymentPayload {
-  x402Version: number;
-  scheme: string;
-  network: string;
-  payload: string;
-}
+type X402ClientModules = {
+  x402Client: typeof import("@okxweb3/x402-core/client").x402Client;
+  x402HTTPClient: typeof import("@okxweb3/x402-core/client").x402HTTPClient;
+  registerExactEvmScheme: typeof import("@okxweb3/x402-evm/exact/client").registerExactEvmScheme;
+  toClientEvmSigner: typeof import("@okxweb3/x402-evm").toClientEvmSigner;
+  privateKeyToAccount: typeof import("viem/accounts").privateKeyToAccount;
+  createPublicClient: typeof import("viem").createPublicClient;
+  http: typeof import("viem").http;
+};
 
-let x402ClientModule: unknown = null;
+let x402ClientModules: X402ClientModules | null = null;
 
-async function loadX402Client(): Promise<any | null> {
-  if (x402ClientModule !== null) return x402ClientModule;
+async function loadX402ClientModules(): Promise<X402ClientModules | null> {
+  if (x402ClientModules !== null) return x402ClientModules;
   try {
-    // Dynamic import so the module is only loaded when actually needed
-    const mod = await import("@okxweb3/x402-evm/exact/client");
-    x402ClientModule = mod;
-    return mod;
+    // Dynamic imports so the modules load only when a 402 actually needs paying
+    const [coreClient, evmClient, evmSigner, accounts, viem] = await Promise.all([
+      import("@okxweb3/x402-core/client"),
+      import("@okxweb3/x402-evm/exact/client"),
+      import("@okxweb3/x402-evm"),
+      import("viem/accounts"),
+      import("viem"),
+    ]);
+    x402ClientModules = {
+      x402Client: coreClient.x402Client,
+      x402HTTPClient: coreClient.x402HTTPClient,
+      registerExactEvmScheme: evmClient.registerExactEvmScheme,
+      toClientEvmSigner: evmSigner.toClientEvmSigner,
+      privateKeyToAccount: accounts.privateKeyToAccount,
+      createPublicClient: viem.createPublicClient,
+      http: viem.http,
+    };
+    return x402ClientModules;
   } catch {
     return null;
   }
 }
 
 /**
- * Attempt to pay a 402 challenge using the x402 client SDK.
- * Requires PROBE_PAYER_PK env var (private key with USDT0 on X Layer).
- * Returns the payment header value, or null if payment isn't possible.
+ * Attempt to pay a 402 challenge using the OKX x402 client SDK.
+ * Requires PROBE_PAYER_PK env var (private key holding USDT0 on X Layer).
+ * Returns the payment headers to replay the request with (PAYMENT-SIGNATURE),
+ * or null if payment isn't possible.
  */
 async function attemptX402Payment(
   challengeHeader: string
-): Promise<string | null> {
+): Promise<Record<string, string> | null> {
   const pk = process.env.PROBE_PAYER_PK;
   if (!pk) return null;
 
   try {
-    const client = await loadX402Client();
-    if (!client) return null;
+    const mods = await loadX402ClientModules();
+    if (!mods) return null;
 
-    // Decode the base64 PAYMENT-REQUIRED header
-    const challenge: X402PaymentPayload = JSON.parse(
-      Buffer.from(challengeHeader, "base64").toString("utf-8")
+    const rpcUrl = process.env.PROBE_RPC_URL || "https://xlayerrpc.okx.com";
+    const account = mods.privateKeyToAccount(pk as `0x${string}`);
+    const publicClient = mods.createPublicClient({ transport: mods.http(rpcUrl) });
+    const signer = mods.toClientEvmSigner(account, publicClient);
+
+    const core = new mods.x402Client();
+    mods.registerExactEvmScheme(core, {
+      signer,
+      schemeOptions: { rpcUrl },
+    });
+    const httpClient = new mods.x402HTTPClient(core);
+
+    const paymentRequired = httpClient.getPaymentRequiredResponse(
+      (name) => (name.toUpperCase() === "PAYMENT-REQUIRED" ? challengeHeader : null)
     );
-
-    // Use the SDK's client to sign the payment
-    // The exact API depends on the SDK version; we try the common pattern
-    if (typeof client.createPayment === "function") {
-      const payment = await client.createPayment({
-        privateKey: pk,
-        scheme: challenge.scheme,
-        network: challenge.network,
-        payload: challenge.payload,
-      });
-      return payment;
-    }
-
-    // Fallback: if the SDK exposes a signAndEncode helper
-    if (typeof client.signPayment === "function") {
-      const signed = await client.signPayment(pk, challenge);
-      return signed;
-    }
-
-    return null;
+    const paymentPayload = await httpClient.createPaymentPayload(paymentRequired);
+    return httpClient.encodePaymentSignatureHeader(paymentPayload);
   } catch {
     return null;
   }
@@ -215,14 +226,14 @@ export async function probeEndpoint(
         response.headers.get("payment-required");
 
       if (paymentRequired) {
-        const paymentHeader = await attemptX402Payment(paymentRequired);
-        if (paymentHeader) {
-          // Retry with payment
+        const paymentHeaders = await attemptX402Payment(paymentRequired);
+        if (paymentHeaders) {
+          // Retry with payment (PAYMENT-SIGNATURE header from the SDK)
           const retryOpts: RequestInit = {
             ...fetchOpts,
             headers: {
               ...(fetchOpts.headers as Record<string, string>),
-              "X-PAYMENT": paymentHeader,
+              ...paymentHeaders,
             },
           };
           const retryController = new AbortController();
