@@ -29,6 +29,22 @@ runs (deploys build locally), not on the server.
 | `PALM_USD_RECIPIENT` | PalmUSD checkout pays the null address | Your treasury wallet pubkey |
 | `DATABARD_API_SECRET` | ⚠️ Do **not** set in prod as-is: it guards `/api/synthesize` and `/api/regenerate`, which the browser calls — setting it breaks the UI generation flow. Locking those routes down properly needs a session-based guard first. | — |
 
+## Portable attestation routes (pending deployment)
+
+`/api/attestation/solana/{prepare,anchor,verify}` use runtime-only
+`SOLANA_ATTESTATION_RPC_URL` (defaults to devnet). Set it in the server's
+persistent env for a private RPC; never expose private RPC credentials through
+`NEXT_PUBLIC_*`. Legacy Solana routes retain their existing configuration.
+No server signing key is needed or accepted: clients sign and pay their own fees.
+An open signing endpoint cannot authenticate caller-provided unsigned receipts
+as DataBard output. See [API contract and trust limits](ATTESTATION_API.md).
+
+After deployment, validate demo receipt preparation and tiered verification;
+perform a consented devnet wallet transaction separately to prove live inclusion.
+HTTP 202 from anchor is submission/unknown, not confirmation. The deterministic
+signature survives RPC errors; retry identical bytes rather than auto-re-signing.
+Deploy now runs `npm run test:unit` before building; failures abort deployment.
+
 ## Scheduled digests (the runner)
 
 Schedules are created via `/api/schedules` (Pro accounts) with a `nextRunAt`.

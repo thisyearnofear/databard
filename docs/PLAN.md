@@ -124,12 +124,14 @@ Beachhead = Protocols (interest is web3-heavy). Close the viral/retention loop w
 
 Direction: **chain-agnostic evidence, Solana-native execution**. See [Portable Evidence](PORTABLE_EVIDENCE.md) for the format, compatibility boundaries and acceptance gates.
 
-- [ ] Confirm existing-project eligibility and detailed competition rules; record pre-existing/new work
+- [x] Existing-project eligibility confirmed by project owner (September 17, 2026)
+- [ ] Review detailed competition rules and record pre-existing/new work
 - [x] Versioned chain-neutral receipt, deterministic hashing and offline integrity verification
 - [x] Additive health-check receipt and discovery schema, with demo/privacy/round-trip tests
 - [ ] Separate attestation and payment adapters; remove chain types from shared boundaries without breaking existing APIs
 - [x] Solana adapter library: unsigned Memo preparation and RPC-backed expected-wallet verification, tested offline
-- [ ] Wire adapter into existing HTTP/UI paths with consent and route-level tests; preserve legacy hashes
+- [x] Add wallet-signed prepare/anchor/verify HTTP routes with consent and offline route tests; legacy paths unchanged (not deployed)
+- [ ] Wallet UI and live-network end-to-end verification; see [Attestation API](ATTESTATION_API.md)
 - [ ] Complete issuer trust configuration, retry/idempotency and operational verification
 - [ ] One real protocol-operator workflow, measured time saved and repeat-use feedback
 - [ ] Harden token-payment verification and review escrow before meaningful funds; not the demo critical path

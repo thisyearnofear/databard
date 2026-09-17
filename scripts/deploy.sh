@@ -95,8 +95,7 @@ echo "   Commit: $GIT_SHA"
 # ── 1. Test + local build ───────────────────────────────────────
 echo ""
 echo "→ Running unit tests..."
-echo "  (skipped: tsx not installed locally; unrelated to market fixes)"
-# npm run test:unit
+npm run test:unit
 
 echo ""
 echo "→ Building locally..."

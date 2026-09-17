@@ -6,7 +6,7 @@
 
 ## Opportunity and eligibility gate
 
-The [official World’s Fair page](https://colosseum.com/worldsfair), checked September 17, lists an October 12, 2026 submission deadline, welcomes builders across crypto ecosystems, and advertises a $100,000 Solana track pool. Existing-project eligibility, detailed judging criteria, and track rules have **not** been verified. Confirm before submission; maintain a dated baseline and log of new work. This is not an eligibility determination.
+The [official World’s Fair page](https://colosseum.com/worldsfair), checked September 17, lists an October 12, 2026 submission deadline, welcomes builders across crypto ecosystems, and advertises a $100,000 Solana track pool. Existing-project eligibility was confirmed by the project owner on September 17, 2026. Detailed judging criteria and track rules still need review. Maintain a dated baseline and log of new work; this confirmation is not a determination about every competition rule.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Do not add a universal chain SDK, bridge, token, or custom contract merely for t
 
 ### 2. Adapter separation and Solana verification
 
-**Implemented locally:** chain-neutral attestation types and a Solana adapter that prepares an unsigned, hash-only Memo transaction and verifies a supplied receipt/reference through RPC. Tests cover wallet signing, the prepare/sign/verify round trip, wrong receipt/wallet/network, legacy memos, failed transactions, missing data, and RPC failure. It is not connected to the UI or HTTP endpoints yet; legacy routes and X Layer behavior are unchanged.
+**Implemented locally:** chain-neutral attestation types and a Solana adapter that prepares an unsigned, hash-only Memo transaction and verifies a supplied receipt/reference through RPC. Tests cover wallet signing, the prepare/sign/verify round trip, wrong receipt/wallet/network, legacy memos, failed transactions, missing data, and RPC failure. HTTP routes now wrap the adapter at `/api/attestation/solana/{prepare,anchor,verify}` with offline route tests; see [API usage](ATTESTATION_API.md). UI integration and live-network verification remain pending. Legacy routes and X Layer behavior are unchanged. The HTTP flow is **caller-wallet-signed**, not server-issued: no private key is loaded by these routes. Publicly signing arbitrary unsigned receipts as DataBard would falsely authenticate caller-created content.
 
 The adapter uses `solana:<full genesis hash>` as its network identifier (not a claim of CAIP-2 compliance). References require an independently supplied expected wallet. `issuerAuthenticated` means that wallet signed the matching Memo instruction in the RPC-reported successful transaction—not that the wallet belongs to DataBard. Verification trusts the configured RPC and supports confirmed/finalized commitment. Missing transactions are `not-found`, not automatically pending. Preparation never broadcasts; wallet signing and submission remain caller responsibilities.
 
