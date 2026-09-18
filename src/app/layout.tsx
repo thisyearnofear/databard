@@ -4,6 +4,7 @@ import { AppProviders } from "@/components/AppProviders";
 import { ClientProviders } from "@/components/ClientProviders";
 import { ToastProvider } from "@/components/Toast";
 import { HeaderBar } from "@/components/HeaderBar";
+import { WebMcpLoader } from "@/components/WebMcpLoader";
 import "./globals.css";
 
 const display = Space_Grotesk({
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ClientProviders>
             <ToastProvider>
               <HeaderBar />
+              <WebMcpLoader />
               {children}
             </ToastProvider>
           </ClientProviders>

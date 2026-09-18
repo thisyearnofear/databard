@@ -1,0 +1,31 @@
+# DataBard — agent integration guide
+
+DataBard is an AI data analyst: connect a source, get health scores, trend
+narratives, and a 2-minute audio briefing. No email, no sales call — self-serve.
+
+## Direct integration (preferred — no credentials needed to try)
+
+- Service discovery: `GET /api/mcp/tools`
+- Free demo analysis: `POST /api/mcp/health-check` with `{"demo":true}`
+- Live analysis: `POST /api/mcp/health-check` with a connection spec, e.g.
+  `{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://your-datahub:8080"}}`
+- Full briefing (script + audio, $1/call x402 on X Layer):
+  `POST /api/mcp/briefing` with the same connection spec
+- Write findings back to DataHub: `POST /api/mcp/writeback`
+- Probe agent-service quality: `POST /api/agent/probe` ($1/call x402)
+
+Sources: openmetadata, dbt-cloud, dbt-local, the-graph, dune, coral, datahub, monid.
+Omit everything for a labelled demo — every invocation succeeds with `demo:true`.
+
+## In-browser agents (WebMCP)
+
+Pages expose `databard_runDemoHealthCheck`, `databard_getTools`, and
+`databard_startConnect` via `document.modelContext` when the browser supports
+WebMCP (Chromium 146+ with #enable-webmcp-testing). Same tools as above,
+tab-bound transport.
+
+## Humans
+
+- Try the demo: `/` → demo CTA
+- Connect a source: `/?start=connect`
+- Weekly league: `/league` · Earn economy: `/superteam` · Verify: `/verify`

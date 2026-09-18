@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { PublicLeaderboardEntry } from "@/app/api/onchain/leaderboard/route";
 import { HealthBar, TrendBadge, Sparkline } from "@/components/viz";
-import { LeadCapture } from "@/components/LeadCapture";
+import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { PixelIcon } from "@/components/dither-kit";
 import { scoreColor } from "@/lib/product/score-tone";
 import { homeHref } from "@/lib/product/workspaces";
@@ -230,10 +230,10 @@ export function LeaderboardIndex() {
                     </div>
                     {entry.tier === "scanned" && claimingSchema === entry.schemaName && (
                       <div className="mt-3">
-                        <LeadCapture
+                        <IntegrationCTA
                           source={`leaderboard_claim:${entry.schemaName}`}
-                          prompt="Leave your email — we'll verify your protocol's health on Solana."
-                          buttonText="Claim →"
+                          schemaName={entry.schemaName}
+                          connectHref="/?start=connect"
                           compact
                         />
                       </div>

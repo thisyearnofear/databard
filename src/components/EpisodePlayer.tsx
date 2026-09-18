@@ -75,8 +75,7 @@ export function EpisodePlayer({
   const [evidenceSection, setEvidenceSection] = useState<string | null>(null);
   const line = bottomLine(currentEpisode);
   // Post-listen feedback prompt (discovery signal at the moment of value)
-  const [feedbackStage, setFeedbackStage] = useState<"hidden" | "ask" | "email" | "done">("hidden");
-  const [feedbackEmail, setFeedbackEmail] = useState("");
+  const [feedbackStage, setFeedbackStage] = useState<"hidden" | "ask" | "cta" | "done">("hidden");
   const listenStartedRef = useRef(false);
   const accentRef = useRef<{ h: number; s: number; l: number } | null>(null);
 
@@ -1357,7 +1356,7 @@ export function EpisodePlayer({
                 <button
                   onClick={() => {
                     track("feedback_yes", { schema: currentEpisode.schemaName });
-                    setFeedbackStage(isDemoEpisode ? "done" : "email");
+                    setFeedbackStage(isDemoEpisode ? "done" : "cta");
                   }}
                   className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-xs font-medium cursor-pointer"
                 >
@@ -1375,43 +1374,33 @@ export function EpisodePlayer({
               </div>
             </>
           )}
-          {feedbackStage === "email" && (
+          {feedbackStage === "cta" && (
             <>
               <p className="text-sm mb-1">Want to go deeper?</p>
               <p className="text-xs text-[var(--text-muted)] mb-3">
-                Leave your email — we&apos;ll schedule a 15-minute live deep-dive on your gnarliest schema.
+                Connect your gnarliest schema and get the deep-dive yourself — or hand the curl to your agent.
               </p>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    await fetch("/api/leads", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ email: feedbackEmail, source: "discovery-call" }),
-                    });
-                  } catch { /* lead capture is best-effort */ }
-                  setFeedbackStage("done");
-                }}
-                className="flex gap-2 justify-center max-w-sm mx-auto"
-              >
-                <input
-                  type="email"
-                  required
-                  value={feedbackEmail}
-                  onChange={(e) => setFeedbackEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs focus:border-[var(--accent)] outline-none"
-                />
-                <button type="submit" className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-xs font-medium cursor-pointer">
-                  Book it
-                </button>
-              </form>
+              <div className="flex gap-2 justify-center max-w-sm mx-auto flex-wrap">
+                <Link
+                  href={workspaceHref("/?start=connect", workspaceFromSearch(typeof window !== "undefined" ? window.location.search : ""))}
+                  onClick={() => { track("integration_cta_click", { action: "connect", source: "discovery-call" }); setFeedbackStage("done"); }}
+                  className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-xs font-medium cursor-pointer"
+                >
+                  Connect it
+                </Link>
+                <Link
+                  href="/api/mcp/tools"
+                  onClick={() => { track("integration_cta_click", { action: "tools", source: "discovery-call" }); setFeedbackStage("done"); }}
+                  className="border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-2.5 text-xs cursor-pointer"
+                >
+                  Agent tools
+                </Link>
+              </div>
             </>
           )}
           {feedbackStage === "done" && (
             <p className="text-sm text-[var(--text-muted)]">
-              {isDemoEpisode ? "Thanks! Connect your own source to hear the real thing." : "Thanks — we'll be in touch."}
+              {isDemoEpisode ? "Thanks! Connect your own source to hear the real thing." : "Thanks — connect a source any time."}
             </p>
           )}
         </div>

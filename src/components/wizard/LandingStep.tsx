@@ -9,7 +9,7 @@ import { costHighlights } from "@/lib/cost-framing";
 import { setDataContext } from "@/lib/data-context";
 import { StatTile } from "@/components/viz";
 import { PixelIcon } from "@/components/dither-kit";
-import { LeadCapture } from "@/components/LeadCapture";
+import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { LandingProof } from "./LandingProof";
 import type { Episode } from "@/lib/types";
 import type { InsightTotals } from "@/app/api/insights/route";
@@ -420,7 +420,7 @@ export function LandingStep() {
         </div>
       </section>
 
-      {/* Email capture — the "talk to us" moment */}
+      {/* Direct integration — the self-serve moment (replaces email capture) */}
       <section className="enter-up enter-delay-4 w-full max-w-2xl pb-8">
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-center">
           <h2 className="text-base font-semibold mb-1">
@@ -428,14 +428,10 @@ export function LandingStep() {
           </h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">
             {state.persona === "web3"
-              ? "Send us a Dune dashboard or subgraph URL. We'll run the report and send you the 2-minute briefing — no setup."
-              : "Send a dbt manifest or catalog URL. We'll run the report and send you the briefing — no commitment."}
+              ? "Connect a Dune dashboard or subgraph URL and get the 2-minute briefing yourself — no setup, no waiting."
+              : "Connect a dbt manifest or catalog URL and get the briefing yourself — no commitment."}
           </p>
-          <LeadCapture
-            source="landing_footer"
-            prompt=""
-            buttonText="Get my report →"
-          />
+          <IntegrationCTA source="landing_footer" connectHref={workspaceHref("/?start=connect", workspace)} />
         </div>
       </section>
 

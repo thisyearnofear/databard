@@ -43,6 +43,7 @@ export const EVENT_TYPES = [
   "superteam_page_view",      // visited /superteam (Earn economy accounting)
   "superteam_share_copy",     // copied Superteam tweet, LinkedIn, email, or link
   "monday_signup",            // email on the finding: send this every Monday
+  "integration_cta_click",    // direct self-serve CTA: demo vs connect vs copy_curl (replaces inbound lead capture)
   "probe_run",                // DataBard Probe executed against agent services
   // Story-layer events (Phase 1 progressive disclosure)
   "story_expand",             // opened a Why-it-matters / Details disclosure

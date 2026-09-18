@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { track } from "@/lib/track";
 import { MondaySignup } from "@/components/MondaySignup";
-import { LeadCapture } from "@/components/LeadCapture";
+import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { HealthBar } from "@/components/viz";
 import { scoreTextClass } from "@/lib/product/score-tone";
 import { LeaderboardIndex } from "./LeaderboardIndex";
@@ -238,14 +238,14 @@ export function LeagueBoard() {
             <section className="mt-10 border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
               <h2 className="text-sm font-semibold">Want this on a source you run?</h2>
               <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-                Leave an email or a Dune / subgraph URL. We&apos;ll rerun the scan and send the 2-minute briefing.
-                If it doesn&apos;t surface something you didn&apos;t know, say so.
+                Run the demo, connect a Dune / subgraph URL yourself, or hand the curl to your agent.
+                The 2-minute briefing is self-serve.
               </p>
               <div className="mt-4">
-                <LeadCapture
+                <IntegrationCTA
                   source="league_edition"
-                  prompt=""
-                  buttonText="Request a scan →"
+                  schemaName={edition.headline.schemaName}
+                  connectHref={workspaceHref("/?start=connect", "protocols")}
                 />
               </div>
               <p className="mt-4 text-xs">
