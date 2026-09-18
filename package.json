@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:unit": "tsx tests/rate-limit.unit.ts && tsx tests/datahub-adapter.unit.ts && tsx tests/fleet-analysis.unit.ts && tsx tests/account.unit.ts && tsx tests/score-card.unit.ts && tsx tests/serial-queue.unit.ts && tsx tests/monid-adapter.unit.ts && tsx tests/mcp-parse.unit.ts && tsx tests/probe-scorer.unit.ts && tsx tests/evidence-receipt.unit.ts && tsx tests/health-receipt.unit.ts && tsx tests/solana-receipt.unit.ts && tsx tests/attestation-http.unit.ts && tsx tests/story.unit.ts && tsx tests/superteam-earn.unit.ts && node --test tests/kindness-audio.unit.mjs"
+    "test:unit": "tsx tests/rate-limit.unit.ts && tsx tests/datahub-adapter.unit.ts && tsx tests/fleet-analysis.unit.ts && tsx tests/account.unit.ts && tsx tests/score-card.unit.ts && tsx tests/serial-queue.unit.ts && tsx tests/monid-adapter.unit.ts && tsx tests/mcp-parse.unit.ts && tsx tests/probe-scorer.unit.ts && tsx tests/evidence-receipt.unit.ts && tsx tests/health-receipt.unit.ts && tsx tests/solana-receipt.unit.ts && tsx tests/attestation-http.unit.ts && tsx tests/story.unit.ts && tsx tests/superteam-earn.unit.ts && tsx tests/attention-market.unit.ts && tsx tests/editions.unit.ts && node --test tests/kindness-audio.unit.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.109.1",

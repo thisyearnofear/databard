@@ -2,25 +2,28 @@
  * Palm USD settlement backend — SPL token transfer to treasury, verified on-chain.
  *
  * Extracted from api/checkout/palmusd/verify/route.ts so the same verification code path
- * is reachable from Pro checkout AND the market (if a WANT is denominated in PUSD instead
- * of SOL). Today the market uses SOL escrow; PUSD remains the human-subscription path.
+ * is reachable from Pro checkout AND commissioned editions. Verification is strict:
+ * the tx must have succeeded, pay the configured treasury, be funded by the claiming
+ * wallet, and move at least `expectedAmount` of `expectedMint` tokens — measured from
+ * pre/post token balances, not the caller's word. Replay protection lives in
+ * `claimPusdSignature` (src/lib/pusd.ts), which routes invoke after verification.
  */
 import { Connection, PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { proAccounts } from "../../store";
+import { pusdMint, pusdRpcUrl, pusdTreasury } from "../../pusd";
 import { explorerUrl, type SettlementBackend, type VerifyRequest, type VerifyResult } from "../verifier";
-
-const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
-const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? `https://api.${NETWORK}.solana.com`;
-
-function treasury(): PublicKey {
-  return new PublicKey(process.env.PALM_USD_RECIPIENT ?? "11111111111111111111111111111111");
-}
 
 export const pusdBackend: SettlementBackend = {
   id: "pusd",
 
   async verify(req: VerifyRequest): Promise<VerifyResult> {
-    const connection = new Connection(RPC_URL, "confirmed");
+    const treasury = req.expectedRecipient ? new PublicKey(req.expectedRecipient) : pusdTreasury();
+    if (!treasury) {
+      return { status: "mismatched", detail: "PUSD payments are not configured (PALM_USD_RECIPIENT unset)" };
+    }
+
+    const connection = new Connection(pusdRpcUrl(), "confirmed");
     const tx = await connection.getTransaction(req.reference, {
       commitment: "confirmed",
       maxSupportedTransactionVersion: 0,
@@ -33,11 +36,45 @@ export const pusdBackend: SettlementBackend = {
       return { status: "mismatched", detail: `On-chain error: ${JSON.stringify(tx.meta.err)}` };
     }
 
-    const expected = req.expectedRecipient ? new PublicKey(req.expectedRecipient) : treasury();
     const accountKeys = tx.transaction.message.getAccountKeys().keySegments().flat();
-    const involved = accountKeys.some((k) => k.equals(expected));
-    if (!involved) {
-      return { status: "mismatched", detail: "Transaction does not involve the expected recipient" };
+    if (!accountKeys.some((k) => k.equals(treasury))) {
+      return { status: "mismatched", detail: "Transaction does not involve the treasury" };
+    }
+
+    // The claimant must be the funding wallet — the fee payer is the first
+    // static account key on every Solana transaction.
+    if (req.expectedPayer) {
+      const feePayer = accountKeys[0];
+      if (!feePayer || feePayer.toBase58() !== req.expectedPayer) {
+        return { status: "mismatched", detail: "Transaction was not funded by the claiming wallet" };
+      }
+    }
+
+    // Amount + mint check: net tokens gained by the treasury's ATA for the
+    // expected mint, measured from pre/post token balances rather than
+    // instruction shape. The `owner` field is not populated on every RPC, so
+    // the token account is identified by resolving its account index.
+    if (req.expectedAmount !== undefined) {
+      const mintKey = req.expectedMint ? new PublicKey(req.expectedMint) : pusdMint();
+      const expectedAta = await getAssociatedTokenAddress(mintKey, treasury);
+      const mint = mintKey.toBase58();
+      type TokenBalance = NonNullable<typeof tx.meta>["postTokenBalances"];
+      const balanceOf = (list: TokenBalance) =>
+        (list ?? [])
+          .filter(
+            (b) =>
+              b.mint === mint &&
+              (b.owner === treasury.toBase58() ||
+                (accountKeys[b.accountIndex] && accountKeys[b.accountIndex].equals(expectedAta))),
+          )
+          .reduce((s, b) => s + BigInt(b.uiTokenAmount.amount), BigInt(0));
+      const gained = balanceOf(tx.meta?.postTokenBalances) - balanceOf(tx.meta?.preTokenBalances);
+      if (gained < BigInt(req.expectedAmount)) {
+        return {
+          status: "mismatched",
+          detail: `Treasury gained ${(Number(gained) / 1e6).toFixed(2)} PUSD, expected ${(req.expectedAmount / 1e6).toFixed(2)}`,
+        };
+      }
     }
 
     return {

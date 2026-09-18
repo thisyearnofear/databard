@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
-import { loadEarnEdition } from "@/lib/superteam-earn";
+import { loadEarnEdition, loadEarnListings, sponsorFocus } from "@/lib/superteam-earn";
+import { sponsorForSlug } from "@/lib/editions";
 
 export const runtime = "nodejs";
 export const revalidate = 3600;
@@ -9,13 +10,8 @@ function fmtUsd(n: number): string {
   return `$${Math.round(n)}`;
 }
 
-const RACE_COLORS: Record<string, string> = {
-  "Superteam UK": "#8f6bff",
-  "Superteam Brasil": "#358ff3",
-  "Superteam Ukraine": "#28d26e",
-  Superteam: "#f59e0b",
-  "Superteam Nigeria": "#f05abe",
-};
+const FOCUS_COLOR = "#8f6bff";
+const OTHER_COLORS = ["#358ff3", "#28d26e", "#f59e0b", "#f05abe"];
 
 /** Flatten a race series into an SVG polyline path inside the plot box. */
 function racePath(rows: Record<string, string | number>[], key: string, w: number, h: number, max: number): string {
@@ -29,15 +25,31 @@ function racePath(rows: Record<string, string | number>[], key: string, w: numbe
     .join(" ");
 }
 
+interface RouteProps {
+  params: Promise<{ slug: string }>;
+}
+
 /**
- * OG card for the Superteam Earn economy page. Slack/X unfurl of /superteam.
+ * OG card for commissioned + preview Earn sponsor editions (/earn/[slug]).
+ * Published editions render their pinned numbers; previews render live.
  */
-export async function GET() {
+export async function GET(_req: Request, { params }: RouteProps) {
+  const { slug } = await params;
   try {
-    const edition = await loadEarnEdition();
+    const { listings } = await loadEarnListings();
+    const resolved = await sponsorForSlug(slug, listings);
+    if (!resolved) throw new Error("unknown sponsor");
+
+    const edition =
+      resolved.published?.edition ??
+      (await loadEarnEdition(new Date(), sponsorFocus(resolved.name, `/earn/${slug}`)));
+
+    const focus = edition.focus;
     const race = edition.race;
     const raceMax = Math.max(1, ...race.keys.map((k) => Number(race.rows.at(-1)?.[k]) || 0));
-    const PW = 1072, PH = 200; // race plot box
+    const PW = 1072, PH = 200;
+    const colorOf = (k: string) =>
+      k === focus.name ? FOCUS_COLOR : OTHER_COLORS[race.keys.indexOf(k) % OTHER_COLORS.length];
 
     return new ImageResponse(
       (
@@ -63,22 +75,22 @@ export async function GET() {
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-              <div style={{ fontSize: "40px", fontWeight: 700 }}>{`#${edition.focus.rankByListings}`}</div>
+              <div style={{ fontSize: "40px", fontWeight: 700 }}>{`#${focus.rankByListings}`}</div>
               <div style={{ fontSize: "14px", color: "#8888a0", letterSpacing: "0.16em", textTransform: "uppercase" }}>
-                UK by listings · all-time
+                {`${focus.short} by listings · all-time`}
               </div>
             </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", marginTop: "36px" }}>
             <div style={{ fontSize: "18px", color: "#7c5bf5", letterSpacing: "0.18em", textTransform: "uppercase" }}>
-              Superteam UK
+              {focus.name}
             </div>
             <div style={{ fontSize: "48px", fontWeight: 700, marginTop: "8px", letterSpacing: "-0.03em" }}>
-              {`${edition.focus.listings} listings · ${fmtUsd(edition.focus.usdRewards)}`}
+              {`${focus.listings} listings · ${fmtUsd(focus.usdRewards)}`}
             </div>
             <div style={{ fontSize: "22px", color: "#b0b0c8", marginTop: "10px", maxWidth: "980px" }}>
-              {`${edition.focus.submissions.toLocaleString("en-US")} builder submissions — ${edition.headline.card}`}
+              {`${focus.submissions.toLocaleString("en-US")} builder submissions — ${edition.headline.card}`}
             </div>
           </div>
 
@@ -90,7 +102,7 @@ export async function GET() {
               <div style={{ display: "flex", gap: "16px" }}>
                 {race.keys.map((k) => (
                   <div key={k} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <div style={{ width: "10px", height: "10px", borderRadius: "2px", background: RACE_COLORS[k] ?? "#8888a0" }} />
+                    <div style={{ width: "10px", height: "10px", borderRadius: "2px", background: colorOf(k) }} />
                     <div style={{ fontSize: "13px", color: "#b0b0c8" }}>{k.replace("Superteam ", "") || k}</div>
                   </div>
                 ))}
@@ -105,9 +117,9 @@ export async function GET() {
                   key={k}
                   points={racePath(race.rows, k, PW, PH, raceMax)}
                   fill="none"
-                  stroke={RACE_COLORS[k] ?? "#8888a0"}
-                  strokeWidth={k === "Superteam UK" ? 4 : 2.5}
-                  strokeOpacity={k === "Superteam UK" ? 1 : 0.75}
+                  stroke={colorOf(k)}
+                  strokeWidth={k === focus.name ? 4 : 2.5}
+                  strokeOpacity={k === focus.name ? 1 : 0.75}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                 />

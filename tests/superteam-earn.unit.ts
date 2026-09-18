@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { computeEarnEdition, isStableToken, type EarnListing } from "../src/lib/superteam-earn";
+import { computeEarnEdition, isStableToken, loadEarnListings, type EarnListing } from "../src/lib/superteam-earn";
 import { hashEvidence, verifyEvidenceReceipt } from "../src/lib/evidence-receipt";
 
 const NOW = new Date("2026-09-17T12:00:00Z");
@@ -46,8 +46,8 @@ describe("computeEarnEdition", () => {
       listing({ rewardAmount: 500, token: "USDC" }),
       listing({ rewardAmount: 33_000_000, token: "BONK" }),
     ]);
-    assert.equal(e.uk.usdRewards, 500);
-    assert.equal(e.uk.listings, 2);
+    assert.equal(e.focus.usdRewards, 500);
+    assert.equal(e.focus.listings, 2);
     assert.equal(e.totals.stableListings, 1);
   });
 
@@ -57,7 +57,7 @@ describe("computeEarnEdition", () => {
       listing({ sponsor: { name: "Superteam Ukraine" } }),
       listing({ sponsor: { name: "BukProtocol" } }),
     ]);
-    assert.equal(e.uk.listings, 1);
+    assert.equal(e.focus.listings, 1);
     const names = e.chapters.map((c) => c.name);
     assert.ok(names.includes("Superteam UK"));
     assert.ok(names.includes("Superteam Ukraine"));
@@ -74,8 +74,11 @@ describe("computeEarnEdition", () => {
     assert.equal(e.chapters[0].name, "Superteam Nigeria");
     assert.equal(e.chapters[1].name, "Superteam UK");
     // UK has 2 listings vs Nigeria's 1 vs Jupiter's 1 → #1 by listing count
-    assert.equal(e.uk.rankByListings, 1);
-    assert.equal(e.uk.rankByRewards, 2);
+    assert.equal(e.focus.rankByListings, 1);
+    // All-sponsors reward rank: Nigeria $5000, Jupiter $999, UK $200 → #3.
+    assert.equal(e.focus.rankByRewards, 3);
+    // Chapter-only rank (what the page badges): Nigeria then UK → #2.
+    assert.equal(e.focus.rankByRewardsChapters, 2);
     // Past tense + all-time: the count is of published listings, not a live rate.
     assert.match(e.headline.claim, /more Earn listings/);
     assert.match(e.headline.claim, /has published/);
@@ -90,7 +93,7 @@ describe("computeEarnEdition", () => {
       ],
       NOW,
     );
-    assert.equal(e.uk.liveNow.length, 1);
+    assert.equal(e.focus.liveNow.length, 1);
     assert.equal(e.totals.liveNow, 1);
   });
 
@@ -104,8 +107,8 @@ describe("computeEarnEdition", () => {
 
   it("handles empty input without NaN", () => {
     const e = computeEarnEdition([]);
-    assert.equal(e.uk.listings, 0);
-    assert.equal(e.uk.subsPerListing, 0);
+    assert.equal(e.focus.listings, 0);
+    assert.equal(e.focus.subsPerListing, 0);
     assert.equal(e.totals.listings, 0);
     assert.equal(e.chapters.length, 0);
   });
@@ -148,8 +151,8 @@ describe("computeEarnEdition", () => {
       NOW,
     );
     // Mar ends 2–2 (tie), Apr is the first month UK is solely ahead
-    assert.equal(e.uk.leadSinceMonth, "2026-04");
-    assert.equal(e.uk.streakMonths, 2); // Mar + Apr consecutive
+    assert.equal(e.focus.leadSinceMonth, "2026-04");
+    assert.equal(e.focus.streakMonths, 2); // Mar + Apr consecutive
     // The axis is closing month, not posting month — say so.
     assert.match(e.story.join(" "), /since Apr 2026/);
     assert.match(e.story.join(" "), /closed more bounties/);
@@ -161,7 +164,7 @@ describe("computeEarnEdition", () => {
       listing({ deadline: "2026-01-10T00:00:00Z", sponsor: { name: "Superteam Brasil" } }),
       listing({ deadline: "2026-01-10T00:00:00Z", sponsor: { name: "Superteam UK" } }),
     ]);
-    assert.equal(e.uk.leadSinceMonth, null);
+    assert.equal(e.focus.leadSinceMonth, null);
     assert.ok(!e.story.some((s) => /closed more bounties than any other sponsor/.test(s)));
   });
 
@@ -175,9 +178,9 @@ describe("computeEarnEdition", () => {
       ],
       NOW,
     );
-    assert.equal(e.uk.liveNow.length, 1);
+    assert.equal(e.focus.liveNow.length, 1);
     // Newest-closed first, future and undated excluded.
-    assert.deepEqual(e.uk.recent.map((l) => l.title), ["Newer", "Older"]);
+    assert.deepEqual(e.focus.recent.map((l) => l.title), ["Newer", "Older"]);
   });
 
   it("keeps the OG card claim identical to the page headline and states the caveats", () => {

@@ -54,6 +54,36 @@ export interface ChapterRow {
   liveNow: number;
 }
 
+/**
+ * Which sponsor an edition spotlights. UK is the showcase default; any Earn
+ * sponsor name works — commissioned editions pass their own focus.
+ */
+export interface SponsorFocus {
+  /** Canonical sponsor name as it appears in Earn's `sponsor.name`. */
+  name: string;
+  /** Short label for prose — "UK", "Nigeria", "Jupiter". */
+  short: string;
+  /** Extra matcher beyond exact-name equality (UK counts "SuperteamUK" too). */
+  match?: RegExp;
+  /** Permalink path for share copy. */
+  path: string;
+  /** X handle for tweet copy, without the @. */
+  handle?: string;
+}
+
+export const UK_FOCUS: SponsorFocus = {
+  name: "Superteam UK",
+  short: "UK",
+  match: /^superteam\s*uk\b/i,
+  path: "/superteam",
+  handle: "SuperteamUK",
+};
+
+/** Prose-friendly focus for any other sponsor: exact-name match, no handle. */
+export function sponsorFocus(name: string, path: string): SponsorFocus {
+  return { name, short: name.replace(/^superteam\s*/i, "").trim() || name, path };
+}
+
 export interface EarnListingCard {
   title: string;
   url: string;
@@ -83,10 +113,18 @@ export interface EarnEdition {
     agentAllowed: number;
     liveNow: number;
   };
-  uk: {
+  /** The sponsor this edition spotlights — UK on /superteam, any sponsor on /earn. */
+  focus: {
     name: string;
+    /** Short label for prose — "UK", "Nigeria", "Jupiter". */
+    short: string;
+    /** A Superteam chapter account (name starts with "Superteam"). */
+    isChapter: boolean;
     rankByListings: number;
+    /** Rank among ALL sponsors by stable rewards. */
     rankByRewards: number;
+    /** Rank among chapters only — 0 for non-chapter sponsors. */
+    rankByRewardsChapters: number;
     listings: number;
     usdRewards: number;
     submissions: number;
@@ -95,10 +133,12 @@ export interface EarnEdition {
     leadSinceMonth: string | null;
     liveNow: EarnListingCard[];
     biggest: EarnListingCard[];
-    /** Most recently closed UK listings — the fallback when nothing is open. */
+    /** Most recently closed focus listings — the fallback when nothing is open. */
     recent: EarnListingCard[];
   };
   chapters: ChapterRow[];
+  /** Every sponsor ranked by USD rewards — the league for non-chapter editions. */
+  sponsors: ChapterRow[];
   race: RaceSeries;
   story: string[];
   /**
@@ -209,12 +249,13 @@ function longestStreak(months: Set<string>): number {
 
 /**
  * Cumulative listings per chapter by deadline month — "the chapter race".
- * Series order: UK first (highlighted), then the next-busiest chapters.
+ * Series order: the focus sponsor first (highlighted), then the busiest
+ * chapters — so a non-chapter focus still gets a race to run in.
  */
-function buildRace(listings: EarnListing[], chapters: ChapterRow[]): RaceSeries {
+function buildRace(listings: EarnListing[], chapters: ChapterRow[], focusName: string): RaceSeries {
   const names = [
-    "Superteam UK",
-    ...chapters.filter((c) => c.name !== "Superteam UK").sort((a, b) => b.listings - a.listings).map((c) => c.name),
+    focusName,
+    ...chapters.filter((c) => c.name !== focusName).sort((a, b) => b.listings - a.listings).map((c) => c.name),
   ].slice(0, 5);
 
   const perMonth = new Map<string, Map<string, number>>();
@@ -246,11 +287,11 @@ function buildRace(listings: EarnListing[], chapters: ChapterRow[]): RaceSeries 
 }
 
 /**
- * Earliest month the UK held sole listings lead (vs every sponsor, not just
- * chapters) and never lost it through the end of the series. `null` if the
- * lead still trades hands — the story must say so honestly.
+ * Earliest month `focusName` held sole listings lead (vs every sponsor, not
+ * just chapters) and never lost it through the end of the series. `null` if
+ * the lead still trades hands — the story must say so honestly.
  */
-function ukLeadSince(listings: EarnListing[]): string | null {
+function soleLeadSince(listings: EarnListing[], focusName: string): string | null {
   const byMonth = new Map<string, Map<string, number>>();
   let min = "9999-12", max = "0000-01";
   for (const l of listings) {
@@ -270,9 +311,9 @@ function ukLeadSince(listings: EarnListing[]): string | null {
   for (const k of monthRange(min, max)) {
     const bucket = byMonth.get(k);
     if (bucket) for (const [n, c] of bucket) cum.set(n, (cum.get(n) ?? 0) + c);
-    const uk = cum.get("Superteam UK") ?? 0;
-    const bestOther = Math.max(0, ...[...cum.entries()].filter(([n]) => n !== "Superteam UK").map(([, c]) => c));
-    candidate = uk > bestOther ? candidate ?? k : null;
+    const focus = cum.get(focusName) ?? 0;
+    const bestOther = Math.max(0, ...[...cum.entries()].filter(([n]) => n !== focusName).map(([, c]) => c));
+    candidate = focus > bestOther ? candidate ?? k : null;
   }
   return candidate;
 }
@@ -281,9 +322,18 @@ function ukLeadSince(listings: EarnListing[]): string | null {
 export function computeEarnEdition(
   listings: EarnListing[],
   now = new Date(),
-  opts: { source?: "live" | "snapshot"; observedAt?: string; requestedAt?: string } = {},
+  opts: {
+    source?: "live" | "snapshot";
+    observedAt?: string;
+    requestedAt?: string;
+    /** Which sponsor the edition spotlights. Defaults to UK (the /superteam page). */
+    focus?: SponsorFocus;
+  } = {},
 ): EarnEdition {
   const source = opts.source ?? "live";
+  const focus = opts.focus ?? UK_FOCUS;
+  const isFocus = (sponsorName: string | undefined | null) =>
+    (sponsorName ?? "") === focus.name || (focus.match?.test(sponsorName ?? "") ?? false);
   const sponsors = new Map<string, { listings: number; usdRewards: number; submissions: number; liveNow: number }>();
   let submissions = 0;
   let usdRewards = 0;
@@ -319,39 +369,57 @@ export function computeEarnEdition(
 
   const allSponsors = [...sponsors.entries()].map(([name, a]) => ({ name, ...a }));
   const byListings = [...allSponsors].sort((a, b) => b.listings - a.listings);
-  const ukAgg = sponsors.get("Superteam UK") ?? { listings: 0, usdRewards: 0, submissions: 0, liveNow: 0 };
-  const rankByListings = byListings.findIndex((s) => s.name === "Superteam UK") + 1;
-  const rankByRewards = chapters.find((c) => c.name === "Superteam UK")?.rank ?? 0;
+  const byRewardsAll = [...allSponsors].sort((a, b) => b.usdRewards - a.usdRewards || b.listings - a.listings);
+  // The focus may appear under small name variants ("SuperteamUK") — aggregate
+  // every sponsor key the matcher claims, not just the canonical spelling.
+  const focusAgg = allSponsors
+    .filter((s) => isFocus(s.name))
+    .reduce(
+      (acc, s) => ({
+        listings: acc.listings + s.listings,
+        usdRewards: acc.usdRewards + s.usdRewards,
+        submissions: acc.submissions + s.submissions,
+        liveNow: acc.liveNow + s.liveNow,
+      }),
+      { listings: 0, usdRewards: 0, submissions: 0, liveNow: 0 },
+    );
+  const rankByListings = byListings.findIndex((s) => isFocus(s.name)) + 1;
+  const rankByRewards = byRewardsAll.findIndex((s) => isFocus(s.name)) + 1;
+  const rankByRewardsChapters = chapters.find((c) => isFocus(c.name))?.rank ?? 0;
+  const isChapter = CHAPTER_RE.test(focus.name);
 
-  const ukListings = listings.filter((l) => UK_RE.test(l.sponsor?.name ?? ""));
-  const live = ukListings
+  const focusListings = listings.filter((l) => isFocus(l.sponsor?.name));
+  const live = focusListings
     .filter((l) => deadlineAfter(l, now))
     .sort((a, b) => (a.deadline ?? "").localeCompare(b.deadline ?? ""));
-  const biggest = [...ukListings]
+  const biggest = [...focusListings]
     .filter((l) => isStableToken(l.token))
     .sort((a, b) => (b.rewardAmount ?? 0) - (a.rewardAmount ?? 0))
     .slice(0, 5);
-  const recent = [...ukListings]
+  const recent = [...focusListings]
     .filter((l) => !deadlineAfter(l, now) && l.deadline)
     .sort((a, b) => (b.deadline ?? "").localeCompare(a.deadline ?? ""))
     .slice(0, 4);
 
-  const ukMonths = new Set(ukListings.map((l) => monthKey(l.deadline)).filter((k): k is string => !!k));
-  const leadSince = ukLeadSince(listings);
-  const race = buildRace(listings, chapters);
+  const focusMonths = new Set(focusListings.map((l) => monthKey(l.deadline)).filter((k): k is string => !!k));
+  const leadSince = soleLeadSince(listings, focus.name);
+  const race = buildRace(listings, chapters, focus.name);
   const chapterSubsRates = chapters.filter((c) => c.listings > 0).map((c) => c.submissions / c.listings).sort((a, b) => a - b);
   const chapterMedianSubs = chapterSubsRates.length > 0 ? chapterSubsRates[Math.floor(chapterSubsRates.length / 2)] : 0;
-  const ukSubsRate = ukAgg.listings > 0 ? ukAgg.submissions / ukAgg.listings : 0;
+  const focusSubsRate = focusAgg.listings > 0 ? focusAgg.submissions / focusAgg.listings : 0;
 
-  const uk = {
-    name: "Superteam UK",
+  const focusEd = {
+    name: focus.name,
+    short: focus.short,
+    isChapter,
     rankByListings,
     rankByRewards,
-    listings: ukAgg.listings,
-    usdRewards: ukAgg.usdRewards,
-    submissions: ukAgg.submissions,
-    subsPerListing: Math.round(ukSubsRate),
-    streakMonths: longestStreak(ukMonths),
+    rankByRewardsChapters,
+    listings: focusAgg.listings,
+    usdRewards: focusAgg.usdRewards,
+    submissions: focusAgg.submissions,
+    subsPerListing: Math.round(focusSubsRate),
+    streakMonths: longestStreak(focusMonths),
     leadSinceMonth: leadSince,
     liveNow: live.slice(0, 6).map(toCard),
     biggest: biggest.map(toCard),
@@ -360,43 +428,63 @@ export function computeEarnEdition(
 
   const topRewards = chapters.slice(0, 4);
   const rewardLeader = chapters[0];
+  const rewardLeaderAll = byRewardsAll[0];
 
   const story: string[] = [];
   if (leadSince) {
     story.push(
-      `The UK desk has closed more bounties than any other sponsor every month since ${monthLong(leadSince)} — every sponsor, not just chapters.`,
+      `The ${focus.short} desk has closed more bounties than any other sponsor every month since ${monthLong(leadSince)} — every sponsor, not just chapters.`,
     );
   }
-  if (rewardLeader && rewardLeader.name !== "Superteam UK") {
+  if (rankByListings === 1 && rewardLeaderAll && !isFocus(rewardLeaderAll.name)) {
     story.push(
-      `${rewardLeader.name} leads on reward dollars (${money(rewardLeader.usdRewards)}); the UK wins on volume — ${ukAgg.listings} listings, the most of any sponsor.`,
+      `${rewardLeaderAll.name} leads on reward dollars (${money(rewardLeaderAll.usdRewards)}); ${focus.short} wins on volume — ${focusAgg.listings} listings, the most of any sponsor.`,
+    );
+  } else if (rewardLeaderAll && isFocus(rewardLeaderAll.name)) {
+    story.push(
+      `${focus.name} leads every sponsor on reward dollars too — ${money(focusAgg.usdRewards)} advertised across ${focusAgg.listings} listings.`,
     );
   }
-  if (uk.streakMonths >= 3) {
-    story.push(`Longest run without a quiet month: ${uk.streakMonths} consecutive months with at least one UK listing.`);
+  if (focusEd.streakMonths >= 3) {
+    story.push(`Longest run without a quiet month: ${focusEd.streakMonths} consecutive months with at least one ${focus.short} listing.`);
   }
-  if (ukSubsRate > chapterMedianSubs && chapterMedianSubs > 0) {
+  if (focusSubsRate > chapterMedianSubs && chapterMedianSubs > 0) {
     story.push(
-      `A UK listing draws ~${uk.subsPerListing} submissions — ${ukSubsRate > chapterMedianSubs * 1.5 ? "well above" : "above"} the ~${Math.round(chapterMedianSubs)} median across chapters.`,
+      `A ${focus.short} listing draws ~${focusEd.subsPerListing} submissions — ${focusSubsRate > chapterMedianSubs * 1.5 ? "well above" : "above"} the ~${Math.round(chapterMedianSubs)} median across chapters.`,
     );
   }
 
   // One constant, two renderers (page headline + OG card) — they cannot drift.
   const listingsLeadClaim =
     "has published more Earn listings than any other sponsor in the network";
+  const rankPhrase =
+    rankByListings === 1
+      ? `${focus.name} ${listingsLeadClaim}`
+      : rankByRewards === 1
+        ? `${focus.name} leads the Earn economy on reward dollars`
+        : `${focus.name} ranks #${rankByListings || "?"} by listings in the Earn economy`;
+  const rewardRankLine = isChapter
+    ? `#${rankByRewardsChapters || "?"} of ${chapters.length} chapters by reward volume`
+    : `#${rankByRewards || "?"} of ${allSponsors.length} sponsors by reward volume`;
   const headline = {
-    claim:
-      rankByListings === 1
-        ? `Superteam UK ${listingsLeadClaim}`
-        : `Superteam UK ranks #${rankByListings} by listings in the Earn economy`,
-    line: `${uk.listings} listings · ${money(uk.usdRewards)} in USD rewards · ${uk.submissions.toLocaleString("en-US")} builder submissions — #${uk.rankByRewards || "?"} of ${chapters.length} chapters by reward volume.`,
+    claim: rankPhrase,
+    line: `${focusEd.listings} listings · ${money(focusEd.usdRewards)} in USD rewards · ${focusEd.submissions.toLocaleString("en-US")} builder submissions — ${rewardRankLine}.`,
     card:
       rankByListings === 1
-        ? `Superteam UK ${listingsLeadClaim}.`
-        : `#${rankByListings} by listings in the Earn economy.`,
+        ? `${focus.name} ${listingsLeadClaim}.`
+        : rankByRewards === 1
+          ? `${focus.name} leads the Earn economy on reward dollars.`
+          : `#${rankByListings || "?"} by listings in the Earn economy.`,
   };
 
-  const permalink = `${PUBLIC_BASE}${SUPERTEAM_PATH}`;
+  const permalink = `${PUBLIC_BASE}${focus.path}`;
+  const mention = focus.handle ? `@${focus.handle}` : focus.name;
+  const focusClaim =
+    rankByListings === 1
+      ? listingsLeadClaim
+      : rankByRewards === 1
+        ? "leads the Earn economy on reward dollars"
+        : `ranks #${rankByListings || "?"} by listings`;
   // Tweet copy is length-budgeted: X counts the URL as 23 chars, so keep the
   // rest under 257. Two reward leaders only — names and totals both grow.
   const leaders = topRewards.map((c) => `${c.name.replace("Superteam ", "")} ${money(c.usdRewards)}`).join(" · ");
@@ -405,7 +493,7 @@ export function computeEarnEdition(
   const tweet = [
     "The Superteam Earn economy, measured:",
     "",
-    `@SuperteamUK ${listingsLeadClaim} — ${uk.listings} listings, ${money(uk.usdRewards)} in USD-denominated rewards, ${count(uk.submissions)} submissions.`,
+    `${mention} ${focusClaim} — ${focusEd.listings} listings, ${money(focusEd.usdRewards)} in USD-denominated rewards, ${count(focusEd.submissions)} submissions.`,
     "",
     `By reward dollars: ${tweetLeaders}`,
     "",
@@ -415,11 +503,11 @@ export function computeEarnEdition(
   const linkedin = [
     `We ran the numbers on the Superteam Earn economy — ${listings.length.toLocaleString("en-US")} public listings, ${count(submissions)} builder submissions.`,
     "",
-    `Superteam UK stands out: ${uk.listings} listings published (more than any other sponsor), ${money(uk.usdRewards)} in USD-denominated rewards, ${uk.submissions.toLocaleString("en-US")} submissions.`,
+    `${focus.name} stands out: ${focusEd.listings} listings published (#${focusEd.rankByListings || "?"} of all sponsors), ${money(focusEd.usdRewards)} in USD-denominated rewards, ${focusEd.submissions.toLocaleString("en-US")} submissions.`,
     "",
     `By reward volume: ${leaders}.`,
     "",
-    `Attribution is by sponsor-account name, so UK activity run under another sponsor's listing is not counted — treat these as floors, not ceilings.`,
+    `Attribution is by sponsor-account name, so ${focus.short} activity run under another sponsor's listing is not counted — treat these as floors, not ceilings.`,
     "",
     `Table + method: ${permalink}`,
   ].join("\n");
@@ -427,7 +515,7 @@ export function computeEarnEdition(
   const emailBlurb = [
     `We computed a public accounting of the Superteam Earn economy from the listings API (${listings.length.toLocaleString("en-US")} listings, ${count(submissions)} submissions).`,
     "",
-    `Superteam UK: ${uk.listings} listings (#${uk.rankByListings} of all sponsors), ${money(uk.usdRewards)} in USD-denominated rewards, ${uk.submissions.toLocaleString("en-US")} submissions — #${uk.rankByRewards || "?"} chapter by reward volume.`,
+    `${focus.name}: ${focusEd.listings} listings (#${focusEd.rankByListings || "?"} of all sponsors), ${money(focusEd.usdRewards)} in USD-denominated rewards, ${focusEd.submissions.toLocaleString("en-US")} submissions — ${rewardRankLine}.`,
     "",
     `Attribution is by sponsor name, so these are floors, not ceilings. USD totals cover stablecoin-denominated rewards only.`,
     "",
@@ -449,8 +537,9 @@ export function computeEarnEdition(
       agentAllowed,
       liveNow,
     },
-    uk,
+    focus: focusEd,
     chapters,
+    sponsors: byRewardsAll.map((s, i) => ({ rank: i + 1, ...s })),
     race,
     story,
     headline,
@@ -498,24 +587,44 @@ interface SnapshotFile {
   listings: EarnListing[];
 }
 
-/** Live fetch → computed edition; falls back to the committed snapshot, labelled. */
-export async function loadEarnEdition(now = new Date()): Promise<EarnEdition> {
+export interface EarnListingsSnapshot {
+  listings: EarnListing[];
+  source: "live" | "snapshot";
+  /** When these listings were read — snapshotAsOf for a fallback. */
+  observedAt: string;
+}
+
+/**
+ * Live fetch, falling back to the committed snapshot. Shared by every edition
+ * built on Earn data so the fallback behaves identically everywhere.
+ */
+export async function loadEarnListings(now = new Date()): Promise<EarnListingsSnapshot> {
   try {
     const listings = await fetchEarnListings();
-    return computeEarnEdition(listings, now, { source: "live", observedAt: now.toISOString() });
+    return { listings, source: "live", observedAt: now.toISOString() };
   } catch {
-    try {
-      const raw = await fs.readFile(SNAPSHOT_FILE, "utf-8");
-      const snap = JSON.parse(raw) as SnapshotFile;
-      // Evaluate deadlines as of the snapshot and label the receipt honestly:
-      // these numbers come from `snapshotAsOf`, not from this request.
-      return computeEarnEdition(snap.listings, new Date(snap.snapshotAsOf), {
-        source: "snapshot",
-        observedAt: snap.snapshotAsOf,
-        requestedAt: now.toISOString(),
-      });
-    } catch {
-      throw new Error("Superteam Earn data unavailable (live fetch failed, no snapshot)");
-    }
+    const raw = await fs.readFile(SNAPSHOT_FILE, "utf-8");
+    const snap = JSON.parse(raw) as SnapshotFile;
+    return { listings: snap.listings, source: "snapshot", observedAt: snap.snapshotAsOf };
   }
+}
+
+/**
+ * Live fetch → computed edition; falls back to the committed snapshot, labelled.
+ * A snapshot edition evaluates deadlines as of `snapshotAsOf`, not "now".
+ * Pass a `focus` to spotlight a different sponsor — commissioned editions do.
+ */
+export async function loadEarnEdition(now = new Date(), focus?: SponsorFocus): Promise<EarnEdition> {
+  let loaded: EarnListingsSnapshot;
+  try {
+    loaded = await loadEarnListings(now);
+  } catch {
+    throw new Error("Superteam Earn data unavailable (live fetch failed, no snapshot)");
+  }
+  return computeEarnEdition(loaded.listings, new Date(loaded.observedAt), {
+    source: loaded.source,
+    observedAt: loaded.observedAt,
+    requestedAt: now.toISOString(),
+    focus,
+  });
 }

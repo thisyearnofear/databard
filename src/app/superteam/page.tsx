@@ -16,7 +16,7 @@ function fmtUsd(n: number): string {
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const edition = await loadEarnEdition();
-    const description = `${edition.uk.listings} listings, ${fmtUsd(edition.uk.usdRewards)} in rewards, ${edition.uk.submissions.toLocaleString("en-US")} submissions — Superteam UK's place in the Earn economy, computed from public data.`;
+    const description = `${edition.focus.listings} listings, ${fmtUsd(edition.focus.usdRewards)} in rewards, ${edition.focus.submissions.toLocaleString("en-US")} submissions — Superteam UK's place in the Earn economy, computed from public data.`;
     return {
       title: "The Superteam Earn economy, measured — DataBard",
       description,
@@ -108,25 +108,25 @@ export default async function SuperteamPage() {
               </div>
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <div>
-                  <div className="font-display text-3xl font-bold tabular-nums">{edition.uk.listings}</div>
+                  <div className="font-display text-3xl font-bold tabular-nums">{edition.focus.listings}</div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                    listings · #{edition.uk.rankByListings} of sponsors
+                    listings · #{edition.focus.rankByListings} of sponsors
                   </div>
                 </div>
                 <div>
                   <div className="font-display text-3xl font-bold tabular-nums">
-                    {fmtUsd(edition.uk.usdRewards)}
+                    {fmtUsd(edition.focus.usdRewards)}
                   </div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                    USD rewards · #{edition.uk.rankByRewards} chapter
+                    USD rewards · #{edition.focus.rankByRewardsChapters} chapter
                   </div>
                 </div>
                 <div>
                   <div className="font-display text-3xl font-bold tabular-nums">
-                    {edition.uk.submissions.toLocaleString("en-US")}
+                    {edition.focus.submissions.toLocaleString("en-US")}
                   </div>
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                    submissions · ~{edition.uk.subsPerListing}/listing
+                    submissions · ~{edition.focus.subsPerListing}/listing
                   </div>
                 </div>
               </div>
@@ -134,7 +134,7 @@ export default async function SuperteamPage() {
                 Counted from listings published under the{" "}
                 <span className="font-mono">Superteam UK</span> sponsor account. Campaigns the desk
                 co-hosts under another sponsor&apos;s listing are not counted here — so{" "}
-                {edition.uk.listings} listings is a floor on UK activity, not a ceiling.
+                {edition.focus.listings} listings is a floor on UK activity, not a ceiling.
               </p>
             </section>
 
@@ -165,19 +165,19 @@ export default async function SuperteamPage() {
             <section className="mt-8 grid gap-6 sm:grid-cols-2">
               <div className="border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
                 <h2 className="text-sm font-semibold">Live from Superteam UK right now</h2>
-                {edition.uk.liveNow.length === 0 ? (
+                {edition.focus.liveNow.length === 0 ? (
                   <div className="mt-3">
                     <p className="text-xs leading-relaxed text-[var(--text-muted)]">
                       Nothing open at this moment. The UK desk publishes in bursts — the streak and
                       the totals above are the better signal.
                     </p>
-                    {edition.uk.recent.length > 0 && (
+                    {edition.focus.recent.length > 0 && (
                       <>
                         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-4 mb-2">
                           Most recently closed
                         </p>
                         <ul className="flex flex-col gap-2.5">
-                          {edition.uk.recent.map((l) => (
+                          {edition.focus.recent.map((l) => (
                             <li key={l.url} className="text-xs leading-relaxed">
                               <a
                                 href={l.url}
@@ -206,7 +206,7 @@ export default async function SuperteamPage() {
                   </div>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2.5">
-                    {edition.uk.liveNow.map((l) => (
+                    {edition.focus.liveNow.map((l) => (
                       <li key={l.url} className="text-xs leading-relaxed">
                         <a
                           href={l.url}
@@ -225,7 +225,7 @@ export default async function SuperteamPage() {
               <div className="border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
                 <h2 className="text-sm font-semibold">Biggest UK bounties to date</h2>
                 <ul className="mt-3 flex flex-col gap-2.5">
-                  {edition.uk.biggest.map((l) => (
+                  {edition.focus.biggest.map((l) => (
                     <li key={l.url} className="text-xs leading-relaxed">
                       <a
                         href={l.url}
@@ -388,9 +388,12 @@ export default async function SuperteamPage() {
               <div className="mt-4">
                 <IntegrationCTA source="superteam_page" connectHref={workspaceHref("/?start=connect", "protocols")} />
               </div>
-              <p className="mt-4 text-xs">
+              <p className="mt-4 text-xs flex flex-col gap-1.5">
                 <Link href={workspaceHref("/?start=connect", "protocols")} className="text-[var(--accent)] hover:underline">
                   Or connect your data yourself →
+                </Link>
+                <Link href="/earn" className="text-[var(--accent)] hover:underline">
+                  On Earn? Commission this page for your sponsor →
                 </Link>
               </p>
             </section>

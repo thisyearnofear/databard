@@ -14,7 +14,7 @@ const SolanaProvider = dynamic(
   { ssr: false }
 );
 
-const SOLANA_PATHS = new Set(["/onchain", "/verify"]);
+const SOLANA_PATHS = new Set(["/onchain", "/verify", "/pro"]);
 const LOCATION_CHANGE_EVENT = "databard:location-change";
 
 let historyEventsPatched = false;
@@ -56,6 +56,7 @@ function needsSolanaProvider(pathname: string, search = ""): boolean {
   // Mounting a provider around it would replace the wizard subtree mid-switch
   // and reset its local state. Wallet code belongs on actual on-chain surfaces.
   return SOLANA_PATHS.has(pathname)
+    || pathname.startsWith("/earn/")
     || (pathname === "/protocol" && workspaceFromSearch(search) === "protocols");
 }
 

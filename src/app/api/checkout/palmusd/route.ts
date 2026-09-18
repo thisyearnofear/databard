@@ -1,103 +1,55 @@
 /**
  * POST /api/checkout/palmusd
- * Creates a Palm USD payment transaction for DataBard Pro.
+ * Creates a Palm USD payment transaction — Pro subscription or commissioned edition.
  * Returns an unsigned transaction for the client to sign with their Solana wallet.
  *
- * Body: { walletAddress }
+ * Body: { walletAddress, purpose?: "pro" | "edition", editionId? }
  * Returns: { ok, unsignedTxBase64, amount, recipient } or { ok: false, error }
  *
- * Palm USD is a Solana stablecoin. The Pro subscription is $49/mo = 49 PUSD.
+ * Palm USD is a Solana stablecoin. Pro is 49 PUSD/mo; an edition is a one-off
+ * EDITION_PRICE_PUSD. The server always sets the amount — the client signs only.
  * After the client signs and submits, they call /api/checkout/palmusd/verify
- * to confirm payment and activate Pro.
+ * to confirm payment and activate whatever they paid for.
  */
 import { NextRequest, NextResponse } from "next/server";
-import {
-  Connection,
-  Transaction,
-  PublicKey,
-} from "@solana/web3.js";
-import {
-  getAssociatedTokenAddress,
-  createTransferInstruction,
-  getAccount,
-} from "@solana/spl-token";
-
-const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet";
-const RPC_URL = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? `https://api.${NETWORK}.solana.com`;
-const PRO_PRICE_PUSD = 49; // $49/mo
-
-function getConfig() {
-  const mint = new PublicKey(
-    process.env.NEXT_PUBLIC_PALM_USD_MINT ?? "CZzgUBvxaMLwMhVSLgqJn3npmxoTo6nzMNQPAnwtHF3s",
-  );
-  const recipient = new PublicKey(
-    process.env.PALM_USD_RECIPIENT ?? "11111111111111111111111111111111",
-  );
-  return { mint, recipient };
-}
+import { buildPusdTransfer, priceFor, pusdTreasury } from "@/lib/pusd";
+import { getIntent } from "@/lib/editions";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { walletAddress } = body;
+    const { walletAddress, purpose = "pro", editionId } = body;
 
     if (!walletAddress) {
       return NextResponse.json({ ok: false, error: "walletAddress required" }, { status: 400 });
     }
-
-    const { mint: PALM_USD_MINT, recipient: RECIPIENT_WALLET } = getConfig();
-    const connection = new Connection(RPC_URL, "confirmed");
-    const payer = new PublicKey(walletAddress);
-
-    // Get or create associated token accounts
-    const payerAta = await getAssociatedTokenAddress(PALM_USD_MINT, payer);
-    const recipientAta = await getAssociatedTokenAddress(PALM_USD_MINT, RECIPIENT_WALLET);
-
-    // Check payer has enough PUSD
-    try {
-      const payerAccount = await getAccount(connection, payerAta);
-      const balance = Number(payerAccount.amount) / 1e6; // PUSD has 6 decimals
-      if (balance < PRO_PRICE_PUSD) {
-        return NextResponse.json(
-          { ok: false, error: `Insufficient PUSD balance. Need ${PRO_PRICE_PUSD}, have ${balance.toFixed(2)}` },
-          { status: 400 },
-        );
-      }
-    } catch {
+    if (purpose !== "pro" && purpose !== "edition") {
+      return NextResponse.json({ ok: false, error: "purpose must be 'pro' or 'edition'" }, { status: 400 });
+    }
+    if (!pusdTreasury()) {
       return NextResponse.json(
-        { ok: false, error: "No Palm USD token account found. You need PUSD tokens to subscribe." },
-        { status: 400 },
+        { ok: false, error: "PUSD payments are not configured yet" },
+        { status: 503 },
       );
     }
 
-    // Build transfer transaction
-    const amount = BigInt(PRO_PRICE_PUSD * 1e6); // 6 decimals
-    const transferIx = createTransferInstruction(
-      payerAta,
-      recipientAta,
-      payer,
-      amount,
-    );
+    // An edition payment must name a live intent — the amount is server-side,
+    // and the intent is what the verify step publishes.
+    if (purpose === "edition") {
+      const intent = editionId ? getIntent(editionId) : null;
+      if (!intent) {
+        return NextResponse.json({ ok: false, error: "Unknown or expired edition intent" }, { status: 400 });
+      }
+      const built = await buildPusdTransfer(walletAddress, intent.pricePusd);
+      return NextResponse.json({ ok: true, ...built });
+    }
 
-    const tx = new Transaction().add(transferIx);
-    tx.feePayer = payer;
-
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-    tx.recentBlockhash = blockhash;
-    tx.lastValidBlockHeight = lastValidBlockHeight;
-
-    const serialized = tx.serialize({ requireAllSignatures: false, verifySignatures: false });
-
-    return NextResponse.json({
-      ok: true,
-      unsignedTxBase64: Buffer.from(serialized).toString("base64"),
-      amount: PRO_PRICE_PUSD,
-      token: "PUSD",
-      recipient: RECIPIENT_WALLET.toBase58(),
-      network: NETWORK,
-    });
+    const built = await buildPusdTransfer(walletAddress, priceFor("pro"));
+    return NextResponse.json({ ok: true, ...built });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    const clientSafe =
+      msg.includes("Insufficient") || msg.includes("No Palm USD token account") || msg.includes("not configured");
+    return NextResponse.json({ ok: false, error: clientSafe ? msg : "Failed to prepare payment" }, { status: 500 });
   }
 }

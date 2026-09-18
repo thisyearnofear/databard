@@ -49,6 +49,9 @@ export const EVENT_TYPES = [
   "story_expand",             // opened a Why-it-matters / Details disclosure
   "evidence_open",            // opened evidence from a story context
   "finding_share",            // per-segment finding shared
+  // Commissioned editions (PUSD paywall)
+  "edition_intent",           // payment intent created for a sponsor edition
+  "edition_published",        // edition published after verified PUSD payment
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

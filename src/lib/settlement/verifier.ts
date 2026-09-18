@@ -14,10 +14,14 @@ export type SettlementBackendId = "escrow" | "pusd" | "stripe";
 export interface VerifyRequest {
   /** Backend-specific reference: escrow reference Pubkey, Solana tx signature, Stripe session id. */
   reference: string;
-  /** Amount in the backend's native unit (lamports for escrow/PUSD, cents for Stripe). */
+  /** Amount in the backend's native unit (lamports for escrow, PUSD base units for pusd, cents for Stripe). */
   expectedAmount?: number;
   /** For escrow: expected recipient (seller) pubkey. For PUSD: expected treasury pubkey. */
   expectedRecipient?: string;
+  /** For PUSD: SPL mint the transfer must be denominated in. */
+  expectedMint?: string;
+  /** For PUSD: fee payer / funding wallet — binds the payment to the claimant. */
+  expectedPayer?: string;
   /** For escrow: expected deliverable_hash (SHA-256 hex) after seller commit. */
   expectedManifestHash?: string;
 }

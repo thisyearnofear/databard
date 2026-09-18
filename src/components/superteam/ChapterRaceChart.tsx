@@ -15,28 +15,25 @@ import {
 } from "@/components/dither-kit";
 import type { RaceSeries } from "@/lib/superteam-earn";
 
-const RACE_COLORS: Record<string, DitherColor> = {
-  "Superteam UK": "purple",
-};
 const OTHER_COLORS: DitherColor[] = ["blue", "green", "orange", "pink"];
 
 /**
  * The chapter race — cumulative Earn listings by deadline month, one dithered
- * line per chapter. UK is the highlighted series; scrub to compare, hover a
- * legend entry to spotlight it.
+ * line per chapter. The focus sponsor is the highlighted series; scrub to
+ * compare, hover a legend entry to spotlight.
  */
-export function ChapterRaceChart({ race }: { race: RaceSeries }) {
+export function ChapterRaceChart({ race, focusName = "Superteam UK" }: { race: RaceSeries; focusName?: string }) {
   const config = useMemo<ChartConfig>(() => {
     const out: ChartConfig = {};
     let i = 0;
     for (const key of race.keys) {
       out[key] = {
         label: key.replace("Superteam ", "") || key,
-        color: RACE_COLORS[key] ?? OTHER_COLORS[i++ % OTHER_COLORS.length],
+        color: key === focusName ? "purple" : OTHER_COLORS[i++ % OTHER_COLORS.length],
       };
     }
     return out;
-  }, [race.keys]);
+  }, [race.keys, focusName]);
 
   if (race.rows.length < 2) return null;
 

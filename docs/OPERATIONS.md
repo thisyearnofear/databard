@@ -26,7 +26,8 @@ runs (deploys build locally), not on the server.
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` | Pro checkout returns 503; "Start Pro trial" errors | Stripe dashboard (test mode is fine pre-launch). Also register webhook: `https://databard.persidian.com/api/webhook` → events: `checkout.session.completed`, `customer.subscription.deleted` |
 | `RESEND_API_KEY` (+ optional `EMAIL_FROM`, `SMTP_URL`) | Digest emails are logged and dropped | Resend HTTP API is preferred (port 465 SMTP is blocked on this host). Set `RESEND_API_KEY` and `EMAIL_FROM`; `SMTP_URL` is a fallback if port 465 is ever unblocked. |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Page-view/referrer analytics dark (custom events still work via `/api/events`) | Create the site in Plausible; set in **local** build env; redeploy |
-| `PALM_USD_RECIPIENT` | PalmUSD checkout pays the null address | Your treasury wallet pubkey |
+| `PALM_USD_RECIPIENT` | PUSD checkout returns 503 (Pro + commissioned editions); previously it silently paid the null address — the guard now refuses to build transactions | Your treasury wallet pubkey (mainnet). Also set `NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta`, `NEXT_PUBLIC_SOLANA_RPC_URL`, and confirm `NEXT_PUBLIC_PALM_USD_MINT` is the mainnet mint |
+| `EDITION_PRICE_PUSD` | Commissioned `/earn/[slug]` editions price at the 25 PUSD default | Optional override (whole-PUSD number) |
 | `DATABARD_API_SECRET` | ⚠️ Do **not** set in prod as-is: it guards `/api/synthesize` and `/api/regenerate`, which the browser calls — setting it breaks the UI generation flow. Locking those routes down properly needs a session-based guard first. | — |
 
 ## Portable attestation routes (pending deployment)
