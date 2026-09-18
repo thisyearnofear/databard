@@ -10,7 +10,10 @@ spending money on an unknown service.
 **Pitch (one sentence):** *"Before an agent pays another agent, it asks
 DataBard Probe — is this service worth it?"*
 
-**Track:** **OKX AI — Agents and AI-native businesses** (primary).
+**Track:** **Build a Company** (OKX AI — agent services). **Route:** **Remote
+Build** (decided 18 Sep 2026 — no travel; competes for the Best Remote Demo
+awards, US$15k pool). Submission via
+`https://forms.gle/81S2gnFCzqSoeDEA7` by **25 Sep 2026, 23:59 UTC**.
 **X Layer** is the substrate: x402 settlement for the probes + cheap
 attestation writes for the verdict hash.
 
@@ -265,15 +268,22 @@ paid tier is where the margin lives.
 **Solo-team risk:** the entire schedule assumes udin alone. If a collaborator
 joins, assign Sep 22–24 (UI polish + video) to them.
 
-## Submission checklist (Sep 25)
+## Submission checklist (Sep 25) — form `forms.gle/81S2gnFCzqSoeDEA7`
 
-- [ ] Working prototype URL: `https://databard.persidian.com/probe`
-- [ ] GitHub repo link (public, branch `okx-dev-day-2026`)
-- [ ] 3-5 min demo video (mp4, hosted — YouTube unlisted or Loom)
-- [ ] Project description (≤500 words): problem, solution, why OKX AI,
-      link to ASP #9878
-- [ ] One screenshot showing agent-to-agent payment flow
-- [ ] On-chain attestation transaction hash from the live demo run
+- [x] Working prototype URL: `https://databard.persidian.com/probe`
+- [x] GitHub repo link (public, `main` — probe work is the 15–25 Sep commit
+      range; README documents the tool + evidence)
+- [ ] **2–4 min demo video** (mp4, hosted — YouTube unlisted or Loom) — the
+      form's hard requirement; NOT started
+- [x] Project description (≤500 words): drafted in
+      [`OKX_DEV_DAY_2026_SUBMISSION.md`](OKX_DEV_DAY_2026_SUBMISSION.md)
+- [x] One screenshot showing agent-to-agent payment flow:
+      `demo-assets/devday-inbound-settlement.png`,
+      `demo-assets/devday-attestation.png`, `demo-assets/devday-probe-results.png`
+- [x] On-chain attestation tx from a live run (see Sep 18 log below):
+      `0x5519c31276c8947e0144bd7bc35378f262c7a4ca0d98b3b3f41f5b7f6fac7a59`
+- [ ] Team roster + track confirmation, Telegram group join (user actions)
+- [ ] Optional: register `databard_probe` as a third service on ASP #9878
 
 ## Risks
 
@@ -333,14 +343,21 @@ joins, assign Sep 22–24 (UI polish + video) to them.
    as the substrate. We want to be the trust oracle the agent economy
    needs to grow."*
 
-## Open questions (resolve Sep 16 briefing)
+## Open questions — RESOLVED (builder kit, 18 Sep 2026)
 
-1. Is there a submission template or required format?
-2. Are remote-only submissions scored on the same rubric as finalists?
-3. Can the attestation write be a no-op for the demo, or is on-chain
-   evidence mandatory?
-4. Should we register DataBard Probe as a third service on ASP #9878, or
-   create a new ASP identity for the hackathon submission?
+1. ~~Submission template~~ — one form per team: `forms.gle/81S2gnFCzqSoeDEA7`,
+   due 25 Sep 23:59 UTC. Required: team/track, project summary, repo, 2–4 min
+   demo video, product link, declaration.
+2. ~~Remote scoring~~ — remote submissions compete for the separate **Best
+   Remote Demo** awards (US$15k pool), reviewed by 7 Oct, results by email.
+3. ~~Attestation optional?~~ — moot: we have a real attestation on mainnet.
+4. ~~ASP registration~~ — `databard_probe` is already in `/api/mcp/tools`;
+   optionally register it as a third listed service on ASP #9878 to
+   strengthen the "publish a working service through OKX AI" criterion.
+   **Existing-project rule noted:** judges assess only work from the build
+   period — the entire probe layer (15–25 Sep commits) qualifies; the
+   pre-existing ASP (#9878, listed 8 Sep) is infrastructure, and the doc
+   below already separates the two.
 
 ## Progress log
 
@@ -418,3 +435,31 @@ joins, assign Sep 22–24 (UI polish + video) to them.
   1-hour TTL) returned 200 and served PolyDesk from the paid-mode cache
   (`fromCache: true`) instead of re-probing it — the payment-mode-aware cache
   prevents double-spend on repeated verdicts.
+
+### Sep 18, 2026 (later) — attested mainnet run + submission evidence
+
+- **Route decided: Remote Build** (builder kit reviewed; submission form is
+  `forms.gle/81S2gnFCzqSoeDEA7`, due 25 Sep 23:59 UTC — NOT the Genesis form).
+- **ATTESTED PAID RUN PASSED** — the full agent-to-agent loop, live on X Layer
+  mainnet, evidence captured for the submission:
+  - inbound: unpaid → 402; paid retry → 200; settlement `paymentId 15850923`,
+    tx `0x581d13568d3f44bd98a85943e20808e3a34b993ef4f719fc0fdf375e6edb60a7`
+  - outbound third-party payment (OKLink Token Metadata, $0.01):
+    tx `0xeb22c2362a861548b64fdc4eb0ee9275957ace28b916496e850040bedf163be6`
+  - **verdict attestation written to X Layer**:
+    tx `0x5519c31276c8947e0144bd7bc35378f262c7a4ca0d98b3b3f41f5b7f6fac7a59`,
+    confirmed via RPC at **block 70981029** (zero-value self-send from the
+    probe wallet, verdict hash in calldata)
+  - verdict: self 71 > OKLink 47 > PolyDesk 33 > Doxa 0 (unreachable, honest);
+    PolyDesk returned 402 after payment — reported as a flag, not hidden
+  - cost receipt: `outboundSpentUsd 0.01` of `0.50` cap; repeat run served 4/5
+    candidates from the payment-aware cache
+- **Screenshots captured** (`demo-assets/`): `devday-inbound-settlement.png`,
+  `devday-attestation.png` (OKLink explorer), `devday-probe-ui.png`,
+  `devday-probe-results.png` (live UI with ranked cards).
+- **README** gained the Probe section (tool table + evidence txs) — the form
+  requires "a public repository with a clear README".
+- **Submission copy drafted** in `docs/OKX_DEV_DAY_2026_SUBMISSION.md`
+  (~430-word project summary + evidence link table).
+- **Remaining**: the 2–4 min demo video (the only hard requirement not yet
+  started) and the form submission itself.

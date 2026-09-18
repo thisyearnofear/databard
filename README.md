@@ -102,8 +102,26 @@ DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP #
 |---|---|---|
 | `databard_health_check` | Free | `POST /api/mcp/health-check` |
 | `databard_briefing` | 1 USDT / call (x402) | `POST /api/mcp/briefing` |
+| `databard_probe` | 1 USDT / call (x402) | `POST /api/agent/probe` |
 | `databard_write_back` | Free | `POST /api/mcp/writeback` |
 | Service discovery | — | `GET /api/mcp/tools` |
+
+### DataBard Probe — service-quality oracle (OKX Dev Day 2026)
+
+Before an agent pays another agent, it asks Probe: *is this service worth it?*
+Probe calls up to 10 candidate A2MCP endpoints in parallel (paying each via
+x402 where required, from a dedicated wallet with a hard spend cap), scores
+them on six dimensions — schema completeness, latency, freshness,
+price-per-value, reliability, credentials — ranks them, and optionally anchors
+the verdict hash on X Layer as an on-chain attestation.
+
+- Live demo: [`/probe`](https://databard.persidian.com/probe) — free browser
+  preview (`POST /api/probe/preview`, no payments, 10/hr) plus the paid
+  endpoint above ($1, outbound spend capped at $0.50).
+- Verified end-to-end on X Layer mainnet (Sep 18, 2026): inbound $1 settlement
+  tx `0x581d13…60a7`, outbound payment to a third-party service
+  `0xeb22c2…63be6`, verdict attestation `0x5519c3…ac7a59` (block 70981029).
+- Details, scoring rubric, economics: [`docs/OKX_DEV_DAY_2026.md`](docs/OKX_DEV_DAY_2026.md).
 
 ```bash
 # Free, explicitly labelled demo — no data-source credentials required
