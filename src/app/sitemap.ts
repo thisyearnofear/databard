@@ -18,6 +18,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/verify",
     "/alerts",
     "/superteam",
+    "/earn",
+    "/agents",
+    "/probe",
     "/privacy",
     "/terms",
   ];

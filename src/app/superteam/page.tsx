@@ -3,10 +3,11 @@ import Link from "next/link";
 import { loadEarnEdition } from "@/lib/superteam-earn";
 import { editionPricePusd } from "@/lib/pusd";
 import { ShareRow } from "@/components/superteam/ShareRow";
-import { ChapterRaceChart } from "@/components/superteam/ChapterRaceChart";
-import { IntegrationCTA } from "@/components/IntegrationCTA";
+import { ReportEvidenceExplorer } from "@/components/editions/ReportEvidenceExplorer";
+import { reportEvidence } from "@/lib/report-evidence";
 import { DitherAvatar, PixelIcon } from "@/components/dither-kit";
-import { homeHref, workspaceHref } from "@/lib/product/workspaces";
+import { DitherField } from "@/components/editions/DitherField";
+import { focusSeriesFromRace, seedFromString } from "@/lib/dither-field";
 
 export const revalidate = 3600;
 
@@ -51,16 +52,20 @@ export default async function SuperteamPage() {
   const maxChapterRewards = edition ? Math.max(...edition.chapters.map((c) => c.usdRewards), 1) : 1;
 
   return (
-    <main className="enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10">
+    <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
       <div className="max-w-[720px] mx-auto">
         <Link
-          href={homeHref("protocols")}
+          href="/"
           className="inline-flex items-center py-1.5 font-mono text-xs text-[var(--text-muted)] no-underline hover:text-[var(--text)]"
         >
           ← DataBard
         </Link>
 
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)] mt-6">
+        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+          <span>DataBard Registry — Earn division</span>
+          <span>Flagship accounting · free to read</span>
+        </div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--accent)] mt-4">
           {edition?.source === "snapshot" ? "Snapshot edition · public data" : "Live accounting · public data"}
         </p>
         <h1 className="text-[28px] sm:text-[34px] font-extrabold tracking-tight mt-2">
@@ -86,19 +91,35 @@ export default async function SuperteamPage() {
 
         {loadError && <p className="mt-8 text-sm text-[var(--danger)]">{loadError}</p>}
 
+        {edition && (() => {
+          const terrain = focusSeriesFromRace(edition.race, edition.focus.name);
+          return terrain.some((v) => v > 0) ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none relative mt-8 h-32 overflow-hidden rounded-xl border border-[var(--border)] md:h-40 [mask-image:linear-gradient(to_right,transparent_0%,black_15%,black_85%,transparent_100%)]"
+            >
+              <DitherField
+                series={terrain}
+                seed={seedFromString(edition.receipt.payloadHash)}
+                className="h-full w-full"
+              />
+            </div>
+          ) : null;
+        })()}
+
         {edition && (
-          <>
+          <div className="paper-doc mt-8 rounded-2xl px-5 py-6 sm:px-8 sm:py-8">
             {/* ── L0 · the decision ─────────────────────────────── */}
             <section
-              className="mt-8 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5"
+              className="mt-0 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5"
               aria-labelledby="uk-headline"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]">
                     The headline
                   </p>
-                  <h2 id="uk-headline" className="text-xl font-bold mt-3 leading-snug">
+                  <h2 id="uk-headline" className="text-xl md:text-2xl font-bold mt-3 leading-snug">
                     {edition.headline.claim}
                   </h2>
                   <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
@@ -107,10 +128,10 @@ export default async function SuperteamPage() {
                 </div>
                 <DitherAvatar name="Superteam UK" size={44} className="rounded-lg shrink-0 mt-1" />
               </div>
-              <div className="mt-5 grid grid-cols-3 gap-3">
+              <div className="mt-5 grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
                 <div>
                   <div className="font-display text-3xl font-bold tabular-nums">{edition.focus.listings}</div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
+                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
                     listings · #{edition.focus.rankByListings} of sponsors
                   </div>
                 </div>
@@ -118,7 +139,7 @@ export default async function SuperteamPage() {
                   <div className="font-display text-3xl font-bold tabular-nums">
                     {fmtUsd(edition.focus.usdRewards)}
                   </div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
+                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
                     USD rewards · #{edition.focus.rankByRewardsChapters} chapter
                   </div>
                 </div>
@@ -126,12 +147,12 @@ export default async function SuperteamPage() {
                   <div className="font-display text-3xl font-bold tabular-nums">
                     {edition.focus.submissions.toLocaleString("en-US")}
                   </div>
-                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
+                  <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
                     submissions · ~{edition.focus.subsPerListing}/listing
                   </div>
                 </div>
               </div>
-              <p className="mt-4 text-[10px] leading-relaxed text-[var(--text-muted)]">
+              <p className="mt-4 text-[11px] leading-relaxed text-[var(--text-muted)]">
                 Counted from listings published under the{" "}
                 <span className="font-mono">Superteam UK</span> sponsor account. Campaigns the desk
                 co-hosts under another sponsor&apos;s listing are not counted here — so{" "}
@@ -140,7 +161,7 @@ export default async function SuperteamPage() {
             </section>
 
             <div className="mt-6">
-              <ChapterRaceChart race={edition.race} />
+              <ReportEvidenceExplorer evidence={reportEvidence(edition)} />
             </div>
 
             {/* ── L1 · the story ────────────────────────────────── */}
@@ -174,7 +195,7 @@ export default async function SuperteamPage() {
                     </p>
                     {edition.focus.recent.length > 0 && (
                       <>
-                        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-4 mb-2">
+                        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-4 mb-2">
                           Most recently closed
                         </p>
                         <ul className="flex flex-col gap-2.5">
@@ -245,7 +266,7 @@ export default async function SuperteamPage() {
 
             {/* ── L2 · the evidence ─────────────────────────────── */}
             <section className="mt-12" aria-labelledby="evidence-title">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-4">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)] mb-4">
                 Evidence behind the numbers above
               </p>
 
@@ -353,50 +374,42 @@ export default async function SuperteamPage() {
               className="mt-10 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5"
               aria-labelledby="cta-title"
             >
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]">
                 Get one like this
               </p>
               <h2 id="cta-title" className="text-sm font-semibold mt-3">
-                Your sponsor, measured the same way
+                Get a report for your organization
               </h2>
               <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-                Any Earn sponsor can commission this page — pinned snapshot, evidence receipt,
-                shareable OG card, permanent link. One payment, settled on Solana.
+                Preview free. Publish a dated edition for {"$"}{editionPricePusd()}, one-time.
               </p>
               <Link
                 href="/earn"
                 className="mt-4 inline-flex items-center gap-2 rounded bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
               >
-                Commission an edition — {editionPricePusd()} PUSD →
+                Find your organization →
               </Link>
               <p className="mt-5 text-xs text-[var(--text-muted)]">
-                Not on Earn? The same engine runs on your own data:
+                <Link href="/#divisions" className="text-[var(--accent)] hover:underline">
+                  Analyze your own data instead
+                </Link>
+                {" "}— a separate workflow for supported sources; not this public-report format.
               </p>
-              <div className="mt-3">
-                <IntegrationCTA
-                  source="superteam_page"
-                  connectHref={workspaceHref("/?start=connect", "protocols")}
-                  compact
-                />
-              </div>
             </section>
 
-            <section className="mt-8 border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Evidence receipt · databard.evidence-receipt v1
+            <section className="mt-10 border-t-2 border-[var(--border)] pt-6 text-center">
+              <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                Imprint · databard.evidence-receipt v1
               </p>
-              <p className="mt-3 font-mono text-[11px] break-all text-[var(--text)]">
+              <p className="mt-4 font-mono text-[11px] break-all text-[var(--text)]">
                 {edition.receipt.payloadHash}
               </p>
-              <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+              <p className="mx-auto mt-4 max-w-[64ch] text-[11px] leading-relaxed text-[var(--text-muted)]">
                 SHA-256 over the canonical (key-sorted) JSON of these{" "}
                 {edition.totals.listings.toLocaleString("en-US")} listings plus the computed result,
-                observed {new Date(edition.observedAt).toISOString()}. Copy it with the button above
-                and check it offline with{" "}
-                <span className="font-mono">verifyEvidenceReceipt()</span> from{" "}
-                <span className="font-mono">databard.evidence-receipt</span>. It proves these numbers
-                correspond to exactly that listing set — it does not authenticate the issuer, and it
-                does not make Superteam&apos;s own data true.
+                observed {new Date(edition.observedAt).toISOString()}. This unsigned receipt contains
+                hashes of the input dataset and report. Matching original data is required to check
+                those hashes. It does not authenticate the issuer or prove source accuracy.
               </p>
             </section>
 
@@ -412,7 +425,7 @@ export default async function SuperteamPage() {
               are floors, not ceilings. Independent computation — not an official Superteam report. If a
               number looks wrong, that is the conversation.
             </p>
-          </>
+          </div>
         )}
       </div>
     </main>

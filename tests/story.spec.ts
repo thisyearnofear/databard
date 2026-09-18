@@ -102,4 +102,92 @@ test.describe("Story layer — protocol dashboard", () => {
     await card.getByText(/Details ·/).click();
     await expect(card.getByText("Test coverage", { exact: true })).toBeVisible();
   });
+
+  test.describe("episode hero consequence — exact snapshot attribution", () => {
+    const episode = {
+      schemaFqn: "orders.core", schemaName: "orders", tableCount: 6,
+      qualitySummary: { passed: 10, failed: 0, total: 10 },
+      script: [{ speaker: "Alex", topic: "t", text: "x" }, { speaker: "Morgan", topic: "t", text: "y" }, { speaker: "Alex", topic: "t", text: "z" }],
+    };
+
+    function insights(ordersInsight: Record<string, unknown>) {
+      return {
+        ok: true,
+        totals: { sources: 2, failingTests: 3, staleTables: 0, undocumentedTables: 0 },
+        insights: [
+          {
+            schemaFqn: "sales.core", schemaName: "sales", episodeId: "sales-ep",
+            recordedAt: "2026-09-17T00:00:00Z",
+            healthScore: 58, healthLabel: "at-risk", testCoverage: 40, docCoverage: 60,
+            failingTests: 3, untestedCount: 1, ownerlessCount: 1, staleCount: 0,
+            undocumentedCount: 0, tableCount: 10,
+            criticalTables: [{ name: "payments", failingTests: 3, downstreamCount: 8, risk: "critical" }],
+            lineageHotspots: [{ name: "payments", connections: 8 }],
+            healthHistory: [70, 64, 58],
+          },
+          ordersInsight,
+        ],
+      };
+    }
+
+    const healthyOrders = {
+      schemaFqn: "orders.core", schemaName: "orders", episodeId: "selected",
+      recordedAt: "2026-09-18T00:00:00Z",
+      healthScore: 92, healthLabel: "healthy", testCoverage: 95, docCoverage: 90,
+      failingTests: 0, untestedCount: 0, ownerlessCount: 0, staleCount: 0,
+      undocumentedCount: 0, tableCount: 6,
+      criticalTables: [], lineageHotspots: [], healthHistory: [90, 92],
+    };
+
+    async function stubEpisodeApis(page: import("@playwright/test").Page, ordersInsight: Record<string, unknown>, ep: Record<string, unknown> = episode) {
+      await page.route("**/api/insights", async (route) => {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(insights(ordersInsight)) });
+      });
+      await page.route("**/api/share*", async (route) => {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, episode: ep }) });
+      });
+    }
+
+    const failingOrders = {
+      ...healthyOrders,
+      healthScore: 61, healthLabel: "at-risk", failingTests: 1,
+      criticalTables: [{ name: "fulfilment", failingTests: 1, downstreamCount: 2, risk: "high" }],
+    };
+    const failingEpisode = {
+      ...episode,
+      qualitySummary: { passed: 9, failed: 1, total: 10 },
+    };
+
+    test("same FQN + matching episode id shows the episode's own finding", async ({ page }) => {
+      await stubEpisodeApis(page, failingOrders, failingEpisode);
+      await page.goto("/protocol?workspace=teams&episode=selected");
+
+      const hero = page.getByLabel("Priority briefing");
+      await expect(hero).toBeVisible({ timeout: 10_000 });
+      await expect(hero).toContainText("1 test failing");
+      await expect(hero).toContainText("2 downstream");
+      await expect(hero).not.toContainText("8 downstream");
+    });
+
+    test("healthy episode falls back to its own counts, never the sales finding", async ({ page }) => {
+      await stubEpisodeApis(page, healthyOrders);
+      await page.goto("/protocol?workspace=teams&episode=selected");
+
+      const hero = page.getByLabel("Priority briefing");
+      await expect(hero).toBeVisible({ timeout: 10_000 });
+      await expect(hero).toContainText("orders");
+      await expect(hero).toContainText("0/10 tests failing");
+      await expect(hero).not.toContainText("downstream");
+    });
+
+    test("same FQN but an older episode id falls back to counts", async ({ page }) => {
+      await stubEpisodeApis(page, failingOrders, failingEpisode);
+      await page.goto("/protocol?workspace=teams&episode=older-episode-id");
+
+      const hero = page.getByLabel("Priority briefing");
+      await expect(hero).toBeVisible({ timeout: 10_000 });
+      await expect(hero).toContainText("1/10 tests failing");
+      await expect(hero).not.toContainText("downstream");
+    });
+  });
 });

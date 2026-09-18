@@ -334,7 +334,7 @@ export function LandingStep() {
       {/* Coral showcase — Protocols only; Teams should not look like a SQL engine */}
       {state.persona === "web3" && (
       <section className="enter-up enter-delay-3 w-full max-w-2xl pb-12">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
+        <div className="dither-grain bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-[var(--accent)]"><PixelIcon name="search" size={16} /></span>
             <h2 className="text-lg font-semibold">Query 50+ sources with SQL</h2>
@@ -422,7 +422,7 @@ export function LandingStep() {
 
       {/* Direct integration — the self-serve moment (replaces email capture) */}
       <section className="enter-up enter-delay-4 w-full max-w-2xl pb-8">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-center">
+        <div className="dither-grain bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 text-center">
           <h2 className="text-base font-semibold mb-1">
             {state.persona === "web3" ? "Want a briefing on your subgraph?" : "Want a briefing on your warehouse?"}
           </h2>
@@ -436,7 +436,8 @@ export function LandingStep() {
       </section>
 
       {/* Footer */}
-      <footer className="enter-up enter-delay-5 w-full max-w-2xl border-t border-[var(--border)] pt-6 pb-8 mt-auto">
+      <hr className="dither-rule w-full max-w-2xl" aria-hidden="true" />
+      <footer className="enter-up enter-delay-5 w-full max-w-2xl pt-6 pb-8 mt-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--text-muted)]">
           <div className="flex items-center gap-2">
             <span className="font-medium text-[var(--text)]">DataBard</span>

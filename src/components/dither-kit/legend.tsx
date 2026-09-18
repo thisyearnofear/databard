@@ -33,6 +33,7 @@ export function Legend({
             key={name}
             type="button"
             disabled={!isClickable}
+            aria-pressed={isClickable ? chart.selectedDataKey === name : undefined}
             onClick={() =>
               chart.selectDataKey(chart.selectedDataKey === name ? null : name)
             }

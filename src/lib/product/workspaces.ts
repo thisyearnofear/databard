@@ -38,7 +38,7 @@ export const WORKSPACES = {
       eyebrow: "YOUR AI PROTOCOL ANALYST",
       title: "Protocol health, explained and provable.",
       description: "DataBard connects to your on-chain data, computes health scores, and tells you what changed, why it matters, and what to do — with an attestation trail behind every claim.",
-      demoLabel: "Open a protocol briefing",
+      demoLabel: "Explore the protocol league",
       connectLabel: "Query your protocol data",
     },
   },

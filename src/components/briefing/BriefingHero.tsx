@@ -29,11 +29,15 @@ export function BriefingHero({ episode, cards, avgHealth, isProtocols, onListenE
     const headline = episode.testsFailed > 0
       ? `Your analyst found ${episode.testsFailed} ${episode.testsFailed === 1 ? "issue" : "issues"} — ${episode.schemaName}`
       : `Your analyst briefed ${episode.schemaName}`;
-    const consequence = priority?.insight
-      ? (findingSentence(priority.insight) ?? `${episode.tableCount} tables · ${episode.testsFailed}/${episode.testsTotal} tests failing · ${episode.segments} segments`)
-      : `${episode.tableCount} tables · ${episode.testsFailed}/${episode.testsTotal} tests failing · ${episode.segments} segments`;
+    const episodeInsight = cards.find((card) =>
+      Boolean(episode.schemaFqn && episode.episodeId) &&
+      card.insight?.schemaFqn === episode.schemaFqn &&
+      card.insight?.episodeId === episode.episodeId
+    )?.insight;
+    const consequence = (episodeInsight ? findingSentence(episodeInsight) : null)
+      ?? `${episode.tableCount} tables · ${episode.testsFailed}/${episode.testsTotal} tests failing · ${episode.segments} segments`;
     return (
-      <section className="relative bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-2xl p-5 mb-6 animate-slide-up overflow-hidden" aria-label="Priority briefing">
+      <section className="dither-grain relative bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-2xl p-5 mb-6 animate-slide-up overflow-hidden" aria-label="Priority briefing">
         {isProtocols && <DitherGradient from="purple" direction="left" cell={3} opacity={0.12} className="absolute inset-y-0 right-0 w-1/2 pointer-events-none" />}
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">

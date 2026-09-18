@@ -8,6 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { DataContextChip } from "./DataContextChip";
 import { DataSourceSwitch } from "./DataSourceSwitch";
 import { AccountMenu } from "./AccountMenu";
+import { PublicReportHeader } from "./editions/PublicReportHeader";
 import { homeHref, isNavItemActive, WORKSPACES, workspaceFromRoute, workspaceHref } from "@/lib/product/workspaces";
 import { track } from "@/lib/track";
 
@@ -27,6 +28,9 @@ function HeaderBarInner() {
   const workspace = workspaceFromRoute(pathname, searchParams.toString());
 
   if (pathname === "/" || pathname.startsWith("/episode/")) return null;
+  if (["/earn", "/superteam", "/agents", "/probe", "/verify"].includes(pathname) || pathname.startsWith("/earn/")) {
+    return <PublicReportHeader />;
+  }
   const definition = WORKSPACES[workspace];
 
   return (

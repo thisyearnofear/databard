@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
 import { ResultCard, type ProbeResultCardProps } from "@/components/probe/ResultCard";
 
 interface ProbeCost {
@@ -35,238 +36,110 @@ type RunMode = "idle" | "preview" | "paid-check";
 export default function ProbePage() {
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<RunMode>("idle");
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ProbeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paymentRequired, setPaymentRequired] = useState<string | null>(null);
   const [show402, setShow402] = useState(false);
+  const request = useRef<AbortController | null>(null);
+  const reduce = useReducedMotion();
+  const loading = mode !== "idle";
+  useEffect(() => () => { request.current?.abort(); request.current = null; }, []);
 
-  const runPreview = useCallback(async () => {
-    setLoading(true);
+  async function run(nextMode: Exclude<RunMode, "idle">) {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 45_000);
+    setMode(nextMode);
     setError(null);
     setResult(null);
     setPaymentRequired(null);
     setShow402(false);
-    setMode("preview");
     try {
-      const res = await fetch("/api/probe/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(question ? { question } : {}),
+      const response = await fetch(nextMode === "preview" ? "/api/probe/preview" : "/api/agent/probe", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(question.trim() ? { question: question.trim() } : {}),
+        signal: controller.signal,
       });
-      const json = await res.json();
-      if (!json.ok) {
-        setError(json.error ?? "Preview failed");
-      } else {
-        setResult(json);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Network error");
-    } finally {
-      setLoading(false);
-      setMode("idle");
-    }
-  }, [question]);
-
-  const checkPaidEndpoint = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setPaymentRequired(null);
-    setShow402(false);
-    setMode("paid-check");
-    try {
-      const res = await fetch("/api/agent/probe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(question ? { question } : {}),
-      });
-      if (res.status === 402) {
-        const challenge = res.headers.get("payment-required");
+      if (request.current !== controller) return;
+      if (nextMode === "paid-check" && response.status === 402) {
+        const challenge = response.headers.get("payment-required");
         if (challenge) {
-          try {
-            const decoded = JSON.parse(atob(challenge));
-            setPaymentRequired(
-              JSON.stringify(decoded, null, 2)
-            );
-          } catch {
-            setPaymentRequired(challenge.slice(0, 300));
-          }
+          try { setPaymentRequired(JSON.stringify(JSON.parse(atob(challenge)), null, 2)); }
+          catch { setPaymentRequired(challenge.slice(0, 300)); }
         }
         setShow402(true);
-      } else {
-        const json = await res.json();
-        if (!json.ok) setError(json.error ?? "Probe failed");
-        else setResult(json);
+        return;
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Network error");
+      const data = await response.json();
+      if (request.current !== controller) return;
+      if (!response.ok || data?.ok !== true || typeof data.summary !== "string" || !Array.isArray(data.ranked)) {
+        throw new Error(response.status === 429 ? "The free preview is rate-limited. Please try again later." : "The service check could not be completed. Try again; no payment was authorized.");
+      }
+      setResult(data);
+    } catch (failure) {
+      if (request.current !== controller) return;
+      setError(controller.signal.aborted ? "The service check timed out. Try again; no payment was authorized." : failure instanceof Error ? failure.message : "The service check could not be completed.");
     } finally {
-      setLoading(false);
-      setMode("idle");
+      window.clearTimeout(timeout);
+      if (request.current === controller) { request.current = null; setMode("idle"); }
     }
-  }, [question]);
-
-  const loadingText =
-    mode === "preview" ? "Probing free candidates…" : "Checking paid endpoint…";
+  }
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-4xl mx-auto">
-      <div className="w-full">
-        <Link
-          href="/"
-          className="inline-flex items-center py-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
-        >
-          ← Back to DataBard
-        </Link>
-      </div>
+    <main className="report-surface min-h-screen bg-[var(--bg)] px-5 py-12 sm:py-16">
+      <div className="mx-auto max-w-5xl">
+        <Link href="/agents" className="inline-flex min-h-11 items-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Tools for agents</Link>
 
-      {/* Hero */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight font-display">
-          DataBard Probe
-        </h1>
-        <p className="text-[var(--text-muted)] max-w-2xl mx-auto text-lg">
-          Before an agent pays another agent, ask DataBard. We probe A2MCP
-          services, score their quality, and can anchor the verdict on-chain.
-        </p>
-      </div>
-
-      {/* How it works */}
-      <section className="w-full grid gap-3 sm:grid-cols-3 text-sm">
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="font-semibold">1. Ask</p>
-          <p className="mt-1 text-[var(--text-muted)]">
-            An agent sends a question and optional candidate endpoints.
-          </p>
+        {/* Hero */}
+        <div className="mt-6 max-w-3xl">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">DataBard Probe</p>
+          <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Check a service before you pay.</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--text-muted)]">Compare response quality across our default service set. The free preview makes no payments and cannot inspect paid-only responses.</p>
         </div>
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="font-semibold">2. Probe</p>
-          <p className="mt-1 text-[var(--text-muted)]">
-            DataBard calls each service, pays x402 fees when needed (capped at
-            $0.50), and measures schema, latency, freshness, price-value,
-            reliability, and credentials.
-          </p>
-        </div>
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <p className="font-semibold">3. Verdict</p>
-          <p className="mt-1 text-[var(--text-muted)]">
-            You get a ranked verdict. Optionally, the hash is written to X
-            Layer as an attestation.
-          </p>
-        </div>
-      </section>
 
-      {/* Input */}
-      <div className="w-full max-w-2xl space-y-4">
-        <label
-          htmlFor="probe-question"
-          className="block text-sm font-medium text-[var(--text-muted)]"
-        >
-          What are you trying to do?
-        </label>
-        <input
-          id="probe-question"
-          type="text"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="e.g. I need a reliable on-chain token-price feed"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-        />
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={runPreview}
-            disabled={loading}
-            className="flex-1 rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-white transition-opacity disabled:opacity-50 hover:opacity-90"
-          >
-            {loading && mode === "preview" ? loadingText : "Run free preview"}
-          </button>
-          <button
-            onClick={checkPaidEndpoint}
-            disabled={loading}
-            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-3 text-sm font-semibold text-[var(--text)] transition-opacity disabled:opacity-50 hover:bg-[var(--bg)]"
-          >
-            {loading && mode === "paid-check"
-              ? loadingText
-              : "Check paid agent endpoint"}
-          </button>
+        {/* How it works */}
+        <ol className="mt-10 grid gap-5 border-y border-[var(--border)] py-6 text-sm sm:grid-cols-3">
+          <li><span className="font-mono text-xs text-[var(--accent)]">01</span><h2 className="mt-2 font-semibold">Check what responds</h2><p className="mt-2 leading-relaxed text-[var(--text-muted)]">Call the default services without authorizing payments.</p></li>
+          <li><span className="font-mono text-xs text-[var(--accent)]">02</span><h2 className="mt-2 font-semibold">Compare the evidence</h2><p className="mt-2 leading-relaxed text-[var(--text-muted)]">Inspect quality scores, response flags, and pricing information.</p></li>
+          <li><span className="font-mono text-xs text-[var(--accent)]">03</span><h2 className="mt-2 font-semibold">Decide with context</h2><p className="mt-2 leading-relaxed text-[var(--text-muted)]">Use the observations as a starting point—not a guarantee of suitability.</p></li>
+        </ol>
+
+        {/* Input */}
+        <div className="dither-grain mt-10 max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+          <label htmlFor="probe-question" className="block text-sm font-medium">Question for your agent (optional)</label>
+          <input id="probe-question" type="text" value={question} maxLength={500} onChange={(event) => setQuestion(event.target.value)} placeholder="What would you like your agent to investigate?" aria-describedby="probe-scope" className="mt-3 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm placeholder:text-[var(--text-muted)]" />
+          <p id="probe-scope" className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">This note travels with the result; the free preview checks the same default services. It does not select services or rank them for this question.</p>
+          <button type="button" onClick={() => run("preview")} disabled={loading} className="mt-5 min-h-11 rounded-lg bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90 disabled:opacity-50">{mode === "preview" ? "Comparing services…" : "Compare the example services"}</button>
+          <p className="mt-3 text-xs text-[var(--text-muted)]">No wallet · no payment · default candidates only</p>
+          {loading && <p role="status" className="mt-3 text-sm text-[var(--text-muted)]">{mode === "preview" ? "Comparing the default services…" : "Checking the payment requirement…"}</p>}
         </div>
-        <p className="text-xs text-[var(--text-muted)]">
-          Free preview probes only the default candidate set without paying any
-          outbound fees. The full paid endpoint costs $1.00 via x402 and is
-          designed for agent-to-agent calls.
-        </p>
-      </div>
 
-      {/* 402 explanation */}
-      {show402 && (
-        <section className="w-full max-w-2xl rounded-lg border border-[var(--warning, #eab308)] bg-[var(--surface)] p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-[var(--warning, #eab308)]">
-            402 Payment Required — this is working as designed
-          </h2>
-          <p className="text-sm text-[var(--text-muted)]">
-            The endpoint is live and gated by x402. An agent would read the
-            PAYMENT-REQUIRED header, sign a USDT0 payment on X Layer, and retry
-            with the PAYMENT-SIGNATURE header. Browsers can&apos;t sign that
-            payment automatically, so this page offers the free preview above.
-          </p>
-          {paymentRequired && (
-            <details className="text-xs">
-              <summary className="cursor-pointer text-[var(--text-muted)]">
-                View decoded challenge
-              </summary>
-              <pre className="mt-2 overflow-x-auto rounded border border-[var(--border)] bg-[var(--bg)] p-3 text-[10px] leading-relaxed">
-                {paymentRequired}
-              </pre>
-            </details>
-          )}
-        </section>
-      )}
+        {/* 402 explanation */}
+        <details className="mt-6 max-w-2xl border-y border-[var(--border)] py-3">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Use the paid agent endpoint</summary>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">Your agent can supply candidate endpoints and request paid responses with a spending cap. This button only checks the payment requirement; it does not authorize a payment.</p>
+          <button type="button" onClick={() => run("paid-check")} disabled={loading} className="my-4 min-h-11 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium transition-colors hover:border-[var(--accent)] disabled:opacity-50">Check paid agent endpoint</button>
+          {show402 && <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"><h2 className="text-sm font-semibold">This call needs payment authorization</h2><p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">An agent reads the x402 payment requirement, obtains authorization, and retries with a signed payment. The payment details specify USDT0 on X Layer. Nothing has been paid by this check.</p>{paymentRequired && <details className="mt-4"><summary className="cursor-pointer py-3 text-xs">Inspect the payment requirement</summary><pre className="max-h-72 overflow-auto rounded bg-[var(--bg)] p-3 text-xs">{paymentRequired}</pre></details>}</div>}
+          <Link href="/api/mcp/tools" className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">Read the input schema →</Link>
+        </details>
 
-      {/* Error */}
-      {error && (
-        <div className="w-full max-w-2xl rounded-lg border border-[var(--danger)] bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
-          {error}
-        </div>
-      )}
+        {/* Error */}
+        {error && <p role="alert" className="mt-6 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-4 text-sm text-[var(--danger)]">{error}</p>}
 
-      {/* Results */}
-      {result && (
-        <section className="w-full space-y-4">
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2">
-            <p className="text-sm text-[var(--text)]">{result.summary}</p>
-            {result.cost && (
-              <p className="text-xs text-[var(--text-muted)]">
-                Cost: {result.cost.priceUsd} · outbound spent $
-                {result.cost.outboundSpentUsd.toFixed(4)} / cap $
-                {result.cost.outboundCapUsd.toFixed(2)} · paid:{" "}
-                {result.cost.paidCount} · cached: {result.cost.cachedCount}
-              </p>
-            )}
-            {result.attestation?.txHash && (
-              <a
-                href={`https://www.oklink.com/xlayer/tx/${result.attestation.txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block font-mono text-[11px] text-[var(--accent)] underline underline-offset-2"
-              >
-                Attestation on X Layer → {result.attestation.txHash.slice(0, 14)}…
-              </a>
-            )}
-            {result.attestation?.error && (
-              <p className="text-xs text-[var(--danger)]">
-                Attestation: {result.attestation.error}
-              </p>
-            )}
+        {/* Results */}
+        {result && <motion.section initial={{ opacity: 0.65, y: reduce ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0.08 : 0.24 }} className="mt-10 space-y-5" aria-label="Service comparison results">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+            <h2 className="text-lg font-semibold">What the check found</h2>
+            <p role="status" className="mt-3 text-sm leading-relaxed">{result.summary}</p>
+            {result.preview && <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">Free preview: a payment challenge confirms reachability, not the quality of a paid response. Cached observations are labeled below.</p>}
+            {result.cost && <p className="mt-3 text-xs text-[var(--text-muted)]">Cost: {result.cost.priceUsd} · outbound spent ${result.cost.outboundSpentUsd.toFixed(4)} / cap ${result.cost.outboundCapUsd.toFixed(2)} · paid: {result.cost.paidCount} · cached: {result.cost.cachedCount}</p>}
+            {result.attestation?.txHash && <a href={`https://www.oklink.com/xlayer/tx/${result.attestation.txHash}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">Inspect the verdict commitment →</a>}
+            {result.attestation?.error && <p className="mt-3 text-xs text-[var(--danger)]">Attestation: {result.attestation.error}</p>}
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            {result.ranked.map((r) => (
-              <ResultCard key={r.endpoint} {...r} />
-            ))}
-          </div>
-        </section>
-      )}
+          <div className="grid gap-4 sm:grid-cols-2">{result.ranked.map((item) => <ResultCard key={item.endpoint} {...item} />)}</div>
+        </motion.section>}
+      </div>
     </main>
   );
 }

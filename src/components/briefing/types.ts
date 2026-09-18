@@ -17,6 +17,8 @@ export interface SourceCard {
 }
 
 export interface BriefingEpisodeMeta {
+  schemaFqn?: string;
+  episodeId?: string;
   schemaName: string;
   tableCount: number;
   testsFailed: number;

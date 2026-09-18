@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import type { MintRecord } from "@/lib/mint-stats";
 import { DitherButton, DitherGradient, PixelIcon } from "@/components/dither-kit";
 import { IntegrationCTA } from "@/components/IntegrationCTA";
-import { homeHref, workspaceHref } from "@/lib/product/workspaces";
+import { workspaceHref } from "@/lib/product/workspaces";
 
 interface VerifyMemo {
   schemaName: string;
@@ -143,14 +143,13 @@ function VerifyPageInner() {
 
       <div className="max-w-[720px] mx-auto relative">
         <div className="mb-8">
-          <Link href={homeHref("protocols")} className="text-[var(--text-muted)] text-sm no-underline">
+          <Link href="/" className="text-[var(--text-muted)] text-sm no-underline">
             ← Back to DataBard
           </Link>
-          <h1 className="text-[28px] font-extrabold mt-4 mb-1">Verify an attestation</h1>
+          <h1 className="text-[28px] font-extrabold mt-4 mb-1">Check an anchored report</h1>
           <p className="text-[var(--text-muted)] text-[15px]">
-            Every DataBard health report is hashed and written to Solana. Paste a transaction
-            signature to check the record against the report — no trust in DataBard&apos;s servers
-            required for the hash itself.
+            For reports explicitly anchored on-chain, compare the recorded hash with the available report.
+            An ordinary publication payment is not a report anchor. No wallet connection is needed to check.
           </p>
         </div>
 
@@ -162,7 +161,9 @@ function VerifyPageInner() {
             runVerify(tx);
           }}
         >
+          <label htmlFor="verification-signature" className="sr-only">Transaction signature</label>
           <input
+            id="verification-signature"
             value={tx}
             onChange={(e) => setTx(e.target.value)}
             placeholder="Solana transaction signature (e.g. 5Kd7z…)"

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Demo Mode", () => {
   test("should load the landing page with hero and CTAs", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
 
     // Hero heading should be visible
     await expect(page.locator("h1")).toBeVisible();
@@ -13,7 +13,7 @@ test.describe("Demo Mode", () => {
   });
 
   test("should enter demo mode on this week's league, then reach the episode player", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
 
     // Click demo button using stable testid — demo is dashboard-first now
     await page.getByTestId("demo-button").click();
@@ -48,7 +48,7 @@ test.describe("Demo Mode", () => {
   });
 
   test("should show onboarding tooltips once inside the wizard (not on landing)", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
 
     // Clear onboarding state to simulate first visit
     await page.evaluate(() => localStorage.removeItem("databard:onboarding-complete"));
@@ -66,7 +66,7 @@ test.describe("Demo Mode", () => {
 
 test.describe("Workspace switch", () => {
   test("should switch to the Teams presentation and update landing content", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
     await page.waitForLoadState("networkidle");
 
     // Protocols is the default workspace.

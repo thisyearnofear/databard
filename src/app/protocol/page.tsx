@@ -133,6 +133,8 @@ function ProtocolDashboardInner() {
           if (epData.ok && epData.episode) {
             const ep = epData.episode;
             setEpisodeMeta({
+              schemaFqn: ep.schemaFqn,
+              episodeId: episodeId ?? undefined,
               schemaName: ep.schemaName,
               tableCount: ep.tableCount,
               testsFailed: ep.qualitySummary?.failed ?? 0,

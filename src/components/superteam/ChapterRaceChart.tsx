@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useReducedMotion } from "motion/react";
 import {
   LineChart,
   Line,
@@ -22,7 +23,8 @@ const OTHER_COLORS: DitherColor[] = ["blue", "green", "orange", "pink"];
  * line per chapter. The focus sponsor is the highlighted series; scrub to
  * compare, hover a legend entry to spotlight.
  */
-export function ChapterRaceChart({ race, focusName = "Superteam UK" }: { race: RaceSeries; focusName?: string }) {
+export function ChapterRaceChart({ race, focusName = "Superteam UK", spotlight = false }: { race: RaceSeries; focusName?: string; spotlight?: boolean }) {
+  const reduce = useReducedMotion();
   const config = useMemo<ChartConfig>(() => {
     const out: ChartConfig = {};
     let i = 0;
@@ -52,18 +54,18 @@ export function ChapterRaceChart({ race, focusName = "Superteam UK" }: { race: R
           </p>
         </div>
         <span className="font-mono text-xs text-[var(--text-muted)]">
-          scrub to compare · hover a legend entry to spotlight
+          Select a legend entry to focus; select it again to compare.
         </span>
       </div>
       <div className="relative h-56 w-full pt-4">
-        <LineChart data={race.rows} config={config} animate bloom="low" margins={{ top: 18, right: 8, bottom: 22, left: 30 }}>
+        <LineChart data={race.rows} config={config} animate={!reduce} animationDuration={450} defaultSelectedDataKey={spotlight ? focusName : null} bloom="low" margins={{ top: 18, right: 8, bottom: 22, left: 30 }}>
           <Grid />
           <XAxis dataKey="t" maxTicks={8} />
           <YAxis tickFormatter={(v) => `${v}`} />
           {race.keys.map((key) => (
             <Line key={key} dataKey={key} />
           ))}
-          <Legend />
+          <Legend isClickable />
           <Tooltip labelKey="t" variant="frosted-glass" />
         </LineChart>
       </div>

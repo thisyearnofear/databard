@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Wizard Flow", () => {
   test("should navigate from landing to connect step", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
 
     // Click connect using stable testid
     await page.getByTestId("connect-button").click();
@@ -15,7 +15,7 @@ test.describe("Wizard Flow", () => {
   });
 
   test("should show all four step labels in the step indicator", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
 
     // Enter the connect step to reach the step indicator (demo now leaves the wizard)
     await page.getByTestId("connect-button").click();
@@ -28,7 +28,7 @@ test.describe("Wizard Flow", () => {
   });
 
   test("should allow navigating back from schema picker", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?workspace=protocols");
     await page.getByTestId("connect-button").click();
 
     // Back button should be visible
