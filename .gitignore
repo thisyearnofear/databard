@@ -53,3 +53,5 @@ data/alerts.json
 demo-assets/
 screenshots-review/
 screenshots-review-v2/
+next-env.d.ts
+data/pageviews.json
