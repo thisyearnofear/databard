@@ -397,16 +397,19 @@ export function computeEarnEdition(
   };
 
   const permalink = `${PUBLIC_BASE}${SUPERTEAM_PATH}`;
+  // Tweet copy is length-budgeted: X counts the URL as 23 chars, so keep the
+  // rest under 257. Two reward leaders only — names and totals both grow.
   const leaders = topRewards.map((c) => `${c.name.replace("Superteam ", "")} ${money(c.usdRewards)}`).join(" · ");
+  const tweetLeaders = topRewards.slice(0, 2).map((c) => `${c.name.replace("Superteam ", "")} ${money(c.usdRewards)}`).join(" · ");
 
   const tweet = [
     "The Superteam Earn economy, measured:",
     "",
-    `@SuperteamUK ${listingsLeadClaim} — ${uk.listings} listings, ${money(uk.usdRewards)} in USD-denominated rewards, ${count(uk.submissions)} submissions (all-time).`,
+    `@SuperteamUK ${listingsLeadClaim} — ${uk.listings} listings, ${money(uk.usdRewards)} in USD-denominated rewards, ${count(uk.submissions)} submissions.`,
     "",
-    `Reward leaders: ${leaders}`,
+    `By reward dollars: ${tweetLeaders}`,
     "",
-    `Method + table → ${permalink}`,
+    permalink,
   ].join("\n");
 
   const linkedin = [

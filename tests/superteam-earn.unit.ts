@@ -184,10 +184,32 @@ describe("computeEarnEdition", () => {
     const e = computeEarnEdition([listing({ rewardAmount: 95_600, _count: { Submission: 1491 } })]);
     assert.equal(e.headline.card, `${e.headline.claim}.`);
     assert.match(e.tweet, /USD-denominated rewards/);
-    assert.match(e.tweet, /Method \+ table/);
-    assert.match(e.tweet, /all-time/);
     assert.match(e.linkedin, /floors, not ceilings/);
     assert.match(e.emailBlurb, /floors, not ceilings/);
+  });
+
+  it("keeps the tweet inside X's 280-char budget at realistic magnitudes", () => {
+    // Mirrors the live shape: 93 UK listings, ~$95.6K, ~1.5K submissions, and
+    // two chapters ahead on reward dollars.
+    const listings = [
+      ...Array.from({ length: 93 }, () =>
+        listing({ rewardAmount: 1027, _count: { Submission: 16 } }),
+      ),
+      ...Array.from({ length: 54 }, () =>
+        listing({ sponsor: { name: "Superteam Nigeria" }, rewardAmount: 2714 }),
+      ),
+      ...Array.from({ length: 58 }, () =>
+        listing({ sponsor: { name: "Superteam Ukraine" }, rewardAmount: 2139 }),
+      ),
+    ];
+    const e = computeEarnEdition(listings, NOW);
+    // X counts every URL as 23 characters (t.co), regardless of its real length.
+    const asPosted = e.tweet.replace(e.permalink, "x".repeat(23));
+    assert.ok(asPosted.length <= 280, `tweet is ${asPosted.length} chars, over X's 280 limit`);
+    assert.match(e.tweet, /has published more Earn listings/);
+    assert.match(e.tweet, /USD-denominated rewards/);
+    assert.ok(e.tweet.includes(e.permalink), "tweet must carry the permalink");
+    assert.ok(!/took the listings lead|posts more opportunities/.test(e.tweet), "no stale claim wording");
   });
 });
 
