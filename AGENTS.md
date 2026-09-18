@@ -17,9 +17,12 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 The build runs `scripts/check-bundle-size.mjs` after `prepare-standalone.mjs`.
 It fails the build if `.next/standalone/` exceeds 120MB or if `contracts/` or
 `video/` directories appear in the standalone output. Current healthy size:
-~85MB (was ~73MB before the OKX x402 server SDK + viem were traced into the
-server bundle for the A2MCP paid endpoint — see "OKX.AI A2MCP ASP" below).
-Warn threshold 90MB. If the guard fails, check `outputFileTracingExcludes` in
+~69MB. It had drifted to ~107MB because libs reading via `path.join(process.cwd(), …)`
+made the file tracer include the whole project root (demo-assets, screenshots-review,
+test-results) in API route bundles — fixed by scoping `outputFileTracingExcludes` to
+`"*"` in `next.config.mjs`. Keep `public/` traced: demo fixtures read episode MP3s from
+it at runtime, and the binary filter in `prepare-standalone.mjs` strips them from its
+own copy. Warn threshold 90MB. If the guard fails, check `outputFileTracingExcludes` in
 `next.config.mjs` and the binary asset filter in `prepare-standalone.mjs`.
 
 ## Production Environment
