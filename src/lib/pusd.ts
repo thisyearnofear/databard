@@ -145,6 +145,7 @@ const QUOTE_PREFIX = "pay:quote:";
 /** A SOL quote is locked server-side at build time so the price can't drift
  *  between "prepare" and "verify". 10 minutes is enough to sign and confirm. */
 const QUOTE_TTL_SECONDS = 600;
+const QUOTE_RETENTION_SECONDS = 86400 * 7;
 
 export interface SolQuote {
   id: string;
@@ -155,6 +156,7 @@ export interface SolQuote {
   lamports: number;
   solUsd: number;
   createdAt: string;
+  expiresAt?: string;
 }
 
 /** USD→lamports, rounded up so a verified payment never under-pays by dust. */
@@ -201,6 +203,7 @@ export interface BuiltSolTx extends BuiltPusdTx {
   lamports: number;
   solUsd: number;
   quoteId: string;
+  expiresAt: string;
 }
 
 /**
@@ -247,8 +250,9 @@ export async function buildSolTransfer(
     lamports,
     solUsd,
     createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + QUOTE_TTL_SECONDS * 1000).toISOString(),
   };
-  store.set(`${QUOTE_PREFIX}${quote.id}`, quote, QUOTE_TTL_SECONDS);
+  store.set(`${QUOTE_PREFIX}${quote.id}`, quote, QUOTE_RETENTION_SECONDS);
 
   return {
     unsignedTxBase64: Buffer.from(
@@ -261,6 +265,7 @@ export async function buildSolTransfer(
     lamports,
     solUsd,
     quoteId: quote.id,
+    expiresAt: quote.expiresAt!,
   };
 }
 

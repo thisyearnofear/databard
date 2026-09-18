@@ -41,6 +41,12 @@ export interface PublishedEdition {
   paidBy: string;
   txSignature: string;
   pricePusd: number;
+  payment?: {
+    method: "sol" | "usdc" | "pusd";
+    amountBaseUnits: string;
+    decimals: number;
+    network: string;
+  };
   publishedAt: string;
   /** The pinned computation — the published page renders this, not live data. */
   edition: EarnEdition;
@@ -137,7 +143,7 @@ export function listPublished(): PublishedEdition[] {
  */
 export async function publishEdition(
   intent: EditionIntent,
-  payment: { walletAddress: string; txSignature: string },
+  payment: { walletAddress: string; txSignature: string; details?: PublishedEdition["payment"] },
   opts: { edition?: EarnEdition } = {},
 ): Promise<PublishedEdition> {
   const existing = publishedForSponsor(intent.sponsor);
@@ -154,6 +160,7 @@ export async function publishEdition(
     publishedAt: new Date().toISOString(),
     edition,
   };
+  if (payment.details) published.payment = payment.details;
   store.set(`${PUB_PREFIX}${intent.slug}`, published, PUB_TTL_SECONDS);
   store.set(`${SPONSOR_PREFIX}${intent.sponsor.toLowerCase()}`, intent.slug, PUB_TTL_SECONDS);
   return published;

@@ -54,7 +54,10 @@ export const pusdBackend: SettlementBackend = {
       return { status: "mismatched", detail: `On-chain error: ${JSON.stringify(tx.meta.err)}` };
     }
 
-    const accountKeys = tx.transaction.message.getAccountKeys().keySegments().flat();
+    const accountKeys = tx.transaction.message
+      .getAccountKeys({ accountKeysFromLookups: tx.meta?.loadedAddresses ?? undefined })
+      .keySegments()
+      .flat();
     if (!accountKeys.some((k) => k.equals(treasury))) {
       return { status: "mismatched", detail: "Transaction does not involve the treasury" };
     }
@@ -72,6 +75,7 @@ export const pusdBackend: SettlementBackend = {
     // expected mint, measured from pre/post token balances rather than
     // instruction shape. The `owner` field is not populated on every RPC, so
     // the token account is identified by resolving its account index.
+    let gained: bigint | undefined;
     if (req.expectedAmount !== undefined) {
       const mintKey = req.expectedMint ? new PublicKey(req.expectedMint) : pusdMint();
       const expectedAta = await getAssociatedTokenAddress(mintKey, treasury);
@@ -86,7 +90,7 @@ export const pusdBackend: SettlementBackend = {
                 (accountKeys[b.accountIndex] && accountKeys[b.accountIndex].equals(expectedAta))),
           )
           .reduce((s, b) => s + BigInt(b.uiTokenAmount.amount), BigInt(0));
-      const gained = balanceOf(tx.meta?.postTokenBalances) - balanceOf(tx.meta?.preTokenBalances);
+      gained = balanceOf(tx.meta?.postTokenBalances) - balanceOf(tx.meta?.preTokenBalances);
       if (gained < BigInt(req.expectedAmount)) {
         const symbol =
           mint === pusdMint().toBase58() ? "PUSD" : mint === usdcMint().toBase58() ? "USDC" : "tokens";
@@ -100,6 +104,7 @@ export const pusdBackend: SettlementBackend = {
     return {
       status: "verified",
       explorerUrl: explorerUrl("tx", req.reference),
+      settledAmount: gained?.toString(),
     };
   },
 

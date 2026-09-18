@@ -52,6 +52,10 @@ export const EVENT_TYPES = [
   // Commissioned editions (PUSD paywall)
   "edition_intent",           // payment intent created for a sponsor edition
   "edition_published",        // edition published after verified PUSD payment
+  "edition_preview",
+  "edition_publish_start",
+  "edition_payment_recovery",
+  "edition_share_copy",
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

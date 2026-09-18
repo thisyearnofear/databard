@@ -11,6 +11,17 @@ import { pusdRpcUrl, pusdTreasury } from "../../pusd";
 import { explorerUrl, type SettlementBackend, type VerifyRequest, type VerifyResult } from "../verifier";
 import { activatePro } from "./pusd";
 
+export function blockTimeWithinWindow(
+  req: Pick<VerifyRequest, "expectedAfter" | "expectedBefore">,
+  blockTime: number | null | undefined,
+): boolean {
+  if (req.expectedAfter === undefined && req.expectedBefore === undefined) return true;
+  if (typeof blockTime !== "number" || !Number.isFinite(blockTime)) return false;
+  if (req.expectedAfter !== undefined && (!Number.isFinite(req.expectedAfter) || blockTime < req.expectedAfter)) return false;
+  if (req.expectedBefore !== undefined && (!Number.isFinite(req.expectedBefore) || blockTime > req.expectedBefore)) return false;
+  return true;
+}
+
 export const solBackend: SettlementBackend = {
   id: "sol",
 
@@ -33,7 +44,14 @@ export const solBackend: SettlementBackend = {
       return { status: "mismatched", detail: `On-chain error: ${JSON.stringify(tx.meta.err)}` };
     }
 
-    const accountKeys = tx.transaction.message.getAccountKeys().keySegments().flat();
+    if (!blockTimeWithinWindow(req, tx.blockTime)) {
+      return { status: "mismatched", detail: "Transaction is outside the payment quote window" };
+    }
+
+    const accountKeys = tx.transaction.message
+      .getAccountKeys({ accountKeysFromLookups: tx.meta?.loadedAddresses ?? undefined })
+      .keySegments()
+      .flat();
 
     // The claimant must be the funding wallet — the fee payer is the first
     // static account key on every Solana transaction.
@@ -46,12 +64,13 @@ export const solBackend: SettlementBackend = {
 
     // Amount check: net lamports gained by the treasury, measured from
     // pre/post balances rather than instruction shape.
+    let gained: bigint | undefined;
     if (req.expectedAmount !== undefined) {
       const tIdx = accountKeys.findIndex((k) => k.equals(treasury));
       if (tIdx === -1) {
         return { status: "mismatched", detail: "Transaction does not pay the treasury" };
       }
-      const gained =
+      gained =
         BigInt(tx.meta?.postBalances?.[tIdx] ?? 0) - BigInt(tx.meta?.preBalances?.[tIdx] ?? 0);
       if (gained < BigInt(req.expectedAmount)) {
         return {
@@ -64,6 +83,7 @@ export const solBackend: SettlementBackend = {
     return {
       status: "verified",
       explorerUrl: explorerUrl("tx", req.reference),
+      settledAmount: gained?.toString(),
     };
   },
 

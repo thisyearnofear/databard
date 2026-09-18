@@ -17,7 +17,9 @@
  * the expected lamports come from that record, never from the client.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getBackend } from "@/lib/settlement";
+import { serial } from "@/lib/serial-queue";
 import {
   claimPusdSignature,
   releasePusdSignature,
@@ -25,11 +27,34 @@ import {
   quoteMatches,
   priceFor,
   pusdMint,
+  pusdNetwork,
   pusdTreasury,
   usdcMint,
   type PaymentMethod,
+  type SolQuote,
 } from "@/lib/pusd";
-import { getIntent, getPublished, publishEdition } from "@/lib/editions";
+import { getIntent, getPublished, publishEdition, type PublishedEdition } from "@/lib/editions";
+
+type EditionPaymentDetails = NonNullable<PublishedEdition["payment"]>;
+
+function invalidateEditionPaths(slug: string): void {
+  try {
+    revalidatePath("/earn");
+    revalidatePath(`/earn/${slug}`);
+    revalidatePath(`/api/og/earn/${slug}`);
+  } catch { }
+}
+
+function quoteWindow(quote: SolQuote): { expectedAfter: number; expectedBefore: number } {
+  const created = Date.parse(quote.createdAt);
+  const expires = Date.parse(
+    quote.expiresAt ?? new Date(created + 600_000).toISOString(),
+  );
+  return {
+    expectedAfter: Math.floor(created / 1000) - 30,
+    expectedBefore: Math.floor(expires / 1000),
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,6 +93,7 @@ export async function POST(req: NextRequest) {
     if (intent) {
       const existing = getPublished(intent.slug);
       if (existing) {
+        invalidateEditionPaths(existing.slug);
         return NextResponse.json({
           ok: true,
           message: `Edition already published — ${existing.sponsor}`,
@@ -82,17 +108,28 @@ export async function POST(req: NextRequest) {
     let backendId: "pusd" | "sol" = "pusd";
     let expectedAmount: number;
     let expectedMint: string | undefined;
+    let expectedAfter: number | undefined;
+    let expectedBefore: number | undefined;
     if (method === "sol") {
       // Expected lamports come from the server-locked quote — never the client.
       const quote = quoteId ? getSolQuote(quoteId) : null;
       if (!quote || !quoteMatches(quote, { walletAddress, purpose, intentId: intent?.id ?? null })) {
         return NextResponse.json(
-          { ok: false, error: "Payment quote expired or does not match — prepare a fresh payment" },
+          { ok: false, error: "Payment quote unavailable. Keep your transaction reference; do not pay again." },
           { status: 400 },
         );
       }
       backendId = "sol";
       expectedAmount = quote.lamports;
+      const window = quoteWindow(quote);
+      expectedAfter = window.expectedAfter;
+      expectedBefore = window.expectedBefore;
+      if (!Number.isFinite(expectedAfter) || !Number.isFinite(expectedBefore)) {
+        return NextResponse.json(
+          { ok: false, error: "Payment quote unavailable. Keep your transaction reference; do not pay again." },
+          { status: 400 },
+        );
+      }
     } else {
       expectedAmount = Math.round(expectedUsd * 1e6);
       expectedMint = method === "usdc" ? usdcMint().toBase58() : pusdMint().toBase58();
@@ -105,52 +142,80 @@ export async function POST(req: NextRequest) {
       expectedPayer: walletAddress,
       expectedMint,
       expectedAmount,
+      expectedAfter,
+      expectedBefore,
     });
     if (result.status !== "verified") {
       return NextResponse.json({ ok: false, error: result.detail ?? result.status }, { status: 400 });
     }
 
-    // One signature funds one thing — claimed before any activation so a
-    // replayed verify can never double-grant.
-    const claim = claimPusdSignature(txSignature, {
-      purpose,
-      reference: intent?.id ?? walletAddress,
-    });
-    if (!claim.ok) {
-      return NextResponse.json(
-        { ok: false, error: `This payment already activated ${claim.alreadySpentOn.purpose} (${claim.alreadySpentOn.reference})` },
-        { status: 409 },
-      );
+    let details: EditionPaymentDetails | undefined;
+    if (intent) {
+      if (!result.settledAmount || !/^\d+$/.test(result.settledAmount)) {
+        throw new Error("settled amount unavailable");
+      }
+      details = {
+        method: method as PaymentMethod,
+        amountBaseUnits: result.settledAmount,
+        decimals: method === "sol" ? 9 : 6,
+        network: pusdNetwork(),
+      };
     }
 
-    if (intent) {
+    return await serial(`pusd:verify:${txSignature}`, async () => {
+      // One signature funds one thing — claimed before any activation so a
+      // replayed verify can never double-grant.
+      const claim = claimPusdSignature(txSignature, {
+        purpose,
+        reference: intent?.id ?? walletAddress,
+      });
+      let claimedHere = false;
+      if (!claim.ok) {
+        const expectedReference = intent?.id ?? walletAddress;
+        if (
+          claim.alreadySpentOn.purpose !== purpose ||
+          claim.alreadySpentOn.reference !== expectedReference
+        ) {
+          return NextResponse.json(
+            { ok: false, error: `This payment already activated ${claim.alreadySpentOn.purpose} (${claim.alreadySpentOn.reference})` },
+            { status: 409 },
+          );
+        }
+      } else {
+        claimedHere = true;
+      }
+
       // If publish throws, the signature never activated anything — release
       // the claim so the payer can retry verify without burning the payment.
       try {
-        const published = await publishEdition(intent, { walletAddress, txSignature });
+        if (intent) {
+          const published = await publishEdition(intent, { walletAddress, txSignature, details });
+          invalidateEditionPaths(published.slug);
+          return NextResponse.json({
+            ok: true,
+            message: `Edition published — ${published.sponsor}`,
+            txSignature,
+            explorerUrl: result.explorerUrl,
+            permalink: published.edition.permalink,
+            slug: published.slug,
+          });
+        }
+        await backend.activate?.(walletAddress, { reference: txSignature });
         return NextResponse.json({
           ok: true,
-          message: `Edition published — ${published.sponsor}`,
+          message: "Pro access activated via Palm USD payment",
           txSignature,
           explorerUrl: result.explorerUrl,
-          permalink: published.edition.permalink,
-          slug: published.slug,
         });
       } catch (e) {
-        releasePusdSignature(txSignature);
+        if (claimedHere) releasePusdSignature(txSignature);
         throw e;
       }
-    }
-
-    await backend.activate?.(walletAddress, { reference: txSignature });
-    return NextResponse.json({
-      ok: true,
-      message: "Pro access activated via Palm USD payment",
-      txSignature,
-      explorerUrl: result.explorerUrl,
     });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Verification failed — keep your transaction reference and retry." },
+      { status: 500 },
+    );
   }
 }

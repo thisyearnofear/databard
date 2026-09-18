@@ -24,6 +24,8 @@ export interface VerifyRequest {
   expectedPayer?: string;
   /** For escrow: expected deliverable_hash (SHA-256 hex) after seller commit. */
   expectedManifestHash?: string;
+  expectedAfter?: number;
+  expectedBefore?: number;
 }
 
 export type VerifyStatus =
@@ -38,6 +40,7 @@ export interface VerifyResult {
   explorerUrl?: string;
   /** Human-readable reason, especially for mismatched / not-found. */
   detail?: string;
+  settledAmount?: string;
 }
 
 export interface SettlementBackend {
