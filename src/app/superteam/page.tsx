@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadEarnEdition } from "@/lib/superteam-earn";
+import { editionPricePusd } from "@/lib/pusd";
 import { ShareRow } from "@/components/superteam/ShareRow";
 import { ChapterRaceChart } from "@/components/superteam/ChapterRaceChart";
 import { IntegrationCTA } from "@/components/IntegrationCTA";
@@ -336,66 +337,48 @@ export default async function SuperteamPage() {
                 </details>
               )}
 
-              <div className="mt-8 border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
-                <h2 className="text-sm font-semibold">The wider economy</h2>
-                <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div>
-                    <div className="font-display text-2xl font-bold tabular-nums">
-                      {edition.totals.listings.toLocaleString("en-US")}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                      listings tracked
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-display text-2xl font-bold tabular-nums">
-                      {edition.totals.submissions.toLocaleString("en-US")}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                      builder submissions
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-display text-2xl font-bold tabular-nums">
-                      {edition.totals.liveNow}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                      live right now
-                    </div>
-                  </div>
-                  <div>
-                    <div className="font-display text-2xl font-bold tabular-nums">
-                      {edition.totals.agentAllowed}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">
-                      agent-eligible
-                    </div>
-                  </div>
-                </div>
-                <p className="mt-4 text-[11px] leading-relaxed text-[var(--text-muted)]">
-                  Agents can watch the whole marketplace — only {edition.totals.agentAllowed} listings
-                  let them earn. That asymmetry is the interesting bit.
+              <div className="mt-8 border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+                <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                  <span className="font-semibold text-[var(--text)]">
+                    {edition.totals.liveNow} listings live right now
+                  </span>
+                  {" "}across the whole network — but only {edition.totals.agentAllowed} of{" "}
+                  {edition.totals.listings.toLocaleString("en-US")} are agent-eligible. Agents can
+                  watch the whole marketplace; they can barely earn in it.
                 </p>
               </div>
             </section>
 
-            <section className="mt-10 border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
-              <h2 className="text-sm font-semibold">Want this kind of accounting on your ecosystem?</h2>
+            <section
+              className="mt-10 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5"
+              aria-labelledby="cta-title"
+            >
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">
+                Get one like this
+              </p>
+              <h2 id="cta-title" className="text-sm font-semibold mt-3">
+                Your sponsor, measured the same way
+              </h2>
               <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
-                DataBard turns any data source into a synthesized briefing — scores, narratives,
-                shareable artifacts. Run the demo or connect a source — no email needed.
+                Any Earn sponsor can commission this page — pinned snapshot, evidence receipt,
+                shareable OG card, permanent link. One payment, settled on Solana.
               </p>
-              <div className="mt-4">
-                <IntegrationCTA source="superteam_page" connectHref={workspaceHref("/?start=connect", "protocols")} />
+              <Link
+                href="/earn"
+                className="mt-4 inline-flex items-center gap-2 rounded bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+              >
+                Commission an edition — {editionPricePusd()} PUSD →
+              </Link>
+              <p className="mt-5 text-xs text-[var(--text-muted)]">
+                Not on Earn? The same engine runs on your own data:
+              </p>
+              <div className="mt-3">
+                <IntegrationCTA
+                  source="superteam_page"
+                  connectHref={workspaceHref("/?start=connect", "protocols")}
+                  compact
+                />
               </div>
-              <p className="mt-4 text-xs flex flex-col gap-1.5">
-                <Link href={workspaceHref("/?start=connect", "protocols")} className="text-[var(--accent)] hover:underline">
-                  Or connect your data yourself →
-                </Link>
-                <Link href="/earn" className="text-[var(--accent)] hover:underline">
-                  On Earn? Commission this page for your sponsor →
-                </Link>
-              </p>
             </section>
 
             <section className="mt-8 border border-[var(--border)] bg-[var(--surface)] px-5 py-5">

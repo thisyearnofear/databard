@@ -91,10 +91,14 @@ export default async function EarnSponsorPage({ params }: PageProps) {
         )}
 
         {!published && edition && (
-          <div className="mt-5 border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-              This is the free live preview — the numbers move as Earn&apos;s API does. Publish it
-              to pin this snapshot, issue the evidence receipt, and keep the permalink.
+          <div className="mt-5 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">
+              Free live preview
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+              These numbers move as Earn&apos;s API does. Publish to pin this snapshot, issue the
+              evidence receipt, and keep the permanent link — {editionPricePusd()} PUSD, settled
+              on Solana.
             </p>
             <div className="mt-3">
               <EditionPublish sponsor={name} slug={slug} pricePusd={editionPricePusd()} />
