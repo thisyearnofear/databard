@@ -2,6 +2,7 @@
 
 DataBard is an AI data analyst: connect a source, get health scores, trend
 narratives, and a 2-minute audio briefing. No email, no sales call — self-serve.
+Also listed on OKX.AI as ASP #9878 (health check, briefing, probe).
 
 ## Direct integration (preferred — no credentials needed to try)
 
@@ -12,7 +13,15 @@ narratives, and a 2-minute audio briefing. No email, no sales call — self-serv
 - Full briefing (script + audio, $1/call x402 on X Layer):
   `POST /api/mcp/briefing` with the same connection spec
 - Write findings back to DataHub: `POST /api/mcp/writeback`
-- Probe agent-service quality: `POST /api/agent/probe` ($1/call x402)
+- Probe agent-service quality (free preview, no payment):
+  `POST /api/probe/preview` with `{}` — add `{"stream": true}` for live NDJSON progress
+- Probe agent-service quality (paid, $1/call x402, optional on-chain verdict):
+  `POST /api/agent/probe` with `{}` or `{"attest": true}`
+
+Every paid tool returns a decision-ready payload: `summary` (quotable
+takeaway), `keyFindings` (short strings), `nextStep` (single recommended
+action), plus a `cost` receipt. Unreachable services are reported honestly —
+never scored as if they responded.
 
 Sources: openmetadata, dbt-cloud, dbt-local, the-graph, dune, coral, datahub, monid.
 Omit everything for a labelled demo — every invocation succeeds with `demo:true`.

@@ -95,6 +95,50 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
       `Top pick: ${scored[0]?.name ?? "n/a"} (${scored[0]?.score.total ?? 0}/100). ` +
       `${unreachableCount} unreachable, ${paidCount} paid, ${cachedCount} cached.`;
 
+    // Agent-first decision fields (same contract as health-check/briefing):
+    // keyFindings are quotable facts; nextStep is the single recommended action.
+    const keyFindings: string[] = [];
+    const top = scored[0];
+    if (top) {
+      keyFindings.push(
+        `Top pick: ${top.name} — ${top.score.total}/100 (${top.score.label})`
+      );
+    }
+    const unreachable = scored.filter((s) => !s.reachable);
+    if (unreachable.length > 0) {
+      keyFindings.push(
+        `Unreachable right now: ${unreachable.map((s) => s.name).join(", ")}`
+      );
+    }
+    const paidButFailed = scored.filter(
+      (s) =>
+        s.payment?.challengeReceived &&
+        !s.payment.paid &&
+        typeof s.payment.error === "string" &&
+        s.payment.error.includes("Payment sent")
+    );
+    if (paidButFailed.length > 0) {
+      keyFindings.push(
+        `Took payment then re-challenged (treat as unreliable): ${paidButFailed.map((s) => s.name).join(", ")}`
+      );
+    }
+    const cheapestReachablePaid = scored
+      .filter((s) => s.reachable && (s.knownPriceUsd ?? 0) > 0)
+      .sort((a, b) => (a.knownPriceUsd ?? 0) - (b.knownPriceUsd ?? 0))[0];
+    if (cheapestReachablePaid) {
+      keyFindings.push(
+        `Cheapest reachable paid option: ${cheapestReachablePaid.name} at $${cheapestReachablePaid.knownPriceUsd}/call`
+      );
+    }
+    const topReachable = scored.find((s) => s.reachable);
+    const nextStep = topReachable
+      ? `Pay ${topReachable.name} (${topReachable.endpoint}) — the best-scored reachable service this run${
+          (topReachable.knownPriceUsd ?? 0) > 0
+            ? ` at $${topReachable.knownPriceUsd}/call`
+            : " (free)"
+        }.`
+      : "No candidate is reachable right now — supply alternate endpoints or retry later.";
+
     const verdict = {
       question,
       generatedAt,
@@ -114,6 +158,7 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
       try {
         const att = await attestVerdict(verdict);
         attestationTx = att.txHash;
+        keyFindings.push(`Verdict anchored on X Layer: ${att.txHash}`);
       } catch (attErr) {
         attestationError = attErr instanceof Error ? attErr.message : "Attestation failed";
         console.warn("[probe] Attestation failed (non-fatal):", attErr);
@@ -134,6 +179,8 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
       generatedAt,
       question,
       summary,
+      keyFindings,
+      nextStep,
       cost: {
         priceUsd: PROBE_PRICE,
         outboundSpentUsd: Number(outboundSpend.toFixed(4)),

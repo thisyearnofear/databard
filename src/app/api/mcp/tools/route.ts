@@ -337,6 +337,8 @@ const probeOutputSchema = {
     generatedAt: { type: "string" },
     question: { type: "string" },
     summary: { type: "string", description: "Plain-text takeaway the calling agent can quote verbatim." },
+    keyFindings: { type: "array", items: { type: "string" }, description: "Decision-relevant facts from the run (top pick, unreachable services, unreliable payers, cheapest option, attestation)." },
+    nextStep: { type: "string", description: "The single recommended action — which service to pay, or what to do when nothing is reachable." },
     cost: {
       type: "object",
       properties: {

@@ -16,6 +16,12 @@ export default function AgentsPage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">DataBard for agents</p>
             <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Useful answers.<br />Inspectable evidence.</h1>
             <p className="mt-6 max-w-[44ch] text-base leading-relaxed text-[var(--text-muted)]">Give your agent a health check, compare services before paying, or inspect an anchored report. Start free; paid calls require explicit authorization.</p>
+            <p className="mt-5 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 font-mono text-[11px] text-[var(--text-muted)]">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--success)]" aria-hidden="true" />
+              Also listed on
+              <a href="https://www.okx.ai" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">OKX.AI ↗</a>
+              · ASP #9878
+            </p>
             <ol className="mt-10 divide-y divide-[var(--border)] border-y border-[var(--border)]">
               {[
                 { title: "Analyze a data source", href: "#try-health-check", description: "Get a health summary, key findings, and a recommended next step.", label: "Try a free example" },
@@ -40,6 +46,27 @@ export default function AgentsPage() {
           <details>
             <summary className="cursor-pointer py-3 text-lg font-semibold">Connect these tools to your agent</summary>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--text-muted)]">Start with discovery, then send a source configuration to the appropriate tool. The free example above uses sample data. Paid calls return a payment requirement; your agent must obtain authorization before paying and retrying.</p>
+            <div className="mt-6 max-w-2xl rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Zero to first call</p>
+              <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-[var(--text)]">{`# 1. Discover the tools and schemas
+curl https://databard.persidian.com/api/mcp/tools
+
+# 2. Free health check — no credentials, labelled demo data
+curl -X POST https://databard.persidian.com/api/mcp/health-check \\
+  -H 'content-type: application/json' \\
+  -d '{"demo":true}'
+
+# 3. Free service-quality preview — five live A2MCP services
+curl -X POST https://databard.persidian.com/api/probe/preview \\
+  -H 'content-type: application/json' \\
+  -d '{}'
+
+# 4. Paid tools answer 402 with a PAYMENT-REQUIRED header;
+#    your agent signs once (x402, USDT0 on X Layer) and retries.
+curl -i -X POST https://databard.persidian.com/api/agent/probe \\
+  -H 'content-type: application/json' \\
+  -d '{"attest": true}'`}</pre>
+            </div>
             <dl className="mt-6 grid gap-4 sm:grid-cols-2">
               {[
                 ["Discover capabilities", "GET /api/mcp/tools", "Input and output schemas for the available tools."],
