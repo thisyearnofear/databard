@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { ResultCard, type ProbeResultCardProps } from "@/components/probe/ResultCard";
+import { ProbeRun, type ProbeRunDone } from "@/components/probe/ProbeRun";
+import { AttestedRunPanel } from "@/components/probe/AttestedRunPanel";
 
 interface ProbeCost {
   priceUsd: string;
@@ -31,38 +33,65 @@ interface ProbeResponse {
   ranked: ProbeResultCardProps[];
 }
 
-type RunMode = "idle" | "preview" | "paid-check";
-
 export default function ProbePage() {
   const [question, setQuestion] = useState("");
-  const [mode, setMode] = useState<RunMode>("idle");
+  const [runId, setRunId] = useState(0);
+  const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ProbeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paymentRequired, setPaymentRequired] = useState<string | null>(null);
   const [show402, setShow402] = useState(false);
+  const [checking402, setChecking402] = useState(false);
   const request = useRef<AbortController | null>(null);
   const reduce = useReducedMotion();
-  const loading = mode !== "idle";
   useEffect(() => () => { request.current?.abort(); request.current = null; }, []);
 
-  async function run(nextMode: Exclude<RunMode, "idle">) {
+  function startPreview() {
+    if (running) return;
+    setError(null);
+    setResult(null);
+    setShow402(false);
+    setRunning(true);
+    setRunId((id) => id + 1);
+  }
+
+  function handleRunDone(payload: ProbeRunDone | null, failure: string | null) {
+    setRunning(false);
+    if (failure) {
+      setError(failure);
+      return;
+    }
+    if (payload) {
+      setResult({
+        ok: true,
+        tool: "databard.probe",
+        preview: true,
+        generatedAt: payload.generatedAt,
+        question: question.trim() || undefined,
+        summary: payload.summary,
+        cost: payload.cost,
+        ranked: payload.ranked,
+      });
+    }
+  }
+
+  async function checkPaidEndpoint() {
     if (request.current) return;
     const controller = new AbortController();
     request.current = controller;
     const timeout = window.setTimeout(() => controller.abort(), 45_000);
-    setMode(nextMode);
+    setChecking402(true);
     setError(null);
-    setResult(null);
-    setPaymentRequired(null);
     setShow402(false);
+    setPaymentRequired(null);
     try {
-      const response = await fetch(nextMode === "preview" ? "/api/probe/preview" : "/api/agent/probe", {
+      const response = await fetch("/api/agent/probe", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(question.trim() ? { question: question.trim() } : {}),
         signal: controller.signal,
       });
       if (request.current !== controller) return;
-      if (nextMode === "paid-check" && response.status === 402) {
+      if (response.status === 402) {
         const challenge = response.headers.get("payment-required");
         if (challenge) {
           try { setPaymentRequired(JSON.stringify(JSON.parse(atob(challenge)), null, 2)); }
@@ -73,16 +102,13 @@ export default function ProbePage() {
       }
       const data = await response.json();
       if (request.current !== controller) return;
-      if (!response.ok || data?.ok !== true || typeof data.summary !== "string" || !Array.isArray(data.ranked)) {
-        throw new Error(response.status === 429 ? "The free preview is rate-limited. Please try again later." : "The service check could not be completed. Try again; no payment was authorized.");
-      }
-      setResult(data);
+      setError(data?.error ?? "The service check could not be completed. Try again; no payment was authorized.");
     } catch (failure) {
       if (request.current !== controller) return;
       setError(controller.signal.aborted ? "The service check timed out. Try again; no payment was authorized." : failure instanceof Error ? failure.message : "The service check could not be completed.");
     } finally {
       window.clearTimeout(timeout);
-      if (request.current === controller) { request.current = null; setMode("idle"); }
+      if (request.current === controller) { request.current = null; setChecking402(false); }
     }
   }
 
@@ -110,16 +136,15 @@ export default function ProbePage() {
           <label htmlFor="probe-question" className="block text-sm font-medium">Question for your agent (optional)</label>
           <input id="probe-question" type="text" value={question} maxLength={500} onChange={(event) => setQuestion(event.target.value)} placeholder="What would you like your agent to investigate?" aria-describedby="probe-scope" className="mt-3 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-sm placeholder:text-[var(--text-muted)]" />
           <p id="probe-scope" className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">This note travels with the result; the free preview checks the same default services. It does not select services or rank them for this question.</p>
-          <button type="button" onClick={() => run("preview")} disabled={loading} className="mt-5 min-h-11 rounded-lg bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90 disabled:opacity-50">{mode === "preview" ? "Comparing services…" : "Compare the example services"}</button>
+          <button type="button" onClick={startPreview} disabled={running} className="mt-5 min-h-11 rounded-lg bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90 disabled:opacity-50">{running ? "Comparing services…" : "Compare the example services"}</button>
           <p className="mt-3 text-xs text-[var(--text-muted)]">No wallet · no payment · default candidates only</p>
-          {loading && <p role="status" className="mt-3 text-sm text-[var(--text-muted)]">{mode === "preview" ? "Comparing the default services…" : "Checking the payment requirement…"}</p>}
         </div>
 
         {/* 402 explanation */}
         <details className="mt-6 max-w-2xl border-y border-[var(--border)] py-3">
           <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Use the paid agent endpoint</summary>
           <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">Your agent can supply candidate endpoints and request paid responses with a spending cap. This button only checks the payment requirement; it does not authorize a payment.</p>
-          <button type="button" onClick={() => run("paid-check")} disabled={loading} className="my-4 min-h-11 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium transition-colors hover:border-[var(--accent)] disabled:opacity-50">Check paid agent endpoint</button>
+          <button type="button" onClick={checkPaidEndpoint} disabled={checking402} className="my-4 min-h-11 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium transition-colors hover:border-[var(--accent)] disabled:opacity-50">{checking402 ? "Checking…" : "Check paid agent endpoint"}</button>
           {show402 && <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"><h2 className="text-sm font-semibold">This call needs payment authorization</h2><p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">An agent reads the x402 payment requirement, obtains authorization, and retries with a signed payment. The payment details specify USDT0 on X Layer. Nothing has been paid by this check.</p>{paymentRequired && <details className="mt-4"><summary className="cursor-pointer py-3 text-xs">Inspect the payment requirement</summary><pre className="max-h-72 overflow-auto rounded bg-[var(--bg)] p-3 text-xs">{paymentRequired}</pre></details>}</div>}
           <Link href="/api/mcp/tools" className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">Read the input schema →</Link>
         </details>
@@ -127,18 +152,21 @@ export default function ProbePage() {
         {/* Error */}
         {error && <p role="alert" className="mt-6 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-4 text-sm text-[var(--danger)]">{error}</p>}
 
-        {/* Results */}
-        {result && <motion.section initial={{ opacity: 0.65, y: reduce ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0.08 : 0.24 }} className="mt-10 space-y-5" aria-label="Service comparison results">
+        {/* Live run — staged candidate cards driven by the real probe stream */}
+        <ProbeRun question={question} runId={runId} onDone={handleRunDone} />
+
+        {/* Summary — arrives with the stream's "done" event */}
+        {result && <motion.section initial={{ opacity: 0.65, y: reduce ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduce ? 0.08 : 0.24 }} className="mt-6" aria-label="Service comparison summary">
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
             <h2 className="text-lg font-semibold">What the check found</h2>
             <p role="status" className="mt-3 text-sm leading-relaxed">{result.summary}</p>
             {result.preview && <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">Free preview: a payment challenge confirms reachability, not the quality of a paid response. Cached observations are labeled below.</p>}
             {result.cost && <p className="mt-3 text-xs text-[var(--text-muted)]">Cost: {result.cost.priceUsd} · outbound spent ${result.cost.outboundSpentUsd.toFixed(4)} / cap ${result.cost.outboundCapUsd.toFixed(2)} · paid: {result.cost.paidCount} · cached: {result.cost.cachedCount}</p>}
-            {result.attestation?.txHash && <a href={`https://www.oklink.com/xlayer/tx/${result.attestation.txHash}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">Inspect the verdict commitment →</a>}
-            {result.attestation?.error && <p className="mt-3 text-xs text-[var(--danger)]">Attestation: {result.attestation.error}</p>}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">{result.ranked.map((item) => <ResultCard key={item.endpoint} {...item} />)}</div>
         </motion.section>}
+
+        {/* The recorded attested run — proof of the full money loop */}
+        <AttestedRunPanel />
       </div>
     </main>
   );

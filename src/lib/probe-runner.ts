@@ -63,6 +63,25 @@ export interface ProbeResult {
   fromCache?: boolean;
 }
 
+/**
+ * Lifecycle stages of a single-candidate probe, emitted only when the real
+ * event happens — never synthesized for effect:
+ *   checking → calling → challenged (402 seen) → paying (x402 retry sent)
+ *   → measuring (response in hand, extracting metrics) → scored (via onResult)
+ * Cached candidates short-circuit straight to scored.
+ */
+export type ProbeStage =
+  | "checking"
+  | "calling"
+  | "challenged"
+  | "paying"
+  | "measuring";
+
+export type ProbeStageListener = (
+  endpoint: string,
+  stage: ProbeStage,
+) => void;
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const PROBE_TIMEOUT_MS = 15_000;
@@ -221,12 +240,23 @@ async function attemptX402Payment(
 export async function probeEndpoint(
   candidate: ProbeCandidate,
   spendRemaining: { value: number },
-  allowPayments = true
+  allowPayments = true,
+  onStage?: ProbeStageListener
 ): Promise<ProbeResult> {
+  const stage = (s: ProbeStage) => {
+    try {
+      onStage?.(candidate.endpoint, s);
+    } catch {
+      // A broken listener must never affect the probe.
+    }
+  };
+
   // Check cache first
   const key = cacheKey(candidate, allowPayments);
   const cached = getCached(key);
   if (cached) return { ...cached, fromCache: true };
+
+  stage("checking");
 
   // Reject non-public URLs before any network I/O (SSRF guard)
   try {
@@ -303,6 +333,7 @@ export async function probeEndpoint(
       fetchOpts.body = JSON.stringify({});
     }
 
+    stage("calling");
     let response = await fetch(url, fetchOpts);
     clearTimeout(timeout);
 
@@ -310,6 +341,7 @@ export async function probeEndpoint(
     const payment: ProbePayment = { challengeReceived: false, paid: false };
     if (response.status === 402) {
       payment.challengeReceived = true;
+      stage("challenged");
       const paymentRequired = response.headers.get("PAYMENT-REQUIRED") ||
         response.headers.get("payment-required");
 
@@ -318,6 +350,7 @@ export async function probeEndpoint(
       } else if (paymentRequired) {
         const paymentHeaders = await attemptX402Payment(paymentRequired);
         if (paymentHeaders) {
+          stage("paying");
           // Retry with payment (PAYMENT-SIGNATURE header from the SDK)
           const retryOpts: RequestInit = {
             ...fetchOpts,
@@ -366,6 +399,8 @@ export async function probeEndpoint(
 
     const latencyMs = Date.now() - start;
     const statusCode = response.status;
+
+    stage("measuring");
 
     // Read body
     let bodyText = "";
@@ -448,12 +483,19 @@ export async function probeEndpoint(
 /**
  * Probe multiple candidates in parallel with a concurrency limit.
  * Enforces a cumulative outbound spend cap across all candidates.
+ * `onResult` fires as each candidate completes (worker order, not input
+ * order) so callers can stream live progress; the return value is unchanged.
  */
 export async function probeAll(
   candidates: ProbeCandidate[],
-  opts: { concurrency?: number; allowPayments?: boolean } = {}
+  opts: {
+    concurrency?: number;
+    allowPayments?: boolean;
+    onResult?: (result: ProbeResult) => void;
+    onStage?: ProbeStageListener;
+  } = {}
 ): Promise<ProbeResult[]> {
-  const { concurrency = 4, allowPayments = true } = opts;
+  const { concurrency = 4, allowPayments = true, onResult, onStage } = opts;
   const results: ProbeResult[] = [];
   const queue = [...candidates];
   const spendRemaining = { value: MAX_OUTBOUND_SPEND_USD };
@@ -462,7 +504,13 @@ export async function probeAll(
     while (queue.length > 0) {
       const candidate = queue.shift();
       if (!candidate) break;
-      results.push(await probeEndpoint(candidate, spendRemaining, allowPayments));
+      const result = await probeEndpoint(candidate, spendRemaining, allowPayments, onStage);
+      results.push(result);
+      try {
+        onResult?.(result);
+      } catch {
+        // A broken stream listener must never fail the probe itself.
+      }
     }
   }
 

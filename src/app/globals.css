@@ -352,6 +352,23 @@ body > .aurora + * {
   outline-offset: 2px;
 }
 
+/* Probe pending card — indeterminate shimmer (honest "working", not a fake
+   percentage). */
+@keyframes probe-pending-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(320%); }
+}
+
+.probe-pending-bar {
+  animation: probe-pending-slide 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .probe-pending-bar {
+    animation: none;
+  }
+}
+
 /* ── Editorial instrument — paper document on an ink field ────────────── */
 
 /* The report object: always warm paper, even on the dark ink page.
