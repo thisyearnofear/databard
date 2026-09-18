@@ -379,3 +379,24 @@ dashboards or subgraphs we can analyze without any integration.
 Every lead captured from manual outreach should be tagged with
 `source: "manual_outreach:<protocol>"` in `data/leads.json` so we can
 distinguish organic leads from outreach leads.
+
+## Steering bespoke asks: editions, not services
+
+When an ecosystem org or agency responds to a public artifact with "can you
+make one for us," the answer is never a bespoke build. Route the ask:
+
+- **Earn sponsors** → self-serve `/earn/[slug]` edition — 25 PUSD, zero-touch,
+  preview free, pinned on payment. "Want one for your chapter?" already has a
+  paid answer, not a contact form.
+- **Agencies and brands (e.g. Flight3)** → sponsorship of a flagship public
+  artifact (the league, an attention-market report). They buy adjacency to a
+  trusted artifact, not custom labour. Media-model revenue, no deliverables.
+- **Private rosters / custom datasets** → that's the bring-your-own-dataset
+  roadmap, not a services engagement. If we find ourselves hand-curating a
+  client's data into JSON, we've become an agency — the engine must do the
+  assembly, or the ask is out of lane.
+
+Rule of thumb for every bespoke request: *would this work for the next 100
+users without us touching it?* If it can't be expressed as (dataset, entity,
+metrics), it's consulting — decline or refer. See STRATEGY.md → Product
+Principles → "Generated, never crafted."
