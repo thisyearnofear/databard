@@ -11,16 +11,30 @@
  * signature is then claimed exactly once (claimPusdSignature) so one payment
  * can never activate two things.
  *
- * Body: { walletAddress, txSignature, purpose?: "pro" | "edition", editionId? }
+ * Body: { walletAddress, txSignature, purpose?: "pro" | "edition", editionId?,
+ *        method?: "pusd" | "usdc" | "sol", quoteId? }
+ * For method=sol, quoteId names the server-locked price quote from checkout —
+ * the expected lamports come from that record, never from the client.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getBackend } from "@/lib/settlement";
-import { claimPusdSignature, releasePusdSignature, priceFor, pusdMint, pusdTreasury } from "@/lib/pusd";
+import {
+  claimPusdSignature,
+  releasePusdSignature,
+  getSolQuote,
+  quoteMatches,
+  priceFor,
+  pusdMint,
+  pusdTreasury,
+  usdcMint,
+  type PaymentMethod,
+} from "@/lib/pusd";
 import { getIntent, getPublished, publishEdition } from "@/lib/editions";
 
 export async function POST(req: NextRequest) {
   try {
-    const { walletAddress, txSignature, purpose = "pro", editionId } = await req.json();
+    const { walletAddress, txSignature, purpose = "pro", editionId, method = "pusd", quoteId } =
+      await req.json();
     if (!walletAddress || !txSignature) {
       return NextResponse.json(
         { ok: false, error: "walletAddress and txSignature required" },
@@ -30,10 +44,16 @@ export async function POST(req: NextRequest) {
     if (purpose !== "pro" && purpose !== "edition") {
       return NextResponse.json({ ok: false, error: "purpose must be 'pro' or 'edition'" }, { status: 400 });
     }
+    if (!["pusd", "usdc", "sol"].includes(method)) {
+      return NextResponse.json(
+        { ok: false, error: "method must be 'pusd', 'usdc' or 'sol'" },
+        { status: 400 },
+      );
+    }
 
     const treasury = pusdTreasury();
     if (!treasury) {
-      return NextResponse.json({ ok: false, error: "PUSD payments are not configured yet" }, { status: 503 });
+      return NextResponse.json({ ok: false, error: "Payments are not configured yet" }, { status: 503 });
     }
 
     // Resolve what this payment is supposed to buy — server-side, so the
@@ -57,15 +77,34 @@ export async function POST(req: NextRequest) {
         });
       }
     }
-    const expectedPusd = intent ? intent.pricePusd : priceFor("pro");
+    const expectedUsd = intent ? intent.pricePusd : priceFor("pro");
 
-    const backend = getBackend("pusd");
+    let backendId: "pusd" | "sol" = "pusd";
+    let expectedAmount: number;
+    let expectedMint: string | undefined;
+    if (method === "sol") {
+      // Expected lamports come from the server-locked quote — never the client.
+      const quote = quoteId ? getSolQuote(quoteId) : null;
+      if (!quote || !quoteMatches(quote, { walletAddress, purpose, intentId: intent?.id ?? null })) {
+        return NextResponse.json(
+          { ok: false, error: "Payment quote expired or does not match — prepare a fresh payment" },
+          { status: 400 },
+        );
+      }
+      backendId = "sol";
+      expectedAmount = quote.lamports;
+    } else {
+      expectedAmount = Math.round(expectedUsd * 1e6);
+      expectedMint = method === "usdc" ? usdcMint().toBase58() : pusdMint().toBase58();
+    }
+
+    const backend = getBackend(backendId);
     const result = await backend.verify({
       reference: txSignature,
       expectedRecipient: treasury.toBase58(),
       expectedPayer: walletAddress,
-      expectedMint: pusdMint().toBase58(),
-      expectedAmount: Math.round(expectedPusd * 1e6),
+      expectedMint,
+      expectedAmount,
     });
     if (result.status !== "verified") {
       return NextResponse.json({ ok: false, error: result.detail ?? result.status }, { status: 400 });

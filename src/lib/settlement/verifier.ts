@@ -9,7 +9,7 @@
  */
 import type { PublicKey } from "@solana/web3.js";
 
-export type SettlementBackendId = "escrow" | "pusd" | "stripe";
+export type SettlementBackendId = "escrow" | "pusd" | "sol" | "stripe";
 
 export interface VerifyRequest {
   /** Backend-specific reference: escrow reference Pubkey, Solana tx signature, Stripe session id. */

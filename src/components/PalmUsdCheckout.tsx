@@ -12,6 +12,9 @@ import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { Transaction } from "@solana/web3.js";
 
 type CheckoutState = "idle" | "ready" | "signing" | "confirming" | "success" | "error";
+type PayMethod = "pusd" | "usdc" | "sol";
+
+const METHOD_LABEL: Record<PayMethod, string> = { pusd: "PUSD", usdc: "USDC", sol: "SOL" };
 
 interface PalmUsdCheckoutProps {
   /** Called after successful payment activation */
@@ -27,6 +30,8 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
   const [error, setError] = useState<string | null>(null);
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+  const [method, setMethod] = useState<PayMethod>("sol");
+  const [paidLabel, setPaidLabel] = useState<string>("49 PUSD");
 
   const reset = useCallback(() => {
     setState("idle");
@@ -42,17 +47,22 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
     setState("signing");
 
     try {
-      // 1. Request unsigned transaction from server
+      // 1. Request unsigned transaction from server in the chosen method
       const res = await fetch("/api/checkout/palmusd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: publicKey.toBase58() }),
+        body: JSON.stringify({ walletAddress: publicKey.toBase58(), method }),
       });
       const data = await res.json();
 
       if (!data.ok) {
         throw new Error(data.error || "Failed to prepare payment");
       }
+      setPaidLabel(
+        method === "sol" && typeof data.lamports === "number"
+          ? `${(data.lamports / 1e9).toFixed(3)} SOL`
+          : `49 ${METHOD_LABEL[method]}`,
+      );
 
       // 2. Sign with wallet
       const tx = Transaction.from(Buffer.from(data.unsignedTxBase64, "base64"));
@@ -76,6 +86,8 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         body: JSON.stringify({
           walletAddress: publicKey.toBase58(),
           txSignature: signature,
+          method,
+          quoteId: data.quoteId,
         }),
       });
       const verifyData = await verifyRes.json();
@@ -98,7 +110,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
       setError(msg);
       setState("error");
     }
-  }, [publicKey, signTransaction, connected, onSuccess]);
+  }, [publicKey, signTransaction, connected, onSuccess, method]);
 
   // Update state when wallet connects/disconnects
   const effectiveState = connected && publicKey
@@ -116,7 +128,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         </div>
         <p className="text-sm font-medium text-[var(--success)]">Pro activated</p>
         <p className="text-xs text-[var(--text-muted)] text-center">
-          Paid 49 PUSD via Palm USD on Solana
+          Paid {paidLabel} on Solana
         </p>
         {explorerUrl && (
           <a
@@ -174,7 +186,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         </p>
         <p className="text-xs text-[var(--text-muted)]">
           {effectiveState === "signing"
-            ? "Sign the 49 PUSD transfer in your wallet"
+            ? `Sign the ${paidLabel} transfer in your wallet`
             : "Waiting for Solana network confirmation"
           }
         </p>
@@ -192,7 +204,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
             <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
             {wallet?.adapter.name} · {publicKey?.toBase58().slice(0, 4)}…{publicKey?.toBase58().slice(-4)}
           </span>
-          <span className="text-[var(--text-muted)]">49 PUSD</span>
+          <span className="text-[var(--text-muted)]">$49</span>
         </div>
 
         {/* Pay button */}
@@ -202,9 +214,26 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
             <PalmIcon size={16} />
-            Pay 49 PUSD
+            Pay {method === "sol" ? "in SOL" : `49 ${METHOD_LABEL[method]}`}
           </span>
         </button>
+
+        {/* Method toggle */}
+        <div className="flex items-center justify-center gap-2">
+          {(["sol", "usdc", "pusd"] as PayMethod[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMethod(m)}
+              className={`rounded border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] cursor-pointer transition-colors ${
+                method === m
+                  ? "border-[var(--palm)]/60 bg-[var(--palm)]/15 text-[var(--text)]"
+                  : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]"
+              }`}
+            >
+              {METHOD_LABEL[m]}
+            </button>
+          ))}
+        </div>
 
         {/* Trust signals */}
         <div className="flex items-center justify-center gap-3 text-xs text-[var(--text-muted)]">
@@ -213,12 +242,12 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
-            Non-freezable
+            Non-custodial
           </span>
           <span>·</span>
-          <span>1:1 USD backed</span>
+          <span>Verified on-chain</span>
           <span>·</span>
-          <span>Solana SPL</span>
+          <span>Solana</span>
         </div>
       </div>
     );
@@ -233,11 +262,11 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
       >
         <span className="relative z-10 flex items-center justify-center gap-2">
           <PalmIcon size={16} />
-          Pay with Palm USD
+          Pay on Solana
         </span>
       </button>
       <p className="text-xs text-[var(--text-muted)] text-center">
-        Connect a Solana wallet to pay 49 PUSD · non-freezable stablecoin
+        Connect a Solana wallet to pay $49 — SOL, USDC or PUSD
       </p>
     </div>
   );

@@ -4,10 +4,12 @@
  */
 import { registerBackend, getBackend, explorerUrl } from "./verifier";
 import { pusdBackend } from "./backends/pusd";
+import { solBackend } from "./backends/sol";
 import { stripeBackend } from "./backends/stripe";
 import { escrowBackend } from "./backends/escrow";
 
 registerBackend(pusdBackend);
+registerBackend(solBackend);
 registerBackend(stripeBackend);
 registerBackend(escrowBackend);
 

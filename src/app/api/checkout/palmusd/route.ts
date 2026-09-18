@@ -1,24 +1,35 @@
 /**
  * POST /api/checkout/palmusd
- * Creates a Palm USD payment transaction — Pro subscription or commissioned edition.
+ * Creates a payment transaction — Pro subscription or commissioned edition —
+ * in the caller's chosen method: PUSD, USDC, or native SOL.
  * Returns an unsigned transaction for the client to sign with their Solana wallet.
  *
- * Body: { walletAddress, purpose?: "pro" | "edition", editionId? }
- * Returns: { ok, unsignedTxBase64, amount, recipient } or { ok: false, error }
+ * Body: { walletAddress, purpose?: "pro" | "edition", editionId?, method?: "pusd" | "usdc" | "sol" }
+ * Returns: { ok, unsignedTxBase64, amount, token, recipient, method, quoteId?, lamports?, solUsd? }
  *
- * Palm USD is a Solana stablecoin. Pro is 49 PUSD/mo; an edition is a one-off
- * EDITION_PRICE_PUSD. The server always sets the amount — the client signs only.
- * After the client signs and submits, they call /api/checkout/palmusd/verify
- * to confirm payment and activate whatever they paid for.
+ * The server always sets the amount — the client signs only. For SOL the price
+ * is locked server-side as a quote (10 min TTL); verify resolves the expected
+ * lamports from `quoteId`, never from the client. After signing and submitting,
+ * the client calls /api/checkout/palmusd/verify to activate the purchase.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { buildPusdTransfer, priceFor, pusdTreasury } from "@/lib/pusd";
+import {
+  buildSolTransfer,
+  buildSplTransfer,
+  priceFor,
+  pusdMint,
+  pusdTreasury,
+  usdcMint,
+  type PaymentMethod,
+} from "@/lib/pusd";
 import { getIntent } from "@/lib/editions";
+
+const METHODS: PaymentMethod[] = ["pusd", "usdc", "sol"];
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { walletAddress, purpose = "pro", editionId } = body;
+    const { walletAddress, purpose = "pro", editionId, method = "pusd" } = body;
 
     if (!walletAddress) {
       return NextResponse.json({ ok: false, error: "walletAddress required" }, { status: 400 });
@@ -26,30 +37,43 @@ export async function POST(req: NextRequest) {
     if (purpose !== "pro" && purpose !== "edition") {
       return NextResponse.json({ ok: false, error: "purpose must be 'pro' or 'edition'" }, { status: 400 });
     }
+    if (!METHODS.includes(method)) {
+      return NextResponse.json(
+        { ok: false, error: "method must be 'pusd', 'usdc' or 'sol'" },
+        { status: 400 },
+      );
+    }
     if (!pusdTreasury()) {
       return NextResponse.json(
-        { ok: false, error: "PUSD payments are not configured yet" },
+        { ok: false, error: "Payments are not configured yet" },
         { status: 503 },
       );
     }
 
     // An edition payment must name a live intent — the amount is server-side,
     // and the intent is what the verify step publishes.
-    if (purpose === "edition") {
-      const intent = editionId ? getIntent(editionId) : null;
-      if (!intent) {
-        return NextResponse.json({ ok: false, error: "Unknown or expired edition intent" }, { status: 400 });
-      }
-      const built = await buildPusdTransfer(walletAddress, intent.pricePusd);
-      return NextResponse.json({ ok: true, ...built });
+    const intent = purpose === "edition" ? (editionId ? getIntent(editionId) : null) : null;
+    if (purpose === "edition" && !intent) {
+      return NextResponse.json({ ok: false, error: "Unknown or expired edition intent" }, { status: 400 });
+    }
+    const usdAmount = intent ? intent.pricePusd : priceFor("pro");
+
+    if (method === "sol") {
+      const built = await buildSolTransfer(walletAddress, usdAmount, {
+        purpose,
+        intentId: intent?.id ?? null,
+      });
+      return NextResponse.json({ ok: true, method, ...built });
     }
 
-    const built = await buildPusdTransfer(walletAddress, priceFor("pro"));
-    return NextResponse.json({ ok: true, ...built });
+    const mint = method === "usdc" ? usdcMint() : pusdMint();
+    const built = await buildSplTransfer(walletAddress, mint, method.toUpperCase(), usdAmount);
+    return NextResponse.json({ ok: true, method, ...built });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     const clientSafe =
-      msg.includes("Insufficient") || msg.includes("No Palm USD token account") || msg.includes("not configured");
+      msg.includes("Insufficient") || msg.includes("token account") || msg.includes("not configured")
+        || msg.includes("SOL price feed");
     return NextResponse.json({ ok: false, error: clientSafe ? msg : "Failed to prepare payment" }, { status: 500 });
   }
 }

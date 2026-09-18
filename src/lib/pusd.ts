@@ -11,9 +11,10 @@
  * null instead of a key so callers can fail loudly (503) rather than take
  * money into a fire.
  */
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import {
   getAssociatedTokenAddress,
+  createAssociatedTokenAccountIdempotentInstruction,
   createTransferInstruction,
   getAccount,
 } from "@solana/spl-token";
@@ -21,6 +22,13 @@ import { store } from "@/lib/store";
 
 export const PUSD_DECIMALS = 6;
 export const PRO_PRICE_PUSD = 49;
+
+/** Canonical mainnet USDC mint (verified via Jupiter token search). */
+export const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+/** Wrapped-SOL mint — used for price lookups, not SPL transfers. */
+export const SOL_MINT = "So11111111111111111111111111111111111111112";
+
+export type PaymentMethod = "pusd" | "usdc" | "sol";
 
 const NULL_ADDRESS = "11111111111111111111111111111111";
 
@@ -46,6 +54,10 @@ export function pusdMint(): PublicKey {
   );
 }
 
+export function usdcMint(): PublicKey {
+  return new PublicKey(process.env.NEXT_PUBLIC_USDC_MINT ?? USDC_MINT);
+}
+
 /** Treasury wallet — `null` when unconfigured (never silently the burn address). */
 export function pusdTreasury(): PublicKey | null {
   const raw = process.env.PALM_USD_RECIPIENT;
@@ -65,22 +77,27 @@ export function priceFor(purpose: "pro" | "edition"): number {
 export interface BuiltPusdTx {
   unsignedTxBase64: string;
   amount: number;
-  token: "PUSD";
+  token: string;
   recipient: string;
   network: string;
 }
 
 /**
- * Build an unsigned SPL transfer of `amountPusd` from `walletAddress` to the
+ * Build an unsigned SPL transfer of `amount` tokens from `walletAddress` to the
  * treasury. Throws with a client-safe message on insufficient balance or when
- * payments are not configured.
+ * payments are not configured. The recipient's ATA is created idempotently in
+ * the same tx so a mint the treasury has never held can't strand the transfer.
  */
-export async function buildPusdTransfer(walletAddress: string, amountPusd: number): Promise<BuiltPusdTx> {
+export async function buildSplTransfer(
+  walletAddress: string,
+  mint: PublicKey,
+  symbol: string,
+  amount: number,
+): Promise<BuiltPusdTx> {
   const recipient = pusdTreasury();
   if (!recipient) {
-    throw new Error("PUSD payments are not configured (PALM_USD_RECIPIENT unset)");
+    throw new Error("Payments are not configured (PALM_USD_RECIPIENT unset)");
   }
-  const mint = pusdMint();
   const connection = new Connection(pusdRpcUrl(), "confirmed");
   const payer = new PublicKey(walletAddress);
 
@@ -90,16 +107,17 @@ export async function buildPusdTransfer(walletAddress: string, amountPusd: numbe
   try {
     const payerAccount = await getAccount(connection, payerAta);
     const balance = Number(payerAccount.amount) / 1e6;
-    if (balance < amountPusd) {
-      throw new Error(`Insufficient PUSD balance. Need ${amountPusd}, have ${balance.toFixed(2)}`);
+    if (balance < amount) {
+      throw new Error(`Insufficient ${symbol} balance. Need ${amount}, have ${balance.toFixed(2)}`);
     }
   } catch (e) {
     if (e instanceof Error && e.message.startsWith("Insufficient")) throw e;
-    throw new Error("No Palm USD token account found. You need PUSD tokens to pay.");
+    throw new Error(`No ${symbol} token account found. You need ${symbol} to pay this way.`);
   }
 
   const tx = new Transaction().add(
-    createTransferInstruction(payerAta, recipientAta, payer, BigInt(Math.round(amountPusd * 1e6))),
+    createAssociatedTokenAccountIdempotentInstruction(payer, recipientAta, recipient, mint),
+    createTransferInstruction(payerAta, recipientAta, payer, BigInt(Math.round(amount * 1e6))),
   );
   tx.feePayer = payer;
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
@@ -110,10 +128,139 @@ export async function buildPusdTransfer(walletAddress: string, amountPusd: numbe
     unsignedTxBase64: Buffer.from(
       tx.serialize({ requireAllSignatures: false, verifySignatures: false }),
     ).toString("base64"),
-    amount: amountPusd,
-    token: "PUSD",
+    amount,
+    token: symbol,
     recipient: recipient.toBase58(),
     network: pusdNetwork(),
+  };
+}
+
+export function buildPusdTransfer(walletAddress: string, amountPusd: number): Promise<BuiltPusdTx> {
+  return buildSplTransfer(walletAddress, pusdMint(), "PUSD", amountPusd);
+}
+
+// ── SOL payments ────────────────────────────────────────────────────────────
+
+const QUOTE_PREFIX = "pay:quote:";
+/** A SOL quote is locked server-side at build time so the price can't drift
+ *  between "prepare" and "verify". 10 minutes is enough to sign and confirm. */
+const QUOTE_TTL_SECONDS = 600;
+
+export interface SolQuote {
+  id: string;
+  walletAddress: string;
+  purpose: "pro" | "edition";
+  intentId: string | null;
+  usdAmount: number;
+  lamports: number;
+  solUsd: number;
+  createdAt: string;
+}
+
+/** USD→lamports, rounded up so a verified payment never under-pays by dust. */
+export function lamportsForUsd(usdAmount: number, solUsd: number): number {
+  return Math.ceil((usdAmount / solUsd) * 1e9);
+}
+
+/** SOL/USD spot — Jupiter v3 primary, CoinGecko fallback. Throws if neither. */
+export async function solUsdPrice(): Promise<number> {
+  try {
+    const r = await fetch(`https://lite-api.jup.ag/price/v3?ids=${SOL_MINT}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    const j = (await r.json()) as Record<string, { usdPrice?: number }>;
+    const p = j?.[SOL_MINT]?.usdPrice;
+    if (typeof p === "number" && p > 0) return p;
+  } catch { /* fall through to coingecko */ }
+  const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd", {
+    signal: AbortSignal.timeout(8000),
+  });
+  const j = (await r.json()) as { solana?: { usd?: number } };
+  const p = j?.solana?.usd;
+  if (typeof p === "number" && p > 0) return p;
+  throw new Error("SOL price feed unavailable — try again in a moment");
+}
+
+export function getSolQuote(id: string): SolQuote | null {
+  return store.get<SolQuote>(`${QUOTE_PREFIX}${id}`);
+}
+
+/** True when the stored quote belongs to this payer and purchase. */
+export function quoteMatches(
+  quote: SolQuote,
+  expected: { walletAddress: string; purpose: string; intentId: string | null },
+): boolean {
+  return (
+    quote.walletAddress === expected.walletAddress &&
+    quote.purpose === expected.purpose &&
+    quote.intentId === expected.intentId
+  );
+}
+
+export interface BuiltSolTx extends BuiltPusdTx {
+  lamports: number;
+  solUsd: number;
+  quoteId: string;
+}
+
+/**
+ * Build an unsigned native-SOL transfer for `usdAmount` dollars, priced at the
+ * moment of building. The quote is stored server-side; verify resolves the
+ * expected lamports from the returned `quoteId`, never from the client.
+ */
+export async function buildSolTransfer(
+  walletAddress: string,
+  usdAmount: number,
+  meta: { purpose: "pro" | "edition"; intentId: string | null },
+): Promise<BuiltSolTx> {
+  const recipient = pusdTreasury();
+  if (!recipient) {
+    throw new Error("Payments are not configured (PALM_USD_RECIPIENT unset)");
+  }
+  const solUsd = await solUsdPrice();
+  const lamports = lamportsForUsd(usdAmount, solUsd);
+  const connection = new Connection(pusdRpcUrl(), "confirmed");
+  const payer = new PublicKey(walletAddress);
+
+  const balance = await connection.getBalance(payer);
+  // ~0.002 SOL covers fee + tx overhead; keep the error client-readable.
+  if (balance < lamports + 2_000) {
+    throw new Error(
+      `Insufficient SOL. Need ~${(lamports / 1e9).toFixed(3)} SOL, have ${(balance / 1e9).toFixed(3)}`,
+    );
+  }
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({ fromPubkey: payer, toPubkey: recipient, lamports }),
+  );
+  tx.feePayer = payer;
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+  tx.recentBlockhash = blockhash;
+  tx.lastValidBlockHeight = lastValidBlockHeight;
+
+  const quote: SolQuote = {
+    id: `q_${Math.random().toString(36).slice(2, 12)}${Date.now().toString(36)}`,
+    walletAddress,
+    purpose: meta.purpose,
+    intentId: meta.intentId,
+    usdAmount,
+    lamports,
+    solUsd,
+    createdAt: new Date().toISOString(),
+  };
+  store.set(`${QUOTE_PREFIX}${quote.id}`, quote, QUOTE_TTL_SECONDS);
+
+  return {
+    unsignedTxBase64: Buffer.from(
+      tx.serialize({ requireAllSignatures: false, verifySignatures: false }),
+    ).toString("base64"),
+    amount: usdAmount,
+    token: "SOL",
+    recipient: recipient.toBase58(),
+    network: pusdNetwork(),
+    lamports,
+    solUsd,
+    quoteId: quote.id,
   };
 }
 

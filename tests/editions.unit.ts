@@ -15,7 +15,17 @@ import {
   publishedForSponsor,
   publishEdition,
 } from "../src/lib/editions";
-import { claimPusdSignature, editionPricePusd } from "../src/lib/pusd";
+import {
+  claimPusdSignature,
+  editionPricePusd,
+  getSolQuote,
+  lamportsForUsd,
+  quoteMatches,
+  usdcMint,
+  USDC_MINT,
+  type SolQuote,
+} from "../src/lib/pusd";
+import { store } from "../src/lib/store";
 import { computeEarnEdition, sponsorFocus, type EarnListing } from "../src/lib/superteam-earn";
 
 function listing(overrides: Partial<EarnListing> = {}): EarnListing {
@@ -139,5 +149,64 @@ describe("payment rails", () => {
     assert.equal(first.ok, true);
     assert.equal(second.ok, false);
     if (!second.ok) assert.equal(second.alreadySpentOn.reference, "int_1");
+  });
+});
+
+describe("payment methods", () => {
+  it("converts USD to lamports, rounding up so payment never under-pays", () => {
+    // $25 at $106.14/SOL ≈ 0.2355 SOL.
+    const lamports = lamportsForUsd(25, 106.14);
+    assert.ok(lamports > 235_000_000 && lamports < 236_000_000, `got ${lamports}`);
+    // Always rounds up — never leaves the verify check short by dust.
+    assert.equal(lamportsForUsd(25, 106.14) * 106.14 >= 25e9, true);
+    assert.equal(lamportsForUsd(1, 1), 1e9);
+  });
+
+  it("defaults USDC to the canonical mainnet mint", () => {
+    const prev = process.env.NEXT_PUBLIC_USDC_MINT;
+    try {
+      delete process.env.NEXT_PUBLIC_USDC_MINT;
+      assert.equal(usdcMint().toBase58(), USDC_MINT);
+    } finally {
+      if (prev === undefined) delete process.env.NEXT_PUBLIC_USDC_MINT;
+      else process.env.NEXT_PUBLIC_USDC_MINT = prev;
+    }
+  });
+
+  it("stores a SOL quote and binds it to payer, purpose and intent", () => {
+    const quote: SolQuote = {
+      id: `q_test_${Date.now()}`,
+      walletAddress: "Wallet111",
+      purpose: "edition",
+      intentId: "int_abc",
+      usdAmount: 25,
+      lamports: 235_534_000,
+      solUsd: 106.14,
+      createdAt: new Date().toISOString(),
+    };
+    store.set(`pay:quote:${quote.id}`, quote, 600);
+    const loaded = getSolQuote(quote.id);
+    assert.ok(loaded);
+    assert.equal(loaded!.lamports, 235_534_000);
+
+    assert.equal(
+      quoteMatches(loaded!, { walletAddress: "Wallet111", purpose: "edition", intentId: "int_abc" }),
+      true,
+    );
+    // Wrong payer, wrong purpose, wrong intent — all must fail.
+    assert.equal(
+      quoteMatches(loaded!, { walletAddress: "Wallet999", purpose: "edition", intentId: "int_abc" }),
+      false,
+    );
+    assert.equal(
+      quoteMatches(loaded!, { walletAddress: "Wallet111", purpose: "pro", intentId: "int_abc" }),
+      false,
+    );
+    assert.equal(
+      quoteMatches(loaded!, { walletAddress: "Wallet111", purpose: "edition", intentId: "int_xyz" }),
+      false,
+    );
+    // Unknown quote ids resolve to nothing — the verify route must reject.
+    assert.equal(getSolQuote("q_does_not_exist"), null);
   });
 });

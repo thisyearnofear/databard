@@ -11,8 +11,26 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { proAccounts } from "../../store";
-import { pusdMint, pusdRpcUrl, pusdTreasury } from "../../pusd";
+import { pusdMint, pusdRpcUrl, pusdTreasury, usdcMint } from "../../pusd";
 import { explorerUrl, type SettlementBackend, type VerifyRequest, type VerifyResult } from "../verifier";
+
+/** Shared Pro activation — a verified signature (any method) grants the wallet Pro. */
+export async function activatePro(customerId: string, reference: string): Promise<void> {
+  const existing = proAccounts.get(customerId);
+  const subscriptionId = `solana_${reference.slice(0, 16)}`;
+  if (existing) {
+    proAccounts.update(customerId, { plan: "team", stripeSubscriptionId: subscriptionId });
+    return;
+  }
+  proAccounts.set(customerId, {
+    stripeCustomerId: "",
+    stripeSubscriptionId: subscriptionId,
+    plan: "team",
+    activatedAt: new Date().toISOString(),
+    schedules: [],
+    feedToken: Math.random().toString(36).substring(2, 15),
+  });
+}
 
 export const pusdBackend: SettlementBackend = {
   id: "pusd",
@@ -70,9 +88,11 @@ export const pusdBackend: SettlementBackend = {
           .reduce((s, b) => s + BigInt(b.uiTokenAmount.amount), BigInt(0));
       const gained = balanceOf(tx.meta?.postTokenBalances) - balanceOf(tx.meta?.preTokenBalances);
       if (gained < BigInt(req.expectedAmount)) {
+        const symbol =
+          mint === pusdMint().toBase58() ? "PUSD" : mint === usdcMint().toBase58() ? "USDC" : "tokens";
         return {
           status: "mismatched",
-          detail: `Treasury gained ${(Number(gained) / 1e6).toFixed(2)} PUSD, expected ${(req.expectedAmount / 1e6).toFixed(2)}`,
+          detail: `Treasury gained ${(Number(gained) / 1e6).toFixed(2)} ${symbol}, expected ${(req.expectedAmount / 1e6).toFixed(2)}`,
         };
       }
     }
@@ -84,19 +104,6 @@ export const pusdBackend: SettlementBackend = {
   },
 
   async activate(customerId: string, req: VerifyRequest): Promise<void> {
-    const existing = proAccounts.get(customerId);
-    const subscriptionId = `palmusd_${req.reference.slice(0, 16)}`;
-    if (existing) {
-      proAccounts.update(customerId, { plan: "team", stripeSubscriptionId: subscriptionId });
-      return;
-    }
-    proAccounts.set(customerId, {
-      stripeCustomerId: "",
-      stripeSubscriptionId: subscriptionId,
-      plan: "team",
-      activatedAt: new Date().toISOString(),
-      schedules: [],
-      feedToken: Math.random().toString(36).substring(2, 15),
-    });
+    await activatePro(customerId, req.reference);
   },
 };

@@ -16,6 +16,13 @@ import { Transaction } from "@solana/web3.js";
 import { track } from "@/lib/track";
 
 type PublishState = "idle" | "preparing" | "signing" | "confirming" | "publishing" | "success" | "error";
+type PayMethod = "pusd" | "usdc" | "sol";
+
+const METHOD_LABEL: Record<PayMethod, string> = {
+  pusd: "PUSD",
+  usdc: "USDC",
+  sol: "SOL",
+};
 
 interface EditionPublishProps {
   sponsor: string;
@@ -31,6 +38,8 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
   const [error, setError] = useState<string | null>(null);
   const [permalink, setPermalink] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+  const [method, setMethod] = useState<PayMethod>("sol");
+  const [solAmount, setSolAmount] = useState<number | null>(null);
 
   const handlePublish = useCallback(async () => {
     if (!publicKey || !signTransaction) return;
@@ -54,7 +63,7 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
       }
       track("edition_intent", { sponsor: intent.sponsor, slug: intent.slug });
 
-      // 2. Unsigned transfer for the edition price.
+      // 2. Unsigned transfer for the edition price in the chosen method.
       const res = await fetch("/api/checkout/palmusd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,10 +71,14 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
           walletAddress: publicKey.toBase58(),
           purpose: "edition",
           editionId: intent.intentId,
+          method,
         }),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Failed to prepare payment");
+      if (method === "sol" && typeof data.lamports === "number") {
+        setSolAmount(data.lamports / 1e9);
+      }
 
       setState("signing");
       const tx = Transaction.from(Buffer.from(data.unsignedTxBase64, "base64"));
@@ -88,6 +101,8 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
           txSignature: signature,
           purpose: "edition",
           editionId: intent.intentId,
+          method,
+          quoteId: data.quoteId,
         }),
       });
       const verifyData = await verifyRes.json();
@@ -107,7 +122,7 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
       setError(msg);
       setState("error");
     }
-  }, [publicKey, signTransaction, sponsor, slug, router]);
+  }, [publicKey, signTransaction, sponsor, slug, router, method]);
 
   if (state === "success") {
     return (
@@ -146,7 +161,8 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
   if (state !== "idle") {
     const label =
       state === "preparing" ? "Preparing…"
-      : state === "signing" ? "Approve in wallet…"
+      : state === "signing"
+        ? `Approve in wallet${method === "sol" && solAmount ? ` — ${solAmount.toFixed(3)} SOL` : ""}…`
       : state === "confirming" ? "Confirming on-chain…"
       : "Publishing your edition…";
     return (
@@ -160,22 +176,45 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
     );
   }
 
+  const payLabel =
+    method === "sol" ? "pay in SOL" : `${pricePusd} ${METHOD_LABEL[method]}`;
+
   return (
-    <div className="flex items-center gap-4 flex-wrap">
-      <button
-        onClick={connected && publicKey ? handlePublish : () => setVisible(true)}
-        className="relative overflow-hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-white cursor-pointer transition-transform ease-out hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-br from-[var(--palm)] to-[var(--palm-light)]"
-      >
-        {connected && publicKey ? `Publish this page — ${pricePusd} PUSD` : "Connect wallet to publish"}
-      </button>
-      {connected && publicKey && (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-4 flex-wrap">
+        <button
+          onClick={connected && publicKey ? handlePublish : () => setVisible(true)}
+          className="relative overflow-hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-white cursor-pointer transition-transform ease-out hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-br from-[var(--palm)] to-[var(--palm-light)]"
+        >
+          {connected && publicKey ? `Publish this page — ${payLabel}` : "Connect wallet to publish"}
+        </button>
+        {connected && publicKey && (
+          <span className="text-xs text-[var(--text-muted)]">
+            {wallet?.adapter.name} · {publicKey.toBase58().slice(0, 4)}…{publicKey.toBase58().slice(-4)}
+          </span>
+        )}
         <span className="text-xs text-[var(--text-muted)]">
-          {wallet?.adapter.name} · {publicKey.toBase58().slice(0, 4)}…{publicKey.toBase58().slice(-4)}
+          pins the snapshot · issues the receipt · yours to share
         </span>
-      )}
-      <span className="text-xs text-[var(--text-muted)]">
-        pins the snapshot · issues the receipt · yours to share
-      </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          pay with
+        </span>
+        {(["sol", "usdc", "pusd"] as PayMethod[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMethod(m)}
+            className={`rounded border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] cursor-pointer transition-colors ${
+              method === m
+                ? "border-[var(--accent)]/60 bg-[var(--accent)]/15 text-[var(--text)]"
+                : "border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)]"
+            }`}
+          >
+            {METHOD_LABEL[m]}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
