@@ -1,14 +1,35 @@
 # Data Sources Architecture: First-Class Adapters + Coral Escape Hatch
 
+*Updated 18 September 2026: added the public-datasets tier (Superteam Earn)
+that powers the reports and editions front door. This adapter set feeds two
+consumers: the wizard/synthesis pipeline and the stateless public surfaces
+(`/earn` reports, A2MCP tools).*
+
 ## Design Principle
 
-DataBard uses a **triple-path** data architecture optimised for the end user:
+DataBard uses a **multi-path** data architecture optimised for the end user:
 
 1. **First-class adapters** for the top 6 sources — deep integration with full feature support
 2. **Coral as the "Bring Your Own Source" escape hatch** — lets users connect anything else via SQL without waiting on us to build an adapter
 3. **Monid as the metered-catalog reach layer** — one key, 1,900+ pay-per-call endpoints; an agent picks any endpoint at runtime and DataBard scores whatever rows come back, with the measured per-run cost as a receipt
 
 This is a user-first decision. First-class adapters deliver better error messages, deeper metadata extraction (lineage, PII, owners, profiler data), and zero extra dependencies. Coral gives users immediate access to the long tail of sources we haven't built adapters for yet. Monid reaches the *metered* long tail — third-party APIs an agent pays for per call — and makes that spend visible.
+
+## Tier 0: Public Datasets (the editions front door)
+
+Public, accounting-grade datasets that need no credentials and feed the
+deterministic report engine — the source of `/earn` previews and commissioned
+editions. These do **not** go through `metadata-adapter.ts`; they have their
+own deterministic pipeline (`computeEarnEdition`) so that published reports
+are reproducible and receipt-compatible.
+
+| Dataset | Lib | Status | Powers |
+|---|---|---|---|
+| Superteam Earn listings | `src/lib/superteam-earn.ts` | ✅ Shipped | `/earn` previews, editions, `/superteam` showcase, homepage examples |
+
+The roadmap unlock (Phase 12 in [`PLAN.md`](PLAN.md)) is adding user-defined
+datasets here: a Dune query, CSV, or API the customer points at, with
+provenance labels and receipt coverage.
 
 ## Tier 1: First-Class Adapters (all shipped)
 
@@ -111,6 +132,10 @@ A source should get a dedicated adapter when:
 ## Architecture Diagram
 
 ```
+superteam-earn.ts (public reports pipeline — bypasses metadata-adapter):
+
+  superteam-earn        → Earn public API     Tier 0 ✅   listings → deterministic editions + receipts
+
 metadata-adapter.ts (the unified entry point) dispatches on config.source:
 
   openmetadata          → OM REST API         Tier 1 ✅   full depth · HTTP only

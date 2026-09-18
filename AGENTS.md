@@ -110,12 +110,12 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["databard:theme"]` and sets `data-theme` on `<html>` before first paint, so light mode never flashes dark; `data-theme="dark"` stays the no-JS default. Light mode is opt-in via the `ThemeToggle` component (persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components. Type: headings (`h1,h2,h3`) and score numerals use the self-hosted Space Grotesk face via `--font-display` / `.font-display`; body copy stays system-ui.
 
 ## Docs
-- `docs/STRATEGY.md` — north star, competitive positioning, product principles, operating principles (PG framework)
-- `docs/GTM.md` — viral hooks, engagement loops, user interview plan, manual outreach target list
+- `docs/STRATEGY.md` — north star (public accounting: reports people share, tools agents call), positioning, principles (rewritten Sep 2026)
+- `docs/GTM.md` — the two distribution loops (edition shares, agent discovery), hooks, manual outreach
 - `docs/OPERATIONS.md` — prod env, schedule cron, stay-alive / shared PM2
-- `docs/UNIT_ECONOMICS.md` — cost-per-briefing, pricing, margin analysis
-- `docs/PLAN.md` — development roadmap (Phases 1-9)
-- `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture
+- `docs/UNIT_ECONOMICS.md` — margins per revenue shape (editions, x402 briefing, probe, legacy Pro)
+- `docs/PLAN.md` — roadmap (Phases 1-9 compressed history, 10-14 forward)
+- `docs/DATA_SOURCES_ARCHITECTURE.md` — tiered source architecture (Tier 0 public datasets → Tier 2b Monid)
 - `docs/DATAHUB_HACKATHON.md` — DataHub Agent Hackathon submission packet (pitch, judging-criteria map, setup, demo shot list)
 - `docs/MONID_HACKATHON.md` — Monid "We Kill" hackathon packet (generic metered-endpoint kill, measured-cost receipt, deferred video/social checklist)
 - `docs/CANDIDATE_TRACKER.md` — PARKED until after Monid: Campaign Lab candidate-website longitudinal tracker (separate vertical experiment, not the data-health roadmap)
@@ -303,3 +303,11 @@ stack trace); **soft** (timeout / rate-limit / exec / empty / parse) degrade via
   is JS-rendered and scrapes empty; keep "≈$349–390/mo" or omit the number.
 - Unit-tested offline: `tests/monid-adapter.unit.ts` (36 tests over the pure
   mapping layer — no CLI, no key).
+
+## Public reports and agent discovery
+- `/` is the report-first landing; explicit `?workspace=`, `?persona=`, and `?start=` routes retain the analytical wizard in `src/components/wizard/WizardHome.tsx`.
+- `/agents` is the human-readable agent-tool entry point; its free example sends only `{ demo: true }` to `/api/mcp/health-check`. `/probe` keeps paid invocation details separate from the no-payment preview.
+- Homepage examples are computed from one captured listing set in `src/lib/report-examples.ts`; client selection never reruns analysis. `src/lib/report-evidence.ts` projects existing report values without changing ranks or scores.
+- `ReportEvidenceExplorer` links report questions to charts, comparisons, and methodology. `PublicationFrame` reflects actual checkout states; it never simulates payment progress.
+- Focused non-browser checks: `DATABARD_DATA_DIR=/tmp/databard-interaction-tests npx tsx --test tests/report-examples.unit.ts tests/report-surfaces.unit.tsx tests/checkout-recovery.unit.ts`, then `npx tsc --noEmit`.
+- The current ESLint configuration does not match TS/TSX files; an ignored-file warning is not a successful lint check.

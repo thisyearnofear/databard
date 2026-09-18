@@ -1,48 +1,75 @@
 # DataBard Unit Economics
 
-## The one number
+*Rewritten 18 September 2026. The old doc centered the $49/month Teams
+subscription. The business now has three revenue shapes — editions, per-call
+agent tools, and the legacy Pro tier — and this doc tracks each.*
 
-**It costs ~$0.80 to generate one weekly briefing.**
-**We charge $49/month per team.**
-**Margin: ~$44/month per team (at 4 briefings/month, 1 schema).**
+## The numbers that matter
 
----
+| Revenue shape | Price | Marginal cost | Margin | Status |
+|---|---|---|---|---|
+| **Commissioned edition** | $25 one-off (PUSD/SOL/USDC) | ~$0 (deterministic compute over cached public data) | ~100% | Live; sales unproven |
+| **`databard_briefing`** (x402) | $1.00/call | ~$0.30–0.35 (Flash TTS + bookends SFX) | ~$0.65 (~65%) | Live; real calls, volume unproven |
+| **`databard_probe`** (x402) | $1.00/call | ~$0.01–0.12 (outbound payments to probed services) | ~88–99% | Live; real calls, volume unproven |
+| **Pro subscription** (wizard) | $49/month | ~$3.40/month per team at 1 schema (TTS-dominated) | ~$45/team | Kept; no longer the lead offer |
+| **Free tools** (`health-check`, `writeback`, probe preview) | $0 | ~$0 | — | Acquisition |
 
-## Cost breakdown per weekly briefing
-
-| Component | Service | Model/Tier | Usage | Cost |
-|-----------|---------|------------|-------|------|
-| **Script generation** | OpenAI API | GPT-4o-mini | ~5,000 tokens (1,200 system + 3,000 input + 800 output) | $0.001 |
-| **Voice synthesis** | ElevenLabs | eleven_multilingual_v2 | ~2,000 characters speech + 5 SFX generations | $0.63–$1.02 |
-| **Solana attestation** | Solana RPC | Memo program (mainnet) | 1 transaction | $0.001–$0.05 |
-| **Email delivery** | Resend | Pro plan | 1 email | $0.001 |
-| **Total per briefing** | | | | **$0.64–$1.07** |
-
-**TTS is 95% of variable cost.** Everything else is negligible.
-
-### Why TTS dominates
-
-ElevenLabs charges $0.10 per 1,000 characters for speech and $0.12 per sound effect generation. A typical 2-minute briefing has ~2,000 characters of speech ($0.20) and 5 sound effects ($0.60). The SFX are the surprise cost driver — each intro, outro, and transition is a separate API call.
-
-### Cost reduction levers
-
-1. **Switch to ElevenLabs Flash model** — $0.05 per 1,000 chars (50% cheaper), slightly lower quality
-2. **Reduce SFX calls** — batch transitions or use pre-rendered assets instead of per-segment generation
-3. **Cache aggressively** — scripts cached 1hr, audio cached 24hr. Same schema = $0 marginal cost on cache hit
-4. **Use Azure OpenAI credits** — moves the $0.001 LLM cost to free credits (negligible but clean)
+The edition is the standout: because public reports are computed
+deterministically from cached public data — no LLM, no TTS — a published
+edition costs effectively nothing to produce. The $25 is almost pure margin.
+This is the economic argument for the deterministic pipeline, not just the
+trust argument.
 
 ---
 
-## Monthly cost per team
+## Cost detail
 
-| Schemas tracked | Briefings/month | Variable cost | At $49/month | Margin |
-|-----------------|-----------------|---------------|---------------|--------|
-| 1 | 4.3 | $3.40 | $49 | $45.60 |
-| 3 | 13 | $10.40 | $49 | $38.60 |
-| 5 | 21.5 | $17.20 | $49 | $31.80 |
-| 10 | 43 | $34.40 | $49 | $14.60 |
+### Editions: why marginal cost is ~$0
 
-**Break-even at 10 schemas per team.** Most teams will track 3–5.
+- Computation is deterministic (`computeEarnEdition`) over a cached public
+  dataset (`loadEarnListings`) — no LLM, no TTS, no per-publish API spend.
+- The receipt is a local SHA-256 (`src/lib/evidence-receipt.ts`).
+- Settlement is a Solana transfer the customer pays network fees on ("network
+  fees are additional" is on the pricing copy).
+- What remains is hosting amortisation and storage, both negligible per page.
+
+### x402 briefing: TTS is 95% of variable cost
+
+| Component | Model/Tier | Usage | Cost |
+|---|---|---|---|
+| Script generation | GPT-4o-mini | ~5,000 tokens | $0.001 |
+| Voice synthesis | ElevenLabs Flash (scoped via `BRIEFING_TTS_MODEL`) + bookends SFX (`BRIEFING_SFX_MODE`) | ~2,000 chars + SFX | ~$0.30–0.35 |
+| Settlement | x402 on X Layer (USDT0) | 1 transfer | dust |
+| **Total per briefing** | | | **~$0.30–0.35** |
+
+Settlement fires only after the handler returns <400 — a failed synthesis
+never charges the caller, so we never earn revenue we have to refund.
+
+### Probe: bounded outbound spend
+
+A Probe call's cost is the payments it makes to candidate services plus gas and
+the optional attestation write. Live observation (18 Sep full-candidate run):
+actual outbound spend was **$0.01001** — the $0.12 figure is a conservative
+ceiling, not the norm.
+
+Guardrails in `probe-runner.ts`:
+
+1. **Outbound spend cap** — `MAX_OUTBOUND_SPEND_USD` (default $0.50) checked
+   before each paid call; remaining paid candidates are skipped with an honest
+   error in the response.
+2. **1-hour result cache** — payment-mode-aware (`paid:`/`free:`), so repeat
+   probes don't re-spend and free previews never poison paid results. Hard
+   failures are never cached.
+3. **No LLM / no TTS** — pure HTTP + JSON parsing; variable cost stays near
+   zero at any volume.
+4. **User-supplied candidates capped at 10**, each under the same spend cap.
+
+### Pro subscription (legacy/supporting surface)
+
+Cost per weekly wizard briefing: $0.64–$1.07 (TTS-dominated; the Flash lever
+drops it ~50%). At $49/month and 3–5 schemas per team, margin is $31–45/team.
+The tier still works and still pays its way, but it is no longer where growth
+is expected from.
 
 ---
 
@@ -50,134 +77,56 @@ ElevenLabs charges $0.10 per 1,000 characters for speech and $0.12 per sound eff
 
 | Item | Cost | Notes |
 |------|------|-------|
-| VPS (Hetzner) | $5–10 | Single server, PM2, Next.js + Coral sidecar |
-| ElevenLabs Starter | $5 | Required for API access |
-| Resend Pro | $20 | 50,000 emails/month (optional — free tier covers 3,000) |
+| VPS (shared, PM2) | $5–10 | `snel-bot`; Next.js standalone + stay-alive cron |
+| ElevenLabs Starter | $5 | Required for API access (wizard + x402 briefing) |
+| Resend Pro | $20 | Optional — free tier covers 3,000 emails |
 | Domain | $1 | persidian.com |
 | **Total fixed** | **$11–36** | |
-
-At 10 paying teams ($490/month revenue), fixed costs are covered with ~$450 margin.
-
----
-
-## Pricing
-
-### Entry price: $49/month per team (Stripe)
-
-- Below the "need to ask my manager" threshold for most data teams
-- Covers up to 5 schemas, unlimited listeners
-- Includes on-chain attestation (Solana mainnet)
-- Includes weekly email digest delivery
-- Includes embeddable health badge
-
-### Pay-per-call: x402 A2MCP (agent-to-agent)
-
-For agents rather than humans. The `databard_briefing` MCP tool charges **$1.00 per call** (configurable via `BRIEFING_PRICE_USD`) settled as exact EIP-3009 USDT0 on X Layer via the OKX Payment SDK. Settlement only fires after the handler returns <400 — failed synthesis never charges the caller.
-
-| Tool | Price | Cost | Margin |
-|---|---|---|---|
-| `databard_health_check` | Free | ~$0.00 (no LLM/audio) | — (acquisition; every response carries the `upgrade` upsell block for the briefing) |
-| `databard_briefing` | $1.00 | ~$0.30–0.35 (Flash TTS + bookends SFX, scoped to this route via `BRIEFING_TTS_MODEL` / `BRIEFING_SFX_MODE`; subscriptions keep premium voices) | ~$0.65 (~65%) |
-| `databard_write_back` | Free | ~$0.00 (no LLM/audio) | — |
-| `databard_probe` | $1.00 | ~$0.12 (outbound x402 payments to probed services + gas + attestation write; no LLM/audio) | ~$0.88 (~88%) |
-
-At 100 briefing calls/month that's ~$20 additional margin on top of the subscription business.
-
-#### Probe economics & sustainability guardrails
-
-A single Probe call costs roughly $0.12 in outbound spend when using the five
-default candidates (Doxa $0.005, Onchain Data Explorer $0.01, Atlas $0.00001,
-PolyDesk $0.10, DataBard self $0). At a $1.00 sticker price that yields ~88%
-gross margin — the best of any tool in the suite, since there is no TTS or
-LLM involved.
-
-Sustainability guardrails built into `probe-runner.ts`:
-
-1. **Outbound spend cap** — `MAX_OUTBOUND_SPEND_USD` (default $0.50) is checked
-   before each paid call. If the cumulative cost of a probe batch would exceed
-   the cap, remaining paid candidates are skipped with
-   `error: "Skipped: outbound spend cap reached"` in the response. Worst-case
-   COGS is therefore bounded well below the $1.00 price.
-   Live observation (Sep 18 full-candidate run): actual outbound spend was
-   $0.01001 (OKLink $0.01 + Atlas $0.00001) — PolyDesk answers without an
-   x402 challenge and Doxa was unreachable, so the $0.12 estimate is a
-   conservative ceiling, not the norm.
-2. **1-hour result cache** — repeat probes for the same endpoint + body within
-   one hour return the cached result without re-spending, so multiple callers
-   asking about the same service only trigger one outbound call. Cache keys
-   are payment-mode-aware (`paid:` / `free:` prefix), so free previews can
-   never poison paid results or vice versa.
-   A hard-failure probe (fetch error / SSRF rejection) is never cached.
-3. **No LLM / no TTS** — the probe pipeline is pure HTTP + JSON parsing,
-   keeping variable cost near zero regardless of volume.
-4. **User-supplied candidates are capped at 10** and each is subject to the
-   same spend cap, so a malicious or careless caller cannot force unbounded
-   outbound payments.
-
-**Break-even on Probe alone:** at 5 calls/day ($150/month revenue, ~$18/month
-COGS) the tool contributes ~$132/month margin before fixed costs.
-
-### Why $49, not $99 or $29
-
-- **$29** — too close to per-user SaaS tools (Slack, Notion). DataBard is a team tool, not a per-seat tool. Pricing per-seat would penalize sharing, which is our distribution loop.
-- **$49** — comparable to a single Datadog host ($15–35) but delivers more decision-relevant value. Below the procurement threshold at most companies. High enough to signal "this is a real tool" without being expensive enough to require a committee.
-- **$99** — would be the right price for a team tracking 10+ schemas with custom alerts. Save this for a Pro tier. Don't lead with it.
-
-### What's free
-
-- Demo (no signup)
-- Single ad-hoc briefing generation
-- Shared episode viewing
-- Leaderboard browsing
-- Verify page (public good)
-- Probe free preview (`/api/probe/preview`, 10/hr) — same scorer, no outbound
-  payments; paid candidates surface an honest "402 challenge" flag
-- Health badge (embeddable, free forever — it's a distribution surface)
-- `databard_health_check` A2MCP tool
-- `databard_write_back` A2MCP tool
-
-### What's paid
-
-- Scheduled weekly digests (the retention loop) — $49/month via Stripe
-- Multiple schemas — $49/month
-- Custom alerts — $49/month
-- On-chain attestation (Solana mainnet, Protocols workspace) — $49/month
-- Team management (multiple recipients) — $49/month
-- `databard_briefing` A2MCP tool — $1.00/call via x402 (agent pay-per-call)
-- `databard_probe` A2MCP tool — $1.00/call via x402 (agent-service quality probe)
 
 ---
 
 ## The PG question: "Are you default alive?"
 
-**Yes, at 10 paying teams.**
+Reframed for the three shapes:
 
-- 10 teams × $49 = $490/month revenue
-- Variable costs: ~$100/month (assuming 3 schemas avg, 13 briefings/month each)
-- Fixed costs: ~$36/month
-- **Net: ~$354/month positive**
+- **Editions alone:** one edition per day ($750/month) covers fixed costs ~20×
+  over at near-zero marginal cost. The constraint is distribution, not cost.
+- **Probe alone:** 5 paid calls/day ≈ $150/month revenue against ~$18/month
+  worst-case COGS — fixed costs covered by the oracle alone.
+- **Old framing:** 10 paying Pro teams ($490/month) still works, ~$350/month
+  net. It's just no longer the plan of record.
 
-At 1 paying team, you're losing ~$36/month on fixed costs. That's fine — the first 10 users are manual, not paid. The first paying team validates the price. The 10th paying team validates the business.
+The honest state: all three shapes are margin-positive per unit. None has
+proven volume. The next dollar of effort goes to distribution (Phase 11), not
+cost optimisation.
 
 ---
 
 ## What we don't know yet
 
-1. **How many schemas does a real team track?** Our guess is 3–5. The first 10 conversations will tell us.
-2. **Is the briefing worth $49/month?** We won't know until someone pays. The free tier removes price as the barrier; the paid tier tests value.
-3. **Does TTS quality matter?** If Flash model is good enough, costs drop 50%. A/B test after 10 users.
-4. **What's the retention curve?** If teams churn after 2 months, the LTV doesn't justify the CAC. We need 3 months of data from real users.
+1. **Will anyone pay $25 for a dated page?** The first three real edition
+   sales answer this. Free previews remove price as the barrier to reading;
+   publishing tests value.
+2. **Do agents come back?** Real calls are happening; the repeat rate is the
+   number that matters.
+3. **Does the loop loop?** If shared previews don't produce new previews, the
+   distribution model needs rethinking before Phase 12.
+4. **Is $25 the right price?** Untested. The first ten payments are the price
+   test, not a survey.
+5. **What's a sponsored edition worth?** Unknowable until Phase 11 produces
+   distribution numbers to sell against.
 
 ---
 
 ## Method
 
-These costs are calculated from the actual codebase:
-- `src/lib/script-generator.ts` — LLM call, GPT-4o-mini, ~5K tokens
-- `src/lib/audio-engine.ts` — ElevenLabs API, eleven_multilingual_v2, ~2K chars + 5 SFX
-- `src/app/api/onchain/mint-solana/route.ts` — Solana Memo transaction
-- `src/lib/notifications.ts` — email delivery (SMTP or webhook)
-- `src/lib/grove-storage.ts` — Lens Protocol Grove IPFS storage (immutable ACL, no per-upload cost beyond gas)
-- `src/lib/x402.ts` — x402 pay-per-call settlement (OKX Payment SDK, X Layer)
+Costs are calculated from the codebase:
 
-Pricing is a hypothesis. The first 10 paying teams are the test.
+- `src/lib/editions.ts` + `src/lib/superteam-earn.ts` — deterministic edition computation
+- `src/lib/evidence-receipt.ts` — local SHA-256 receipts
+- `src/lib/x402.ts` — x402 settlement (OKX Payment SDK, X Layer)
+- `src/lib/script-generator.ts`, `src/lib/audio-engine.ts` — LLM + TTS for briefings
+- `src/lib/probe-runner.ts` — probe outbound spend, caps, caching
+- `src/lib/pusd.ts` — edition ($25) and Pro ($49) pricing, SOL/USDC/PUSD rails
+
+Pricing is a hypothesis. The first ten payments in each shape are the test.

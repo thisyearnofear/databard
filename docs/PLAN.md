@@ -1,166 +1,100 @@
 # DataBard — Development Plan
 
+*Rewritten 18 September 2026. Phases 1–9 are compressed history; the forward
+roadmap reflects the two-front-door strategy (see [`STRATEGY.md`](STRATEGY.md)).*
+
 ## What We're Building
 
-DataBard is an AI data analyst that monitors your data estate, synthesises what it finds, and acts on it. The core product is a **synthesis engine** that connects to any data source, computes health scores, generates trend narratives, and recommends next steps. Audio briefings, dashboards, alerts, and (next) automated actions are all output formats of that engine. The agent layer is the product; the outputs are how it reaches you.
+DataBard turns public data into public accounting: reports people share and
+agents call — every finding dated, receipted, and checkable. Human front door:
+public reports and commissioned editions. Machine front door: A2MCP tools with
+x402 payment. One deterministic engine underneath; the wizard and its audio
+briefings remain as a supporting surface.
 
-## Why It Matters
+## Where We Are (September 2026)
 
-Data teams produce findings nobody reads. Dashboards have 47 rows of test results. Execs want a 1-line summary. DataBard's synthesis engine distills metadata from any source into outputs people actually consume: audio briefings, dashboards with trend narratives, and alerts that find you.
+- **Live:** report-first landing with interactive examples; `/earn` directory +
+  free previews; commissioned editions ($25 PUSD/SOL/USDC, pinned snapshot,
+  receipt, attribution); `/superteam` showcase; `/league`; `/roast`; `/verify`.
+- **Live (agents):** A2MCP tools — free `health-check`, $1 `briefing` (x402 on
+  X Layer), $1 `probe` (service-quality oracle), `writeback`, `tools`
+  discovery. Listed on OKX.AI; Monid adapter shipped. Real calls happening;
+  volume unproven.
+- **Kept, supporting:** the wizard (connect dbt, catalogs, Dune, subgraphs,
+  DataHub, Monid → synthesis + optional audio briefing), Pro digests, alerts.
+- **Honest gaps:** no proven edition sales yet; league live-scan cron still
+  open; user interviews still owed (Phase 7 debt, carried into Phase 11).
 
-## Target Users
+## History (compressed)
 
-- **Data team leads** who spend hours building reports nobody opens
-- **Execs and PMs** who want the bottom line, not the raw test results
-- **Onchain/web3 teams** who need publicly verifiable protocol health
-- **Anyone who'd rather hear a 2-minute summary than read a dashboard**
+| Phase | Era | Outcome |
+|---|---|---|
+| 1–2 | Hackathon core | Wizard, two-voice scripts, TTS, episode player, Stripe Pro |
+| 3–4 | Analysis-first | Dashboard-first flow, trend narratives, format picker |
+| 5 | Viral hooks | Share cards, Monday email, `/roast`, badges, event tracking |
+| 6–6.8 | Solana demo + workspaces | `/verify`, Teams/Protocols split, Grove persistence, A2MCP tools, OKX ASP registered, `/league`, stay-alive cron |
+| 7.1 | Portable evidence | Chain-neutral receipt, offline verification, Solana adapter (World's Fair slice) |
+| 8 | Field-sales discovery | Parked vertical experiment ([`FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md)) |
+| 9 | Future list | Candidate tracker (parked), Azure, Purview |
+| 9.5 | Public accounting pivot | `/superteam` showcase → parameterised `/earn` editions; PUSD + SOL/USDC checkout; anti-agency rule; OKX listing **approved**; Probe shipped; Monid "We Kill" submission; report-first landing replaces wizard-first |
 
-## Roadmap
+## Forward Roadmap
 
-### Phase 1: Core (hackathon) — Done
-- [x] Connect to OpenMetadata via REST API
-- [x] Fetch schema metadata (tables, columns, quality, lineage, tags)
-- [x] Generate two-host conversation script from metadata
-- [x] Synthesize audio via ElevenLabs TTS (two voices)
-- [x] Episode player with waveform visualization
-- [x] Catalog browser UI
+### Phase 10: Public Record Identity — in progress
 
-### Phase 2: Polish & Expansion — Done
-- [x] ElevenLabs sound effects for transitions
-- [x] Visual segment timeline
-- [x] Shareable episode links / embeds (`/episode/[id]`)
-- [x] Monetization: Stripe Pro tier
-- [x] The Graph + Dune Analytics adapters
-- [x] Coral integration (50+ sources via SQL)
-- [x] Solana on-chain attestation (Memo Program + PDA registry)
-- [x] Scheduled regeneration (Pro tier)
-- [x] Historical diff intros ("since last week, 2 new failures")
+Make the product look like what it is: a registry of verifiable findings.
 
-### Phase 3: Analysis-First Repositioning — Done
-- [x] Landing page rewritten: analysis-first hero, live dashboard stats, three pillars
-- [x] Default persona initially set to enterprise (later flipped to Protocols beachhead — Phase 6.8)
-- [x] Alerts page with email-based subscriptions (decoupled from wallet)
-- [x] Alert badges on protocol dashboard cards
-- [x] Executive summary output format (2-minute briefing)
-- [x] Format picker for all sources (not just Coral)
-- [x] Schedule form with output format selector
-- [x] Auto-attest weekly digests for wallet-connected Pro accounts
+- [ ] Registry/visual identity pass across landing, report pages, publishing flow
+- [ ] Report pages recast as dated filings; receipt presented as the seal
+- [ ] Publish "seal lands" moment (real states only, no simulated progress)
+- Gate: a cold visitor can say what DataBard is in one sentence after 10 seconds on `/`.
 
-### Phase 4: Dashboard-First + Trend Narratives — Done
-- [x] After generation, land on /protocol dashboard (not episode player)
-- [x] "Listen to this analysis" button on dashboard
-- [x] Anthem removed from main flow, moved to /labs
-- [x] Format picker narrowed to 2 options (Full analysis / Executive briefing)
-- [x] Format picker added for non-Coral sources (OpenMetadata, dbt, etc.)
-- [x] Trend narrative API (`/api/insights/trends`)
-- [x] "What changed this week" section on dashboard
-- [x] Trend narratives in executive summary format
-- [x] Onchain page reframed as "Onchain Primitives" showcase
-- [x] Coral showcase section on landing page
-- [x] Coral presets expanded (stale PRs, bug triage)
+### Phase 11: Prove the Edition Loop
 
-### Phase 5: Viral Hooks & Retention — Done
-- [x] CTA on shared episode / score-card pages
-- [x] Monday signup on the finding (later refined in Phase 6.8; Pro still for multi-schema)
-- [x] Share card / clip feature (refined to score-card OG in Phase 6.8)
-- [x] Email delivery for scheduled digests
-- [x] "Roast my data" landing page variant (`/roast`)
-- [x] Health score badge (embeddable SVG, `/api/badge/[schema]`)
-- [x] Team email recipients for scheduled digests
-- [x] Plausible analytics + funnel event tracking
+The edition is the business; prove the loop loops before building more of it.
 
-### Phase 6: Solana Accelerator Demo — Done
-See [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) for the talk track, click path, and preflight checklist.
+- [ ] 5 user interviews (carried debt from Phase 7): sponsors + protocol data teams
+- [ ] Manual outreach to the 10 most flattering Earn previews, one per day
+- [ ] First 3 published editions from real customers (not us)
+- [ ] Instrument preview → publish conversion and share rate; review weekly
+- [ ] One hand-made 60s audio cut of the `/superteam` showcase as a share
+      asset — the cheap test of whether the bard belongs on public reports
+- Gate: evidence that a shared preview produces a new preview (loop), or a
+  written post-mortem on why it doesn't.
 
-- [x] Dashboard redesigned on dither-kit: fleet-health chart (scrub + legend spotlight), generative source avatars, dithered CTAs
-- [x] Dashboard-first demo: "Try the demo" seeds deterministic data (`POST /api/demo/seed`); Protocols land on `/league`, Teams on `/protocol`
-- [x] `/verify` page + `/api/onchain/verify`: decode the SPL-memo attestation, recompute the report hash, show match/mismatch (also renders marketplace settlement receipts)
-- [x] Teams/Protocols workspace model: `/` defaults to **Protocols**; Teams hides wallet chrome
-- [x] Wallet provider loads only for Protocols dashboard and on-chain routes (not shared score-card pages)
-- [x] Dashboard broken into briefing components (`DashboardHeader`, `PriorityBriefingCard`, `DashboardSummary`, `ChangeNarratives`, `SourceHealthList`) with shared health logic in `src/lib/briefing-health.ts`
-- [x] `/?workspace=protocols` URL param; legacy `?persona=onchain` still maps to Protocols
-- [x] Onboarding tour moved off the landing hero; decision-support copy
-- [x] Leaderboard backfills zero-score mint rows from engine snapshots
+### Phase 12: Datasets Beyond Earn (the unlock)
 
-### Phase 6.5: UI/UX Catch-Up — Match the Demo Video
-- [x] Dark-first theme enforced as default (`data-theme="dark"` on `<html>`, removed `prefers-color-scheme: light` override); light mode still available via ThemeToggle
-- [x] Landing page: added browser-framed dashboard screenshot to break up the text wall
-- [x] Leaderboard rebuilt: sorting (score/change/recent), filter toggle (all/verified/scanned), search, stats summary bar, styled claim buttons, improved row design, empty states
-- [x] History page: episode count and recent episode previews shown above the wallet gate; "What is this?" explainer added; gate reframed as "Connect to see your full history"
-- [x] Wizard context split: 538-line monolith decomposed into `wizard-types.ts` (types + initialState), `wizard-reducer.ts` (5 domain reducers), `wizard-effects.ts` (5 extracted effect hooks), slim `wizard-context.tsx` (provider only)
-- [x] Fixed infinite render loop from unstable `onReady` callback in persona sync effect
+- [ ] Bring-your-own-dataset surface: Dune query, CSV, or API → accounting page
+- [ ] Customer-defined entities + metrics whitelist; engine does the rest
+- [ ] Receipt coverage for user-supplied sources, with provenance labels
+- Gate: one external dataset produces a page its owner shares, with zero
+  hand-curation from us (agency-creep tripwire).
 
-### Phase 6.7: OKX.AI ASP + A2MCP — Done
-- [x] `POST /api/mcp/health-check` — free A2MCP tool (health score + recommended actions, no LLM/audio)
-- [x] `POST /api/mcp/briefing` — paid A2MCP tool (x402 EIP-3009 USDT0 on X Layer, default $1.00/call)
-- [x] `POST /api/mcp/writeback` — free A2MCP tool (writes findings back into DataHub context graph)
-- [x] `GET /api/mcp/tools` — service discovery (tool list + JSON input/output schemas)
-- [x] x402 server setup (`src/lib/x402.ts`) — OKX Payment SDK, `syncSettle: true`, 503 on misconfigured deploy
-- [x] ASP #9878 registered on OKX.AI (X Layer, chainIndex 196); services attached (`Data Health Check` id 37750, `Data Briefing` id 37751); submitted for final OKX review
-- [x] Episode persistence via Lens Protocol Grove (`src/lib/grove-storage.ts`) — IPFS-backed, immutable ACL
-- [x] `DATABARD_DATA_DIR` production guard (`src/lib/data-dir.ts`) — throws at startup without it, preventing process.cwd() bundle trace blowup
-- [x] Bundle size guard (`scripts/check-bundle-size.mjs`) — fails build if `.next/standalone/` exceeds 120MB; current healthy size ~85MB
+### Phase 13: Sponsored Editions
 
-### Phase 6.8: Protocol Growth Loop — Done
-Beachhead = Protocols (interest is web3-heavy). Close the viral/retention loop without burying attestation.
+- [ ] Named-sponsor slot on a flagship public artifact (league or ecosystem report)
+- [ ] Media-model pricing; adjacency to a trusted artifact, never custom labour
+- Gate: one paid sponsor, sold on the strength of Phase 11 distribution numbers.
 
-- [x] Default workspace Protocols; landing proof = live declining finding or seeded Orca drop
-- [x] Public `/league` + `/api/league` + `/api/og/league` (sample roster when no live scan — honesty in copy)
-- [x] Share as a **score card** (OG + quote + ~15s audio); shared TTL 21 days; no wallet on `/episode/[id]`
-- [x] Protocols demo lands on `/league?from=demo` (claim row / listen)
-- [x] Monday email on the finding (`MondaySignup`) — habit before `/pro`
-- [x] Prod stay-alive: `scripts/ensure-running.sh` cron + `docs/OPERATIONS.md` shared-PM2 notes
+### Phase 14: Agent-Economy Depth
 
-### Phase 7: Validation & GTM
-- [ ] 5 user interviews (protocol teams first; data team leads as expansion)
-- [ ] Monday live-scan cron so `/league` is not sample-only
-- [ ] A/B test CTA ordering (demo vs connect first)
-- [ ] Review funnel numbers against targets in [`docs/GTM.md`](GTM.md)
-- [ ] Blog / social from league editions (see [`docs/CONTENT_PLAYBOOK.md`](CONTENT_PLAYBOOK.md))
-- [ ] Wait for OKX final approval (status flips to "listed" — check with `onchainos agent get-agents --agent-ids 9878`)
-- [ ] Record 90s X demo post with `#OKXAI` (shot list in [`docs/OKX_AI_ASP.md`](OKX_AI_ASP.md))
+- [ ] Public probe verdicts (the "Wirecutter for agent services" content engine)
+- [ ] Free → paid conversion instrumentation on the A2MCP funnel
+- [ ] Probe attestation volume on X Layer; OKX/Monid listing optimisation
+- [ ] Monday live-scan cron for `/league` (carried from Phase 7)
+- Gate: sustained weekly paid calls from agents we don't know personally.
 
-### Phase 7.1: Portable Evidence — World’s Fair Delivery Slice
+### Parked (not the roadmap)
 
-Direction: **chain-agnostic evidence, Solana-native execution**. See [Portable Evidence](PORTABLE_EVIDENCE.md) for the format, compatibility boundaries and acceptance gates.
-
-- [x] Existing-project eligibility confirmed by project owner (September 17, 2026)
-- [ ] Review detailed competition rules and record pre-existing/new work
-- [x] Versioned chain-neutral receipt, deterministic hashing and offline integrity verification
-- [x] Additive health-check receipt and discovery schema, with demo/privacy/round-trip tests
-- [ ] Separate attestation and payment adapters; remove chain types from shared boundaries without breaking existing APIs
-- [x] Solana adapter library: unsigned Memo preparation and RPC-backed expected-wallet verification, tested offline
-- [x] Add wallet-signed prepare/anchor/verify HTTP routes with consent and offline route tests; legacy paths unchanged (not deployed)
-- [ ] Wallet UI and live-network end-to-end verification; see [Attestation API](ATTESTATION_API.md)
-- [ ] Complete issuer trust configuration, retry/idempotency and operational verification
-- [ ] One real protocol-operator workflow, measured time saved and repeat-use feedback
-- [ ] Harden token-payment verification and review escrow before meaningful funds; not the demo critical path
-
-### Phase 8: Field-Sales Allocation Discovery — Validate Before Building
-
-See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md). This is a separate vertical experiment, not a replacement for the data-health roadmap.
-
-- [ ] Run one controlled pilot with a field-sales organisation; start with reviewed account, activity, and commercial outcome exports
-- [ ] Define the canonical account, representative, activity, opportunity, and accounting-outcome model with the pilot customer
-- [ ] Build a reviewable account-identity matching workflow; surface uncertain matches instead of silently merging records
-- [ ] Back-test coverage and allocation hypotheses against historical orders, invoices, payments, credits, renewals, or another agreed outcome
-- [ ] Produce a manager-reviewable allocation briefing: under-covered high-potential accounts, capacity mismatches, recommended action, evidence, and confidence
-- [ ] Track recommendation adoption and outcome against a pre-agreed baseline or comparable cohort
-- [ ] Validate the actual activity source before building an integration: CRM, email, WhatsApp, calendar, manager report, or another system
-- [ ] Define data-access, retention, deletion, audit-log, and performance-decision safeguards with the pilot customer
-- [ ] Defer live Xero/QuickBooks integrations and zero-knowledge proofs until a pilot demonstrates a specific, recurring need
-
-### Phase 9: Future
-- [ ] **Candidate Website Tracker (parked)** — Campaign Lab brief: turn the 2024
-      candidate-site scrape into a longitudinal messaging-shift dataset. Separate
-      vertical experiment, NOT the data-health roadmap. Scoping + reuse map in
-      [`docs/CANDIDATE_TRACKER.md`](CANDIDATE_TRACKER.md). Revisit only after Monid
-      submission and Phase 7 validation.
-- [ ] Azure migration — inference on Azure OpenAI, hosting on Container Apps ([`docs/AZURE.md`](docs/AZURE.md))
-- [ ] Microsoft Purview Tier-1 adapter ([`docs/PURVIEW_ADAPTER.md`](docs/PURVIEW_ADAPTER.md))
-- [ ] Custom voice personalities
-- [ ] Benchmarking — "your health score vs. teams your size"
-- [ ] Custom Anchor program for richer on-chain PDA queries
+- Field-sales allocation vertical — [`FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md)
+- Candidate website tracker — [`CANDIDATE_TRACKER.md`](CANDIDATE_TRACKER.md)
+- Azure migration — [`AZURE.md`](AZURE.md)
+- Purview Tier-1 adapter — [`PURVIEW_ADAPTER.md`](PURVIEW_ADAPTER.md)
+- Custom voice personalities, benchmarking, custom Anchor program
 
 ## Paper Canvas (developer tool)
-The Paper.design MCP integration in `src/lib/paper-canvas.ts` renders the same 3-slide dashboard onto a live Paper canvas for design iteration. This requires Paper Desktop running locally and is **not** used in the user-facing export path. Use it when iterating on the dashboard layout — the pure HTML builders (`buildOverviewHtml`, `buildCriticalAndActionsHtml`, `buildLineageAndOwnershipHtml`, `buildDashboardHtml`) are the single source of truth for both the Paper preview and the PDF export.
+
+The Paper.design MCP integration in `src/lib/paper-canvas.ts` renders dashboard
+slides onto a live Paper canvas for design iteration. Requires Paper Desktop
+locally; not used in the user-facing export path. The pure HTML builders remain
+the single source of truth for preview and PDF export.

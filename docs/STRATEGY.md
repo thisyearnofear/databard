@@ -1,330 +1,176 @@
-# DataBard Strategy: The AI Data Analyst That Acts
+# DataBard Strategy: Public Accounting for Ecosystems
+
+*Rewritten 18 September 2026, supersedes the 2025 audio-wedge strategy. The old
+doc described the wizard product at a time when audio briefings were the lead
+offer. This one describes what DataBard actually is now: two front doors, one
+engine, verifiability as the brand.*
 
 ## North Star
 
-**DataBard is an AI data analyst that monitors your data estate, synthesises what it finds, and acts on it.**
+**DataBard turns public data into public accounting: reports people share and agents call — every finding dated, receipted, and checkable.**
 
-Data health monitoring tools (Monte Carlo, Bigeye, Soda, dbt tests) tell you *what's broken*. They don't tell the people who need to know, and they don't do anything about it. The insight exists in dashboards, logs, and test results — but it doesn't *land* with the exec, the PM, or the stakeholder who needs to act on it. And nobody files the ticket, pings the on-call, or drafts the runbook.
+Ecosystems run on claims. "We funded hundreds of builders." "Our program is the
+most active." Those claims live in tweets and pitch decks; nobody publishes the
+accounting. At the same time, a new class of customer has arrived — agents that
+buy data services per call — and it has no reliable way to judge a service
+before paying it.
 
-DataBard's real problem is not "data observability" (we'd lose to better-funded competitors). It's not even "data communication" alone — that's a symptom. The real problem is **data inaction**: the gap between knowing something is broken and doing something about it. Audio briefings were our first output format. The agent layer — synthesis, trend narratives, recommended next steps, and the ability to act on them — is the product.
+DataBard answers both with one engine: read public data, compute the finding,
+attach an evidence receipt, and publish the result where humans can share it
+(public reports, commissioned editions) and where agents can call it (A2MCP
+tools with x402 payment). Verifiability is not a feature of the product. It is
+the product.
 
-## The Problem, Quantified
+## The Two Front Doors
 
-The pain is not a feeling. It's a number. Several numbers, actually:
+### Human front door — public reports and editions
 
-| Statistic | Source | What it means |
-|-----------|--------|---------------|
-| **Only 7% of companies are truly insights-driven** | Forrester, *The State Of The Insights-Driven Business Market, 2023* | 93% of companies have data, dashboards, and observability tools — but insights don't reach the people who act. The gap is synthesis and action, not detection. |
-| **75% of business users don't feel confident making decisions from dashboards** | Forrester Business Technographics Data & Analytics Survey, 2023 | The "last-mile problem": dashboards show what changed, but not why, and don't suggest a next step. Even when dashboards are opened, they don't drive action. |
-| **60-73% of enterprise data goes unused for analytics** | Forrester / industry research, 2023 | The "data cemetery" effect: dashboards are built, visited once, and abandoned. The majority of data work is invisible. |
-| **54% of teams say reporting has inefficiencies** | Databox Time to Insight survey | Over half of teams know their reporting process is broken. |
-| **11.2 hours/month per client on manual reporting** | AgencyAnalytics 2025 State of Agency Reporting | For agencies alone, reporting is a full-time job that produces no strategy. |
+- **Free previews**, computed from public data (Superteam Earn listings today;
+  more datasets next). No wallet, no payment, full methodology included.
+- **Commissioned editions**: pin a dated snapshot for $25 (PUSD, SOL, or USDC),
+  with payment attribution and a durable permalink. One published edition per
+  subject; republishing is a no-op, so nobody is ever double-charged.
+- The subject shares the page because it is flattering *and verifiable* — the
+  artifact distributes itself.
+- The receipt makes every number checkable; `/verify` lets anyone audit a
+  report without trusting our servers.
 
-### What these numbers say
+### Machine front door — agent tools
 
-The problem isn't that data tools can't detect issues. The problem is that the
-findings don't reach the people who need to act on them. The data exists. The
-dashboards exist. The tests exist. What doesn't exist is **synthesis and action**.
+- **`databard_health_check`** (free) — the discovery driver. Listed on OKX.AI
+  (approved September 2026) and reachable through the Monid catalog.
+- **`databard_briefing`** ($1, x402 on X Layer) — full synthesis as a paid
+  tool: two-voice script, audio, health score, recommended actions.
+- **`databard_probe`** ($1) — the service-quality oracle: measures candidate
+  agent services across six dimensions, returns a ranked verdict with a cost
+  receipt and optional on-chain attestation.
+- `/agents` is the human-readable front page for all of it; `/probe` demos the
+  paid oracle with a free preview.
 
-DataBard doesn't compete with observability tools — it competes with the
-status quo of "I know something is broken and I'm still not doing anything
-about it." The agent layer is what closes the gap, because:
+### One engine underneath
 
-1. **Synthesis gets acted on.** "Your health dropped 8 points because test
-   coverage fell in payments after Friday's deploy, and here's what to do"
-   gets acted on. "47 rows of test results" gets skimmed. The synthesis —
-   not the format — is what drives action.
-2. **Audio gets consumed.** A 2-minute briefing you can listen to on your
-   commute solves the consumption problem that Forrester quantified — 75% of
-   users don't trust dashboards enough to act. Audio is one output format
-   that solves this. It's not the only one — dashboards, alerts, tickets,
-   and emails are others — but it's the one nobody else offers.
-3. **Action is the differentiator.** An analyst that tells you something is
-   broken is a dashboard. An analyst that tells you, explains why, recommends
-   a fix, and files the ticket is an agent. The gap between informing and
-   acting is where DataBard differentiates.
-4. **Distribution is built in.** Shared episodes, embeddable badges, on-chain
-   attestations — every artifact is a distribution surface. The report
-   travels; it doesn't sit in a dashboard graveyard.
+Deterministic where money and receipts are involved (public reports, editions,
+probe metrics). LLM-assisted where narrative helps (briefings, the wizard). The
+wizard and its two-voice audio briefings remain a **supporting surface** — the
+way individuals connect their own data (dbt, catalogs, Dune, subgraphs,
+DataHub, Monid) — but they are no longer the lead story.
 
-### Where these numbers appear in the product
+## The Problem, Honestly Stated
 
-The landing page shows three of these statistics (75%, 7%, 73%) as a
-quantified problem section before any solution copy. The roast page uses
-specific findings ("test coverage at 23%?") as emotional hooks. The dashboard
-shows the live cost of the problem via `costHighlights()` — "3 tests failing
-silently, cascading to 8 downstream tables."
+1. **Ecosystems publish claims, not accounting.** Public data exists (Earn
+   listings, on-chain activity), but nobody turns it into a dated, citable
+   record. The closest alternative is a dashboard screenshot: unverifiable,
+   undated, unattributed.
+2. **Agents pay for services they can't evaluate.** Metered endpoints are
+   proliferating (Monid alone lists 1,900+). There is payment infrastructure
+   (x402) but no quality oracle — nothing that measures a service before you
+   spend on it.
+3. **Data teams still write reports nobody reads** (the original wedge). Real,
+   still served by the wizard, but no longer the center of the business.
 
-The pain is not a claim. It's a number on the landing page.
+## Why Verifiability Is the Brand
 
-## The Three Problems, Ranked by GTM Urgency
+- **Receipts over vibes.** Every report carries a SHA-256 evidence receipt over
+  the canonical computation payload. We state its limits plainly: it proves
+  integrity, not source truth; it does not authenticate an issuer.
+- **Deterministic where it matters.** A third party can recompute a public
+  report from the same source data and get the same numbers. Publishing pins
+  the snapshot — a one-way door.
+- **Honest labels, always.** Demos are labelled `demo: true`. Snapshot data is
+  labelled. Unreachable sources degrade to labelled demos, never to silent
+  failures. This discipline is already in the code; it is now codified here.
+- A flattering page that can be *checked* is worth more than a flattering page
+  that can't. That is what makes the media model below credible.
 
-### Problem 1: "My data team writes reports nobody reads" (the wedge)
+## Revenue Shapes (all product-shaped)
 
-Every data lead feels this pain. They spend hours building dashboards, writing weekly updates, creating Notion docs — and nobody opens them. The weekly digest podcast solves this directly: the report comes to you, in a format you can consume on your commute, and it's 2 minutes long.
-
-**Why this converts:** You don't need to explain the problem. You play a 2-minute executive summary of a real schema and say "this is what your team gets every Monday." The reaction is immediate.
-
-**Why this is defensible:** The synthesis is the moat. You can't read 47 rows aloud — you have to distill. That distillation, powered by LLMs + the analysis engine, is something traditional observability tools can't do.
-
-### Problem 2: "I don't know my data health is bad until something breaks" (expansion)
-
-The data observability problem. We have a version of this (health scores, alerts, trend narratives) but we're not the best at it. However, we have something the observability tools don't: **the trend narrative.** "Your health dropped 8 points because test coverage fell in the payments schema after the Friday deploy" is more useful than "anomaly detected in table X."
-
-**Why this retains:** Once a team is getting weekly digests, alerts and trend narratives create a pull-back effect. Health dropped → alert fires → you check the dashboard → you hear what changed. The audio + dashboard combination is stickier than either alone.
-
-### Problem 3: "I can't prove my data quality history publicly" (niche)
-
-The onchain attestation use case. Real but narrow. For most enterprises, this is "nice to have." For web3-native teams, it's a differentiator. Keep it for the Onchain persona, don't lead with it.
-
-The claim is now backed by product, not just copy: every report's SHA-256 is written on-chain via the Memo program, and `/verify` recomputes the hash from the report and checks it against the memo — anyone can audit a report without trusting our servers.
+1. **Self-serve editions** (live): $25 one-off, zero-touch. Deterministic
+   compute over cached public data means near-zero marginal cost.
+2. **Per-call agent tools** (live): $1 briefings (~$0.65 margin after TTS),
+   $1 probes. Real calls are already happening; volume is unproven.
+3. **Sponsored editions** (hypothesis): a brand pays to be named on a trusted
+   public artifact — adjacency to credibility, not custom labour.
+4. **Editions over user datasets** (the unlock): point the engine at a Dune
+   query, CSV, or API and it produces *their* accounting page. "Turn my data
+   into a shareable, evidence-receipted narrative" is the thing nobody else
+   does.
 
 ## Competitive Positioning
 
 | Positioning | Competitor | Our edge |
 |---|---|---|
-| "Data observability" | Monte Carlo, Bigeye, Soda, dbt tests | We lose — they're better funded, more mature |
-| "Data communication" | Nobody | We own it — but communication alone is a symptom, not the disease |
-| "AI data analyst" | Generic AI assistants (ChatGPT, Copilot) | They don't connect to your data estate, don't compute health scores, don't produce trend narratives, and don't act with context |
-| "Data agent" | Emerging (too early to name) | First-mover with a working product, real data connectors (Coral, OpenMetadata, dbt, Dune), and a proven output format (audio briefings) |
-
-**The key insight:** We're not competing with observability tools. We're not
-just a communication layer. We're an **AI analyst** that sits on top of any
-data source, synthesises what it finds into trend narratives and recommended
-actions, and delivers those through multiple channels — audio briefings,
-dashboards, alerts, and (next) automated actions like filing tickets and
-drafting runbooks. The observability tools can be inputs to DataBard, not
-competitors. The generic AI assistants don't have our data connectors, our
-health-scoring engine, or our synthesis layer.
-
-## Workspace Strategy
-
-The product now presents this split as workspaces, not as separate products. Both workspaces use the same briefing engine, health scoring, trend narratives, and dashboard composition. The difference is disclosure: Teams hides crypto mechanics by default; Protocols exposes attestation, verification, and registry surfaces.
-
-### Teams (enterprise path)
-- **Who:** Data team leads at companies with 50+ tables
-- **Pain:** "I spend hours building reports nobody reads"
-- **Wedge:** Weekly executive briefing (2-min audio)
-- **Expansion:** Alerts, trend narratives, team email delivery
-- **Terminology:** Health score, test coverage, critical tables, downstream risk
-- **Onchain:** Not mentioned. Enterprise data teams don't want Solana in their stack.
-- **Entry point:** `/?workspace=teams` or `/protocol?workspace=teams`. Wallet providers and on-chain navigation are not mounted in this workspace.
-
-### Protocols (GTM beachhead / default)
-- **Who:** Web3 protocol operators, DAO data teams — where inbound interest is strongest today
-- **Pain:** "I need publicly verifiable protocol health" + a public weekly accounting of peer sources
-- **Wedge:** `/league` (weekly table) → briefing → onchain attestation + `/verify` + the league's Full index
-- **Expansion:** Same analysis engine; Monday email from the finding before Pro billing
-- **Terminology:** Subgraphs, indexers, entities, attestations
-- **Onchain:** Core feature, not afterthought
-- **Entry point:** `/` defaults to Protocols. `/?workspace=protocols` or `/protocol?workspace=protocols`. Legacy `?persona=onchain` still maps here.
-
-### Presentation Discipline
-
-The briefing engine is one product. Its presentation must earn trust with each
-audience without splitting the underlying experience.
-
-| Shared core | Teams | Protocols |
-|---|---|---|
-| Decision flow | Health, change, impact, recommended next step | The same, plus evidence and verification |
-| Live analysis | "Initial assessment" and "What needs attention" | "Live protocol briefing" and "Protocol signal" |
-| Audio | Optional executive explanation | Optional briefing with an attestable record |
-| Trust surface | Read-only access, data handling clarity, source provenance | Attestation, wallet, and public verification |
-
-**Rule:** Teams gets confidence and clarity. Protocols gets confidence,
-clarity, and proof. Do not introduce wallet, attestation, or crypto language
-to Teams. Do not make Protocols navigate a different analytical model. The
-distinction is disclosure and trust context, not a separate product.
-
-### Field-sales allocation (discovery hypothesis)
-- **Who:** Field-sales leaders with fragmented account, activity, and commercial data; initial hypothesis: publishers selling to schools.
-- **Pain:** "I do not know whether my best salespeople are assigned to the best opportunities, or where scarce field time will create the most revenue."
-- **Wedge:** An evidence-backed allocation briefing: high-potential accounts that are under-covered, capacity mismatches, and recommended next actions.
-- **Required proof:** Recommendations must connect to independent commercial outcomes such as orders, invoices, payments, credits, or renewals—not activity data alone.
-- **Product boundary:** This is not a CRM replacement or a committed pivot. Validate it as a distinct vertical while preserving the data-health product.
-- **Trust:** Start with scoped, read-only exports and transparent evidence trails; do not lead with zero-knowledge technology before a customer has a concrete privacy-preserving verification need.
-
-See [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) for the decision model, trust architecture, pilot, and non-goals.
+| Public accounting / verifiable reports | Dashboard screenshots, ecosystem blogs | Nobody publishes dated, receipted, permalinked accounting |
+| Agent-service quality oracle | Agent directories (list-only) | Probe *measures*; directories just list |
+| Data observability | Monte Carlo, Bigeye, Soda | We don't compete — they monitor private estates; we publish public records |
+| Data communication / briefings | Generic AI assistants | They don't connect to sources, don't compute findings, don't attach receipts |
+| Not a podcast tool | — | Audio is one output of the synthesis layer, kept for the wizard |
 
 ## Product Principles
 
-1. **The agent is the hero. Audio, dashboards, alerts, and actions are all outputs.** DataBard is an AI analyst that synthesises what it finds and acts on it. The dashboard is where you see the synthesis. The audio briefing is where you hear it. The alert is where it finds you. The ticket is where it acts. No single output format is the product — the synthesis engine behind all of them is. This makes the product feel like an analyst that works for you, not a podcast that also analyses.
-
-2. **Synthesis over raw data.** The value is in the distillation. "Your payments table is stale, 8 dashboards are wrong, and here's what to do" is worth more than 47 rows of test results. Every output (audio, dashboard, alert, ticket) should be synthesised, not raw.
-
-3. **Trend narratives are the moat.** Not just "health score is 72%" but "your health score dropped 8 points this week because test coverage fell in the payments schema after the Friday deploy." This is what LLMs are actually good at and traditional tools can't do. It's also what separates an analyst from a dashboard — an analyst explains *why*, not just *what*.
-
-4. **From informing to acting.** The current product informs: it tells you what's broken and recommends a next step. The agentic evolution acts: it files the ticket, pings the on-call, drafts the runbook, and then briefs you on what it did. The gap between informing and acting is the differentiation. Build toward closing it, one action at a time.
-
-5. **Protocols is the GTM beachhead, not a side product.** Solana attestation and `/league` are valuable for Protocols. Don't contaminate the Teams pitch with crypto jargon. The `/onchain` page is a primitives showcase for those who care. The inverse also holds: for a Solana-native audience, open Protocols by default and show verification as the trust layer, while making clear the same engine serves Teams.
-
-6. **Anthem is labs, not product.** Data-driven songs are a fun experiment. They don't serve the analyst positioning. Keep the code, move it to `/labs`, don't surface it in the main flow.
-
-7. **Generated, never crafted.** Every bespoke request is a parameter request, not a contract. When someone asks "can you make us a page like that," the answer is a new parameter on the existing pipeline — a `SponsorFocus`, a dataset adapter, a metrics whitelist — never a hand-built deliverable. The lane test: *would this work for the next 100 users without us touching it?* If yes, generalise and build. If no, it's consulting — decline or hand it to a partner. The `/earn` editions are the proof: the Superteam UK showcase was built once, then parameterised so 593 sponsors self-serve the same artifact for 25 PUSD. Customisation stays inside the parameter space; a freeform ask is a signal to widen the space, not work to accept.
-
-## Chain-Agnostic Evidence, Solana-Native Execution
-
-**Decision — September 17, 2026:** DataBard is an AI analyst with portable evidence and verifiable delivery, not a multichain dashboard. Source selection, payment method, and evidence anchoring are independent choices. The core analyst must work without a wallet or blockchain.
-
-- Produce a versioned, chain-neutral evidence receipt before selecting an attestation network. Support offline integrity verification; keep raw metadata, credentials, and private connection details out of public anchors.
-- Make Solana the best-supported verification and delivery implementation, not a prerequisite. Strengthen the existing Memo-based workflow before introducing another custom contract.
-- Separate attestation adapters from payment adapters. Stripe, x402 immediate payment, and Solana escrow have different capabilities and must not pretend to share identical settlement semantics.
-- Be precise about trust: a hash detects changes relative to a trusted digest; an issuer signature establishes authorship; a confirmed chain commitment establishes inclusion. None proves that source data or analytical conclusions are correct.
-- Validate one protocol-operator workflow: investigate a changed metric, explain it with evidence, and export a receipt independently verifiable against Solana. Measure time saved and operator usefulness, not chain count.
-- World’s Fair is a focused delivery opportunity, not a reason to rebuild the product as a marketplace. Existing-project eligibility and detailed track rules remain unverified; confirm before submission. Do not put escrow expansion on the critical path.
-
-Implementation sequence and acceptance gates: [Portable Evidence & World’s Fair](PORTABLE_EVIDENCE.md).
-
-## Public Accounting Editions
-
-The `/superteam` showcase proved the pattern: a public, evidence-backed accounting of an ecosystem is itself a distribution artifact — the subject shares it because it is flattering and verifiable. `/earn` generalises it: any sponsor in the Earn dataset previews their edition free and pins a published, frozen-snapshot page for 25 PUSD, settled and attributed on-chain.
-
-Three revenue shapes, all product-shaped:
-
-- **Self-serve editions** (live): parameterised over public datasets, one-off PUSD payment, zero-touch. The artifact is generated, pinned, and receipted.
-- **Sponsored editions**: a brand pays to be named on a flagship *public* artifact — the league, an attention-market report. Media-model revenue: they buy adjacency to a trusted artifact, not custom labour.
-- **Editions over user data** (the unlock): point the engine at a dataset — Dune query, CSV, API — and it produces *their* accounting page. "Turn my data into a shareable, evidence-receipted narrative" is the thing nobody else does, and the strongest form of "couldn't do it themselves."
-
-Agency creep does not live in page requests — it lives in *data assembly*. Hand-curating a client's roster into JSON is services work. The SaaS answer is a bring-your-own-dataset surface where the customer defines entities and metrics and the engine does the rest. That pushes the hard work to the edge, which is where self-serve products want it.
-
-## What We're Not
-
-- **Not a data observability platform.** We don't compete with Monte Carlo. We're an AI analyst that can ingest observability data and act on it.
-- **Not a data catalog.** We don't replace OpenMetadata or dbt. We read from them and make their findings actionable.
-- **Not a podcast tool.** Audio is one output format, not the product. The product is the synthesis engine + the agent layer.
-- **Not a generic AI assistant.** ChatGPT doesn't connect to your data estate, doesn't compute health scores, and doesn't produce trend narratives. We do.
-- **Not a web3 product for Teams.** Onchain is a workspace-specific feature, not a core pillar.
-- **Not an agency.** Commissioned artifacts are generated by the engine, not crafted by us. Bespoke page requests become self-serve primitives or they don't happen — revenue scales with the product, not with hours.
-
-## Why Now
-
-The market conditions that make DataBard viable in 2025 didn't exist in 2020. Three forces converged:
-
-### 1. The dashboard trust collapse is now quantified
-
-Forrester's *State Of The Insights-Driven Business Market, 2023* put hard numbers on what data teams have felt for years:
-
-- **Only 7% of companies are truly insights-driven.** The other 93% have data, dashboards, and observability tools — but the insights don't reach the people who act.
-- **75% of business users don't feel confident making decisions from dashboards.** The dashboards exist, but they don't answer "why" and they don't suggest a next step. The "last-mile problem" — turning "churn spiked 4% in EMEA" into "here are the 5 clients you must call today" — is unsolved by traditional BI.
-- **60-73% of enterprise data goes completely unused for analytics.** Dashboards are built, visited once, and abandoned — the "data cemetery" effect.
-
-The problem is no longer "we can't detect issues." Monte Carlo, Bigeye, Soda, dbt tests — detection is solved. The problem is the gap between detection and action. Forrester calls it the journey from "passive visuals" to "active intelligence." We call it data inaction.
-
-**Source:** Forrester, *The State Of The Insights-Driven Business Market, 2023*. Data from the Forrester Business Technographics Data & Analytics Survey (global, thousands of decision-makers across NA, Europe, APAC). The 7% figure represents organisations classified as "Insights-Driven" on Forrester's maturity curve (Beginners → Intermediate → Advanced → Insights-Driven). The 75% figure reflects business users who report lacking confidence in dashboard-based decisions.
-
-### 2. LLMs can now synthesise, not just summarise
-
-In 2020, you couldn't ask an AI "why did our health score drop?" and get a useful answer. In 2025, LLMs can ingest structured metadata (test results, lineage, ownership, PII flags, freshness), compute a health score, explain the trend in plain language, and recommend a next step. The synthesis that used to require a senior data analyst writing a weekly Notion doc can now be automated — and the output is better than the Notion doc because it's grounded in real metadata, not a human's selective memory.
-
-### 3. The agentic era is starting
-
-Forrester's 7% — the insights-driven companies — bypass human interpretation with "decision intelligence": the dashboard itself triggers an automated workflow, alert, or API call when a metric crosses a threshold. That's the agent layer. The industry is already moving from "inform" to "act." DataBard's roadmap — recommended actions with Approve/Dismiss, Jira ticket creation, Slack posting, runbook drafting — is aligned with where the market is going, not ahead of it.
-
-**The convergence:** detection is solved (observability tools), synthesis is now possible (LLMs), and the market wants action (Forrester's "active intelligence"). DataBard sits at the intersection — it reads from detection tools, synthesises with LLMs, and is building toward action. That intersection didn't exist five years ago.
+1. **Every claim checkable.** If a number appears on a DataBard page, its
+   source, method, and receipt are reachable from that page. No exceptions.
+2. **Deterministic where money changes hands.** LLM narrative is allowed where
+   it helps a human; it is never load-bearing for a paid, receipted artifact.
+3. **The finding is the steak.** The receipt, the evidence, the recommended
+   next step. Themes, audio, OG cards, and animations are sizzle. In every
+   demo, the finding gets the airtime.
+4. **Generated, never crafted.** Every bespoke request is a parameter request.
+   The `/earn` editions are the proof: built once for Superteam UK,
+   parameterised so 593 sponsors self-serve the same artifact. Would it work
+   for the next 100 users untouched? If not, it's consulting — decline.
+5. **Two doors, one engine.** No feature may serve one door by forking the
+   computation. If the agent tool and the report disagree, one of them is a
+   bug.
+6. **Honest labels over impressive demos.** A labelled demo beats a silent
+   fabrication every time. The product already degrades this way; never regress
+   it.
 
 ## Operating Principles (Paul Graham framework)
 
-These are the rules we operate by. They're not features — they're disciplines.
+1. **Watch users use it.** Sit with one person opening an edition link cold.
+   Note where they hesitate, what they try to click, what they misread. Those
+   observations are the roadmap.
+2. **Get the first 10 users manually.** Named Earn sponsors and protocol data
+   teams. One a day. Send them their preview. Ask: "Did this surface something
+   you didn't already know?"
+3. **Be a user yourself.** Publish and share our own edition. Run Probe against
+   services we'd actually pay. If we won't use it, no one will.
+4. **Know your number.** Margins per revenue shape live in
+   [`UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md). Keep them current.
+5. **The synthesis is the steak; everything else is sizzle.** The one thing
+   that, if removed, kills the product: the finding plus its evidence. Guard
+   the airtime it gets.
+6. **Have a price, even if it's wrong.** $25 per edition, $1 per agent call.
+   Prices are hypotheses; the first ten payments are the test, not a survey.
 
-### 1. Watch users use it
+## What We're Not
 
-> *"Watch a user use your product. You'll learn more in 10 minutes than in a month of analytics."*
+- **Not a data observability platform.** We don't compete with Monte Carlo.
+- **Not a dashboard.** Dashboards show numbers; we publish findings.
+- **Not a podcast tool.** Audio is an output format, kept for the wizard.
+- **Not a blockchain product.** Chains are settlement and verification rails,
+  not the identity. The engine works without a wallet.
+- **Not an agency.** Commissioned artifacts are generated by the engine, not
+  crafted by us.
+- **Not a media company that writes.** Every word on a report is generated from
+  data or plainly labelled as copy.
 
-Analytics events tell us funnel steps. They don't tell us where someone got
-confused, what they tried to click, or why they left. The highest-value thing
-we can do before any demo or launch is sit with one person who has never seen
-DataBard and watch them use it without explanation. Don't help. Just watch.
+## Why Now
 
-**Practice:** Before every demo, watch one person use the product cold. Record
-the screen if possible. Note where they hesitate, what they misread, what they
-try first. Those observations are the roadmap — not feature requests, not
-competitor analysis, not accelerator feedback.
-
-### 2. Get the first 10 users manually
-
-> *"Get users manually. Go to them. Don't wait for them to come to you."*
-
-The email capture forms on shared episodes, verify, league, and landing
-page are passive — they wait for the user. The first 10 users come from us
-going to them. We have 5 Solana protocol teams named in
-[`docs/GTM.md`](GTM.md) with data already seeded and briefings ready to send.
-
-**Practice:** Contact one protocol team per day. Send them a briefing on their
-actual data. Ask: "Did this surface something you didn't already know?" The
-answer to that question is the only validation that matters right now.
-
-### 3. Be a user yourself
-
-> *"The best startup ideas come from living in the future and noticing what's missing."*
-
-DataBard exists because we felt the pain of data reports not being consumed.
-That's the right origin. But the second-order question is: what's missing from
-DataBard that we personally feel? Not what a roadmap says, not what a reviewer
-wants — what do WE wish it did?
-
-**Practice:** Use DataBard on our own data, every week, for a month. If we
-won't use it, no one will. The frustration we feel is the roadmap. If we
-haven't used it on our own data for a month, we're building a product for other
-people without being a user ourselves — that's the biggest risk.
-
-### 4. Know your number (default alive)
-
-> *"The default state of a startup is dead. You have to fight to be alive."*
-
-We know our cost-per-briefing ($0.80) and our price ($49/month per team). At
-10 paying teams we're default alive. At 1 paying team we're losing $36/month
-on fixed costs. That's fine — the first 10 users are manual, not paid. The
-first paying team validates the price. The 10th paying team validates the
-business. Full breakdown in [`docs/UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md).
-
-**Practice:** Update the unit economics doc when costs change (new TTS model,
-new LLM provider, new infrastructure). The number should always be current.
-If we don't know whether we're default alive, we're default dead.
-
-### 5. The synthesis is the steak; everything else is sizzle
-
-> *"The initial product should be almost embarrassingly simple."*
-
-DataBard has a wizard, a dashboard, a league index, a market page, an escrow
-program, attestation, verify, alerts, a roast page, clip sharing, badges, OG
-images, Coral integration, email delivery, Stripe. That's not embarrassing.
-That's impressive. But if the synthesis isn't worth acting on, none of the
-rest matters.
-
-The one thing that if removed, the product would die: **the trend narrative +
-the recommended next step.** That's the synthesis engine. The audio briefing
-is the most distinctive *output* of that engine — it's what nobody else
-offers — but it's an output, not the engine itself. The dashboard is another
-output. The alert is another. The agent action (when we build it) will be
-another. In the demo, spend the most time on the synthesis itself — the
-moment Morgan says "your test coverage is 23% and you have three PII columns
-with no owner" is the steak. The escrow, the leaderboard, even the audio
-player are sizzle.
-
-**Practice:** In every demo, the synthesis gets the most airtime. The audio
-is the proof that the synthesis is real and consumable. The escrow settlement
-is the climax, but the synthesis is the product. If the reviewer remembers
-one thing, it should be the trend narrative — not the program ID, not the
-voice model, not the leaderboard rank.
-
-### 6. Have a price, even if it's wrong
-
-> *"Don't be a sociopath about monetization, but do have a number."*
-
-We charge $49/month per team. It might be wrong. It might be too low or too
-high. But having a number forces us to think about unit economics, and it
-forces the first paying user to make a real decision. "We'll figure it out
-later" is not a strategy — it's an avoidance mechanism.
-
-**Practice:** The price stays $49 until we have 10 paying teams. Then we
-evaluate: are they all at 1 schema (too expensive) or 5+ schemas (too cheap)?
-The first 10 payments are the price test, not a survey.
+1. **Public ecosystems produce accounting-grade data but publish no
+   accounting.** Earn listings, grants, on-chain activity — the raw material
+   for credible public reports finally exists in structured form.
+2. **x402 and A2MCP made machine-payable services real in 2026.** Payment rails
+   exist; quality measurement doesn't. DataBard is early, listed, and already
+   taking real calls.
+3. **LLMs made narrative cheap — which makes verifiable narrative scarce.** When
+   anyone can generate a plausible story, the story you can *check* is the one
+   worth paying for.
 
 ## See Also
 
-- [`docs/GTM.md`](GTM.md) — Viral hooks, engagement loops, manual outreach target list
-- [`docs/UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md) — Cost-per-briefing, pricing, margin analysis
-- [`docs/PLAN.md`](PLAN.md) — Development roadmap and phases
-- [`docs/DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) — Tiered source architecture
-- [`docs/DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) — Solana accelerator demo: talk track, click path, preflight
-- [`docs/FIELD_SALES_ALLOCATION.md`](FIELD_SALES_ALLOCATION.md) — Field-sales vertical discovery hypothesis
+- [`GTM.md`](GTM.md) — distribution loops, hooks, outreach
+- [`UNIT_ECONOMICS.md`](UNIT_ECONOMICS.md) — margins per revenue shape
+- [`PLAN.md`](PLAN.md) — roadmap and phase gates
+- [`DATA_SOURCES_ARCHITECTURE.md`](DATA_SOURCES_ARCHITECTURE.md) — the adapter set
+- [`OPERATIONS.md`](OPERATIONS.md) — prod environment and stay-alive
