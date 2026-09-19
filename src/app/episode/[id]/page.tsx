@@ -183,7 +183,7 @@ function SharedEpisodeInner() {
         <Link
           href={homeHref(workspace)}
           onClick={() => track("shared_episode_cta_click", { cta: "get_this", schema: episode.schemaName })}
-          className="bg-[var(--accent)] rounded-md px-5 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110 text-center"
+          className="bg-[var(--accent)] rounded-lg px-5 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110 text-center"
         >
           Get this on your data
         </Link>

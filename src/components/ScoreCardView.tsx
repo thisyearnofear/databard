@@ -1,6 +1,7 @@
 "use client";
 
 import { scoreTextClass } from "@/lib/product/score-tone";
+import { track } from "@/lib/track";
 import type { ScoreCard } from "@/lib/score-card";
 
 export function ScoreCardView({
@@ -26,7 +27,7 @@ export function ScoreCardView({
         </p>
         <div className="pb-2 min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Health</p>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{card.name}</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight truncate">{card.name}</h1>
           {card.failed > 0 && (
             <p className="mt-1 text-xs text-[var(--danger)]">{card.failed} failing</p>
           )}
@@ -39,7 +40,10 @@ export function ScoreCardView({
       {onPlayClip && (
         <button
           type="button"
-          onClick={onPlayClip}
+          onClick={() => {
+            track("shared_clip_play", { schema: card.name, segment: String(card.segmentIndex) });
+            onPlayClip?.();
+          }}
           className="mt-6 bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110"
         >
           {clipPlaying ? "Playing…" : "Hear this finding"}

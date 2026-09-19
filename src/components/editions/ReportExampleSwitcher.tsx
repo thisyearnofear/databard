@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { DitherAvatar } from "@/components/dither-kit";
+import { track } from "@/lib/track";
 import type { ReportExampleData } from "@/lib/report-examples";
 import { ReportLink } from "./ReportLink";
 import { DitherDissolve } from "./DitherDissolve";
@@ -10,10 +11,29 @@ import { DitherDissolve } from "./DitherDissolve";
 export function ReportExampleSwitcher({ examples }: { examples: ReportExampleData[] }) {
   const [selected, setSelected] = useState(0);
   const [showEvidence, setShowEvidence] = useState(false);
+  const evidenceOpenedFor = useRef(new Set<string>());
   const reduce = useReducedMotion();
   const id = useId();
   const example = examples[selected] ?? examples[0];
   if (!example) return null;
+
+  function selectExample(index: number) {
+    if (index === selected) return;
+    setSelected(index);
+    const next = examples[index];
+    if (next) track("landing_cta_click", { cta: "example_switch", example: next.id });
+  }
+
+  function toggleEvidence() {
+    setShowEvidence((value) => {
+      const next = !value;
+      if (next && example && !evidenceOpenedFor.current.has(example.id)) {
+        evidenceOpenedFor.current.add(example.id);
+        track("evidence_open", { surface: "landing_example" });
+      }
+      return next;
+    });
+  }
 
   return (
     <article aria-label="Example report" className="paper-doc l-brackets min-w-0 rounded-2xl p-6 sm:p-10">
@@ -35,7 +55,7 @@ export function ReportExampleSwitcher({ examples }: { examples: ReportExampleDat
             type="button"
             aria-pressed={selected === index}
             aria-label={`Show ${item.name} report`}
-            onClick={() => setSelected(index)}
+            onClick={() => selectExample(index)}
             className={`min-h-11 rounded-md border px-3.5 text-sm transition-colors ${
               selected === index
                 ? "border-[var(--paper-ink)] bg-[var(--paper-ink)] text-[var(--paper)]"
@@ -83,7 +103,7 @@ export function ReportExampleSwitcher({ examples }: { examples: ReportExampleDat
           type="button"
           aria-expanded={showEvidence}
           aria-controls={`${id}-evidence`}
-          onClick={() => setShowEvidence((value) => !value)}
+          onClick={toggleEvidence}
           className="inline-flex min-h-11 items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--paper-accent)] hover:underline"
         >
           Why this finding? <span aria-hidden="true">{showEvidence ? "−" : "+"}</span>

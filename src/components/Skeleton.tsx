@@ -33,7 +33,7 @@ export function Skeleton({ className = "", lines = 1, variant = "text" }: Skelet
           <div
             key={i}
             className={`w-1 ${baseClasses} rounded-full`}
-            style={{ height: `${20 + Math.random() * 60}%` }}
+            style={{ height: `${20 + ((Math.sin(i * 1.7) + 1) / 2) * 60}%` }}
           />
         ))}
       </div>
@@ -64,7 +64,7 @@ export function EpisodePlayerSkeleton() {
             <div
               key={i}
               className="w-1 bg-[var(--accent)]/30 rounded-full animate-pulse"
-              style={{ height: `${20 + Math.sin(i * 0.3) * 30 + Math.random() * 20}%` }}
+              style={{ height: `${20 + Math.sin(i * 0.3) * 30 + ((Math.sin(i * 1.7) + 1) / 2) * 20}%` }}
             />
           ))}
         </div>

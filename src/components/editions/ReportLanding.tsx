@@ -45,6 +45,30 @@ async function DitherBand() {
   }
 }
 
+/** Dataset vitals adjacent to the masthead — real counts, quietly stated. */
+async function MastheadStats() {
+  try {
+    const loaded = await loadEarnListings();
+    if (!loaded.listings.length) return null;
+    const sponsors = new Set(
+      loaded.listings.map((l) => l.sponsor?.name?.trim()).filter(Boolean),
+    ).size;
+    const observed = new Date(loaded.observedAt).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+    return (
+      <span className="hidden md:inline">
+        {loaded.listings.length.toLocaleString("en-US")} listings accounted · {sponsors} sponsors · observed {observed}
+      </span>
+    );
+  } catch {
+    return null;
+  }
+}
+
 async function ReportExample() {
   try {
     const loaded = await loadEarnListings();
@@ -52,7 +76,7 @@ async function ReportExample() {
     if (examples.length) return <ReportExampleSwitcher examples={examples} />;
   } catch {}
   return (
-    <article aria-label="Example report" className="paper-doc l-brackets rounded-2xl p-6 sm:p-10">
+    <article aria-label="Example report" className="enter-up paper-doc l-brackets rounded-2xl p-6 sm:p-10">
       <p className="text-sm text-[var(--paper-muted)]">The example report is temporarily unavailable.</p>
       <Link href="/superteam" className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-[var(--paper-accent)] hover:underline">Read the full report →</Link>
     </article>
@@ -69,6 +93,9 @@ export function ReportLanding() {
         {/* Registry masthead */}
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] py-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
           <span>DataBard Registry</span>
+          <Suspense fallback={null}>
+            <MastheadStats />
+          </Suspense>
           <span className="hidden md:inline">Public accounting for ecosystems</span>
           <span>Earn division · Nº 01</span>
         </div>
@@ -103,28 +130,25 @@ export function ReportLanding() {
                 <ReportLink
                   href="/earn"
                   cta="reports"
-                  className="inline-flex items-center whitespace-nowrap rounded-lg bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+                  className="inline-flex items-center whitespace-nowrap rounded-lg bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
                 >
                   Find your organization
                 </ReportLink>
                 <ReportLink
                   href="/superteam"
                   cta="example"
-                  className="inline-flex items-center whitespace-nowrap text-sm font-medium text-[var(--accent)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+                  className="inline-flex min-h-11 items-center whitespace-nowrap rounded-lg border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
                 >
                   Read an example →
                 </ReportLink>
               </div>
-              <p className="enter-up enter-delay-4 mt-4 text-xs text-[var(--text-muted)]">
-                Free preview. Publish a dated edition for {"$"}{price}, one-time.
-              </p>
             </div>
 
             <div id="filings" className="paper-stage scroll-mt-24">
               <div className="paper-stack">
                 <Suspense
                   fallback={
-                    <article aria-label="Example report" aria-busy="true" className="paper-doc l-brackets rounded-2xl p-6 sm:p-10">
+                    <article aria-label="Example report" aria-busy="true" className="enter-up paper-doc l-brackets rounded-2xl p-6 sm:p-10">
                       <p className="text-sm text-[var(--paper-muted)]">Loading the example report…</p>
                       <Link href="/superteam" className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-[var(--paper-accent)] hover:underline">Read the full report →</Link>
                     </article>
@@ -281,16 +305,22 @@ export function ReportLanding() {
         <section className="py-14" aria-labelledby="faq-title">
           <h2 id="faq-title" className="sr-only">Common questions</h2>
           <div className="flex flex-col gap-4">
-            <details className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-              <summary className="cursor-pointer text-sm font-semibold">What does the evidence receipt prove?</summary>
+            <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+              <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold">
+                <span>What does the evidence receipt prove?</span>
+                <span aria-hidden="true" className="text-[var(--text-muted)] transition-transform group-open:rotate-45">+</span>
+              </summary>
               <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">
                 It lets you check the integrity of the receipt and compare matching report data.
                 It does not prove the source data is true. Publishing confirms a payment on
                 Solana; it does not anchor the report on-chain.
               </p>
             </details>
-            <details className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-              <summary className="cursor-pointer text-sm font-semibold">Can I use my own dataset?</summary>
+            <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+              <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold">
+                <span>Can I use my own dataset?</span>
+                <span aria-hidden="true" className="text-[var(--text-muted)] transition-transform group-open:rotate-45">+</span>
+              </summary>
               <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">
                 Public report publishing currently supports Superteam Earn organizations. Our
                 separate analysis tools support dbt, catalogs, Dune and subgraphs; they do not
@@ -298,8 +328,11 @@ export function ReportLanding() {
                 <a href="#divisions" className="text-[var(--accent)] hover:underline">See the division index above</a>.
               </p>
             </details>
-            <details className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
-              <summary className="cursor-pointer text-sm font-semibold">Is a published report live?</summary>
+            <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+              <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold">
+                <span>Is a published report live?</span>
+                <span aria-hidden="true" className="text-[var(--text-muted)] transition-transform group-open:rotate-45">+</span>
+              </summary>
               <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">
                 A published report is a frozen, dated edition — it shows the report computed at
                 publication. A free preview refreshes from the source cache as new listings close.

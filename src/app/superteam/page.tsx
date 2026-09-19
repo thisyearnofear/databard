@@ -3,6 +3,7 @@ import Link from "next/link";
 import { loadEarnEdition } from "@/lib/superteam-earn";
 import { editionPricePusd } from "@/lib/pusd";
 import { ShareRow } from "@/components/superteam/ShareRow";
+import { InlineReportCta } from "@/components/superteam/InlineReportCta";
 import { ReportEvidenceExplorer } from "@/components/editions/ReportEvidenceExplorer";
 import { reportEvidence } from "@/lib/report-evidence";
 import { DitherAvatar, PixelIcon } from "@/components/dither-kit";
@@ -156,8 +157,8 @@ export default async function SuperteamPage() {
                 Counted from listings published under the{" "}
                 <span className="font-mono">Superteam UK</span> sponsor account. Campaigns the desk
                 co-hosts under another sponsor&apos;s listing are not counted here — so{" "}
-                {edition.focus.listings} listings is a floor on UK activity, not a ceiling.
               </p>
+              <InlineReportCta />
             </section>
 
             <div className="mt-6">
@@ -330,8 +331,8 @@ export default async function SuperteamPage() {
               {edition.chapters.length > 8 && (
                 <details className="mt-3 group">
                   <summary className="cursor-pointer list-none font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
-                    <span className="group-open:hidden">Show all {edition.chapters.length} chapters ↓</span>
-                    <span className="hidden group-open:inline">Show fewer ↑</span>
+                    <span className="inline-flex items-center gap-1 group-open:hidden">Show all {edition.chapters.length} chapters <PixelIcon name="arrowDown" size={9} aria-hidden /></span>
+                    <span className="hidden items-center gap-1 group-open:inline-flex">Show fewer <PixelIcon name="arrowUp" size={9} aria-hidden /></span>
                   </summary>
                   <ol className="mt-3 flex flex-col gap-2">
                     {edition.chapters.slice(8).map((row) => (
@@ -385,7 +386,7 @@ export default async function SuperteamPage() {
               </p>
               <Link
                 href="/earn"
-                className="mt-4 inline-flex items-center gap-2 rounded bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110"
               >
                 Find your organization →
               </Link>

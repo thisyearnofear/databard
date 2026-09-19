@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { DitherAvatar } from "@/components/dither-kit";
 import { scoreTextClass } from "@/lib/product/score-tone";
 import { consequenceSentence } from "@/lib/story";
@@ -14,6 +15,8 @@ function sourceSlug(name: string): string {
 }
 
 export function ChangeNarratives({ trends, cards }: { trends: TrendNarrative[]; cards: SourceCard[] }) {
+  // story_expand fires only the first time each narrative is expanded.
+  const expandedRef = useRef<Set<string>>(new Set());
   if (trends.length === 0) return null;
   const visible = trends.slice(0, 5);
   const rest = trends.slice(5);
@@ -46,7 +49,11 @@ export function ChangeNarratives({ trends, cards }: { trends: TrendNarrative[]; 
             {finding && <span className="font-mono text-[var(--text-muted)]">{finding}</span>}
             <a
               href={`#source-${sourceSlug(card?.name ?? trend.schemaName)}`}
-              onClick={() => track("story_expand", { surface: "protocol", from: "trend" })}
+              onClick={() => {
+                if (expandedRef.current.has(trend.schemaFqn)) return;
+                expandedRef.current.add(trend.schemaFqn);
+                track("story_expand", { surface: "protocol", from: "trend" });
+              }}
               className="text-[var(--accent)] no-underline hover:underline"
             >
               View evidence ↓
@@ -59,7 +66,7 @@ export function ChangeNarratives({ trends, cards }: { trends: TrendNarrative[]; 
   };
   return (
     <div className="mb-6" aria-label="Weekly change narratives">
-      <h2 id="what-changed-title" className="text-sm font-semibold mb-1 flex items-center gap-2">
+      <h2 id="what-changed-title" className="font-display text-sm font-semibold mb-1 flex items-center gap-2">
         <span className="font-mono text-xs uppercase tracking-[0.2em] shimmer-text">▚▚</span>
         <span>The story this week</span>
       </h2>

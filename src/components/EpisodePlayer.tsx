@@ -10,6 +10,7 @@ import { track } from "@/lib/track";
 import { costLine } from "@/lib/cost-framing";
 import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips, resolveColor, rgbToHsl } from "@/components/viz";
 import { PixelIcon } from "@/components/dither-kit";
+import { MondaySignup } from "@/components/MondaySignup";
 import { HealthBadge } from "@/components/player/HealthBadge";
 import { TableDetail } from "@/components/player/TableDetail";
 import { PriorityBadge } from "@/components/player/PriorityBadge";
@@ -54,6 +55,7 @@ export function EpisodePlayer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const segListRef = useRef<HTMLDivElement>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
@@ -376,12 +378,22 @@ export function EpisodePlayer({
     }
   }, [activeIdx, playing]);
 
-  // Close share menu on click outside
+  // Close share menu on click outside or Escape, and hand focus to the first
+  // menu item when it opens.
   useEffect(() => {
     if (!showShareMenu) return;
+    const menu = shareMenuRef.current;
+    menu?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const close = () => setShowShareMenu(false);
-    window.addEventListener("click", close, { once: true });
-    return () => window.removeEventListener("click", close);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("click", close);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [showShareMenu]);
 
   // Keyboard shortcuts
@@ -449,7 +461,7 @@ export function EpisodePlayer({
 
   function seekFromKey(e: React.KeyboardEvent<HTMLDivElement>) {
     if (!duration) return;
-    const step = e.shiftKey ? 30 : 5;
+    const step = e.shiftKey ? 30 : 10;
     if (e.key === "ArrowLeft") { e.preventDefault(); e.stopPropagation(); seekTo(currentTime - step); }
     else if (e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); seekTo(currentTime + step); }
     else if (e.key === "Home") { e.preventDefault(); e.stopPropagation(); seekTo(0); }
@@ -707,7 +719,7 @@ export function EpisodePlayer({
                 title="Download MP3"
                 aria-label="Download episode as MP3"
               >
-                ↓
+                <PixelIcon name="arrowDown" size={12} className="text-[var(--text)]" />
               </button>
             )}
             <button
@@ -759,7 +771,12 @@ export function EpisodePlayer({
 
             {/* Share menu (desktop fallback) */}
             {showShareMenu && (
-              <div className="absolute top-full right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-10 animate-slide-up min-w-[140px]">
+              <div
+                ref={shareMenuRef}
+                role="menu"
+                aria-label="Share options"
+                className="absolute top-full right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-10 animate-slide-up min-w-[140px]"
+              >
                 {[
                   { id: "whatsapp", label: "WhatsApp" },
                   { id: "telegram", label: "Telegram" },
@@ -769,6 +786,7 @@ export function EpisodePlayer({
                 ].map((p) => (
                   <button
                     key={p.id}
+                    role="menuitem"
                     onClick={() => shareVia(p.id)}
                     className="block w-full text-left text-xs px-3 py-2 hover:bg-[var(--bg)] cursor-pointer first:rounded-t-lg last:rounded-b-lg"
                   >
@@ -814,7 +832,7 @@ export function EpisodePlayer({
               disabled={!currentAudioUrl}
               className="flex flex-col items-center gap-1 text-[var(--text-muted)] disabled:opacity-50"
             >
-              <span className="text-xl">↓</span>
+              <PixelIcon name="arrowDown" size={16} />
               <span className="text-xs">Save</span>
             </button>
           </div>
@@ -825,6 +843,7 @@ export function EpisodePlayer({
           <>
             <canvas
               ref={canvasRef}
+              aria-hidden="true"
               className="w-full h-20 rounded-lg bg-[var(--bg)] mb-4"
             />
 
@@ -871,7 +890,7 @@ export function EpisodePlayer({
             </div>
 
             <p className="text-xs text-[var(--text-muted)] mt-2 text-center hidden sm:block">
-              Space to play/pause · ← → to seek 10s · Click a segment to jump
+              Space to play/pause · ← → to seek 10s · Shift+← → for 30s · Click a segment to jump
             </p>
           </>
         )}
@@ -890,7 +909,11 @@ export function EpisodePlayer({
             <span>
               {nudge === "download" && "Want a fresh episode every week? "}
               {nudge === "share" && "Share it with your whole team automatically — "}
-              <a href="/#pricing" className="text-[var(--accent)] hover:underline">
+              <a
+                href="/#pricing"
+                onClick={() => track("schedule_setup", { source: "download_nudge" })}
+                className="text-[var(--accent)] hover:underline"
+              >
                 Get DataBard Pro →
               </a>
             </span>
@@ -936,9 +959,9 @@ export function EpisodePlayer({
             <summary className="px-3 py-2.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer list-none">More ▸</summary>
             <div className="absolute right-0 top-full z-20 flex flex-col min-w-32 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xl py-1">
               {currentEpisode.musicPlan && (
-                <button onClick={() => setActiveTab("anthem")} className="px-4 py-2 text-xs text-left text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)] cursor-pointer">Anthem</button>
+                <button onClick={(e) => { setActiveTab("anthem"); e.currentTarget.closest("details")?.removeAttribute("open"); }} className="px-4 py-2 text-xs text-left text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)] cursor-pointer">Anthem</button>
               )}
-              <button onClick={() => setActiveTab("team")} className="px-4 py-2 text-xs text-left text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)] cursor-pointer">Team history</button>
+              <button onClick={(e) => { setActiveTab("team"); e.currentTarget.closest("details")?.removeAttribute("open"); }} className="px-4 py-2 text-xs text-left text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg)] cursor-pointer">Team history</button>
             </div>
           </details>
         </div>
@@ -1194,7 +1217,7 @@ export function EpisodePlayer({
           <div className="p-4 max-h-96 overflow-y-auto">
             {actionItems.length === 0 ? (
               <div className="text-center text-sm text-[var(--text-muted)] py-6">
-                <p>🎉 No action items — your data is in great shape!</p>
+                <p className="flex items-center justify-center gap-2"><PixelIcon name="check" size={12} className="text-[var(--success)]" /> No action items — your data is in great shape!</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -1395,6 +1418,15 @@ export function EpisodePlayer({
                 >
                   Agent tools
                 </Link>
+                <button
+                  onClick={() => void handleClip()}
+                  className="border border-[var(--border)] hover:border-[var(--accent)] rounded-lg px-4 py-2.5 text-xs cursor-pointer"
+                >
+                  {clipCopied ? "✓ Copied!" : "Share card"}
+                </button>
+              </div>
+              <div className="mt-4 text-left max-w-sm mx-auto">
+                <MondaySignup schema={currentEpisode.schemaName} />
               </div>
             </>
           )}

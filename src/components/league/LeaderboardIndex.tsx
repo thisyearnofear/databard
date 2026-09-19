@@ -7,7 +7,7 @@ import { HealthBar, TrendBadge, Sparkline } from "@/components/viz";
 import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { PixelIcon } from "@/components/dither-kit";
 import { scoreColor } from "@/lib/product/score-tone";
-import { homeHref } from "@/lib/product/workspaces";
+import { homeHref, workspaceHref } from "@/lib/product/workspaces";
 
 type SortKey = "score" | "change" | "recent";
 type FilterKey = "all" | "verified" | "scanned";
@@ -124,6 +124,8 @@ export function LeaderboardIndex() {
               {([["score", "Score"], ["change", "Change"], ["recent", "Recent"]] as const).map(([key, label]) => (
                 <button
                   key={key}
+                  type="button"
+                  aria-pressed={sort === key}
                   onClick={() => setSort(key)}
                   className={`px-2.5 py-1 text-xs font-semibold transition-colors ${
                     sort === key ? "bg-[var(--accent)] text-[var(--bg)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
@@ -137,6 +139,8 @@ export function LeaderboardIndex() {
               {([["all", "All"], ["verified", "Verified"], ["scanned", "Scanned"]] as const).map(([key, label]) => (
                 <button
                   key={key}
+                  type="button"
+                  aria-pressed={filter === key}
                   onClick={() => setFilter(key)}
                   className={`px-2.5 py-1 text-xs font-semibold transition-colors ${
                     filter === key ? "bg-[var(--accent)] text-[var(--bg)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
@@ -151,6 +155,7 @@ export function LeaderboardIndex() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search sources…"
+              aria-label="Search sources"
               className="min-w-[140px] flex-1 border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
             />
           </div>
@@ -159,6 +164,7 @@ export function LeaderboardIndex() {
             <div className="mt-6 border border-[var(--border)] bg-[var(--surface)] px-5 py-8 text-center">
               <p className="text-sm mb-3">No sources match your filters.</p>
               <button
+                type="button"
                 onClick={() => { setFilter("all"); setQuery(""); }}
                 className="px-4 py-2 bg-[var(--accent)] text-[var(--bg)] text-xs font-semibold hover:brightness-110"
               >
@@ -187,8 +193,8 @@ export function LeaderboardIndex() {
                           <span className="text-sm font-bold" title={entry.schemaName}>{shortName(entry.schemaName)}</span>
                           <TierBadge tier={entry.tier} />
                           {isMostImproved && (
-                            <span className="bg-[var(--success)] px-2 py-0.5 text-xs font-semibold text-[var(--bg)]">
-                              ▲ Most improved
+                            <span className="inline-flex items-center gap-1 bg-[var(--success)] px-2 py-0.5 text-xs font-semibold text-[var(--bg)]">
+                              <PixelIcon name="arrowUp" size={9} aria-hidden /> Most improved
                             </span>
                           )}
                         </div>
@@ -196,10 +202,10 @@ export function LeaderboardIndex() {
                           {entry.tier === "verified" ? (
                             <>
                               {entry.wallets.length} wallet{entry.wallets.length !== 1 ? "s" : ""} · {entry.mintCount} mint{entry.mintCount !== 1 ? "s" : ""} · last{" "}
-                              {new Date(entry.lastMintedAt).toLocaleDateString()}
+                              {new Date(entry.lastMintedAt).toLocaleDateString("en-GB", { timeZone: "UTC" })}
                             </>
                           ) : (
-                            <>scanned {new Date(entry.lastMintedAt).toLocaleDateString()}</>
+                            <>scanned {new Date(entry.lastMintedAt).toLocaleDateString("en-GB", { timeZone: "UTC" })}</>
                           )}
                         </p>
                       </div>
@@ -219,13 +225,15 @@ export function LeaderboardIndex() {
                       />
                       {entry.tier === "scanned" ? (
                         <button
+                          type="button"
+                          aria-pressed={claimingSchema === entry.schemaName}
                           onClick={() => setClaimingSchema(claimingSchema === entry.schemaName ? null : entry.schemaName)}
-                          className="shrink-0 bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--bg)] hover:brightness-110"
+                          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--bg)] hover:brightness-110"
                         >
                           {claimingSchema === entry.schemaName ? "Cancel" : "Claim →"}
                         </button>
                       ) : (
-                        <span className="w-[76px] shrink-0 text-center text-xs font-semibold text-[var(--success)]">✓ Claimed</span>
+                        <span className="inline-flex w-[76px] shrink-0 items-center justify-center gap-1 text-xs font-semibold text-[var(--success)]"><PixelIcon name="check" size={10} aria-hidden /> Claimed</span>
                       )}
                     </div>
                     {entry.tier === "scanned" && claimingSchema === entry.schemaName && (
@@ -233,7 +241,7 @@ export function LeaderboardIndex() {
                         <IntegrationCTA
                           source={`leaderboard_claim:${entry.schemaName}`}
                           schemaName={entry.schemaName}
-                          connectHref="/?start=connect"
+                          connectHref={workspaceHref("/?start=connect", "protocols")}
                           compact
                         />
                       </div>

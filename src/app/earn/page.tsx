@@ -5,6 +5,7 @@ import { listPublished, slugifySponsor } from "@/lib/editions";
 import { editionPricePusd } from "@/lib/pusd";
 import { DitherAvatar } from "@/components/dither-kit";
 import { SponsorSearch } from "@/components/editions/SponsorSearch";
+import { PageViewTracker } from "@/components/editions/PageViewTracker";
 
 export const revalidate = 3600;
 
@@ -62,6 +63,7 @@ export default async function EarnIndexPage({ searchParams }: PageProps) {
 
   return (
     <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
+      <PageViewTracker event="earn_index_view" />
       <div className="max-w-[720px] mx-auto">
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)]">
           Public reports

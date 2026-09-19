@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useWizard, WizardProvider } from "@/components/wizard";
+import { PixelIcon } from "@/components/dither-kit";
 import { track } from "@/lib/track";
 
 export default function RoastPage() {
@@ -21,7 +22,7 @@ function RoastPageInner() {
   }, []);
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-2xl mx-auto enter-up">
+    <main className="report-surface min-h-screen flex flex-col items-center p-4 sm:p-8 gap-8 max-w-2xl mx-auto enter-up">
       <div className="w-full">
         <Link href="/" className="inline-flex items-center py-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Back to DataBard</Link>
       </div>
@@ -29,7 +30,7 @@ function RoastPageInner() {
       {/* Hero */}
       <div className="text-center space-y-4 animate-fade-in">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
-          Let AI roast your data quality 🔥
+          Let AI roast your data quality <PixelIcon name="flame" size={30} aria-hidden className="inline-block align-[-4px] text-[var(--danger)]" />
         </h1>
         <p className="text-[var(--text-muted)] max-w-lg mx-auto">
           Connect your database, warehouse, or catalog. Two AI hosts will analyze it live — calling out failing tests, missing docs, PII exposure, and stale pipelines. No mercy.
@@ -45,7 +46,7 @@ function RoastPageInner() {
           { quote: "events hasn't been updated in 36 hours. Are the pipelines running, or did someone forget to pay the AWS bill?", severity: "medium" },
           { quote: "Health score 58 out of 100. I've seen spreadsheets with better governance.", severity: "bad" },
         ].map((item, i) => (
-          <div
+          <figure
             key={i}
             className={`rounded-xl p-4 border ${
               item.severity === "bad"
@@ -53,9 +54,9 @@ function RoastPageInner() {
                 : "border-[var(--warning)]/30 bg-[var(--warning)]/5"
             }`}
           >
-            <p className="text-sm italic">"{item.quote}"</p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">— Morgan, the quality auditor</p>
-          </div>
+            <blockquote className="text-sm italic">&quot;{item.quote}&quot;</blockquote>
+            <figcaption className="text-xs text-[var(--text-muted)] mt-1">— Morgan, the quality auditor</figcaption>
+          </figure>
         ))}
       </div>
 
@@ -63,17 +64,17 @@ function RoastPageInner() {
       <div className="flex flex-col gap-3 w-full max-w-sm">
         <button
           onClick={() => {
-            track("roast_cta_click", { cta: "roast" });
+            track("roast_cta_click", { cta: "roast", surface: "hero" });
             dispatch({ type: "SET_PERSONA", persona: "enterprise" });
             dispatch({ type: "SET_SOURCE", source: "dbt-local" });
             dispatch({ type: "SET_STEP", step: "connect" });
           }}
-          className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-xl px-6 py-3.5 text-base font-bold transition ease-out hover:scale-[1.02]"
+          className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-6 py-3.5 text-base font-bold transition"
         >
-          🔥 Roast my data →
+          <PixelIcon name="flame" size={14} aria-hidden /> Roast my data →
         </button>
         <Link
-          href="/"
+          href="/episode/demo"
           className="text-center text-sm text-[var(--text-muted)] hover:text-[var(--text)] py-2"
         >
           Or listen to a demo first (no signup)
@@ -85,19 +86,19 @@ function RoastPageInner() {
         <h2 className="text-sm font-semibold">What you'll get:</h2>
         <ul className="space-y-2 text-sm text-[var(--text-muted)]">
           <li className="flex items-start gap-2">
-            <span>📊</span>
+            <PixelIcon name="chart" size={13} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent)]" />
             <span>A health score (0-100) for your data estate</span>
           </li>
           <li className="flex items-start gap-2">
-            <span>🎙️</span>
+            <PixelIcon name="mic" size={13} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent)]" />
             <span>A 2-minute audio briefing calling out your top 3 issues</span>
           </li>
           <li className="flex items-start gap-2">
-            <span>📈</span>
+            <PixelIcon name="chart" size={13} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent)]" />
             <span>A dashboard with trend narratives — what changed, why it matters</span>
           </li>
           <li className="flex items-start gap-2">
-            <span>🔥</span>
+            <PixelIcon name="flame" size={13} aria-hidden className="mt-0.5 shrink-0 text-[var(--danger)]" />
             <span>Morgan's unfiltered assessment (she doesn't hold back)</span>
           </li>
         </ul>

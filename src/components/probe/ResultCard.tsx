@@ -54,7 +54,7 @@ export function ResultCard({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">{name}</h3>
-          <p className="font-mono text-[11px] text-[var(--text-muted)] truncate max-w-[200px]">
+          <p className="font-mono text-[11px] text-[var(--text-muted)] truncate max-w-[200px]" title={endpoint}>
             {endpoint}
           </p>
         </div>

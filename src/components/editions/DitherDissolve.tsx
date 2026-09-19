@@ -14,11 +14,27 @@ import { hash01 } from "@/lib/dither-field";
 
 const CELL = 9;
 const DURATION = 460;
+/** Legacy fallback ink — only used when --text cannot be resolved (SSR/tests). */
+const FALLBACK_INK = "rgba(37, 27, 49, 0.92)";
+
+/**
+ * Resolve the dissolve ink from the active theme so light mode dissolves in
+ * dark ink and dark mode in light ink. Falls back to the historical default.
+ */
+function themeInk(): string {
+  if (typeof window === "undefined" || typeof document === "undefined") return FALLBACK_INK;
+  try {
+    const value = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
+    return value || FALLBACK_INK;
+  } catch {
+    return FALLBACK_INK;
+  }
+}
 
 export function DitherDissolve({
   trigger,
   seed = 7,
-  ink = "rgba(37, 27, 49, 0.92)",
+  ink,
 }: {
   trigger: unknown;
   seed?: number;
@@ -39,6 +55,9 @@ export function DitherDissolve({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Resolve at paint time: an explicit prop wins, otherwise follow --text.
+    const paintInk = ink ?? themeInk();
+
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
@@ -55,7 +74,7 @@ export function DitherDissolve({
       const t = Math.min((now - start) / DURATION, 1);
       ctx.clearRect(0, 0, w, h);
       const cover = t < 0.5 ? t * 2 : (1 - t) * 2;
-      ctx.fillStyle = ink;
+      ctx.fillStyle = paintInk;
       for (let gy = 0; gy < rows; gy++) {
         for (let gx = 0; gx < cols; gx++) {
           if (hash01(gx, gy, seed) < cover) {

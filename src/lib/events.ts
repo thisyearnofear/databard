@@ -45,6 +45,10 @@ export const EVENT_TYPES = [
   "monday_signup",            // email on the finding: send this every Monday
   "integration_cta_click",    // direct self-serve CTA: demo vs connect vs copy_curl (replaces inbound lead capture)
   "probe_run",                // DataBard Probe executed against agent services
+  "agents_page_view",         // visited /agents (agent-tool doorway)
+  "agent_demo_run",           // ran the free health-check example on /agents
+  "earn_index_view",          // visited /earn (sponsor report index)
+  "shared_clip_play",         // played the clip on a shared score-card page
   // Story-layer events (Phase 1 progressive disclosure)
   "story_expand",             // opened a Why-it-matters / Details disclosure
   "evidence_open",            // opened evidence from a story context

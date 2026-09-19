@@ -18,6 +18,7 @@ import { ChangeNarratives } from "@/components/briefing/ChangeNarratives";
 import { SourceHealthList } from "@/components/briefing/SourceHealthList";
 import type { BriefingEpisodeMeta, SourceCard } from "@/components/briefing/types";
 import { WriteBackAction } from "@/components/briefing/WriteBackAction";
+import { Skeleton } from "@/components/Skeleton";
 import {
   LineChart,
   Line,
@@ -66,7 +67,7 @@ function FleetHealthChart({ cards, caption }: { cards: SourceCard[]; caption: st
       <div className="relative flex items-baseline justify-between gap-3 mb-4 flex-wrap">
         <div>
           <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--text-muted)]">Fleet health</div>
-          <h2 className="text-sm font-semibold mt-0.5">Every source, last {rows.length} snapshots</h2>
+          <h2 className="font-display text-sm font-semibold mt-0.5">Every source, last {rows.length} snapshots</h2>
           <p className="mt-1 text-xs text-[var(--text-muted)]">{caption}</p>
         </div>
         <span className="font-mono text-xs text-[var(--text-muted)]">scrub to compare · hover a legend entry to spotlight</span>
@@ -227,7 +228,8 @@ function ProtocolDashboardInner() {
               </div>
               <Link
                 href={workspaceHref("/?start=connect", workspace)}
-                className="shrink-0 bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110"
+                onClick={() => track("connect_start", { source: "demo_banner" })}
+                className="shrink-0 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110"
               >
                 Connect your analyst →
               </Link>
@@ -246,20 +248,33 @@ function ProtocolDashboardInner() {
             track("dashboard_listen_click", { schema: episodeMeta.schemaName });
             router.push(workspaceHref(`/episode/${episodeId}`, workspace));
           }}
-          onListenSource={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
+          onListenSource={(sourceEpisodeId) => {
+            track("dashboard_listen_click", { schema: episodeMeta?.schemaName ?? "source" });
+            router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace));
+          }}
           onReadStory={() => document.getElementById("story")?.scrollIntoView({ behavior: "smooth" })}
         />}
 
         {loading && (
-          <div className="text-center p-12 text-[var(--text-muted)] font-mono text-sm">
-            Loading analytics…
+          <div className="space-y-4" role="status" aria-label="Loading analytics">
+            <span className="sr-only">Loading analytics…</span>
+            <div className="animate-pulse bg-[var(--surface)] border border-[var(--border)] rounded-2xl h-40" />
+            <div className={`grid grid-cols-2 ${isProtocols ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-3`}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} variant="card" />
+              ))}
+            </div>
           </div>
         )}
 
         {!loading && cards.length === 0 && !(episodeId && episodeMeta) && (
           <div className="hover-depth bg-[var(--surface)] border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
             <p className="text-[var(--text-muted)] mb-4 text-sm">No data sources analyzed yet.</p>
-            <Link href={homeHref(workspace)} className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block">
+            <Link
+              href={homeHref(workspace)}
+              onClick={() => track("connect_start", { source: "empty_state" })}
+              className="bg-[var(--accent)] text-[var(--bg)] px-6 py-2 rounded-lg text-sm font-medium inline-block transition hover:brightness-110"
+            >
               Generate your first health report
             </Link>
           </div>
@@ -279,7 +294,10 @@ function ProtocolDashboardInner() {
             isProtocols={isProtocols}
             hoveredCard={hoveredCard}
             onHoverChange={setHoveredCard}
-            onListen={(sourceEpisodeId) => router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace))}
+            onListen={(sourceEpisodeId) => {
+              track("dashboard_listen_click", { schema: "source_list" });
+              router.push(workspaceHref(`/episode/${sourceEpisodeId}`, workspace));
+            }}
           />
         </section>}
       </div>

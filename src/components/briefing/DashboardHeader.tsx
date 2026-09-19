@@ -11,7 +11,7 @@ export function DashboardHeader({ isProtocols }: { isProtocols: boolean }) {
       <div className="font-mono text-xs uppercase tracking-[0.25em] text-[var(--accent)] mt-4">
         {isProtocols ? "Protocol health · verifiable briefing" : "Data health · weekly briefing"}
       </div>
-      <h1 className="text-[28px] font-extrabold mt-1 mb-1">{isProtocols ? "Protocol briefing" : "This week’s briefing"}</h1>
+      <h1 className="font-display text-[28px] font-extrabold mt-1 mb-1">{isProtocols ? "Protocol briefing" : "This week’s briefing"}</h1>
       <p className="text-[var(--text-muted)] text-[15px]">
         {isProtocols
           ? "The material health changes across your protocol’s sources, with the evidence and Solana attestation trail behind each claim."

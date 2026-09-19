@@ -46,6 +46,11 @@ export function SourceHealthList({ cards, isProtocols, hoveredCard, onHoverChang
                   <span className="font-mono text-xs text-[var(--text-muted)] bg-[var(--bg)] rounded-md px-2 py-0.5 uppercase tracking-wide">{sourceLabel(card)}</span>
                 </div>
                 {finding && <p className="mt-1.5 text-sm leading-relaxed">{finding}</p>}
+                {card.mintCount > 0 && (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    minted {card.mintCount}× by {card.wallets} wallet{card.wallets !== 1 ? "s" : ""}
+                  </p>
+                )}
                 <div className="flex items-center gap-6 flex-wrap mt-2">
                   <HealthBar score={card.latestHealth} width={64} />
                   <TrendBadge trend={card.trend} showLabel />

@@ -59,6 +59,10 @@ Two-layer analytics system:
 - `roast_page_view` — visited /roast
 - `roast_cta_click` — clicked "Roast my data" on /roast
 - `probe_run` — Probe executed (meta: mode=preview for the free route, candidate count, top pick, attest flag)
+- `agents_page_view` — visited `/agents` (agent-tool doorway)
+- `agent_demo_run` — ran the free health-check example on /agents
+- `earn_index_view` — visited `/earn` (sponsor report index)
+- `shared_clip_play` — played the clip on a shared score-card page
 
 ### Adding new events
 1. Add the event type to `EVENT_TYPES` in `src/lib/events.ts`

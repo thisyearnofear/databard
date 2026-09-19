@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { DitherAvatar } from "@/components/dither-kit";
+import { track } from "@/lib/track";
 
 interface SponsorRow {
   name: string;
@@ -104,6 +105,7 @@ export function SponsorSearch({ sponsors, initialQuery = "" }: SponsorSearchProp
               <Link
                 href={rowHref(row)}
                 aria-label={`Preview ${row.name} report`}
+                onClick={() => track("landing_cta_click", { cta: "sponsor_result", surface: "sponsor_search" })}
                 className="flex items-center gap-3 border border-[var(--border)] bg-[var(--surface)] px-4 py-3 no-underline hover:border-[var(--accent)]/50 transition-colors"
               >
                 <DitherAvatar name={row.name} size={26} className="rounded-md shrink-0" />
@@ -128,7 +130,10 @@ export function SponsorSearch({ sponsors, initialQuery = "" }: SponsorSearchProp
       {matches.length > shown && (
         <button
           type="button"
-          onClick={() => setShown((n) => n + PAGE)}
+          onClick={() => {
+            track("landing_cta_click", { cta: "show_more_orgs", surface: "sponsor_search" });
+            setShown((n) => n + PAGE);
+          }}
           className="mt-4 text-xs font-medium text-[var(--accent)] hover:underline cursor-pointer"
         >
           Show more organizations

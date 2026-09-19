@@ -141,7 +141,7 @@ export function LeagueBoard() {
             <div className="mt-3 flex flex-wrap gap-2">
               <Link
                 href="/episode/demo"
-                className="bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] hover:brightness-110"
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110"
               >
                 Listen to the briefing
               </Link>

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AgentHealthDemo } from "@/components/agents/AgentHealthDemo";
+import { AgentsPageTracker } from "@/components/agents/AgentsPageTracker";
+import { AgentIntegrationDetails } from "@/components/agents/AgentIntegrationDetails";
 
 export const metadata: Metadata = {
   title: "DataBard for agents — Check, explain, verify",
@@ -10,6 +12,7 @@ export const metadata: Metadata = {
 export default function AgentsPage() {
   return (
     <main className="report-surface bg-[var(--bg)] px-5 py-14 sm:py-20">
+      <AgentsPageTracker />
       <div className="mx-auto max-w-6xl">
         <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,.95fr)_minmax(0,1.05fr)]">
           <div>
@@ -43,8 +46,7 @@ export default function AgentsPage() {
         </div>
         <hr className="dither-rule mt-16" aria-hidden="true" />
         <section className="pt-8" aria-label="Agent integration">
-          <details>
-            <summary className="cursor-pointer py-3 text-lg font-semibold">Connect these tools to your agent</summary>
+          <AgentIntegrationDetails>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[var(--text-muted)]">Start with discovery, then send a source configuration to the appropriate tool. The free example above uses sample data. Paid calls return a payment requirement; your agent must obtain authorization before paying and retrying.</p>
             <div className="mt-6 max-w-2xl rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Zero to first call</p>
@@ -79,7 +81,7 @@ curl -i -X POST https://databard.persidian.com/api/agent/probe \\
             </dl>
             <p className="mt-5 text-sm leading-relaxed text-[var(--text-muted)]">Use the server’s payment challenge for the current price and payment instructions. The examples on this page never authorize payments. An integrity receipt, a payment receipt, and an on-chain report commitment are different records.</p>
             <div className="mt-4 flex flex-wrap gap-6"><Link href="/api/mcp/tools" className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">Tool schemas →</Link><Link href="/llms.txt" className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">Integration guide →</Link></div>
-          </details>
+          </AgentIntegrationDetails>
         </section>
         <footer className="mt-12 flex flex-wrap justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--text-muted)]"><Link href="/">DataBard</Link><div className="flex gap-5"><Link href="/earn">Public reports</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></div></footer>
       </div>

@@ -13,7 +13,9 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { ResultCard, type ProbeResultCardProps } from "./ResultCard";
+import { track } from "@/lib/track";
 
 type StageKey = "checking" | "calling" | "challenged" | "paying" | "measuring";
 
@@ -71,6 +73,8 @@ export function ProbeRun({ question, runId, onDone }: ProbeRunProps) {
       setCompleted(0);
       setChallenges(0);
       setFinished(false);
+      // Client-side intent — the server records its own probe_run on success.
+      track("probe_run", { mode: "preview" });
       try {
         const response = await fetch("/api/probe/preview", {
           method: "POST",
@@ -213,6 +217,15 @@ export function ProbeRun({ question, runId, onDone }: ProbeRunProps) {
           </motion.div>
         ))}
       </div>
+
+      {/* Forward path once a verdict has rendered */}
+      {finished && completed > 0 && (
+        <p className="text-sm">
+          <Link href="/agents" className="inline-flex min-h-11 items-center text-sm text-[var(--accent)] hover:underline">
+            Call the full briefing tool →
+          </Link>
+        </p>
+      )}
     </section>
   );
 }
@@ -232,7 +245,7 @@ function PendingCard({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold">{candidate.name}</h3>
-          <p className="max-w-[220px] truncate font-mono text-[11px] text-[var(--text-muted)]">
+          <p className="max-w-[220px] truncate font-mono text-[11px] text-[var(--text-muted)]" title={candidate.endpoint}>
             {candidate.endpoint}
           </p>
         </div>

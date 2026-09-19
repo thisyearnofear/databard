@@ -8,7 +8,7 @@ import { track } from "@/lib/track";
 import { costHighlights } from "@/lib/cost-framing";
 import { setDataContext } from "@/lib/data-context";
 import { StatTile } from "@/components/viz";
-import { PixelIcon } from "@/components/dither-kit";
+import { DitherButton, PixelIcon } from "@/components/dither-kit";
 import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { LandingProof } from "./LandingProof";
 import type { Episode } from "@/lib/types";
@@ -48,6 +48,7 @@ export function LandingStep() {
       const res = await fetch("/api/demo/seed", { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Demo seed failed");
+      track("demo_play", { persona: state.persona, path: "seeded" });
       dispatch({ type: "SET_STATUS", status: "" });
       setDataContext({ kind: "demo", label: "Demo", detail: "sample briefing", source: "demo", demo: true });
       router.push(workspace === "protocols" ? "/league?from=demo" : `/protocol?episode=demo-enterprise&demo=1&workspace=teams`);
@@ -68,6 +69,7 @@ export function LandingStep() {
 
       const res = await fetch(sampleUrl);
       const demo: Episode = await res.json();
+      track("demo_play", { persona: state.persona, path: "inline" });
       dispatch({ type: "SET_GEN_STEP", step: 2 });
       dispatch({ type: "SET_EPISODE", episode: demo });
 
@@ -140,14 +142,17 @@ export function LandingStep() {
         {/* Demo-first: the zero-friction "wow" is the highest-converting path,
             so it leads. Connect is a real step, kept as an equal-weight secondary. */}
         <div className="relative z-10 flex flex-col items-center gap-3 mb-8">
-          <button
+          <DitherButton
+            color="purple"
+            variant="solid"
+            bloom="low"
             data-testid="demo-button"
             onClick={handleDemo}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,filter] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-lg shadow-[var(--accent)]/20"
+            className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-semibold text-[var(--bg)]"
           >
             <span>{workspaceCopy.demoLabel}</span>
             <span aria-hidden>→</span>
-          </button>
+          </DitherButton>
           <button
             data-testid="connect-button"
             onClick={() => {
@@ -158,7 +163,7 @@ export function LandingStep() {
               }
               showConnect();
             }}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[transform,color,border-color] duration-200 ease-out hover:scale-[1.02] active:scale-[0.97]"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--text)] px-7 py-3.5 text-base font-semibold cursor-pointer transition-[color,border-color] duration-200 ease-out"
           >
             <span>{workspaceCopy.connectLabel}</span>
             <span aria-hidden>→</span>
@@ -210,7 +215,11 @@ export function LandingStep() {
 
       {/* Product preview — show the actual dashboard, not just talk about it */}
       <section className="enter-up enter-delay-1 w-full max-w-3xl pb-10">
-        <Link href={workspaceHref("/protocol", workspace)} className="block group">
+        <Link
+          href={workspaceHref("/protocol", workspace)}
+          className="block group"
+          onClick={() => track("landing_cta_click", { cta: "preview", persona: state.persona })}
+        >
           <div className="relative rounded-xl overflow-hidden border border-[var(--border)] shadow-2xl shadow-black/40 transition-transform duration-300 group-hover:scale-[1.01]">
             {/* Browser chrome */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface)] border-b border-[var(--border)]">
@@ -242,7 +251,11 @@ export function LandingStep() {
       {/* Live dashboard stats — proof the engine is running */}
       {totals && totals.sources > 0 && (
         <section className="w-full max-w-2xl pb-10">
-          <Link href={workspaceHref("/protocol", workspace)} className="block group">
+          <Link
+            href={workspaceHref("/protocol", workspace)}
+            className="block group"
+            onClick={() => track("landing_cta_click", { cta: "live_stats", persona: state.persona })}
+          >
             <div className="flex flex-wrap gap-3 justify-center">
               <StatTile icon="chart" value={totals.sources} label="Sources watched" />
               <StatTile icon="warning" value={totals.failingTests} label="Failing tests" />
@@ -369,9 +382,9 @@ export function LandingStep() {
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
               <span>Is my data stored anywhere?</span>
-              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+              <span aria-hidden="true" className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
-            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+            <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
               {state.persona === "web3"
                 ? "Credentials are sent over HTTPS and never persisted on disk. Generated audio is ephemeral unless you explicitly save or mint it. Public subgraph scores can be attested on-chain."
                 : "Credentials are sent over HTTPS and never persisted on disk. Upload a dbt manifest or connect a catalog with a read-only token. Generated audio is ephemeral unless you save it."}
@@ -380,18 +393,18 @@ export function LandingStep() {
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
               <span>How long does it take?</span>
-              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+              <span aria-hidden="true" className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
-            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+            <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
               About 30–90 seconds from Connect to listening. The AI analyzes your schema, writes a script, and synthesizes audio in real time. You can watch each step complete.
             </p>
           </details>
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
               <span>{state.persona === "web3" ? "What is Coral?" : "What do I need to connect?"}</span>
-              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+              <span aria-hidden="true" className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
-            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+            <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
               {state.persona === "web3"
                 ? "Coral is an open-source SQL engine for 50+ sources. Write a query that joins Dune, GitHub, or Slack, and DataBard turns the result into a briefing. You can also paste a Dune query URL or subgraph endpoint directly."
                 : "A dbt target/manifest.json is enough. If you have OpenMetadata, DataHub, or dbt Cloud, connect those for lineage, owners, and tests. Everything is read-only."}
@@ -400,9 +413,9 @@ export function LandingStep() {
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
               <span>{state.persona === "enterprise" ? "Does it cost anything?" : "Do I need SOL to use this?"}</span>
-              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+              <span aria-hidden="true" className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
-            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+            <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
               {state.persona === "enterprise"
                 ? "One briefing is free. Weekly digests are $49/month for the whole team — unlimited listeners, no per-seat fee."
                 : "Listening is free. Minting a report on-chain costs a small SOL transaction fee (~0.01 SOL). No wallet needed just to generate and listen."}
@@ -411,9 +424,9 @@ export function LandingStep() {
           <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
             <summary className="text-sm font-medium cursor-pointer flex items-center justify-between list-none">
               <span>Can I get alerts when something breaks?</span>
-              <span className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
+              <span aria-hidden="true" className="text-[var(--text-muted)] group-open:rotate-45 transition-transform text-lg">+</span>
             </summary>
-            <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+            <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
               Yes. Slack or webhook alerts fire when health drops. You can also schedule a weekly briefing — a fresh 2-minute audio every Monday, without anyone opening a dashboard.
             </p>
           </details>

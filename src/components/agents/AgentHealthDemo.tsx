@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { scoreTextClass } from "@/lib/product/score-tone";
+import { DitherButton } from "@/components/dither-kit";
+import { track } from "@/lib/track";
 
 interface HealthExample {
   ok: true;
@@ -40,6 +43,7 @@ export function AgentHealthDemo() {
       if (request.current !== controller) return;
       setResult(data);
       setState("success");
+      track("agent_demo_run", { surface: "agents_page" });
     } catch {
       if (request.current !== controller) return;
       setError(controller.signal.aborted ? "The example took too long. Try again; no payment was made." : "The example could not be loaded. Try again; no payment is required.");
@@ -63,9 +67,9 @@ export function AgentHealthDemo() {
       <h2 id="health-example-title" className="mt-3 text-2xl font-bold">From a check to a next step.</h2>
       <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">Run a real health check on a sample dataset. See the answer your agent receives.</p>
       <p className="mt-4 text-xs text-[var(--text-muted)]">Sample data · no credentials · no payment</p>
-      <button type="button" onClick={runExample} disabled={state === "loading"} className="mt-5 min-h-11 rounded-lg bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90 disabled:opacity-50">
+      <DitherButton color="purple" variant="solid" bloom="low" onClick={runExample} disabled={state === "loading"} className="mt-5 min-h-11 px-5 py-3 text-sm font-semibold">
         {state === "loading" ? "Analyzing the sample…" : state === "success" ? "Run the example again" : state === "error" ? "Try the free example again" : "Run a free example"}
-      </button>
+      </DitherButton>
       {state === "loading" && <p role="status" className="mt-3 text-sm text-[var(--text-muted)]">Waiting for the sample analysis. No paid tools are being called.</p>}
       {error && <p role="alert" className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
       {result && state === "success" && (
@@ -73,7 +77,7 @@ export function AgentHealthDemo() {
           <p role="status" className="font-mono text-xs text-[var(--accent)]">Demo analysis ready</p>
           <div className="mt-3 flex items-start justify-between gap-4">
             <h3 className="text-base font-semibold">{typeof result.schemaName === "string" ? result.schemaName : "Sample dataset"}</h3>
-            {typeof result.health?.score === "number" && Number.isFinite(result.health.score) && <span className="font-display text-2xl font-bold tabular-nums">{result.health.score}<span className="text-xs font-normal text-[var(--text-muted)]"> / 100</span></span>}
+            {typeof result.health?.score === "number" && Number.isFinite(result.health.score) && <span className={`font-display text-2xl font-bold tabular-nums ${scoreTextClass(result.health.score)}`}>{result.health.score}<span className="text-xs font-normal text-[var(--text-muted)]"> / 100</span></span>}
           </div>
           <p className="mt-3 text-sm leading-relaxed">{result.summary}</p>
           {Array.isArray(result.keyFindings) && <ul className="mt-4 space-y-2 text-sm text-[var(--text-muted)]">{result.keyFindings.filter((item) => typeof item === "string").map((item, index) => <li key={index}>{item}</li>)}</ul>}

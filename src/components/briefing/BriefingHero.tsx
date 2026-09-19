@@ -1,5 +1,7 @@
 import { DitherAvatar, DitherButton, DitherGradient, PixelIcon } from "@/components/dither-kit";
+import { MondaySignup } from "@/components/MondaySignup";
 import { findingSentence } from "@/lib/story";
+import { track } from "@/lib/track";
 import type { BriefingEpisodeMeta, SourceCard } from "./types";
 
 interface BriefingHeroProps {
@@ -58,6 +60,12 @@ export function BriefingHero({ episode, cards, avgHealth, isProtocols, onListenE
             </button>
           </div>
         </div>
+        {/* Retention hook at peak intent — the analysis just landed, so this is
+            where the weekly habit starts. Previously MondaySignup only lived in
+            dead code, so monday_signup could never fire from the dashboard. */}
+        <div className="relative mt-4 border-t border-[var(--accent)]/20 pt-3 max-w-sm">
+          <MondaySignup schema={episode.schemaName} />
+        </div>
       </section>
     );
   }
@@ -78,7 +86,7 @@ export function BriefingHero({ episode, cards, avgHealth, isProtocols, onListenE
               <DitherAvatar name={priority.name} size={28} className="rounded-md shrink-0" />
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--accent)]">{isProtocols ? "Protocol signal" : "What your analyst found"}</p>
             </div>
-            <h2 id="priority-title" className="mt-3 text-xl font-bold">
+            <h2 id="priority-title" className="mt-3 text-xl font-bold font-display">
               {priority.insight.failingTests > 0
                 ? `${priority.insight.failingTests} failing ${priority.insight.failingTests === 1 ? "test" : "tests"} in ${priority.displayName}`
                 : `${priority.displayName} needs stronger data coverage`}
@@ -113,9 +121,18 @@ export function BriefingHero({ episode, cards, avgHealth, isProtocols, onListenE
       <section className="relative mb-6 border border-[var(--success)]/30 bg-[var(--success)]/5 rounded-2xl px-5 py-5 animate-slide-up" aria-label="Estate status">
         <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--success)]">{isProtocols ? "Protocol signal" : "What your analyst found"}</p>
         <p className="mt-2 text-lg font-semibold">No material issues. Estate health {avgHealth}% across {cards.length} {cards.length === 1 ? "source" : "sources"}.</p>
-        <button onClick={onReadStory} className="mt-3 text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer">
-          Review the story ↓
-        </button>
+        <div className="mt-3 flex items-center gap-4 flex-wrap">
+          <button onClick={onReadStory} className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer">
+            Review the story ↓
+          </button>
+          <a
+            href="/pro"
+            onClick={() => track("schedule_setup", { source: "calm_state" })}
+            className="text-sm font-medium text-[var(--accent)] hover:underline"
+          >
+            Keep it this way — get the weekly digest →
+          </a>
+        </div>
       </section>
     );
   }

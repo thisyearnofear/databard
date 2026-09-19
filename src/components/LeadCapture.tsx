@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 /**
  * LeadCapture — inline email capture form that posts to /api/leads.
@@ -27,6 +27,8 @@ export function LeadCapture({
 }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const emailId = useId();
+  const errorId = useId();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,24 +70,28 @@ export function LeadCapture({
         </p>
       )}
       <div className={compact ? "flex items-center gap-2" : "flex items-center gap-2 w-full max-w-sm"}>
+        <label htmlFor={emailId} className="sr-only">Email address</label>
         <input
+          id={emailId}
           type="email"
           value={email}
           onChange={(e) => { setEmail(e.target.value); setStatus("idle"); }}
           placeholder="you@protocol.xyz"
+          aria-invalid={status === "error"}
+          aria-describedby={status === "error" ? errorId : undefined}
           className="flex-1 text-sm px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
           disabled={status === "loading"}
         />
         <button
           type="submit"
           disabled={status === "loading"}
-          className="text-sm font-medium px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--bg)] hover:opacity-90 transition-opacity disabled:opacity-50 shrink-0"
+          className="text-sm font-medium px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--bg)] hover:brightness-110 transition disabled:opacity-50 shrink-0"
         >
           {status === "loading" ? "…" : buttonText}
         </button>
       </div>
       {status === "error" && (
-        <span className="text-xs text-[var(--danger)]">Please enter a valid email.</span>
+        <span id={errorId} role="alert" className="text-xs text-[var(--danger)]">Please enter a valid email.</span>
       )}
     </form>
   );

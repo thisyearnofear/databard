@@ -115,7 +115,7 @@ export default function ProbePage() {
   return (
     <main className="report-surface min-h-screen bg-[var(--bg)] px-5 py-12 sm:py-16">
       <div className="mx-auto max-w-5xl">
-        <Link href="/agents" className="inline-flex min-h-11 items-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Tools for agents</Link>
+        <Link href="/agents" className="inline-flex min-h-11 items-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Agent tools</Link>
 
         {/* Hero */}
         <div className="mt-6 max-w-3xl">

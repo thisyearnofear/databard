@@ -69,7 +69,7 @@ export function WriteBackAction() {
             type="button"
             onClick={writeBack}
             disabled={busy}
-            className="bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--bg)] transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? "Writing…" : "Write back →"}
           </button>
@@ -82,7 +82,11 @@ export function WriteBackAction() {
         </div>
       </div>
       {status && (
-        <p className={`mt-2 text-xs ${status.kind === "ok" ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
+        <p
+          role="status"
+          aria-live="polite"
+          className={`mt-2 text-xs ${status.kind === "ok" ? "text-[var(--success)]" : "text-[var(--danger)]"}`}
+        >
           {status.text}
         </p>
       )}
