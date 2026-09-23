@@ -112,6 +112,40 @@ const f = (name: string, over: Partial<FieldSpec> = {}): FieldSpec => ({ name, r
   const names = extractFieldNames({ error: "bad request" });
   assert(names.length === 0, `generic error yields nothing (got ${names.join(",")})`);
 }
+{
+  // `field "tokenAddress" is not set` (xerpa-style)
+  const names = extractFieldNames({ success: false, code: 5001002, msg: 'field "tokenAddress" is not set' });
+  assert(names.includes("tokenAddress"), `is-not-set extraction (got ${names.join(",")})`);
+}
+{
+  // `body.asset: Field required` (fastapi-style)
+  const names = extractFieldNames({ error: "invalid_request: body.asset: Field required; body.position_usd: Field required" });
+  assert(names.includes("asset") && names.includes("position_usd"), `colon-required extraction (got ${names.join(",")})`);
+}
+{
+  // errors array of full sentences must not become field names
+  const names = extractFieldNames({ errors: ["demand.partNumber is required.", "demand.quantity must be a positive number."] });
+  assert(names.includes("demand.partNumber"), `dotted path extracted (got ${names.join(",")})`);
+  assert(!names.some((n) => n.includes(" ")), `no sentence-as-name (got ${names.join(",")})`);
+}
+{
+  // string-form zod paths and $. prefixes
+  const names = extractFieldNames({ issues: [{ path: "targetUrl", message: "Required" }, { path: "$.profile", message: "must be an object" }] });
+  assert(names.includes("targetUrl") && names.includes("profile"), `string paths (got ${names.join(",")})`);
+}
+{
+  // dotted names synthesize nested objects
+  const body = synthesizeBody([f("demand.partNumber"), f("demand.quantity", { type: "number" })]);
+  const d = body.demand as Record<string, unknown>;
+  assert(d?.partNumber === "BTC" && d?.quantity === 5, `nested synthesis (got ${JSON.stringify(body)})`);
+}
+{
+  const body = synthesizeBody([f("addresses", { type: "array" }), f("mint"), f("stablecoin"), f("to")]);
+  assert(Array.isArray(body.addresses), "addresses → array");
+  assert(body.mint === "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "mint → solana USDC");
+  assert(body.stablecoin === "USDC", "stablecoin dict");
+  assert(body.to === "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "to → wallet");
+}
 
 // ── isSideEffecting ─────────────────────────────────────────────────────────
 

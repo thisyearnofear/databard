@@ -150,34 +150,49 @@ const STOPWORDS = new Set([
 
 export function extractFieldNames(body: unknown): string[] {
   const names = new Set<string>();
+  // Normalise "body.asset", "$.profile", "params[0].x" → usable field names.
+  // Dotted names keep their path so synthesizeBody can nest them.
+  const addName = (raw: string) => {
+    let n = raw.trim().replace(/^\$\.?/, "").replace(/\[\d+\]/g, "");
+    if (!n) return;
+    n = n.replace(/^(body|query|params|arguments|args|input|data)\./i, "");
+    const leaf = n.split(".").pop() ?? n;
+    if (!/^[A-Za-z_][\w.]*$/.test(n)) return;
+    if (STOPWORDS.has(leaf.toLowerCase()) || leaf.length > 40) return;
+    names.add(n);
+  };
   const visit = (v: unknown, depth: number) => {
     if (depth > 4 || v == null) return;
     if (typeof v === "string") {
       // "symbol is required", `"symbol" is required`, `missing "chain"`,
-      // `expected field 'limit'`, `must include address`
+      // `expected field 'limit'`, `must include address`,
+      // `field "tokenAddress" is not set`, `body.asset: Field required`
       const patterns = [
-        /["'`]([A-Za-z_][\w.-]*)["'`]\s+(?:is\s+)?(?:required|missing|invalid|expected)/gi,
-        /\b([A-Za-z_][\w.-]*)\s+(?:is\s+)?(?:required|missing|not provided|must be provided)\b/gi,
+        /["'`]([A-Za-z_][\w.-]*)["'`]\s+(?:is\s+)?(?:required|missing|invalid|expected|not set|not provided)/gi,
+        /\b([A-Za-z_][\w.-]*)\s+(?:is\s+)?(?:required|missing|not provided|must be provided|is not set)\b/gi,
         /(?:missing|required|provide|expected|must include|requires?)\s+(?:\w+\s+){0,2}["'`]([A-Za-z_][\w.-]*)["'`]/gi,
+        /\b([A-Za-z_][\w.-]*)\s*:\s*(?:Field\s+)?[Rr]equired\b/g,
       ];
       for (const re of patterns) {
         for (const m of v.matchAll(re)) {
-          const n = m[1];
-          if (!STOPWORDS.has(n.toLowerCase()) && n.length <= 40) names.add(n);
+          addName(m[1]);
         }
       }
       return;
     }
     if (Array.isArray(v)) {
-      // zod-style issues: [{path: ["symbol"], code/message...}]
+      // zod-style issues: [{path: ["symbol"], code/message...}] or
+      // [{path: "targetUrl"|"$.profile"|"body.asset", ...}]
       for (const item of v) {
         if (isObj(item) && Array.isArray(item.path)) {
           const seg = item.path[item.path.length - 1];
-          if (typeof seg === "string" && seg && !STOPWORDS.has(seg.toLowerCase())) names.add(seg);
+          if (typeof seg === "string" && seg) addName(seg);
           else if (typeof seg === "number" && item.path.length > 1) {
             const prev = item.path[item.path.length - 2];
-            if (typeof prev === "string") names.add(prev);
+            if (typeof prev === "string") addName(prev);
           }
+        } else if (isObj(item) && typeof item.path === "string") {
+          addName(item.path);
         } else {
           visit(item, depth + 1);
         }
@@ -188,13 +203,12 @@ export function extractFieldNames(body: unknown): string[] {
       // {errors: {symbol: ["required"]}} / {fields: {...}} keyed by field name
       for (const key of ["errors", "fields", "missing", "required_fields", "requiredFields"]) {
         if (isObj(v[key])) {
-          for (const k of Object.keys(v[key] as Obj)) {
-            if (!STOPWORDS.has(k.toLowerCase()) && /^[A-Za-z_][\w.-]*$/.test(k)) names.add(k);
-          }
+          for (const k of Object.keys(v[key] as Obj)) addName(k);
         }
-        if (Array.isArray(v[key])) {
+        if (Array.isArray(v[key]) && key !== "errors" && key !== "fields") {
+          // {missing: ["symbol", "chain"]} — entries are bare names
           for (const k of v[key] as unknown[]) {
-            if (typeof k === "string" && !STOPWORDS.has(k.toLowerCase())) names.add(k);
+            if (typeof k === "string") addName(k);
           }
         }
       }
@@ -212,19 +226,24 @@ const SAMPLE_TX_HASH =
   "0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060";
 const SAMPLE_TOKEN = "0xdAC17F958D2ee523a2206206994597C13D831ec7"; // USDT (Ethereum)
 const SAMPLE_WALLET = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"; // vitalik.eth
+const SAMPLE_SOL_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"; // USDC (Solana)
 
 const norm = (name: string) => name.toLowerCase().replace(/[_\-.]/g, "");
 
 function dictionaryValue(name: string, type?: string): unknown {
-  const n = norm(name);
+  const n = norm(name.split(".").pop() ?? name);
   const num = type === "number" || type === "integer";
   const has = (...words: string[]) => words.some((w) => n.includes(w));
   if (has("tokenaddress", "contractaddress", "contract")) return SAMPLE_TOKEN;
+  if (n === "mint" || n === "tokenmint" || n === "coinmint") return SAMPLE_SOL_MINT;
   if (has("token")) return SAMPLE_TOKEN;
   if (has("txhash", "transactionhash")) return SAMPLE_TX_HASH;
   if (n === "tx" || has("txnhash")) return SAMPLE_TX_HASH;
   if (has("walletaddress", "wallet")) return SAMPLE_WALLET;
+  if (n === "addresses" || n === "wallets") return [SAMPLE_WALLET];
   if (n === "address" || n.endsWith("address") || has("owner")) return SAMPLE_WALLET;
+  if (n === "to" || n === "from" || n === "recipient" || n === "target") return SAMPLE_WALLET;
+  if (has("stablecoin", "stable")) return "USDC";
   if (has("chainid", "chainindex")) return num ? 1 : "1";
   if (n === "chain" || n === "network" || n.endsWith("chain")) return num ? 1 : "1";
   if (has("symbol", "ticker", "coin", "asset", "pair", "market")) return "BTC";
@@ -238,9 +257,20 @@ function dictionaryValue(name: string, type?: string): unknown {
     return new Date().toISOString().slice(0, 10);
   }
   if (has("lang", "language", "locale")) return "en";
-  if (has("amount", "value", "quantity")) return "1";
+  if (has("amount", "value", "quantity") || n.endsWith("usd")) return num ? 5 : "1";
   if (has("id") || n.endsWith("id")) return "probe-1";
   return undefined;
+}
+
+/** Assign body[a.b.c] = value with nested objects. */
+function assignNested(body: Record<string, unknown>, name: string, value: unknown) {
+  const parts = name.split(".");
+  let cur = body;
+  for (const p of parts.slice(0, -1)) {
+    if (!isObj(cur[p])) cur[p] = {};
+    cur = cur[p] as Record<string, unknown>;
+  }
+  cur[parts[parts.length - 1]] = value;
 }
 
 function typeDefault(type?: string): unknown {
@@ -276,7 +306,7 @@ export function synthesizeBody(
     const hasSchemaHint = exampleVal !== undefined || f.default !== undefined || f.enum !== undefined;
     const dict = dictionaryValue(f.name, f.type);
     if (!f.required && !hasSchemaHint && dict === undefined) continue;
-    body[f.name] =
+    const value =
       exampleVal !== undefined
         ? exampleVal
         : f.default !== undefined
@@ -286,6 +316,7 @@ export function synthesizeBody(
             : dict !== undefined
               ? dict
               : typeDefault(f.type);
+    assignNested(body, f.name, f.type === "array" && !Array.isArray(value) ? [value] : value);
   }
   return body;
 }

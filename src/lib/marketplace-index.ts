@@ -642,16 +642,18 @@ function isSubstantiveJson(body: unknown): boolean {
 }
 
 /** True when the response signals an application-level error rather than a
-    delivered payload — 4xx, or a 2xx body carrying an error marker. */
-function bodyHasErrorSignal(check: ListingCheck): boolean {
-  if (check.status >= 400 && check.status !== 402) return true;
+    delivered payload — 4xx, or a 2xx body carrying an error marker (incl.
+    numeric/string error codes like xerpa's 5001002). */
+function bodyHasErrorSignal(status: number, bodyJson: unknown): boolean {
+  if (status >= 400 && status !== 402) return true;
   const obj =
-    check.bodyJson && typeof check.bodyJson === "object"
-      ? (check.bodyJson as Record<string, unknown>)
+    bodyJson && typeof bodyJson === "object"
+      ? (bodyJson as Record<string, unknown>)
       : null;
   if (!obj) return false;
   if (typeof obj.error === "string" || obj.ok === false || obj.success === false) return true;
   if (typeof obj.code === "string" && /ERROR|REQUIRED|INVALID/i.test(obj.code)) return true;
+  if (typeof obj.code === "number" && obj.code !== 0 && obj.code !== 200) return true;
   return false;
 }
 
@@ -775,6 +777,9 @@ export async function probeValidCall(
   }
 
   // ── HTTP: synthesized body (POST) or query (GET) ──────────────────────
+  // An MCP endpoint without a picked tool gets no plain POST — a non-JSON-RPC
+  // body isn't a fair call on a streamable-HTTP server.
+  if (check.protocol === "mcp" && !toolName) return null;
   let fields = inputs.fields;
   let body = synthesizeBody(fields, inputs.exampleBody);
   const method = check.checkedMethod;
@@ -1048,7 +1053,7 @@ export function scoreListing(
       flags.push("402 but the payment challenge could not be decoded");
       checks.paymentIntegrity = { pass: "partial", detail: "Undecodable PAYMENT-REQUIRED" };
       paymentIntegrity = null;
-    } else if (effStatus >= 200 && effStatus < 300 && isSubstantiveJson(effBody)) {
+    } else if (effStatus >= 200 && effStatus < 300 && isSubstantiveJson(effBody) && !bodyHasErrorSignal(effStatus, effBody)) {
       // Real payload without payment on a paid listing — the one true
       // accusation, and only on substantive responses.
       paymentIntegrity = 0;
@@ -1101,7 +1106,7 @@ export function scoreListing(
     }
   }
   if (delivery === null && validCallRan && effStatus >= 200 && effStatus < 300) {
-    if (isSubstantiveJson(effBody)) {
+    if (isSubstantiveJson(effBody) && !bodyHasErrorSignal(effStatus, effBody)) {
       deliveredBody = effBody;
       delivery = 100;
     } else {
