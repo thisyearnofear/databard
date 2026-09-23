@@ -210,6 +210,11 @@ export default async function MarketplaceServicePage({
                 Settlement tx on OKLink ↗
               </a>
             )}
+            {svc.lastPaidVerification.responseSnippet && (
+              <pre className="mt-2 overflow-x-auto rounded bg-[var(--bg)] p-2 text-[10px] text-[var(--text-muted)]">
+                {`HTTP ${svc.lastPaidVerification.status ?? "?"}${svc.lastPaidVerification.responseContentType ? ` · ${svc.lastPaidVerification.responseContentType}` : ""}\n${svc.lastPaidVerification.responseSnippet}`}
+              </pre>
+            )}
           </section>
         )}
 

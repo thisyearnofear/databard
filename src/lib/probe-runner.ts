@@ -202,7 +202,8 @@ async function loadX402ClientModules(): Promise<X402ClientModules | null> {
  * or null if payment isn't possible.
  */
 export async function attemptX402Payment(
-  challengeHeader: string
+  challengeHeader: string,
+  opts?: { tokenDomain?: { name: string; version: string } }
 ): Promise<Record<string, string> | null> {
   const pk = process.env.PROBE_PAYER_PK;
   if (!pk) return null;
@@ -210,6 +211,23 @@ export async function attemptX402Payment(
   try {
     const mods = await loadX402ClientModules();
     if (!mods) return null;
+
+    let header = challengeHeader;
+    if (opts?.tokenDomain) {
+      // Some services declare a wrong EIP-712 domain in accepts[].extra
+      // (e.g. name "USDT" when the token's domain is "USD₮0"/"1") — the
+      // signature can never verify, so payment is perpetually re-challenged.
+      // Signing against the token's real domain fixes those services.
+      try {
+        const decoded = JSON.parse(Buffer.from(header, "base64").toString("utf-8"));
+        for (const a of decoded.accepts ?? []) {
+          if (a?.network === "eip155:196") a.extra = { ...a.extra, ...opts.tokenDomain };
+        }
+        header = Buffer.from(JSON.stringify(decoded)).toString("base64");
+      } catch {
+        // malformed challenge — use it as-is
+      }
+    }
 
     const rpcUrl = process.env.PROBE_RPC_URL || "https://xlayerrpc.okx.com";
     const account = mods.privateKeyToAccount(pk as `0x${string}`);
@@ -224,7 +242,7 @@ export async function attemptX402Payment(
     const httpClient = new mods.x402HTTPClient(core);
 
     const paymentRequired = httpClient.getPaymentRequiredResponse(
-      (name) => (name.toUpperCase() === "PAYMENT-REQUIRED" ? challengeHeader : null)
+      (name) => (name.toUpperCase() === "PAYMENT-REQUIRED" ? header : null)
     );
     const paymentPayload = await httpClient.createPaymentPayload(paymentRequired);
     return httpClient.encodePaymentSignatureHeader(paymentPayload);

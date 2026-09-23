@@ -5,6 +5,7 @@ import {
   isSideEffecting,
   pickMcpTool,
   discoverInputs,
+  classifyInputs,
   isStalePayload,
   type FieldSpec,
 } from "../src/lib/service-inputs";
@@ -137,7 +138,9 @@ const f = (name: string, over: Partial<FieldSpec> = {}): FieldSpec => ({ name, r
   // dotted names synthesize nested objects
   const body = synthesizeBody([f("demand.partNumber"), f("demand.quantity", { type: "number" })]);
   const d = body.demand as Record<string, unknown>;
-  assert(d?.partNumber === "BTC" && d?.quantity === 5, `nested synthesis (got ${JSON.stringify(body)})`);
+  // "partNumber" isn't a dictionary name — unknown strings get the honest
+  // placeholder, not a confident "BTC".
+  assert(d?.partNumber === "n/a" && d?.quantity === 5, `nested synthesis (got ${JSON.stringify(body)})`);
 }
 {
   const body = synthesizeBody([f("addresses", { type: "array" }), f("mint"), f("stablecoin"), f("to")]);
@@ -233,6 +236,75 @@ assert(!isSideEffecting("https://x.com/mcp", "get_price"), "read tool allowed");
   assert(isStalePayload({ result: { generatedAt: old } }) === old, "nested stale date");
   assert(isStalePayload({ date: new Date().toISOString().slice(0, 10) }) === null, "fresh date not stale");
   assert(isStalePayload({ price: 1 }) === null, "no date → not stale");
+}
+
+// ── extraction never mines payment challenges ─────────────────────────────
+
+{
+  const names = extractFieldNames({ error: "Payment required", x402Version: 2 });
+  assert(names.length === 0, `x402 body → no fields (got ${names.join(",")})`);
+}
+{
+  // even without the x402Version key, "Payment" is a stopword
+  const names = extractFieldNames({ error: "Payment required" });
+  assert(names.length === 0, `payment-required text → no fields (got ${names.join(",")})`);
+}
+{
+  const names = extractFieldNames({ error: "signature verification failed: token is invalid" });
+  assert(!names.includes("token"), `invalid-token error doesn't yield "token" (got ${names.join(",")})`);
+}
+{
+  // a real missing-token error still extracts (missing, not invalid)
+  const names = extractFieldNames({ error: "token is required" });
+  assert(names.includes("token"), `token-is-required still extracts (got ${names.join(",")})`);
+}
+
+// discoverInputs: 402 status bodies skip rejection mining entirely
+{
+  const d = discoverInputs({
+    serviceName: "Svc",
+    description: "nothing usable",
+    status: 402,
+    bodyJson: { error: "Payment required", x402Version: 2 },
+  });
+  assert(d === null || d.source !== "rejection", `402 body → no rejection source (got ${d?.source})`);
+}
+
+// ── input confidence tiers ────────────────────────────────────────────────
+
+{
+  assert(
+    classifyInputs({ source: "challenge_schema", fields: [f("symbol", { example: "ETH" })] }) === "exact",
+    "schema example → exact",
+  );
+  assert(
+    classifyInputs({ source: "rejection", fields: [f("symbol")] }) === "dictionary",
+    "rejection name in dictionary → dictionary",
+  );
+  assert(
+    classifyInputs({ source: "rejection", fields: [f("mysteryField")] }) === "guess",
+    "unknown required field → guess",
+  );
+  assert(
+    classifyInputs({ source: "description", fields: [f("symbol")] }) === "guess",
+    "description source → guess",
+  );
+  assert(
+    classifyInputs({ source: "challenge_example", fields: [{ name: "x", required: false }] }) === "exact",
+    "example body → exact",
+  );
+  assert(
+    classifyInputs({
+      source: "challenge_schema",
+      fields: [f("symbol", { enum: ["BTC"] }), f("name")],
+    }) === "guess",
+    "one unknown required field drags to guess",
+  );
+}
+{
+  // unknown string fields get an honest placeholder, not "BTC"
+  const body = synthesizeBody([f("mystery")]);
+  assert(body.mystery === "n/a", `unknown string → n/a (got ${JSON.stringify(body)})`);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

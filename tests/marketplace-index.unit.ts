@@ -361,6 +361,7 @@ const cand = (id: string, feeUsd: number, over: Record<string, unknown> = {}) =>
   callable: true,
   gateReached: true,
   sideEffectSkipped: false,
+  inputConfidence: "exact" as const,
   ...over,
 });
 const now = Date.now();
@@ -792,25 +793,121 @@ await withFetch(
   );
 }
 
-// Aggregate paid buckets reconcile exactly
+// Aggregate paid buckets reconcile exactly — headline only counts settled
+// calls made with exact/dictionary inputs
 {
   const paidAt = new Date().toISOString();
+  const pv = (o: Partial<import("../src/lib/marketplace-index").PaidVerification>) =>
+    ({ at: paidAt, delivered: false, ...o });
   const rows = [
-    indexed({ serviceId: "d1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: true, status: 200, settlementTx: "0x1" } }),
-    indexed({ serviceId: "d2", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: true, status: 201, settlementTx: "0x2" } }),
-    indexed({ serviceId: "r1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: false, status: 402, outcome: "payment_rejected" } }),
-    indexed({ serviceId: "e1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: false, status: 500, settlementTx: "0x3" } }),
-    indexed({ serviceId: "n1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: false, status: 400 } }),
-    indexed({ serviceId: "f1", feeUsd: 0 }), // free — excluded from buckets
-    indexed({ serviceId: "p1", feeUsd: 0.01 }), // paid, never verified — excluded
+    // headline: 2 delivered (1 substantive + 1 thin) of 3 settled verified
+    indexed({ serviceId: "d1", feeUsd: 0.01, lastPaidVerification: pv({ delivered: true, status: 200, settlementTx: "0x1", outcome: "delivered", inputConfidence: "exact" }) }),
+    indexed({ serviceId: "t1", feeUsd: 0.01, lastPaidVerification: pv({ status: 200, settlementTx: "0x2", outcome: "thin", inputConfidence: "dictionary" }) }),
+    indexed({ serviceId: "e1", feeUsd: 0.01, lastPaidVerification: pv({ status: 500, settlementTx: "0x3", outcome: "errored", inputConfidence: "exact" }) }),
+    // buckets, but out of the headline denominator
+    indexed({ serviceId: "r1", feeUsd: 0.01, lastPaidVerification: pv({ status: 402, outcome: "payment_rejected", inputConfidence: "dictionary" }) }),
+    indexed({ serviceId: "n1", feeUsd: 0.01, lastPaidVerification: pv({ status: 400, outcome: "not_settled", inputConfidence: "exact" }) }),
+    // guess-tier settled attempts never reach the headline
+    indexed({ serviceId: "g1", feeUsd: 0.01, lastPaidVerification: pv({ status: 200, settlementTx: "0x4", outcome: "errored", inputConfidence: "guess" }) }),
+    indexed({ serviceId: "g2", feeUsd: 0.01, lastPaidVerification: pv({ delivered: true, status: 200, settlementTx: "0x5", outcome: "delivered" }) }), // legacy: no confidence → guess
+    indexed({ serviceId: "f1", feeUsd: 0 }),
+    indexed({ serviceId: "p1", feeUsd: 0.01 }),
   ];
   const b = paidBuckets(rows);
-  assert(b.paidAttempted === 5, `paidAttempted 5 (got ${b.paidAttempted})`);
+  assert(b.paidAttempted === 7, `paidAttempted 7 (got ${b.paidAttempted})`);
   assert(b.paidDelivered === 2, `paidDelivered 2 (got ${b.paidDelivered})`);
+  assert(b.paidDeliveredThin === 1, `paidDeliveredThin 1 (got ${b.paidDeliveredThin})`);
   assert(b.paidPaymentRejected === 1, `paidPaymentRejected 1 (got ${b.paidPaymentRejected})`);
-  assert(b.paidErrored === 1, `paidErrored 1 (got ${b.paidErrored})`);
+  assert(b.paidErrored === 2, `paidErrored 2 (got ${b.paidErrored})`);
   assert(b.paidNotSettled === 1, `paidNotSettled 1 (got ${b.paidNotSettled})`);
+  assert(b.paidGuessExcluded === 2, `paidGuessExcluded 2 (got ${b.paidGuessExcluded})`);
+  assert(b.paidSettledVerified === 3, `headline Y=3 (got ${b.paidSettledVerified})`);
+  assert(b.paidDeliveredVerified === 2, `headline X=2 (got ${b.paidDeliveredVerified})`);
   assert(b.settledDeliveryRate === 0.667, `settledDeliveryRate 0.667 (got ${b.settledDeliveryRate})`);
+}
+
+// Paid "thin" (settled 2xx, nothing substantive) → delivery 60, not failed
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 402, challenge: challenge(), bodyJson: null }),
+    s,
+    probe({ status: 402, challenge: challenge(), inputConfidence: "exact" }),
+    {
+      record: { at: new Date().toISOString(), delivered: false, status: 200, settlementTx: "0xt", outcome: "thin", inputConfidence: "exact" },
+      bodyJson: { ok: true },
+      substantive: false,
+    },
+  );
+  assert(v.subScores.delivery === 60, `thin paid → delivery 60 (got ${v.subScores.delivery})`);
+  assert(v.verification === "delivered", `thin paid → delivered (got ${v.verification})`);
+  assert(v.status !== "broken", `thin paid → not broken (got ${v.status})`);
+}
+
+// Paid not_settled → degraded, never failed/broken
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 402, challenge: challenge(), bodyJson: null }),
+    s,
+    probe({ status: 402, challenge: challenge(), inputConfidence: "exact" }),
+    {
+      record: { at: new Date().toISOString(), delivered: false, status: 400, outcome: "not_settled", inputConfidence: "exact" },
+      bodyJson: { error: "bad input" },
+      substantive: false,
+    },
+  );
+  assert(v.status === "degraded", `not_settled → degraded (got ${v.status})`);
+  assert(v.verification === "gate", `not_settled → gate (got ${v.verification})`);
+}
+
+// Paid call on guess inputs → never downgrades the row
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 402, challenge: challenge(), bodyJson: null }),
+    s,
+    probe({ status: 402, challenge: challenge(), inputConfidence: "guess" }),
+    {
+      record: { at: new Date().toISOString(), delivered: false, status: 422, settlementTx: "0xg", outcome: "errored", inputConfidence: "guess" },
+      bodyJson: { error: "wrong params" },
+      substantive: false,
+    },
+  );
+  assert(v.subScores.delivery === null, `guess paid → delivery unknown (got ${v.subScores.delivery})`);
+  assert(v.status === "healthy", `guess paid → not downgraded (got ${v.status})`);
+  assert(v.flags.some((f) => f.includes("guessed inputs")), "guess flag");
+}
+
+// pickVerifyTargets: guess inputs are never paid; force bypasses cooldown+confidence
+{
+  const cand = (id: string, over: Partial<Parameters<typeof pickVerifyTargets>[0][0]> = {}) => ({
+    serviceId: id, ours: false, feeUsd: 0.01, callable: true, gateReached: true,
+    sideEffectSkipped: false, ...over,
+  });
+  const now = Date.now();
+  const fresh = { at: new Date(now - 60_000).toISOString(), delivered: false };
+  const picked = pickVerifyTargets(
+    [
+      cand("exact", { inputConfidence: "exact" }),
+      cand("dict", { inputConfidence: "dictionary" }),
+      cand("guess", { inputConfidence: "guess" }),
+      cand("cooldown", { inputConfidence: "exact" }),
+    ],
+    { cooldown: fresh },
+    now,
+  );
+  const ids = picked.map((c) => c.serviceId);
+  assert(ids.includes("exact") && ids.includes("dict"), "exact+dictionary eligible");
+  assert(!ids.includes("guess"), "guess never paid");
+  assert(!ids.includes("cooldown"), "72h cooldown respected");
+  const forced = pickVerifyTargets(
+    [cand("guess", { inputConfidence: "guess" }), cand("cooldown", { inputConfidence: "exact" })],
+    { cooldown: fresh },
+    now,
+    new Set(["guess", "cooldown"]),
+  );
+  assert(forced.length === 2, `force bypasses cooldown+confidence (got ${forced.length})`);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

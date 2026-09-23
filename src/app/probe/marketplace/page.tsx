@@ -79,22 +79,27 @@ export default async function MarketplacePage({
             {(index.aggregates.paidAttempted ?? 0) >= 1 && (
               <div className="mt-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-4">
                 <p className="font-display text-lg font-bold">
-                  Paid &amp; delivered {index.aggregates.paidDelivered ?? 0} of{" "}
-                  {(index.aggregates.paidDelivered ?? 0) + (index.aggregates.paidErrored ?? 0)} service
-                  {(index.aggregates.paidDelivered ?? 0) + (index.aggregates.paidErrored ?? 0) === 1 ? "" : "s"}{" "}
-                  where payment settled
+                  Paid &amp; delivered {index.aggregates.paidDeliveredVerified ?? 0} of{" "}
+                  {index.aggregates.paidSettledVerified ?? 0} service
+                  {(index.aggregates.paidSettledVerified ?? 0) === 1 ? "" : "s"} where payment settled
                   {(index.aggregates.settledDeliveryRate ?? null) !== null &&
                     ` (${Math.round((index.aggregates.settledDeliveryRate ?? 0) * 100)}%)`}
                 </p>
                 <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                   {index.aggregates.paidAttempted} paid verification
                   {index.aggregates.paidAttempted === 1 ? "" : "s"} total
+                  {(index.aggregates.paidDeliveredThin ?? 0) > 0 &&
+                    ` · ${index.aggregates.paidDeliveredThin} thin`}
+                  {(index.aggregates.paidErrored ?? 0) > 0 &&
+                    ` · ${index.aggregates.paidErrored} errored after settlement`}
                   {(index.aggregates.paidPaymentRejected ?? 0) > 0 &&
                     ` · ${index.aggregates.paidPaymentRejected} re-challenged (inconclusive)`}
                   {(index.aggregates.paidNotSettled ?? 0) > 0 &&
-                    ` · ${index.aggregates.paidNotSettled} never settled`}{" "}
-                  — real x402 payments on X Layer, requests built from each service&apos;s own
-                  input schema — not empty pings.
+                    ` · ${index.aggregates.paidNotSettled} never settled`}
+                  {(index.aggregates.paidGuessExcluded ?? 0) > 0 &&
+                    ` · ${index.aggregates.paidGuessExcluded} excluded (guessed inputs)`}{" "}
+                  — real x402 payments on X Layer; the headline only counts calls made
+                  with schema- or dictionary-verified inputs.
                 </p>
               </div>
             )}

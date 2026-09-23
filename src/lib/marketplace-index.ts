@@ -23,12 +23,14 @@ import { assertPublicUrl, attemptX402Payment } from "./probe-runner";
 import { attestVerdict } from "./probe-attestation";
 import { diffForChain, chunkBatches, indexHashOf, publishIndexRun } from "./probe-registry";
 import {
+  classifyInputs,
   discoverInputs,
   extractFieldNames,
   isSideEffecting,
   isStalePayload,
   synthesizeBody,
   type FieldSpec,
+  type InputConfidence,
   type McpTool,
 } from "./service-inputs";
 import snapshot from "./okx-marketplace.snapshot.json";
@@ -92,6 +94,13 @@ export interface CheckScore {
   detail: string;
 }
 
+export type PaidOutcome =
+  | "delivered" // settled + substantive payload
+  | "thin" // settled, 2xx, but nothing substantive to assess
+  | "errored" // settled, then an explicit error signal or non-2xx
+  | "payment_rejected" // signed payment answered with a fresh 402
+  | "not_settled"; // validation error / timeout / no settlement
+
 export interface PaidVerification {
   at: string;
   delivered: boolean;
@@ -99,8 +108,13 @@ export interface PaidVerification {
   settlementTx?: string;
   amountUsd?: number;
   error?: string;
-  /** Signed payment was answered with a fresh 402 — inconclusive. */
-  outcome?: "payment_rejected";
+  outcome?: PaidOutcome;
+  /** Confidence tier of the inputs we paid with; absent on legacy records
+      (treated as "guess" — excluded from the delivery headline). */
+  inputConfidence?: InputConfidence;
+  /** Evidence of what the service answered after we paid. */
+  responseSnippet?: string;
+  responseContentType?: string;
 }
 
 /** One HTTP request we sent during verification, kept as evidence so
@@ -169,13 +183,20 @@ export interface MarketplaceIndex {
     paidAttempted: number;
     /** Paid services that delivered a substantive payload after payment. */
     paidDelivered: number;
+    /** Settled 2xx without a substantive payload — delivered, not assessable. */
+    paidDeliveredThin: number;
     /** Signed payment re-challenged with a fresh 402 — inconclusive. */
     paidPaymentRejected: number;
-    /** Payment settled but the response was an error / non-substantive. */
+    /** Payment settled but the response was an error / non-2xx. */
     paidErrored: number;
     /** Paid attempt never settled (validation error, timeout, no tx). */
     paidNotSettled: number;
-    /** paidDelivered / (services where payment settled). Null when none. */
+    /** Settled attempts excluded from the headline (guess-tier inputs). */
+    paidGuessExcluded: number;
+    /** Headline X/Y: delivered+thin over settled calls with verified inputs. */
+    paidDeliveredVerified: number;
+    paidSettledVerified: number;
+    /** paidDeliveredVerified / paidSettledVerified. Null when none. */
     settledDeliveryRate: number | null;
     verifySpentUsd: number;
     verifyAttempted: number;
@@ -694,6 +715,9 @@ function bodyHasErrorSignal(status: number, bodyJson: unknown): boolean {
 export interface ValidCallProbe {
   /** Where the request shape came from. */
   inputSource?: string;
+  /** Confidence tier of the synthesized request — only exact/dictionary
+      inputs are worth paying for. */
+  inputConfidence?: InputConfidence;
   /** Skipped because the tool/endpoint may move money or mutate state. */
   sideEffectSkipped?: boolean;
   /** MCP tool called, when protocol is mcp. */
@@ -732,6 +756,7 @@ export async function probeValidCall(
     description: service.description,
     challengeRaw: check.challengeRaw,
     bodyJson: check.bodyJson,
+    status: check.status,
     mcpTools: check.mcpTools,
   });
   if (!inputs) {
@@ -749,6 +774,7 @@ export async function probeValidCall(
     return null;
   }
 
+  const inputConfidence = classifyInputs(inputs);
   const toolName = inputs.toolName;
   if (isSideEffecting(service.endpoint, toolName)) {
     return {
@@ -791,6 +817,7 @@ export async function probeValidCall(
           : res.bodyJson;
     return {
       inputSource: inputs.source,
+      inputConfidence,
       toolName,
       attempts,
       status: res.status,
@@ -841,8 +868,14 @@ export async function probeValidCall(
   const challenge = res.status === 402
     ? decodeChallenge(res.challengeHeader, res.bodyJson)
     : null;
+  // Repair may have added fields — recompute confidence over the final set.
+  const finalConfidence =
+    fields === inputs.fields
+      ? inputConfidence
+      : classifyInputs({ source: inputs.source, fields });
   return {
     inputSource: inputs.source,
+    inputConfidence: finalConfidence,
     attempts,
     status: res.status,
     bodyJson: res.bodyJson,
@@ -860,6 +893,122 @@ export async function probeValidCall(
  * headers. Counts as spend only when a settlement tx appears or the service
  * delivered. Returns the verification record + response outcome.
  */
+interface PaidReplay {
+  status: number;
+  snippet: string;
+  contentType: string | null;
+  bodyJson: unknown;
+  settleHeader: string | null;
+}
+
+async function sendPaidRequest(
+  probe: ValidCallProbe,
+  paymentHeaders: Record<string, string>,
+): Promise<PaidReplay> {
+  const req = probe.request!;
+  const recordAttempt = (status: number, snippet: string, url?: string) => {
+    probe.attempts.push({
+      method: req.method,
+      url: url ?? req.url,
+      body:
+        req.method === "POST"
+          ? JSON.stringify(
+              req.mcpTool ? { tool: req.mcpTool, arguments: req.body } : req.body,
+            ).slice(0, 500)
+          : undefined,
+      status,
+      snippet: snippet.slice(0, SNIPPET_BODY),
+      paid: true,
+    });
+  };
+  if (req.mcpTool) {
+    const res = await mcpPost(
+      req.url,
+      {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: req.mcpTool, arguments: req.body ?? {} },
+      },
+      req.mcpSessionId,
+      paymentHeaders,
+    );
+    recordAttempt(res.status, res.bodySnippet);
+    return {
+      status: res.status,
+      snippet: res.bodySnippet,
+      contentType: null,
+      bodyJson:
+        res.rpc?.result !== undefined
+          ? (res.rpc.result as Record<string, unknown>)
+          : res.bodyJson,
+      settleHeader: res.settleHeader ?? null,
+    };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+  let target = req.url;
+  if (req.method === "GET" && req.body && Object.keys(req.body).length > 0) {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(req.body)) {
+      qs.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+    }
+    target = `${req.url}${req.url.includes("?") ? "&" : "?"}${qs.toString()}`;
+  }
+  const res = await fetch(target, {
+    method: req.method,
+    signal: controller.signal,
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...paymentHeaders,
+    },
+    ...(req.method === "POST" ? { body: JSON.stringify(req.body ?? {}) } : {}),
+  });
+  clearTimeout(timeout);
+  const snippet = (await res.text()).slice(0, MAX_BODY);
+  recordAttempt(res.status, snippet, target);
+  let bodyJson: unknown = null;
+  try {
+    bodyJson = JSON.parse(snippet);
+  } catch {
+    // non-JSON response
+  }
+  return {
+    status: res.status,
+    snippet,
+    contentType: res.headers.get("content-type"),
+    bodyJson,
+    settleHeader: res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("payment-response"),
+  };
+}
+
+/** The canonical EIP-712 domain of USDT0 on X Layer (the asset every
+    eip155:196 exact-scheme challenge settles in). Some services declare a
+    wrong domain in accepts[].extra — signing it as declared produces a
+    signature that can never verify, so the service re-challenges forever. */
+const USDT0_XLAYER = "0x779ded0c9e1022225f8e0630b35a9b54be713736";
+const USDT0_DOMAIN = { name: "USD₮0", version: "1" };
+
+function challengeDeclaresWrongDomain(challengeHeader: string): boolean {
+  try {
+    const decoded = JSON.parse(Buffer.from(challengeHeader, "base64").toString("utf-8"));
+    for (const a of decoded.accepts ?? []) {
+      if (
+        a?.network === "eip155:196" &&
+        typeof a.asset === "string" &&
+        a.asset.toLowerCase() === USDT0_XLAYER &&
+        (a.extra?.name !== USDT0_DOMAIN.name || String(a.extra?.version) !== USDT0_DOMAIN.version)
+      ) {
+        return true;
+      }
+    }
+  } catch {
+    // undecodable — no retry
+  }
+  return false;
+}
+
 async function paidVerify(
   probe: ValidCallProbe,
   check: ListingCheck,
@@ -869,89 +1018,36 @@ async function paidVerify(
     at: new Date().toISOString(),
     delivered: false,
     amountUsd: probe.challenge?.amountUsd ?? check.challenge?.amountUsd ?? service.feeUsd,
+    inputConfidence: probe.inputConfidence,
   };
   const challengeHeader = probe.challengeHeader ?? check.challengeHeader;
   if (!challengeHeader || !probe.request) {
     record.error = "No 402 challenge or request to replay";
+    record.outcome = "not_settled";
     return { record, bodyJson: null, substantive: false };
   }
   const paymentHeaders = await attemptX402Payment(challengeHeader);
   if (!paymentHeaders) {
     record.error = "Could not sign payment (PROBE_PAYER_PK unset or SDK error)";
+    record.outcome = "not_settled";
     return { record, bodyJson: null, substantive: false };
   }
   try {
-    let status: number;
-    let snippet: string;
-    let bodyJson: unknown;
-    let settleHeader: string | null;
-    if (probe.request.mcpTool) {
-      const res = await mcpPost(
-        probe.request.url,
-        {
-          jsonrpc: "2.0",
-          id: 4,
-          method: "tools/call",
-          params: { name: probe.request.mcpTool, arguments: probe.request.body ?? {} },
-        },
-        probe.request.mcpSessionId,
-        paymentHeaders,
-      );
-      status = res.status;
-      snippet = res.bodySnippet;
-      settleHeader = res.settleHeader ?? null;
-      bodyJson =
-        res.rpc?.result !== undefined
-          ? (res.rpc.result as Record<string, unknown>)
-          : res.bodyJson;
-      probe.attempts.push({
-        method: "POST",
-        url: probe.request.url,
-        body: JSON.stringify({ tool: probe.request.mcpTool, arguments: probe.request.body }).slice(0, 500),
-        status,
-        snippet: snippet.slice(0, SNIPPET_BODY),
-        paid: true,
-      });
-    } else {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
-      const req = probe.request;
-      let target = req.url;
-      if (req.method === "GET" && req.body && Object.keys(req.body).length > 0) {
-        const qs = new URLSearchParams();
-        for (const [k, v] of Object.entries(req.body)) {
-          qs.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
-        }
-        target = `${req.url}${req.url.includes("?") ? "&" : "?"}${qs.toString()}`;
+    let replay = await sendPaidRequest(probe, paymentHeaders);
+    // A fresh 402 after a correctly-signed payment is often a service-side
+    // domain misconfiguration — retry once against the token's real EIP-712
+    // domain. A rejected signature never settles, so the retry is free.
+    if (replay.status === 402 && challengeDeclaresWrongDomain(challengeHeader)) {
+      const fixed = await attemptX402Payment(challengeHeader, { tokenDomain: USDT0_DOMAIN });
+      if (fixed) {
+        const retry = await sendPaidRequest(probe, fixed);
+        if (retry.status !== 402) replay = retry;
       }
-      const res = await fetch(target, {
-        method: req.method,
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...paymentHeaders,
-        },
-        ...(req.method === "POST" ? { body: JSON.stringify(req.body ?? {}) } : {}),
-      });
-      clearTimeout(timeout);
-      status = res.status;
-      snippet = (await res.text()).slice(0, MAX_BODY);
-      settleHeader = res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("payment-response");
-      try {
-        bodyJson = JSON.parse(snippet);
-      } catch {
-        bodyJson = null;
-      }
-      probe.attempts.push({
-        method: req.method,
-        url: target,
-        body: req.method === "POST" ? JSON.stringify(req.body).slice(0, 500) : undefined,
-        status,
-        snippet: snippet.slice(0, SNIPPET_BODY),
-        paid: true,
-      });
     }
+    const { status, snippet, settleHeader } = replay;
+    record.status = status;
+    record.responseSnippet = snippet.slice(0, 500);
+    record.responseContentType = replay.contentType ?? undefined;
     if (settleHeader) {
       try {
         const settle = JSON.parse(Buffer.from(settleHeader, "base64").toString("utf-8"));
@@ -960,13 +1056,23 @@ async function paidVerify(
         // settlement header not parseable — non-fatal
       }
     }
-    record.status = status!;
-    if (status === 402) record.outcome = "payment_rejected";
-    const substantive = status! < 400 && isSubstantiveJson(bodyJson) && !bodyHasErrorSignal(status!, bodyJson);
+    const substantive =
+      status < 400 && isSubstantiveJson(replay.bodyJson) && !bodyHasErrorSignal(status, replay.bodyJson);
     record.delivered = substantive;
-    return { record, bodyJson, substantive };
+    record.outcome =
+      status === 402
+        ? "payment_rejected"
+        : substantive
+          ? "delivered"
+          : record.settlementTx
+            ? status < 400 && !bodyHasErrorSignal(status, replay.bodyJson)
+              ? "thin"
+              : "errored"
+            : "not_settled";
+    return { record, bodyJson: replay.bodyJson, substantive };
   } catch (e) {
     record.error = e instanceof Error ? e.message : "Paid verification request failed";
+    record.outcome = "not_settled";
     return { record, bodyJson: null, substantive: false };
   }
 }
@@ -1140,14 +1246,28 @@ export function scoreListing(
   let paymentRejected = false;
   let freeCallRejected = false;
   const validCallRan = probe !== null && probe !== undefined && !probe.sideEffectSkipped;
+  // True when the paid outcome is inconclusive in a way that should still
+  // soften the row (re-challenge, no settlement) — but NOT for guess-tier
+  // inputs, which must not affect status at all.
+  let paidUncertain = false;
   if (paidResult) {
+    const outcome = paidResult.record.outcome;
+    const guessInputs = paidResult.record.inputConfidence === "guess";
     if (paidResult.substantive) {
       deliveredBody = paidResult.bodyJson;
       delivery = 100;
-    } else if (paidResult.record.outcome === "payment_rejected") {
+    } else if (guessInputs) {
+      delivery = null;
+      checks.delivery = {
+        pass: "partial",
+        detail: `Paid call used guessed inputs — outcome not attributable (HTTP ${paidResult.record.status ?? "?"})`,
+      };
+      flags.push("Paid call with guessed inputs was inconclusive — not counted");
+    } else if (outcome === "payment_rejected") {
       // Signed payment answered with a fresh 402 — inconclusive (may be our
       // client/facilitator), so delivery stays unknown, never a failure.
       paymentRejected = true;
+      paidUncertain = true;
       delivery = null;
       checks.delivery = {
         pass: "partial",
@@ -1156,7 +1276,29 @@ export function scoreListing(
       flags.push(
         "Payment was signed but the service re-issued the challenge — inconclusive, may be client/facilitator incompatibility",
       );
+    } else if (outcome === "thin") {
+      // Settled, 2xx, nothing substantive to assess — delivered but thin.
+      delivery = 60;
+      checks.delivery = {
+        pass: "partial",
+        detail: `Paid request returned HTTP ${paidResult.record.status} — delivered, not assessable`,
+      };
+      flags.push("Delivered after payment, but the payload was too thin to assess");
+    } else if (outcome === "not_settled") {
+      // Payment never settled (validation error, timeout) — inconclusive.
+      paidUncertain = true;
+      delivery = null;
+      checks.delivery = {
+        pass: "partial",
+        detail: `Paid attempt never settled${paidResult.record.error ? `: ${paidResult.record.error}` : ` (HTTP ${paidResult.record.status})`}`,
+      };
+      flags.push(
+        `Paid verification inconclusive — no settlement${
+          paidResult.record.error ? ` (${paidResult.record.error})` : paidResult.record.status ? ` (HTTP ${paidResult.record.status})` : ""
+        }`,
+      );
     } else {
+      // errored (or a legacy record without an outcome): settled, then failed.
       delivery = 0;
       checks.delivery = {
         pass: "fail",
@@ -1219,9 +1361,15 @@ export function scoreListing(
 
   // ── verification level ─────────────────────────────────────────────────
   const verification: VerificationLevel =
-    paidResult && !paidResult.substantive && !paymentRejected
+    paidResult && !paidResult.substantive && !paymentRejected &&
+      paidResult.record.outcome !== "thin" &&
+      paidResult.record.outcome !== "not_settled" &&
+      paidResult.record.inputConfidence !== "guess"
       ? "failed"
-      : delivery === 100 || (delivery === 60 && feeUsd === 0) || (deliveredBody !== null && delivery !== 0)
+      : delivery === 100 ||
+          (delivery === 60 && feeUsd === 0) ||
+          paidResult?.record.outcome === "thin" ||
+          (deliveredBody !== null && delivery !== 0)
         ? "delivered"
         : decodableChallenge
           ? "gate"
@@ -1242,7 +1390,7 @@ export function scoreListing(
   const status: IndexedService["status"] =
     availability === 0 || paymentIntegrity === 0 || delivery === 0
       ? "broken"
-      : paymentRejected
+      : paymentRejected || paidUncertain
         ? "degraded"
         : (paymentIntegrity === null && delivery === null) || freeCallRejected
           ? "unverified"
@@ -1290,22 +1438,30 @@ export interface VerifyCandidate {
   /** A decodable x402 challenge was seen this run (probe or plain check). */
   gateReached: boolean;
   sideEffectSkipped: boolean;
+  /** Confidence tier of the request we'd pay with. */
+  inputConfidence?: InputConfidence;
 }
 
 /**
  * Paid-verification eligibility + ordering: non-ours, fee ≤ $0.05, callable,
- * gate reached, no side effects, not verified in the last 72h. Never-verified
- * first, then oldest verification, then cheapest.
+ * gate reached, no side effects, inputs at exact/dictionary confidence (we
+ * never pay for a guess), not verified in the last 72h. `forceIds` bypasses
+ * the cooldown and confidence gate for a one-off manual retry — still
+ * bounded by fee ≤ $0.05 and the caller's spend cap. Never-verified first,
+ * then oldest verification, then cheapest.
  */
 export function pickVerifyTargets(
   candidates: VerifyCandidate[],
   prevPaid: Record<string, PaidVerification>,
   now = Date.now(),
+  forceIds?: Set<string>,
 ): VerifyCandidate[] {
   return candidates
     .filter((r) => {
       if (r.ours || r.feeUsd <= 0 || r.feeUsd > VERIFY_MAX_FEE_USD) return false;
       if (!r.callable || !r.gateReached || r.sideEffectSkipped) return false;
+      if (forceIds?.has(r.serviceId)) return true;
+      if (r.inputConfidence !== "exact" && r.inputConfidence !== "dictionary") return false;
       const last = prevPaid[r.serviceId];
       if (last && now - Date.parse(last.at) < VERIFY_RECHECK_MS) return false;
       return true;
@@ -1354,29 +1510,50 @@ export interface RunIndexOptions {
   verify?: boolean;
   /** Write the index verdict hash to X Layer. */
   attest?: boolean;
+  /** One-off manual retry of specific service ids — bypasses the 72h
+      cooldown and input-confidence gate, spend capped at $0.10. */
+  forceIds?: string[];
 }
 
-/** Paid-verification outcome buckets. "Settled" means money actually moved
-    (delivered, or a settlement tx exists); everything else is excluded from
-    the delivery-rate denominator. */
+/** Classify a paid verification, tolerating legacy records that predate the
+    outcome field. */
+function paidOutcomeOf(v: PaidVerification): PaidOutcome {
+  if (v.outcome) return v.outcome;
+  if (v.delivered) return "delivered";
+  if (v.status === 402) return "payment_rejected";
+  if (v.settlementTx) return v.status !== undefined && v.status < 400 ? "thin" : "errored";
+  return "not_settled";
+}
+
+/**
+ * Paid-verification outcome buckets. The headline denominator counts only
+ * settled attempts (money actually moved) made with exact/dictionary inputs
+ * — guess-tier calls are excluded so a bad guess can never distort the rate.
+ */
 export function paidBuckets(ranked: IndexedService[]) {
   const paid = ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification);
-  const rejected = (r: IndexedService) =>
-    r.lastPaidVerification!.outcome === "payment_rejected" || r.lastPaidVerification!.status === 402;
-  const settled = paid.filter((r) => r.lastPaidVerification!.delivered || !!r.lastPaidVerification!.settlementTx);
+  const conf = (r: IndexedService) => r.lastPaidVerification!.inputConfidence ?? "guess";
+  const outcome = (r: IndexedService) => paidOutcomeOf(r.lastPaidVerification!);
+  const settled = (r: IndexedService) =>
+    !!r.lastPaidVerification!.settlementTx || outcome(r) === "delivered" || outcome(r) === "thin" || outcome(r) === "errored";
+  const headlineRows = paid.filter((r) => settled(r) && conf(r) !== "guess");
+  const headlineDelivered = headlineRows.filter(
+    (r) => outcome(r) === "delivered" || outcome(r) === "thin",
+  );
   return {
     paidAttempted: paid.length,
-    paidDelivered: paid.filter((r) => r.lastPaidVerification!.delivered).length,
-    paidPaymentRejected: paid.filter((r) => !r.lastPaidVerification!.delivered && rejected(r)).length,
-    paidErrored: paid.filter(
-      (r) => !r.lastPaidVerification!.delivered && !!r.lastPaidVerification!.settlementTx && !rejected(r),
-    ).length,
-    paidNotSettled: paid.filter(
-      (r) =>
-        !r.lastPaidVerification!.delivered && !r.lastPaidVerification!.settlementTx && !rejected(r),
-    ).length,
-    settledDeliveryRate: settled.length
-      ? Number((settled.filter((r) => r.lastPaidVerification!.delivered).length / settled.length).toFixed(3))
+    paidDelivered: paid.filter((r) => outcome(r) === "delivered").length,
+    paidDeliveredThin: paid.filter((r) => outcome(r) === "thin").length,
+    paidPaymentRejected: paid.filter((r) => outcome(r) === "payment_rejected").length,
+    paidErrored: paid.filter((r) => outcome(r) === "errored").length,
+    paidNotSettled: paid.filter((r) => outcome(r) === "not_settled").length,
+    /** Settled attempts excluded from the headline because inputs were guesses. */
+    paidGuessExcluded: paid.filter((r) => settled(r) && conf(r) === "guess").length,
+    /** Headline X of Y: delivered+thin over settled, verified-input calls. */
+    paidDeliveredVerified: headlineDelivered.length,
+    paidSettledVerified: headlineRows.length,
+    settledDeliveryRate: headlineRows.length
+      ? Number((headlineDelivered.length / headlineRows.length).toFixed(3))
       : null,
   };
 }
@@ -1471,6 +1648,9 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
   ];
   if (opts.verify) {
     const byId = new Map(results.map((r) => [r.serviceId, r]));
+    const forceIds = opts.forceIds?.length ? new Set(opts.forceIds) : undefined;
+    let forcedSpent = 0;
+    const FORCED_CAP_USD = 0.1;
     const eligible = pickVerifyTargets(
       results.map((r) => {
         const probe = probeById.get(r.serviceId);
@@ -1489,15 +1669,20 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
           callable: !!(probe && probe.request),
           gateReached: gateNow || gateCheck,
           sideEffectSkipped: !!probe?.sideEffectSkipped,
+          inputConfidence: probe?.inputConfidence,
         };
       }),
       prevPaid,
+      Date.now(),
+      forceIds,
     )
       .map((c) => byId.get(c.serviceId))
       .filter((r): r is IndexedService => !!r);
     for (const svc of eligible) {
       const cost = svc.feeUsd;
-      if (daySpend + verifySpent + cost > budget) break;
+      const forced = !!forceIds?.has(svc.serviceId);
+      if (forced && forcedSpent + cost > FORCED_CAP_USD) continue;
+      if (!forced && daySpend + verifySpent + cost > budget) break;
       const check = checkById.get(svc.serviceId);
       const probe = probeById.get(svc.serviceId);
       if (!check || !probe) continue;
@@ -1507,6 +1692,7 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       if (paidResult.record.delivered || paidResult.record.settlementTx) {
         const amt = paidResult.record.amountUsd ?? cost;
         verifySpent += amt;
+        if (forced) forcedSpent += amt;
         todayEntries.push({
           serviceId: svc.serviceId,
           amountUsd: amt,
@@ -1535,6 +1721,14 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
   for (const r of results) {
     if (!r.lastPaidVerification && newPaid[r.serviceId]) {
       r.lastPaidVerification = newPaid[r.serviceId];
+    }
+    // Legacy records predate confidence tiers — derive the tier from this
+    // run's fresh probe of the same service; when we can't derive one the
+    // record stays "guess" and out of the delivery headline.
+    if (r.lastPaidVerification && !r.lastPaidVerification.inputConfidence) {
+      r.lastPaidVerification.inputConfidence =
+        probeById.get(r.serviceId)?.inputConfidence ?? "guess";
+      newPaid[r.serviceId] = r.lastPaidVerification;
     }
     // A carried-forward payment_rejected still downgrades the row — the
     // inconclusive flag shouldn't vanish just because the cooldown skipped

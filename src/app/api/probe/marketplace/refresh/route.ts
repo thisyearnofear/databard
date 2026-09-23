@@ -18,6 +18,8 @@ export const maxDuration = 300;
  *   ?attest=1  — publish changed scores to the on-chain registry (costs gas)
  *   ?verify=1  — paid verification pass under the daily ledger
  *                (INDEX_DAILY_VERIFY_BUDGET_USD, default $1, max $3)
+ *   ?force=ids — one-off paid retry of specific service ids, bypassing the
+ *                72h cooldown; spend on forced retries capped at $0.10
  *   ?dryRun=1  — report what would run without checking anything
  *
  * Synchronous by design: the cron caller (curl from 127.0.0.1) waits.
@@ -38,6 +40,10 @@ export async function POST(req: NextRequest) {
   const dryRun = params.get("dryRun") === "1";
   const attest = params.get("attest") === "1";
   const verify = params.get("verify") === "1";
+  const forceIds = (params.get("force") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   if (dryRun) {
     return NextResponse.json({
@@ -54,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const startedAt = Date.now();
-  const index = await runIndex({ verify, attest });
+  const index = await runIndex({ verify, attest, forceIds: forceIds.length ? forceIds : undefined });
   return NextResponse.json({
     ok: true,
     durationMs: Date.now() - startedAt,

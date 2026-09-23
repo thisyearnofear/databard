@@ -146,19 +146,33 @@ const STOPWORDS = new Set([
   "is", "are", "required", "missing", "invalid", "expected", "must", "be",
   "provide", "provided", "include", "included", "error", "for", "in", "of",
   "to", "and", "or", "not", "no", "was", "string", "number", "object",
+  // auth/payment vocabulary — never real input fields; guards against
+  // extracting "Payment" from a 402 body like {"error":"Payment required"}.
+  "payment", "authentication", "authorization", "signature", "header",
+  "headers", "apikey", "key", "unauthorized", "forbidden", "x402",
 ]);
 
 export function extractFieldNames(body: unknown): string[] {
+  // Never mine a payment challenge for field names — its vocabulary is the
+  // protocol's, not the service's input contract.
+  if (isObj(body) && ("x402Version" in body || "accepts" in body)) return [];
   const names = new Set<string>();
   // Normalise "body.asset", "$.profile", "params[0].x" → usable field names.
   // Dotted names keep their path so synthesizeBody can nest them.
-  const addName = (raw: string) => {
+  const addName = (raw: string, context?: string) => {
     let n = raw.trim().replace(/^\$\.?/, "").replace(/\[\d+\]/g, "");
     if (!n) return;
     n = n.replace(/^(body|query|params|arguments|args|input|data)\./i, "");
     const leaf = n.split(".").pop() ?? n;
     if (!/^[A-Za-z_][\w.]*$/.test(n)) return;
     if (STOPWORDS.has(leaf.toLowerCase()) || leaf.length > 40) return;
+    // "token"/"key" are real field names, but not when the error is about an
+    // invalid/expired credential rather than a missing input.
+    if (
+      (leaf.toLowerCase() === "token" || leaf.toLowerCase() === "apikey") &&
+      context !== undefined &&
+      /invalid|expired|unauthorized|incorrect/i.test(context)
+    ) return;
     names.add(n);
   };
   const visit = (v: unknown, depth: number) => {
@@ -175,7 +189,7 @@ export function extractFieldNames(body: unknown): string[] {
       ];
       for (const re of patterns) {
         for (const m of v.matchAll(re)) {
-          addName(m[1]);
+          addName(m[1], v);
         }
       }
       return;
@@ -285,7 +299,9 @@ function typeDefault(type?: string): unknown {
     case "object":
       return {};
     default:
-      return "BTC"; // crypto-marketplace default for unknown strings
+      // Unknown required strings get an obvious placeholder, not a confident
+      // "BTC" — a guess-tier fill that marks the request as low-confidence.
+      return "n/a";
   }
 }
 
@@ -388,6 +404,8 @@ export function discoverInputs(evidence: {
   description: string;
   challengeRaw?: Obj | null;
   bodyJson?: unknown;
+  /** HTTP status the bodyJson came from — 402 bodies are never mined. */
+  status?: number;
   mcpTools?: McpTool[] | null;
 }): DiscoveredInputs | null {
   // a. MCP tools/list inputSchema
@@ -421,8 +439,10 @@ export function discoverInputs(evidence: {
     }
   }
 
-  // c. Field names extracted from the rejection body
-  const names = extractFieldNames(evidence.bodyJson);
+  // c. Field names extracted from the rejection body — but never from a
+  // payment challenge (402): its "Payment required" is protocol vocabulary.
+  const names =
+    evidence.status === 402 ? [] : extractFieldNames(evidence.bodyJson);
   if (names.length > 0) {
     return {
       source: "rejection",
@@ -439,6 +459,36 @@ export function discoverInputs(evidence: {
   }
 
   return null;
+}
+
+// ── Input confidence ───────────────────────────────────────────────────────
+
+/** How confident we are that the synthesized request is what the service
+    actually wants. Only "exact" and "dictionary" inputs are worth paying
+    for; "guess" calls still run unpaid (a 402 there counts as gate-verified)
+    but their paid outcomes never feed the delivery headline. */
+export type InputConfidence = "exact" | "dictionary" | "guess";
+
+export function classifyInputs(inputs: DiscoveredInputs): InputConfidence {
+  if (inputs.source === "description") return "guess";
+  if (inputs.source === "challenge_example") return "exact";
+  const required = inputs.fields.filter((f) => f.required);
+  if (required.length === 0) return "exact";
+  let tier: InputConfidence = "exact";
+  for (const f of required) {
+    const schemaHint =
+      f.example !== undefined ||
+      f.default !== undefined ||
+      (f.enum !== undefined && f.enum.length > 0) ||
+      (inputs.exampleBody !== undefined && inputs.exampleBody[f.name] !== undefined);
+    if (schemaHint) continue;
+    if (dictionaryValue(f.name, f.type) !== undefined) {
+      if (tier === "exact") tier = "dictionary";
+      continue;
+    }
+    return "guess";
+  }
+  return tier;
 }
 
 // ── Stale-data detection ───────────────────────────────────────────────────
