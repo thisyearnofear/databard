@@ -74,16 +74,26 @@ export default async function MarketplacePage({
 
         {index && (
           <>
-            {/* Headline stat: of the paid services we called with valid
-                requests and real payments, what share actually delivered. */}
-            {(index.aggregates.paidVerified ?? 0) >= 1 && (
+            {/* Headline stat: of the paid calls where settlement actually
+                happened, what share delivered a real payload. */}
+            {(index.aggregates.paidAttempted ?? 0) >= 1 && (
               <div className="mt-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-4">
                 <p className="font-display text-lg font-bold">
-                  Of {index.aggregates.paidVerified} paid service{index.aggregates.paidVerified === 1 ? "" : "s"} called with valid requests,{" "}
-                  {Math.round((index.aggregates.deliveryRate ?? 0) * 100)}% delivered
+                  Paid &amp; delivered {index.aggregates.paidDelivered ?? 0} of{" "}
+                  {(index.aggregates.paidDelivered ?? 0) + (index.aggregates.paidErrored ?? 0)} service
+                  {(index.aggregates.paidDelivered ?? 0) + (index.aggregates.paidErrored ?? 0) === 1 ? "" : "s"}{" "}
+                  where payment settled
+                  {(index.aggregates.settledDeliveryRate ?? null) !== null &&
+                    ` (${Math.round((index.aggregates.settledDeliveryRate ?? 0) * 100)}%)`}
                 </p>
                 <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                  Real x402 payments on X Layer, requests built from each service&apos;s own
+                  {index.aggregates.paidAttempted} paid verification
+                  {index.aggregates.paidAttempted === 1 ? "" : "s"} total
+                  {(index.aggregates.paidPaymentRejected ?? 0) > 0 &&
+                    ` · ${index.aggregates.paidPaymentRejected} re-challenged (inconclusive)`}
+                  {(index.aggregates.paidNotSettled ?? 0) > 0 &&
+                    ` · ${index.aggregates.paidNotSettled} never settled`}{" "}
+                  — real x402 payments on X Layer, requests built from each service&apos;s own
                   input schema — not empty pings.
                 </p>
               </div>

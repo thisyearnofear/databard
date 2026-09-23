@@ -140,11 +140,30 @@ export default async function MarketplaceServicePage({
           <section className="mt-6" aria-labelledby="flags">
             <h2 id="flags" className="text-sm font-semibold">Flags</h2>
             <ul className="mt-3 flex flex-wrap gap-2">
-              {svc.flags.map((f) => (
-                <li key={f} className="rounded-full border border-[var(--danger)]/40 bg-[var(--danger)]/10 px-3 py-1 text-[11px] text-[var(--danger)]">
-                  {f}
-                </li>
-              ))}
+              {svc.flags.map((f) => {
+                // Provider-facing notes (paywall hygiene) are styled neutral —
+                // they aren't buyer risk.
+                const providerNote =
+                  f.startsWith("Payment not enforced") || f.startsWith("Returned free content");
+                const neutral =
+                  providerNote ||
+                  f.startsWith("Couldn't build") ||
+                  f.startsWith("MCP server") ||
+                  f.includes("inconclusive");
+                return (
+                  <li
+                    key={f}
+                    className={`rounded-full border px-3 py-1 text-[11px] ${
+                      neutral
+                        ? "border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)]"
+                        : "border-[var(--danger)]/40 bg-[var(--danger)]/10 text-[var(--danger)]"
+                    }`}
+                  >
+                    {providerNote ? "Provider note: " : ""}
+                    {f}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}

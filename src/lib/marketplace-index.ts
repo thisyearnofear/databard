@@ -99,6 +99,8 @@ export interface PaidVerification {
   settlementTx?: string;
   amountUsd?: number;
   error?: string;
+  /** Signed payment was answered with a fresh 402 — inconclusive. */
+  outcome?: "payment_rejected";
 }
 
 /** One HTTP request we sent during verification, kept as evidence so
@@ -163,12 +165,18 @@ export interface MarketplaceIndex {
     gateVerified: number;
     /** Valid request got a substantive payload (free or paid). */
     delivered: number;
-    /** Paid services whose gate was verified this run or previously. */
-    paidVerified: number;
+    /** Paid services with a paid-verification record (this run or carried). */
+    paidAttempted: number;
     /** Paid services that delivered a substantive payload after payment. */
     paidDelivered: number;
-    /** paidDelivered / paidVerified (null when no paid verifications). */
-    deliveryRate: number | null;
+    /** Signed payment re-challenged with a fresh 402 — inconclusive. */
+    paidPaymentRejected: number;
+    /** Payment settled but the response was an error / non-substantive. */
+    paidErrored: number;
+    /** Paid attempt never settled (validation error, timeout, no tx). */
+    paidNotSettled: number;
+    /** paidDelivered / (services where payment settled). Null when none. */
+    settledDeliveryRate: number | null;
     verifySpentUsd: number;
     verifyAttempted: number;
   };
@@ -641,6 +649,30 @@ function isSubstantiveJson(body: unknown): boolean {
   return Object.keys(obj).filter((k) => !META_KEYS.has(k)).length >= 3;
 }
 
+/** Short human-readable reason a synthesized request was rejected, pulled
+    from the error body (for the neutral "couldn't build a request" flag). */
+function shortRejectionReason(bodyJson: unknown, status: number): string {
+  const obj =
+    bodyJson && typeof bodyJson === "object" ? (bodyJson as Record<string, unknown>) : null;
+  let msg: string | null = null;
+  if (obj) {
+    for (const k of ["error", "message", "msg", "enMsg"]) {
+      const v = obj[k];
+      if (typeof v === "string" && v.trim()) {
+        msg = v;
+        break;
+      }
+      if (v && typeof v === "object" && typeof (v as Record<string, unknown>).message === "string") {
+        msg = (v as Record<string, unknown>).message as string;
+        break;
+      }
+    }
+  }
+  if (!msg) return `HTTP ${status}`;
+  msg = msg.replace(/\s+/g, " ").trim();
+  return msg.length > 80 ? `${msg.slice(0, 77)}…` : msg;
+}
+
 /** True when the response signals an application-level error rather than a
     delivered payload — 4xx, or a 2xx body carrying an error marker (incl.
     numeric/string error codes like xerpa's 5001002). */
@@ -929,7 +961,8 @@ async function paidVerify(
       }
     }
     record.status = status!;
-    const substantive = status! < 400 && isSubstantiveJson(bodyJson);
+    if (status === 402) record.outcome = "payment_rejected";
+    const substantive = status! < 400 && isSubstantiveJson(bodyJson) && !bodyHasErrorSignal(status!, bodyJson);
     record.delivered = substantive;
     return { record, bodyJson, substantive };
   } catch (e) {
@@ -1020,6 +1053,19 @@ export function scoreListing(
   const challenged = (probe ? probe.status === 402 : false) || check.status === 402;
   const decodableChallenge = challenged && challenge && !challenge.undecodable;
 
+  // MCP tools/call returning text-only content is legitimate freemium
+  // (intro/help text explaining the paid flow) — never an accusation.
+  const mcpFreeContent = !!(
+    probe?.toolName &&
+    effBody &&
+    typeof effBody === "object" &&
+    !Array.isArray(effBody) &&
+    Array.isArray((effBody as Record<string, unknown>).content) &&
+    ((effBody as Record<string, unknown>).content as unknown[]).every(
+      (c) => c && typeof c === "object" && (c as Record<string, unknown>).type === "text",
+    )
+  );
+
   // ── paymentIntegrity ──────────────────────────────────────────────────
   let paymentIntegrity: number | null = null;
   if (feeUsd > 0) {
@@ -1053,17 +1099,21 @@ export function scoreListing(
       flags.push("402 but the payment challenge could not be decoded");
       checks.paymentIntegrity = { pass: "partial", detail: "Undecodable PAYMENT-REQUIRED" };
       paymentIntegrity = null;
-    } else if (effStatus >= 200 && effStatus < 300 && isSubstantiveJson(effBody) && !bodyHasErrorSignal(effStatus, effBody)) {
-      // Real payload without payment on a paid listing — the one true
-      // accusation, and only on substantive responses.
-      paymentIntegrity = 0;
-      flags.push(`Listed at $${feeUsd} but returned a response without requesting payment`);
-      checks.paymentIntegrity = { pass: "fail", detail: `HTTP ${effStatus}, substantive payload, no 402` };
+    } else if (effStatus >= 200 && effStatus < 300 && isSubstantiveJson(effBody) && !bodyHasErrorSignal(effStatus, effBody) && !mcpFreeContent) {
+      // A paid listing answering a valid request without payment is a
+      // provider-facing note (the paywall isn't enforced), not buyer harm —
+      // the buyer gets what they paid for either way. Halve integrity,
+      // never hard-fail.
+      paymentIntegrity = 50;
+      flags.push("Payment not enforced: returned a full response without payment");
+      checks.paymentIntegrity = { pass: "partial", detail: `HTTP ${effStatus}, substantive payload, no 402` };
     } else {
       // Gate never reached — validation errors, docs pages, empty accepts,
       // MCP per-tool paywalls. Unknown, not bad.
       paymentIntegrity = null;
-      if (check.protocol === "mcp" && !(probe && probe.status === 402)) {
+      if (mcpFreeContent) {
+        flags.push("Returned free content (intro/help); paid flow not exercised");
+      } else if (check.protocol === "mcp" && !(probe && probe.status === 402)) {
         flags.push("MCP server — payment is enforced per tool call; listing-level gate not checked");
       } else if (probe && effStatus >= 400) {
         flags.push(`Payment gate not reached — valid request still rejected (HTTP ${effStatus})`);
@@ -1087,11 +1137,25 @@ export function scoreListing(
   // ── delivery ───────────────────────────────────────────────────────────
   let delivery: number | null = null;
   let deliveredBody: unknown = null;
+  let paymentRejected = false;
+  let freeCallRejected = false;
   const validCallRan = probe !== null && probe !== undefined && !probe.sideEffectSkipped;
   if (paidResult) {
     if (paidResult.substantive) {
       deliveredBody = paidResult.bodyJson;
       delivery = 100;
+    } else if (paidResult.record.outcome === "payment_rejected") {
+      // Signed payment answered with a fresh 402 — inconclusive (may be our
+      // client/facilitator), so delivery stays unknown, never a failure.
+      paymentRejected = true;
+      delivery = null;
+      checks.delivery = {
+        pass: "partial",
+        detail: "Signed payment re-challenged with HTTP 402 — inconclusive",
+      };
+      flags.push(
+        "Payment was signed but the service re-issued the challenge — inconclusive, may be client/facilitator incompatibility",
+      );
     } else {
       delivery = 0;
       checks.delivery = {
@@ -1106,17 +1170,20 @@ export function scoreListing(
     }
   }
   if (delivery === null && validCallRan && effStatus >= 200 && effStatus < 300) {
-    if (isSubstantiveJson(effBody) && !bodyHasErrorSignal(effStatus, effBody)) {
+    if (isSubstantiveJson(effBody) && !bodyHasErrorSignal(effStatus, effBody) && !mcpFreeContent) {
       deliveredBody = effBody;
       delivery = 100;
     } else {
-      delivery = 60;
+      delivery = 60; // thin payload, or MCP intro/help text (freemium)
     }
   } else if (delivery === null && validCallRan && feeUsd === 0 && effStatus >= 400) {
-    // Free listing that fails a best-effort valid request — broken in
-    // practice, not merely unknown.
-    delivery = 0;
-    flags.push(`Free service rejected a synthesized valid request (HTTP ${effStatus})`);
+    // A free service rejecting our best-effort synthesized request is NOT
+    // broken — it validated input correctly. Delivery stays unknown.
+    delivery = null;
+    freeCallRejected = true;
+    flags.push(
+      `Couldn't build an accepted request automatically (${shortRejectionReason(effBody, effStatus)})`,
+    );
   }
   // Stale data halves delivery credit — honest, dated payload is still a
   // payload but the service isn't fresh.
@@ -1152,7 +1219,7 @@ export function scoreListing(
 
   // ── verification level ─────────────────────────────────────────────────
   const verification: VerificationLevel =
-    paidResult && !paidResult.substantive
+    paidResult && !paidResult.substantive && !paymentRejected
       ? "failed"
       : delivery === 100 || (delivery === 60 && feeUsd === 0) || (deliveredBody !== null && delivery !== 0)
         ? "delivered"
@@ -1175,11 +1242,13 @@ export function scoreListing(
   const status: IndexedService["status"] =
     availability === 0 || paymentIntegrity === 0 || delivery === 0
       ? "broken"
-      : paymentIntegrity === null && delivery === null
-        ? "unverified"
-        : score >= 80
-          ? "healthy"
-          : "degraded";
+      : paymentRejected
+        ? "degraded"
+        : (paymentIntegrity === null && delivery === null) || freeCallRejected
+          ? "unverified"
+          : score >= 80
+            ? "healthy"
+            : "degraded";
 
   return { score, status, checks, flags, verification, subScores };
 }
@@ -1285,6 +1354,31 @@ export interface RunIndexOptions {
   verify?: boolean;
   /** Write the index verdict hash to X Layer. */
   attest?: boolean;
+}
+
+/** Paid-verification outcome buckets. "Settled" means money actually moved
+    (delivered, or a settlement tx exists); everything else is excluded from
+    the delivery-rate denominator. */
+export function paidBuckets(ranked: IndexedService[]) {
+  const paid = ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification);
+  const rejected = (r: IndexedService) =>
+    r.lastPaidVerification!.outcome === "payment_rejected" || r.lastPaidVerification!.status === 402;
+  const settled = paid.filter((r) => r.lastPaidVerification!.delivered || !!r.lastPaidVerification!.settlementTx);
+  return {
+    paidAttempted: paid.length,
+    paidDelivered: paid.filter((r) => r.lastPaidVerification!.delivered).length,
+    paidPaymentRejected: paid.filter((r) => !r.lastPaidVerification!.delivered && rejected(r)).length,
+    paidErrored: paid.filter(
+      (r) => !r.lastPaidVerification!.delivered && !!r.lastPaidVerification!.settlementTx && !rejected(r),
+    ).length,
+    paidNotSettled: paid.filter(
+      (r) =>
+        !r.lastPaidVerification!.delivered && !r.lastPaidVerification!.settlementTx && !rejected(r),
+    ).length,
+    settledDeliveryRate: settled.length
+      ? Number((settled.filter((r) => r.lastPaidVerification!.delivered).length / settled.length).toFixed(3))
+      : null,
+  };
 }
 
 export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceIndex> {
@@ -1486,14 +1580,7 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       medianLatency,
       gateVerified: ranked.filter((r) => r.verification === "gate" || r.verification === "delivered" || r.verification === "failed").length,
       delivered: ranked.filter((r) => r.verification === "delivered").length,
-      paidVerified: ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification).length,
-      paidDelivered: ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification?.delivered).length,
-      deliveryRate: (() => {
-        const v = ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification);
-        return v.length
-          ? Number((v.filter((r) => r.lastPaidVerification?.delivered).length / v.length).toFixed(3))
-          : null;
-      })(),
+      ...paidBuckets(ranked),
       verifySpentUsd: Number(verifySpent.toFixed(6)),
       verifyAttempted,
     },

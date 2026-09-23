@@ -4,6 +4,7 @@ import {
   probeValidCall,
   findServices,
   pickVerifyTargets,
+  paidBuckets,
   dailyVerifyBudget,
   OUR_AGENT_ID,
   type ListingCheck,
@@ -172,15 +173,15 @@ function assert(condition: boolean, label: string) {
   );
 }
 
-// Paid listing, substantive JSON 200, no 402 → the real accusation
+// Paid listing, substantive JSON 200, no 402 → provider note, not buyer harm
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 200, bodyJson: { data: [1, 2, 3] } }), s);
-  assert(v.subScores.paymentIntegrity === 0, "free content without payment → integrity 0");
-  assert(v.status === "broken", "substantive unpaid payload → broken");
+  assert(v.subScores.paymentIntegrity === 50, `free content without payment → integrity 50 (got ${v.subScores.paymentIntegrity})`);
+  assert(v.status !== "broken", `substantive unpaid payload → not broken (got ${v.status})`);
   assert(
-    v.flags.includes("Listed at $0.01 but returned a response without requesting payment"),
-    `no-payment flag (got ${v.flags.join("|")})`,
+    v.flags.includes("Payment not enforced: returned a full response without payment"),
+    `payment-not-enforced flag (got ${v.flags.join("|")})`,
   );
 }
 
@@ -309,7 +310,7 @@ function assert(condition: boolean, label: string) {
   assert(v.flags.some((f) => f.startsWith("Stale data (dated")), `stale flag (got ${v.flags.join("|")})`);
 }
 
-// Free listing that rejects even a valid request → delivery 0 → broken
+// Free listing that rejects even a valid request → delivery stays unknown → unverified
 {
   const s = svc({ feeUsd: 0 });
   const v = scoreListing(
@@ -317,8 +318,9 @@ function assert(condition: boolean, label: string) {
     s,
     probe({ status: 400, bodyJson: { error: "still bad" } }),
   );
-  assert(v.subScores.delivery === 0, "free rejected valid call → delivery 0");
-  assert(v.status === "broken", `free rejected → broken (got ${v.status})`);
+  assert(v.subScores.delivery === null, "free rejected valid call → delivery unknown");
+  assert(v.status === "unverified", `free rejected → unverified (got ${v.status})`);
+  assert(v.flags.some((f) => f.startsWith("Couldn't build an accepted request automatically")), "free rejection neutral flag");
 }
 
 // Side-effecting service → skipped flag, stays unverified
@@ -603,17 +605,17 @@ await withFetch(
   },
 );
 
-// Substantive JSON 200 on paid listing → the real accusation survives
+// Substantive JSON 200 on paid listing → provider note survives (integrity 50)
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 200, bodyJson: { data: [{ x: 1 }], status: "ok" } }), s);
-  assert(v.subScores.paymentIntegrity === 0, "substantive data payload → integrity 0");
-  assert(v.flags.some((f) => f.includes("returned a response without requesting payment")), "substantive accusation stays");
+  assert(v.subScores.paymentIntegrity === 50, "substantive data payload → integrity 50");
+  assert(v.flags.some((f) => f.includes("Payment not enforced")), "substantive provider note stays");
 }
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 200, bodyJson: { prices: { BTC: 1 }, chains: ["x"], updated: "today" } }), s);
-  assert(v.flags.some((f) => f.includes("returned a response without requesting payment")), "3 substantive keys accusation stays");
+  assert(v.flags.some((f) => f.includes("Payment not enforced")), "3 substantive keys provider note stays");
 }
 {
   // thin envelope ({ok:true} only) is NOT substantive → stays unverified
@@ -729,6 +731,87 @@ await withFetch(
     assert(p!.request?.mcpSessionId === "sx", "session id carried to paid replay");
   },
 );
+
+// ── rework: honest classification ─────────────────────────────────────────
+
+// Free service rejecting our synthesized request → unverified, NOT broken
+{
+  const s = svc({ feeUsd: 0 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "profile is required" } }),
+    s,
+    probe({ status: 422, bodyJson: { error: "profile must be an object" } }),
+  );
+  assert(v.status === "unverified", `free rejection → unverified (got ${v.status})`);
+  assert(v.verification === "none", `free rejection → verification none (got ${v.verification})`);
+  assert(v.subScores.delivery === null, "free rejection → delivery unknown");
+  assert(
+    v.flags.some((f) => f.startsWith("Couldn't build an accepted request automatically")),
+    `neutral flag (got ${v.flags.join("|")})`,
+  );
+}
+
+// MCP tools/call text-only intro on a paid listing → thin delivery, no accusation
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ protocol: "mcp", status: 200, bodyJson: { ok: true } }),
+    s,
+    probe({
+      toolName: "get_started",
+      status: 200,
+      bodyJson: { content: [{ type: "text", text: "Welcome! Call paid_tool to get your report." }] },
+    }),
+  );
+  assert(v.subScores.delivery === 60, `mcp intro → delivery 60 (got ${v.subScores.delivery})`);
+  assert(!v.flags.some((f) => f.includes("Payment not enforced")), "no payment-enforced accusation on mcp intro");
+  assert(
+    v.flags.some((f) => f.includes("Returned free content (intro/help); paid flow not exercised")),
+    `mcp freemium flag (got ${v.flags.join("|")})`,
+  );
+}
+
+// Paid replay re-challenged with 402 → payment_rejected, degraded, never failed
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 402, challenge: challenge(), bodyJson: null }),
+    s,
+    probe({ status: 402, challenge: challenge() }),
+    {
+      record: { at: new Date().toISOString(), delivered: false, status: 402, outcome: "payment_rejected" },
+      bodyJson: null,
+      substantive: false,
+    },
+  );
+  assert(v.status === "degraded", `payment_rejected → degraded (got ${v.status})`);
+  assert(v.verification === "gate", `payment_rejected → gate not failed (got ${v.verification})`);
+  assert(
+    v.flags.some((f) => f.includes("re-issued the challenge")),
+    `inconclusive flag (got ${v.flags.join("|")})`,
+  );
+}
+
+// Aggregate paid buckets reconcile exactly
+{
+  const paidAt = new Date().toISOString();
+  const rows = [
+    indexed({ serviceId: "d1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: true, status: 200, settlementTx: "0x1" } }),
+    indexed({ serviceId: "d2", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: true, status: 201, settlementTx: "0x2" } }),
+    indexed({ serviceId: "r1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: false, status: 402, outcome: "payment_rejected" } }),
+    indexed({ serviceId: "e1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: false, status: 500, settlementTx: "0x3" } }),
+    indexed({ serviceId: "n1", feeUsd: 0.01, lastPaidVerification: { at: paidAt, delivered: false, status: 400 } }),
+    indexed({ serviceId: "f1", feeUsd: 0 }), // free — excluded from buckets
+    indexed({ serviceId: "p1", feeUsd: 0.01 }), // paid, never verified — excluded
+  ];
+  const b = paidBuckets(rows);
+  assert(b.paidAttempted === 5, `paidAttempted 5 (got ${b.paidAttempted})`);
+  assert(b.paidDelivered === 2, `paidDelivered 2 (got ${b.paidDelivered})`);
+  assert(b.paidPaymentRejected === 1, `paidPaymentRejected 1 (got ${b.paidPaymentRejected})`);
+  assert(b.paidErrored === 1, `paidErrored 1 (got ${b.paidErrored})`);
+  assert(b.paidNotSettled === 1, `paidNotSettled 1 (got ${b.paidNotSettled})`);
+  assert(b.settledDeliveryRate === 0.667, `settledDeliveryRate 0.667 (got ${b.settledDeliveryRate})`);
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

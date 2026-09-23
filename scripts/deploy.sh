@@ -225,7 +225,7 @@ ssh "$REMOTE" bash <<EOF
   # Don't source .env — unquoted values like EMAIL_FROM break `.`; extract just
   # CRON_SECRET via grep/cut. The cron line is base64'd through the heredoc so
   # its quotes and $ survive both shells untouched.
-  IDX_CRON=\$(echo 'Q1JPTl9TRUNSRVQ9JChncmVwICdeQ1JPTl9TRUNSRVQ9JyAvb3B0L2RhdGFiYXJkLy5lbnYgfCBjdXQgLWQ9IC1mMi0gfCB0ciAtZCAnXDA0MlwwNDcnKSAmJiBjdXJsIC1zIC1tIDI4MCAtWCBQT1NUIC1IICJ4LWNyb24tc2VjcmV0OiAkQ1JPTl9TRUNSRVQiICJodHRwOi8vMTI3LjAuMC4xOjQyMTAwL2FwaS9wcm9iZS9tYXJrZXRwbGFjZS9yZWZyZXNoP2F0dGVzdD0xJnZlcmlmeT0xIiA+PiAvb3B0L2RhdGFiYXJkL2xvZ3MvY3Jvbi1tYXJrZXRwbGFjZS1pbmRleC5sb2cgMj4mMQ==' | base64 -d)
+  IDX_CRON=\$(echo 'Q1JPTl9TRUNSRVQ9JChncmVwICdeQ1JPTl9TRUNSRVQ9JyAvb3B0L2RhdGFiYXJkLy5lbnYgfCBjdXQgLWQ9IC1mMi0gfCB0ciAtZCAnXDA0MlwwNDcnKSAmJiBjdXJsIC1zIC1tIDI4MCAtWCBQT1NUIC1IICJ4LWNyb24tc2VjcmV0OiAkQ1JPTl9TRUNSRVQiICJodHRwOi8vMTI3LjAuMC4xOjQyMTAwL2FwaS9wcm9iZS9tYXJrZXRwbGFjZS9yZWZyZXNoP3ZlcmlmeT0xIiA+PiAvb3B0L2RhdGFiYXJkL2xvZ3MvY3Jvbi1tYXJrZXRwbGFjZS1pbmRleC5sb2cgMj4mMQ==' | base64 -d)
   IDX_CRON="17 */6 * * * \$IDX_CRON"
   EXISTING=\$(crontab -l 2>/dev/null || true)
   FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v 'probe/marketplace/refresh' || true)
