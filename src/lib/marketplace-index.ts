@@ -1536,6 +1536,22 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
     if (!r.lastPaidVerification && newPaid[r.serviceId]) {
       r.lastPaidVerification = newPaid[r.serviceId];
     }
+    // A carried-forward payment_rejected still downgrades the row — the
+    // inconclusive flag shouldn't vanish just because the cooldown skipped
+    // re-payment this run.
+    const lp = r.lastPaidVerification;
+    if (
+      lp &&
+      !lp.delivered &&
+      (lp.outcome === "payment_rejected" || lp.status === 402) &&
+      !r.flags.some((f) => f.includes("re-issued the challenge"))
+    ) {
+      r.flags.push(
+        "Payment was signed but the service re-issued the challenge — inconclusive, may be client/facilitator incompatibility",
+      );
+      if (r.status === "healthy") r.status = "degraded";
+      r.score = Math.min(r.score, 79);
+    }
   }
 
   // Persist + uptime
