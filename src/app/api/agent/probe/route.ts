@@ -56,6 +56,7 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
           knownPriceUsd: typeof c.knownPriceUsd === "number" ? c.knownPriceUsd : null,
           agentId: typeof c.agentId === "string" ? c.agentId : undefined,
           agentAddress: typeof c.agentAddress === "string" ? c.agentAddress : undefined,
+          reference: c.reference === true,
         }));
     }
 
@@ -67,7 +68,7 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
     const results = await probeAll(candidates, { allowPayments: true });
 
     // Score each result
-    const scored = results.map((r) => ({
+    const all = results.map((r) => ({
       name: r.candidate.name,
       endpoint: r.candidate.endpoint,
       agentId: r.candidate.agentId,
@@ -77,7 +78,13 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
       error: r.error,
       payment: r.payment ?? null,
       fromCache: r.fromCache ?? false,
+      reference: r.candidate.reference === true,
     }));
+
+    // Reference candidates (DataBard's own service) are probed for context but
+    // never ranked — they can't win their own oracle.
+    const scored = all.filter((s) => !s.reference);
+    const reference = all.filter((s) => s.reference);
 
     // Rank by total score descending
     scored.sort((a, b) => b.score.total - a.score.total);
@@ -195,6 +202,20 @@ async function probeHandler(req: NextRequest): Promise<NextResponse> {
       },
       ranked: scored.map((s, i) => ({
         rank: i + 1,
+        name: s.name,
+        endpoint: s.endpoint,
+        agentId: s.agentId,
+        score: s.score.total,
+        label: s.score.label,
+        breakdown: s.score.breakdown,
+        flags: s.score.flags,
+        reachable: s.reachable,
+        knownPriceUsd: s.knownPriceUsd,
+        error: s.error ?? null,
+        payment: s.payment,
+        fromCache: s.fromCache,
+      })),
+      reference: reference.map((s) => ({
         name: s.name,
         endpoint: s.endpoint,
         agentId: s.agentId,

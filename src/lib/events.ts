@@ -49,6 +49,8 @@ export const EVENT_TYPES = [
   "agent_demo_run",           // ran the free health-check example on /agents
   "earn_index_view",          // visited /earn (sponsor report index)
   "shared_clip_play",         // played the clip on a shared score-card page
+  "marketplace_index_view",   // visited /probe/marketplace (OKX.AI health index)
+  "service_score_lookup",     // databard_service_score A2MCP tool was called
   // Story-layer events (Phase 1 progressive disclosure)
   "story_expand",             // opened a Why-it-matters / Details disclosure
   "evidence_open",            // opened evidence from a story context

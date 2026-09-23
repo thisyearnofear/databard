@@ -31,6 +31,7 @@ interface CandidateSeed {
   name: string;
   endpoint: string;
   knownPriceUsd: number | null;
+  reference?: boolean;
 }
 
 interface LiveCandidate extends CandidateSeed {
@@ -49,6 +50,7 @@ export interface ProbeRunDone {
     paidCount: number;
   };
   ranked: ProbeResultCardProps[];
+  reference?: ProbeResultCardProps[];
 }
 
 interface ProbeRunProps {
@@ -136,6 +138,7 @@ export function ProbeRun({ question, runId, onDone }: ProbeRunProps) {
                   reachable: entry.reachable,
                   payment: entry.payment,
                   fromCache: entry.fromCache,
+                  reference: entry.reference === true,
                 };
                 setCandidates((prev) =>
                   prev.map((c) =>
@@ -256,6 +259,11 @@ function PendingCard({
           aria-hidden="true"
         />
       </div>
+      {candidate.reference && (
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          Reference — our own service, not ranked
+        </p>
+      )}
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
         {candidate.stage ? STAGE_LABEL[candidate.stage] : "Queued"}
       </p>

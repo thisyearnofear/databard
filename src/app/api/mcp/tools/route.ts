@@ -400,6 +400,63 @@ const probeOutputSchema = {
   },
 } as const;
 
+const serviceScoreInputSchema = {
+  type: "object",
+  description:
+    "Service lookup against the OKX.AI marketplace health index. Provide ANY ONE of: agentId, serviceId, endpoint/url, or query keywords. Envelopes ({arguments: {...}}) are unwrapped; common aliases accepted (agent_id, agent, id, service_id, url, q, question). Omit everything and you get an 'unknown' verdict with usage hints — this tool never errors on missing params.",
+  properties: {
+    agentId: { type: "string", description: "OKX.AI agent ID, e.g. \"2023\". Aliases: agent_id, agent, id." },
+    serviceId: { type: "string", description: "Service listing ID. Alias: service_id." },
+    endpoint: { type: "string", description: "The service endpoint URL. Alias: url." },
+    query: { type: "string", description: "Free-text keywords, e.g. \"token security\". Aliases: q, question." },
+  },
+  examples: [
+    { agentId: "2023" },
+    { query: "token security" },
+    { endpoint: "https://www.oklink.com/api/v5/explorer/mcp/x402/get_token_info" },
+  ],
+} as const;
+
+const serviceScoreOutputSchema = {
+  type: "object",
+  properties: {
+    ok: { type: "boolean" },
+    tool: { type: "string", const: "databard.service_score" },
+    indexGeneratedAt: { type: "string", nullable: true },
+    matches: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          verifiedLevel: { type: "string", enum: ["listing", "paid_delivery"], description: "\"listing\" = unpaid check of endpoint + payment gate only; \"paid_delivery\" = a real paid call was verified end-to-end." },
+          serviceId: { type: "string" },
+          agentId: { type: "string" },
+          agentName: { type: "string" },
+          serviceName: { type: "string" },
+          endpoint: { type: "string" },
+          feeUsd: { type: "number" },
+          score: { type: "number", minimum: 0, maximum: 100 },
+          status: { type: "string", enum: ["healthy", "degraded", "broken", "unreachable"] },
+          flags: { type: "array", items: { type: "string" } },
+          checks: { type: "object" },
+          uptimePct: { type: "number", nullable: true },
+          deep: { type: "object", nullable: true, description: "Paid deep-check result, when one was run (verified delivery, not just listing health)." },
+          badgeUrl: { type: "string" },
+          pageUrl: { type: "string" },
+        },
+      },
+    },
+    verdict: {
+      type: "string",
+      enum: ["safe_to_pay", "caution", "avoid", "unknown"],
+      description: "safe_to_pay = healthy listing; caution = degraded; avoid = broken/unreachable; unknown = not indexed.",
+    },
+    keyFindings: { type: "array", items: { type: "string" } },
+    nextStep: { type: "string" },
+    alternatives: { type: "array", items: { type: "object" }, description: "Top healthy alternatives by keyword overlap." },
+  },
+} as const;
+
 const TOOLS = [
   {
     name: "databard_health_check",
@@ -498,6 +555,17 @@ const TOOLS = [
     pricing: "x402 pay-per-call (exact, USDT0 on X Layer eip155:196), $1.00",
     inputSchema: probeInputSchema,
     outputSchema: probeOutputSchema,
+  },
+  {
+    name: "databard_service_score",
+    summary: "Look up an OKX.AI marketplace service's health score before paying it. Free.",
+    description:
+      "Answers 'should my agent pay this service?' using DataBard's public marketplace health index: every A2MCP listing checked periodically with ONE unpaid request (we verify the listing answers and that its 402 payment challenge matches the advertised price — output quality behind the paywall is not measured). Returns the score, per-check evidence, flags (price mismatches, dead endpoints, free listings demanding payment), uptime, and healthy alternatives. Free; never errors on missing params.",
+    method: "POST",
+    endpoint: "/api/mcp/service-score",
+    pricing: "free",
+    inputSchema: serviceScoreInputSchema,
+    outputSchema: serviceScoreOutputSchema,
   },
   {
     name: "databard_fleet_briefing",

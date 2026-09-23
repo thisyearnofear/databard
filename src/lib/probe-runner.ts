@@ -33,6 +33,8 @@ export interface ProbeCandidate {
   agentId?: string;
   /** Agent's wallet/communication address for Ligis credential lookup */
   agentAddress?: string;
+  /** True for DataBard's own listing: probed as a reference but never ranked. */
+  reference?: boolean;
 }
 
 export interface ProbePayment {
@@ -115,7 +117,7 @@ function setCache(key: string, result: ProbeResult): void {
 // ── SSRF guard ─────────────────────────────────────────────────────────────
 
 /** Hostnames / IP ranges the runner must never probe (SSRF + cloud metadata). */
-function assertPublicUrl(rawUrl: string): void {
+export function assertPublicUrl(rawUrl: string): void {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -199,7 +201,7 @@ async function loadX402ClientModules(): Promise<X402ClientModules | null> {
  * Returns the payment headers to replay the request with (PAYMENT-SIGNATURE),
  * or null if payment isn't possible.
  */
-async function attemptX402Payment(
+export async function attemptX402Payment(
   challengeHeader: string
 ): Promise<Record<string, string> | null> {
   const pk = process.env.PROBE_PAYER_PK;
@@ -724,5 +726,6 @@ export const DEFAULT_CANDIDATES: ProbeCandidate[] = [
     body: {},
     knownPriceUsd: 0,
     agentId: "9878",
+    reference: true,
   },
 ];

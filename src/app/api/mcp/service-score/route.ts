@@ -1,0 +1,240 @@
+import { NextRequest, NextResponse } from "next/server";
+import { ValidationError, rateLimit } from "@/lib/validation";
+import {
+  getLatestIndex,
+  findServices,
+  type IndexedService,
+  type MarketplaceIndex,
+} from "@/lib/marketplace-index";
+import { recordEvent } from "@/lib/events";
+
+export const runtime = "nodejs";
+
+/**
+ * A2MCP tool — `databard_service_score` (FREE).
+ *
+ * Look up a marketplace service's DataBard Probe score before paying it.
+ * Input is deliberately lenient (same posture as the other A2MCP tools):
+ * envelopes are unwrapped and common aliases accepted —
+ *   {agentId}, {serviceId}, {endpoint|url}, {query|q|question}.
+ * Never returns 400 for a missing/misnamed param — a lookup that finds
+ * nothing answers 200 with verdict "unknown" plus a usage hint.
+ */
+
+const PUBLIC_BASE = (process.env.NEXT_PUBLIC_URL || "https://databard.persidian.com").replace(/\/$/, "");
+
+const ENVELOPE_KEYS = ["arguments", "input", "params", "data", "payload", "tool_input", "toolInput"] as const;
+const KNOWN_KEYS = new Set([
+  "agentId", "agent_id", "agent", "id",
+  "serviceId", "service_id", "service",
+  "endpoint", "url",
+  "query", "q", "question",
+  ...ENVELOPE_KEYS,
+]);
+
+function firstString(record: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const k of keys) {
+    const v = record[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "number") return String(v);
+  }
+  return undefined;
+}
+
+function parseLookup(body: unknown): {
+  agentId?: string;
+  serviceId?: string;
+  endpoint?: string;
+  query?: string;
+} {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return {};
+  let record = body as Record<string, unknown>;
+  const hasKnown = Object.keys(record).some(
+    (k) => KNOWN_KEYS.has(k) && !(ENVELOPE_KEYS as readonly string[]).includes(k),
+  );
+  if (!hasKnown) {
+    for (const env of ENVELOPE_KEYS) {
+      const inner = record[env];
+      if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+        record = { ...(inner as Record<string, unknown>), ...record };
+        break;
+      }
+      if (typeof inner === "string" && inner.trim()) {
+        record = { query: inner.trim(), ...record };
+        break;
+      }
+    }
+  }
+  return {
+    agentId: firstString(record, ["agentId", "agent_id", "agent", "id"]),
+    serviceId: firstString(record, ["serviceId", "service_id"]),
+    endpoint: firstString(record, ["endpoint", "url"]),
+    query: firstString(record, ["query", "q", "question"]),
+  };
+}
+
+type Verdict = "safe_to_pay" | "caution" | "avoid" | "unknown";
+
+function verdictFor(status: IndexedService["status"]): Verdict {
+  if (status === "healthy") return "safe_to_pay";
+  if (status === "degraded") return "caution";
+  return "avoid";
+}
+
+function shape(svc: IndexedService) {
+  return {
+    verifiedLevel: (svc.deep?.delivered ? "paid_delivery" : "listing") as
+      | "listing"
+      | "paid_delivery",
+    serviceId: svc.serviceId,
+    agentId: svc.agentId,
+    agentName: svc.agentName,
+    serviceName: svc.serviceName,
+    endpoint: svc.endpoint,
+    feeUsd: svc.feeUsd,
+    score: svc.score,
+    status: svc.status,
+    flags: svc.flags,
+    checks: svc.checks,
+    uptimePct: svc.uptimePct ?? null,
+    deep: svc.deep ?? null,
+    badgeUrl: `${PUBLIC_BASE}/api/probe/badge/${svc.serviceId}`,
+    pageUrl: `${PUBLIC_BASE}/probe/marketplace/${svc.serviceId}`,
+  };
+}
+
+function keywordHay(svc: IndexedService | MarketplaceIndex["services"][number]): string {
+  return `${svc.agentName} ${svc.serviceName} ${svc.description} ${svc.category}`.toLowerCase();
+}
+
+function alternatives(
+  index: MarketplaceIndex,
+  primary: IndexedService | undefined,
+  query: string | undefined,
+): IndexedService[] {
+  const seedText = primary
+    ? `${primary.agentName} ${primary.serviceName} ${primary.description}`
+    : (query ?? "");
+  const tokens = seedText.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+  const scored = index.services
+    .filter((s) => !s.ours && s.status === "healthy" && s.serviceId !== primary?.serviceId)
+    .map((s) => ({
+      svc: s,
+      overlap: tokens.filter((t) => keywordHay(s).includes(t)).length,
+    }))
+    .sort((a, b) => b.overlap - a.overlap || b.svc.score - a.svc.score);
+  const overlapping = scored.filter((s) => s.overlap > 0).map((s) => s.svc);
+  const fill = scored.filter((s) => s.overlap === 0).map((s) => s.svc);
+  return [...overlapping, ...fill].slice(0, 3);
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    // Same posture as health-check — the lookup reads a persisted index.
+    rateLimit(req, { maxRequests: 60, windowMs: 3600000 });
+
+    let body: unknown = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+    const q = parseLookup(body);
+
+    const index = await getLatestIndex();
+    const base = {
+      ok: true,
+      tool: "databard.service_score",
+      indexGeneratedAt: index?.generatedAt ?? null,
+    };
+
+    if (!index) {
+      return NextResponse.json({
+        ...base,
+        matches: [],
+        verdict: "unknown" as Verdict,
+        keyFindings: ["No marketplace index has been generated yet."],
+        nextStep:
+          "Check back shortly — the index refreshes on a schedule. The probe preview at POST /api/probe/preview still works.",
+        alternatives: [],
+      });
+    }
+
+    const found = findServices(index, q);
+    const primary = found[0];
+
+    if (!primary) {
+      void recordEvent("service_score_lookup", { hit: "no" });
+      return NextResponse.json({
+        ...base,
+        matches: [],
+        verdict: "unknown" as Verdict,
+        keyFindings: [
+          "No indexed service matched. Accepted params: agentId (e.g. \"2023\"), serviceId, endpoint/url, or query/q/question keywords.",
+        ],
+        nextStep:
+          "Retry with the service's agentId, endpoint URL, or a keyword like \"token security\" — or browse the index at GET /api/probe/marketplace.",
+        alternatives: alternatives(index, undefined, q.query).map((s) => ({
+          agentId: s.agentId,
+          serviceName: s.serviceName,
+          score: s.score,
+          status: s.status,
+          feeUsd: s.feeUsd,
+        })),
+      });
+    }
+
+    const verdict = verdictFor(primary.status);
+    const keyFindings: string[] = [
+      `${primary.agentName} — ${primary.serviceName}: ${primary.score}/100 (${primary.status}) as of ${index.generatedAt}.`,
+    ];
+    if (primary.feeUsd > 0 && primary.checks.priceMatch) {
+      keyFindings.push(`Price check: ${primary.checks.priceMatch.detail}.`);
+    }
+    for (const flag of primary.flags.slice(0, 3)) keyFindings.push(flag);
+    if (primary.deep?.delivered) {
+      keyFindings.push(
+        `Deep check: a real $${primary.deep.amountUsd ?? primary.feeUsd} payment was made and the service delivered (HTTP ${primary.deep.status}).`,
+      );
+    } else if (verdict === "safe_to_pay" && primary.feeUsd > 0) {
+      keyFindings.push(
+        "Listing-level verification only: the endpoint answers and its x402 payment gate matches the listed price — output quality behind the paywall was NOT measured.",
+      );
+    }
+
+    const nextStep =
+      verdict === "safe_to_pay"
+        ? `Safe to pay: ${primary.endpoint} ($${primary.feeUsd}/call) — the payment gate and listed price check out${
+            primary.deep?.delivered
+              ? ", and a real paid call was delivered"
+              : primary.feeUsd > 0
+                ? ". Note: listing verification only — paid-output quality was not measured"
+                : ""
+          }.`
+        : verdict === "caution"
+          ? `Proceed with caution: ${primary.endpoint} answered but had flag(s): ${primary.flags[0] ?? "partial checks"}.`
+          : `Avoid for now: ${primary.endpoint} scored ${primary.score}/100 (${primary.status}) — ${primary.flags[0] ?? "failing checks"}.`;
+
+    void recordEvent("service_score_lookup", {
+      hit: "yes",
+      verdict,
+      agentId: primary.agentId.slice(0, 20),
+    });
+
+    return NextResponse.json({
+      ...base,
+      matches: found.slice(0, 5).map(shape),
+      verdict,
+      keyFindings,
+      nextStep,
+      alternatives: alternatives(index, primary, q.query).map(shape),
+    });
+  } catch (e) {
+    if (e instanceof ValidationError) {
+      const status = e.message.startsWith("Rate limit") ? 429 : 400;
+      return NextResponse.json({ ok: false, error: e.message }, { status });
+    }
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
+}

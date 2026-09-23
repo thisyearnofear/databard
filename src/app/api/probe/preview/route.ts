@@ -33,6 +33,8 @@ interface ScoredCandidate {
   error: string | null;
   payment: unknown;
   fromCache: boolean;
+  /** DataBard's own service — probed for reference, never ranked. */
+  reference: boolean;
 }
 
 function scoreResult(r: Awaited<ReturnType<typeof probeAll>>[number]): ScoredCandidate {
@@ -46,6 +48,7 @@ function scoreResult(r: Awaited<ReturnType<typeof probeAll>>[number]): ScoredCan
     error: r.error ?? null,
     payment: r.payment ?? null,
     fromCache: r.fromCache ?? false,
+    reference: r.candidate.reference === true,
   };
 }
 
@@ -72,6 +75,7 @@ function rankedPayload(scored: ScoredCandidate[]) {
     error: s.error ?? null,
     payment: s.payment,
     fromCache: s.fromCache,
+    reference: s.reference,
   }));
 }
 
@@ -97,15 +101,17 @@ export async function POST(req: NextRequest) {
     const results = await probeAll(DEFAULT_CANDIDATES, { allowPayments: false });
 
     const scored = results.map(scoreResult);
-    scored.sort((a, b) => b.score.total - a.score.total);
+    const ranked = scored.filter((s) => !s.reference);
+    const reference = scored.filter((s) => s.reference);
+    ranked.sort((a, b) => b.score.total - a.score.total);
 
     const generatedAt = new Date().toISOString();
-    const summary = buildSummary(scored);
+    const summary = buildSummary(ranked);
 
     void recordEvent("probe_run", {
       mode: "preview",
-      candidates: String(scored.length),
-      top: String(scored[0]?.name ?? "none").slice(0, 120),
+      candidates: String(ranked.length),
+      top: String(ranked[0]?.name ?? "none").slice(0, 120),
     });
 
     return NextResponse.json({
@@ -124,7 +130,8 @@ export async function POST(req: NextRequest) {
         paidCount: 0,
       },
       attestation: { requested: false, txHash: null, error: null },
-      ranked: rankedPayload(scored),
+      ranked: rankedPayload(ranked),
+      reference: rankedPayload(reference),
     });
   } catch (e) {
     if (e instanceof ValidationError) {
@@ -160,6 +167,7 @@ async function streamPreview(question: string | undefined): Promise<Response> {
             name: c.name,
             endpoint: c.endpoint,
             knownPriceUsd: c.knownPriceUsd ?? null,
+            reference: c.reference === true,
           })),
         });
 
@@ -175,7 +183,8 @@ async function streamPreview(question: string | undefined): Promise<Response> {
           },
         });
 
-        const sorted = [...scored].sort((a, b) => b.score.total - a.score.total);
+        const sorted = scored.filter((s) => !s.reference).sort((a, b) => b.score.total - a.score.total);
+        const reference = scored.filter((s) => s.reference);
         const summary = buildSummary(sorted);
 
         void recordEvent("probe_run", {
@@ -193,10 +202,11 @@ async function streamPreview(question: string | undefined): Promise<Response> {
             priceUsd: "free preview",
             outboundSpentUsd: 0,
             outboundCapUsd: 0,
-            cachedCount: sorted.filter((s) => s.fromCache).length,
+            cachedCount: scored.filter((s) => s.fromCache).length,
             paidCount: 0,
           },
           ranked: rankedPayload(sorted),
+          reference: rankedPayload(reference),
         });
       } catch (failure) {
         send({

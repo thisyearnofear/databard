@@ -479,6 +479,9 @@ export function LandingStep() {
               <PixelIcon name="search" size={11} className="text-[var(--accent)]" />
               Probe
             </Link>
+            <Link href="/probe/marketplace" className="hover:text-[var(--text)] transition-colors">
+              Marketplace
+            </Link>
             <Link href="/roast" className="inline-flex items-center gap-1.5 hover:text-[var(--text)] transition-colors">
               <PixelIcon name="flame" size={11} className="text-[var(--danger)]" />
               Roast my data

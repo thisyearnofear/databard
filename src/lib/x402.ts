@@ -57,7 +57,13 @@ export const x402Server = x402Configured
     ).register(X402_NETWORK, new ExactEvmScheme())
   : null;
 
+// Public base for the resource URL in the 402 challenge. Behind the nginx
+// proxy req.url resolves to http://0.0.0.0:42100/..., which would leak into
+// the challenge's resource.url — set it explicitly instead.
+const PUBLIC_BASE = (process.env.NEXT_PUBLIC_URL || "https://databard.persidian.com").replace(/\/$/, "");
+
 export const briefingRouteConfig: RouteConfig = {
+  resource: `${PUBLIC_BASE}/api/mcp/briefing`,
   accepts: {
     scheme: "exact",
     network: X402_NETWORK,
@@ -69,6 +75,7 @@ export const briefingRouteConfig: RouteConfig = {
 };
 
 export const probeRouteConfig: RouteConfig = {
+  resource: `${PUBLIC_BASE}/api/agent/probe`,
   accepts: {
     scheme: "exact",
     network: X402_NETWORK,

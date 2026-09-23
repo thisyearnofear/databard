@@ -27,6 +27,8 @@ export interface ProbeResultCardProps {
   reachable: boolean;
   payment?: PaymentInfo | null;
   fromCache?: boolean;
+  /** DataBard's own service — shown for context, excluded from ranking. */
+  reference?: boolean;
 }
 
 const breakdownLabels: Record<string, string> = {
@@ -48,9 +50,15 @@ export function ResultCard({
   reachable,
   payment,
   fromCache,
+  reference,
 }: ProbeResultCardProps) {
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col gap-3">
+    <div className={`rounded-lg border p-4 flex flex-col gap-3 ${reference ? "border-dashed border-[var(--border)] bg-[var(--bg)]" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+      {reference && (
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          Reference — our own service, not ranked
+        </p>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">{name}</h3>

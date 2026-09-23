@@ -29,6 +29,7 @@ export default function AgentsPage() {
               {[
                 { title: "Analyze a data source", href: "#try-health-check", description: "Get a health summary, key findings, and a recommended next step.", label: "Try a free example" },
                 { title: "Check a service before you pay", href: "/probe", description: "Compare the default service set in a free preview. Paid responses and custom candidates require the agent endpoint.", label: "Compare services" },
+                { title: "Marketplace health index", href: "/probe/marketplace", description: "Every A2MCP service on OKX.AI, checked with one unpaid request — or call databard_service_score for a lookup before paying.", label: "See the index" },
                 { title: "Check an anchored report", href: "/verify", description: "Inspect a report commitment separately from its payment receipt. No wallet connection needed.", label: "Check a record" },
               ].map((item, index) => (
                 <li key={item.href} className="flex gap-4 py-6">

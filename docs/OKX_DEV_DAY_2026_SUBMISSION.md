@@ -64,7 +64,11 @@ history on `main` from 15 Sep documents the work.
 | Live product | https://databard.persidian.com/probe |
 | Free preview API | `POST https://databard.persidian.com/api/probe/preview` |
 | Paid API (402 challenge) | `POST https://databard.persidian.com/api/agent/probe` |
-| Tool discovery | `GET https://databard.persidian.com/api/mcp/tools` (`databard_probe`) |
+| Tool discovery | `GET https://databard.persidian.com/api/mcp/tools` (`databard_probe`, `databard_service_score`) |
+| Marketplace health index | https://databard.persidian.com/probe/marketplace — unpaid health check of all 152 listed A2MCP services |
+| Index API | `GET https://databard.persidian.com/api/probe/marketplace` |
+| Free pre-payment lookup | `POST https://databard.persidian.com/api/mcp/service-score` (`databard_service_score`) |
+| Provider badge | `GET https://databard.persidian.com/api/probe/badge/{serviceId}` (shields SVG) |
 | Inbound $1 settlement | X Layer tx `0x581d13568d3f44bd98a85943e20808e3a34b993ef4f719fc0fdf375e6edb60a7` (paymentId 15850923) |
 | Outbound payment (third party) | X Layer tx `0xeb22c2362a861548b64fdc4eb0ee9275957ace28b916496e850040bedf163be6` |
 | Verdict attestation | X Layer tx `0x5519c31276c8947e0144bd7bc35378f262c7a4ca0d98b3b3f41f5b7f6fac7a59`, block 70981029 |

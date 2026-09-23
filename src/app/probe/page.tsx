@@ -122,6 +122,11 @@ export default function ProbePage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">DataBard Probe</p>
           <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Check a service before you pay.</h1>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--text-muted)]">Compare response quality across our default service set. The free preview makes no payments and cannot inspect paid-only responses.</p>
+          <p className="mt-4 text-sm">
+            <Link href="/probe/marketplace" className="text-[var(--accent)] hover:underline">
+              Browse the OKX.AI marketplace health index →
+            </Link>
+          </p>
         </div>
 
         {/* How it works */}

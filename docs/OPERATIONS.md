@@ -69,6 +69,18 @@ Cron entry on the server (deploy user's crontab):
 Hourly is correct: schedules specify a UTC hour, and the runner only executes
 ones whose `nextRunAt` has passed.
 
+**`POST /api/probe/marketplace/refresh`** re-runs the unpaid marketplace health
+index (one request per OKX.AI listing — never pays; optional `deepBudget`
+spends real USDT0 and is NOT used by cron). Same `x-cron-secret` auth;
+`?dryRun=1` verifies without persisting. With `attest=1` the run writes a
+verdict attestation tx on X Layer.
+
+Cron entry (installed by `scripts/deploy.sh`, idempotent):
+
+```cron
+17 */6 * * * . /opt/databard/.env && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
+```
+
 ## Deploy
 
 ```bash

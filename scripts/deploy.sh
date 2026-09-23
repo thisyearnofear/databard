@@ -219,6 +219,16 @@ ssh "$REMOTE" bash <<EOF
   { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$CRON_LINE"; } | grep -v '^\$' | crontab - \
     || echo "   ⚠️  crontab install failed — existing crontab left untouched"
 
+  # Marketplace health index refresh: unpaid listing checks every 6h at :17,
+  # with on-chain attestation. Idempotent like the watchdog cron above.
+  echo "   Installing marketplace-index cron..."
+  IDX_CRON='17 */6 * * * . /opt/databard/.env && curl -s -m 280 -X POST -H "x-cron-secret: \$CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1'
+  EXISTING=\$(crontab -l 2>/dev/null || true)
+  FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v 'probe/marketplace/refresh' || true)
+  mkdir -p /opt/databard/logs 2>/dev/null || true
+  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$IDX_CRON"; } | grep -v '^\$' | crontab - \
+    || echo "   ⚠️  crontab install failed — existing crontab left untouched"
+
   # Cleanup old releases (keep last 5)
   echo "   Cleaning up old releases..."
   ls -dt "$DEPLOY_DIR/releases/"* 2>/dev/null | tail -n +6 | xargs rm -rf || true

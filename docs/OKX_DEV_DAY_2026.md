@@ -463,3 +463,49 @@ joins, assign Sep 22–24 (UI polish + video) to them.
   (~430-word project summary + evidence link table).
 - **Remaining**: the 2–4 min demo video (the only hard requirement not yet
   started) and the form submission itself.
+
+### Sep 23, 2026 — Marketplace Health Index
+
+Probe grew from "pay $1 to rank 5 hand-picked services" into a **free, public
+health index of every A2MCP service listed on OKX.AI**, plus a free lookup tool
+agents call before paying.
+
+- **Crawler**: `scripts/crawl-okx-marketplace.mjs` sweeps ~40 broad keywords ×
+  pages of `onchainos agent search`, dedupes by service id, merges explicit
+  agents (ASP #9878 via `agent service-list`), writes the committed snapshot
+  `src/lib/okx-marketplace.snapshot.json`: **152 agents, 48 A2A, 152 A2MCP
+  services** (includes our own 37750/37751).
+- **Index**: `src/lib/marketplace-index.ts` checks every listing with one
+  unpaid request (SSRF-guarded, POST `{}` with GET fallback on 404/405 or
+  wrong-method error bodies), decodes the x402 challenge, scores 0–100
+  (responds/gate/price-match/latency/JSON/self-describing), persists
+  `latest.json` + 90-run history with per-service `uptimePct`.
+- **Surfaces**: `GET /api/probe/marketplace`, cron-secret
+  `POST /api/probe/marketplace/refresh` (`attest`, `deepBudget`, `dryRun`),
+  `GET /api/probe/badge/[serviceId]` shields SVG, free A2MCP tool
+  `databard_service_score` (`POST /api/mcp/service-score`, `verifiedLevel`
+  listing|paid_delivery), public pages `/probe/marketplace` + per-service
+  detail. Every-6h refresh cron installed by `deploy.sh`.
+- **Local run** (no attest, deepBudget 0): 152 services in ~17s → **97 healthy /
+  39 degraded / 11 broken / 3 unreachable**, median latency 498ms.
+- **Honesty rules** (the core product constraint):
+  - Index checks make **no payment** — they verify the listing answers and its
+    x402 gate matches the advertised price; paid output quality is NOT
+    measured. `service-score` marks matches `verifiedLevel: "listing"` and
+    says so explicitly; only `paid_delivery` (a real settled deep check)
+    claims end-to-end verification.
+  - "Payment gate not reached — service rejects empty input before payment"
+    is a **neutral** flag (partial credit) for services that validate input
+    before the paywall (e.g. DegenDNA's `ANSWERS_REQUIRED_BEFORE_PAYMENT`,
+    GET-only MistTrack); only a clean 2xx body earns the "returned a response
+    without requesting payment" finding.
+  - Dead endpoints (404 after GET fallback, 5xx) are capped at 40 → `broken`.
+  - Deep checks are opt-in, budgeted (`deepBudget`, hard cap $0.25, services
+    ≤$0.02 only), replay with the recorded `checkedMethod`, and don't change
+    the score.
+  - Our own ASP #9878 rows are checked and displayed but marked `ours` and
+    excluded from rankings/aggregates.
+- **Crawler fee bug fixed**: `service-list` returns `fee` (string) not
+  `feeAmount` — our Briefing had been stored as $0 and falsely flagged "Listed
+  free but demands payment".
+- **Gates**: 46/46 marketplace-index unit tests, `tsc --noEmit` clean.
