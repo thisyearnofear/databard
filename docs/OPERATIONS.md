@@ -63,8 +63,12 @@ hour; max 5 runs per invocation (each one is a real TTS spend).
 Cron entry on the server (deploy user's crontab):
 
 ```cron
-0 * * * * . /opt/databard/.env && curl -s -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:42100/api/schedules/run >> /opt/databard/logs/cron-schedules.log 2>&1
+0 * * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -X POST -H "x-cron-secret: $CRON_SECRET" http://127.0.0.1:42100/api/schedules/run >> /opt/databard/logs/cron-schedules.log 2>&1
 ```
+
+Note: `. /opt/databard/.env` is NOT used — the file contains unquoted values
+(`EMAIL_FROM=DataBard <...>`) that break `source`. Extract CRON_SECRET with
+grep/cut instead.
 
 Hourly is correct: schedules specify a UTC hour, and the runner only executes
 ones whose `nextRunAt` has passed.
@@ -78,7 +82,7 @@ verdict attestation tx on X Layer.
 Cron entry (installed by `scripts/deploy.sh`, idempotent):
 
 ```cron
-17 */6 * * * . /opt/databard/.env && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
+17 */6 * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
 ```
 
 ## Deploy

@@ -36,33 +36,58 @@ interface ProviderConfig {
   chat: (input: ChatInput) => Promise<string>;
 }
 
+// Endpoints that reject `response_format` (e.g. some Azure deployments) get
+// remembered per baseUrl|model for the process lifetime — one failed call
+// teaches us, every later call skips straight to plain text.
+const jsonFormatUnsupported = new Set<string>();
+
+/** Strip a surrounding ``` fence and parse — for models without response_format. */
+export function parseJsonFromText(text: string): unknown {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json|JSON)?\s*\n?([\s\S]*?)\n?```\s*$/);
+  return JSON.parse(fenced ? fenced[1].trim() : trimmed);
+}
+
 async function openaiCompatChat(
   baseUrl: string,
   apiKey: string,
   model: string,
   input: ChatInput,
 ): Promise<string> {
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      ...(input.maxTokens ? { max_tokens: input.maxTokens } : {}),
-      temperature: input.temperature ?? 0.4,
-      ...(input.json ? { response_format: { type: "json_object" } } : {}),
-      messages: [
-        { role: "system", content: input.system },
-        { role: "user", content: input.user },
-      ],
-    }),
-    signal: AbortSignal.timeout(input.timeoutMs ?? 30_000),
-  });
+  const key = `${baseUrl}|${model}`;
+  const send = (json: boolean) =>
+    fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        ...(input.maxTokens ? { max_tokens: input.maxTokens } : {}),
+        temperature: input.temperature ?? 0.4,
+        ...(json ? { response_format: { type: "json_object" } } : {}),
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: input.user },
+        ],
+      }),
+      signal: AbortSignal.timeout(input.timeoutMs ?? 30_000),
+    });
+
+  let res = await send(Boolean(input.json) && !jsonFormatUnsupported.has(key));
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`${res.status}: ${body.slice(0, 300)}`);
+    if (input.json && /response_format/i.test(body)) {
+      jsonFormatUnsupported.add(key);
+      res = await send(false);
+      if (!res.ok) {
+        const retryBody = await res.text().catch(() => "");
+        throw new Error(`${res.status}: ${retryBody.slice(0, 300)}`);
+      }
+    } else {
+      throw new Error(`${res.status}: ${body.slice(0, 300)}`);
+    }
   }
   const json = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;

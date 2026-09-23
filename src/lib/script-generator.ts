@@ -7,7 +7,7 @@
 import type { SchemaMeta, ScriptSegment } from "./types";
 import type { ResearchTrail } from "./types";
 import { analyzeSchema, type SchemaInsights } from "./schema-analysis";
-import { isOpenAIChatConfigured, openaiChat } from "./llm-providers";
+import { isOpenAIChatConfigured, openaiChat, parseJsonFromText } from "./llm-providers";
 import { scriptCache } from "./store";
 import type { TableStatSummary } from "./dune-adapter";
 
@@ -157,8 +157,8 @@ async function generateWithLLM(schema: SchemaMeta, insights: SchemaInsights, con
     timeoutMs: 120_000,
   });
 
-  const parsed = JSON.parse(content);
-  const segments: ScriptSegment[] = Array.isArray(parsed) ? parsed : parsed.segments ?? parsed.script;
+  const parsed = parseJsonFromText(content) as { segments?: ScriptSegment[]; script?: ScriptSegment[] } | ScriptSegment[];
+  const segments = Array.isArray(parsed) ? parsed : parsed.segments ?? parsed.script;
 
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new Error("LLM returned invalid script format");

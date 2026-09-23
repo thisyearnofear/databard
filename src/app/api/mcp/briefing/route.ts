@@ -11,6 +11,10 @@ import { parseMcpInput } from "@/lib/mcp";
 import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
 import { getMonidCost } from "@/lib/monid-adapter";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
+import { getDataPath } from "@/lib/data-dir";
+import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { Episode } from "@/lib/types";
 import { ValidationError } from "@/lib/validation";
 import { x402Server, briefingRouteConfig, x402Configured } from "@/lib/x402";
@@ -121,15 +125,26 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       script,
     };
 
-    // Non-fatal: deliver the audio regardless; the URL is a bonus.
+    // Persist the MP3 content-addressed and serve it from our own API — the
+    // Grove upload is fire-and-forget so the paid response doesn't block on
+    // IPFS pinning (~13s, the dominant latency in the old flow).
     let audioUrl: string | undefined;
+    let audioId: string | undefined;
     if (audio) {
+      audioId = createHash("sha256").update(audio).digest("hex");
       try {
-        const grove = await uploadEpisodeToGrove(episode, audio);
-        audioUrl = grove.audioUrl;
-      } catch (groveErr) {
-        console.warn("[MCP briefing] Grove upload failed (non-fatal):", groveErr);
+        const dir = getDataPath("briefing-audio");
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, `${audioId}.mp3`), audio);
+        const base = (process.env.NEXT_PUBLIC_URL || "https://databard.persidian.com").replace(/\/+$/, "");
+        audioUrl = `${base}/api/mcp/briefing/audio/${audioId}`;
+      } catch (persistErr) {
+        console.warn("[MCP briefing] audio persist failed (non-fatal):", persistErr);
+        audioId = undefined;
       }
+      void uploadEpisodeToGrove(episode, audio)
+        .then((grove) => console.log(`[MCP briefing] Grove upload done: ${grove.audioUrl}`))
+        .catch((groveErr) => console.warn("[MCP briefing] Grove upload failed (non-fatal):", groveErr));
     }
 
     const actions = generateActionItems(insights);
@@ -197,6 +212,9 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       audioDelivery: audioModeResolved,
       ...(audio ? { audio: audio.toString("base64"), audioFormat: "mp3" } : { audio: null, audioFormat: null }),
       audioUrl,
+      // Grove pinning happens after the response — honest pending state.
+      groveUrl: null,
+      groveStatus: audio ? "pending" : "skipped",
       ...(monidCost ? { monidCost } : {}),
     });
   } catch (e) {

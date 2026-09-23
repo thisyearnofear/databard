@@ -202,7 +202,9 @@ const briefingOutputSchema = {
     audio: { type: "string", nullable: true, description: "Base64-encoded MP3 (only when audioDelivery is \"inline\").", contentEncoding: "base64" },
     audioFormat: { type: "string", nullable: true, const: "mp3" },
     audioDelivery: { type: "string", enum: ["inline", "url", "none"] },
-    audioUrl: { type: "string", nullable: true, description: "Public Grove/IPFS URL when audio was requested and upload succeeds." },
+    audioUrl: { type: "string", nullable: true, description: "Hosted MP3 URL on this API (GET /api/mcp/briefing/audio/{id}) when audio was generated." },
+    groveUrl: { type: "string", nullable: true, description: "Grove/IPFS URL — pinned asynchronously after the response; null while pending." },
+    groveStatus: { type: "string", enum: ["pending", "skipped"], description: "\"pending\" = IPFS pin in progress in the background; \"skipped\" = no audio generated." },
     monidCost: { type: "object", description: "Measured per-run cost receipt (monid source only)." },
   },
 } as const;

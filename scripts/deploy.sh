@@ -222,7 +222,9 @@ ssh "$REMOTE" bash <<EOF
   # Marketplace health index refresh: unpaid listing checks every 6h at :17,
   # with on-chain attestation. Idempotent like the watchdog cron above.
   echo "   Installing marketplace-index cron..."
-  IDX_CRON='17 */6 * * * . /opt/databard/.env && curl -s -m 280 -X POST -H "x-cron-secret: \$CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1'
+  # Don't source .env — unquoted values like EMAIL_FROM break `.`. Extract just
+  # CRON_SECRET; \\$ escapes land literal $ in the crontab, \042/\047 strip quotes.
+  IDX_CRON="17 */6 * * * CRON_SECRET=\\$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\\042\\047') && curl -s -m 280 -X POST -H \"x-cron-secret: \\$CRON_SECRET\" \"http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1\" >> /opt/databard/logs/cron-marketplace-index.log 2>&1"
   EXISTING=\$(crontab -l 2>/dev/null || true)
   FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v 'probe/marketplace/refresh' || true)
   mkdir -p /opt/databard/logs 2>/dev/null || true
