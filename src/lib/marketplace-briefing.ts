@@ -151,6 +151,8 @@ export interface BriefingServiceEntry {
   score: number | null;
   status: IndexedService["status"];
   verification: string;
+  /** Outcome of our last paid verification call, if any. */
+  paidOutcome?: string;
   subScores: IndexedService["subScores"];
   uptimePct?: number;
   flags: string[];
@@ -199,13 +201,16 @@ function changeLabel(svc: IndexedService, prev: Map<string, string>): string | n
 /** Flags → sentences a human can hear. Unknown flags pass through verbatim —
     the flag text is already written to be factual. */
 export function flagToPlain(flag: string): string {
+  if (flag === "Paid & delivered") return "";
+  if (flag.startsWith("Paid verification inconclusive"))
+    return "A paid call did not settle — inconclusive, so delivery is unproven.";
   if (flag.startsWith("Payment not enforced"))
     return "Its paywall is not enforced — it answered in full without payment. A provider note, not buyer risk.";
   if (flag.startsWith("Payment challenge declares"))
     return "Its payment challenge declares the wrong token domain — standard x402 clients will fail to pay it.";
   if (flag.includes("re-issued the challenge"))
     return "A signed payment was re-challenged with a fresh 402 — inconclusive.";
-  if (flag.startsWith("Couldn't build"))
+  if (flag.startsWith("Couldn't build") || flag.startsWith("Payment gate not reached"))
     return "We could not construct a request it would accept automatically.";
   if (flag.startsWith("MCP server"))
     return "It is an MCP server — payment is enforced per tool call, so the listing-level gate was not checked.";
@@ -297,7 +302,10 @@ function recommend(
   if (better) {
     return {
       rec: "switch",
-      reason: `${better.serviceName} scores ${better.score} vs its ${svc.score ?? "—"}`,
+      reason:
+        svc.score === null
+          ? `${better.serviceName} scores ${better.score} while it is not scored`
+          : `${better.serviceName} scores ${better.score} vs its ${svc.score}`,
     };
   }
   if (
@@ -330,10 +338,14 @@ function serviceEntry(
     score: svc.score,
     status: svc.status,
     verification: svc.verification,
+    paidOutcome: svc.lastPaidVerification?.outcome,
     subScores: svc.subScores,
     uptimePct: svc.uptimePct,
     flags: svc.flags,
-    notes: svc.flags.slice(0, 3).map(flagToPlain),
+    notes: svc.flags
+      .slice(0, 3)
+      .map(flagToPlain)
+      .filter((n): n is string => n.length > 0),
     recommendation: rec,
     reason,
     changeSincePrev: changeLabel(svc, prev),
@@ -360,7 +372,8 @@ const CATEGORY_KEYWORDS: { category: string; include: RegExp; exclude?: RegExp }
   },
   {
     category: "market signals",
-    include: /\b(signal|market|sentiment|trend|alpha)\b/i,
+    include: /\b(signal|signals|market|sentiment|trend|trends|alpha)\b/i,
+    exclude: /\b(card|cards|pokemon|pokémon|sealed|property|apartment)\b/i,
   },
 ];
 
@@ -602,10 +615,14 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
       const name = s.serviceName || s.agentName;
       const change = spokenChange(s.changeSincePrev);
       const note = s.notes[0] ? ` ${s.notes[0]}` : "";
+      const verLine =
+        s.verification === "delivered" && (s.paidOutcome === "delivered" || s.paidOutcome === "thin")
+          ? "it delivered a real answer to a paid request"
+          : (VERIFICATION_SPOKEN[s.verification] ?? "verification unknown");
       parts.push([
         name,
         `${name} is ${STATUS_SPOKEN[s.status]}, ${scoreWords(s.score)}. ` +
-          `${VERIFICATION_SPOKEN[s.verification] ?? "verification unknown"}.` +
+          `${verLine}.` +
           (change ? ` Since the last run it ${change}.` : "") +
           note,
       ]);
