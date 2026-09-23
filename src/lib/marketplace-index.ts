@@ -922,7 +922,14 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       // other contracts gate payments on scoreOf / isSafeToPay.
       try {
         const prevIndex = await getLatestIndex();
-        const changed = diffForChain(results, prevIndex?.services);
+        // Diff against what this registry last published, not the previous
+        // index — a prev run without a matching registry attestation means
+        // nothing is on-chain yet, so publish all non-ours services.
+        const prevOnChain =
+          prevIndex?.attestation?.registry?.toLowerCase() === registry.toLowerCase()
+            ? prevIndex.services
+            : null;
+        const changed = diffForChain(results, prevOnChain);
         const batches = chunkBatches(changed);
         const pub = await publishIndexRun(
           indexHashOf(compactResults),
