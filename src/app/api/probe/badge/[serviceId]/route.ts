@@ -50,8 +50,8 @@ export async function GET(
 
     const svg = !svc
       ? renderBadge("DataBard Probe", "not indexed", "#9ca3af")
-      : svc.status === "unverified"
-        ? renderBadge("DataBard Probe", `${svc.score} · unverified`, "#9ca3af")
+      : svc.status === "unverified" || svc.score === null
+        ? renderBadge("DataBard Probe", "unverified", "#9ca3af")
         : renderBadge(
             "DataBard Probe",
             `${svc.score} · ${svc.status}`,

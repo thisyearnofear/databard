@@ -273,8 +273,8 @@ function ServiceRow({ svc }: { svc: IndexedService }) {
     <li className="border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
       <Link href={`/probe/marketplace/${svc.serviceId}`} className="no-underline">
         <div className="flex items-center gap-3">
-          <span className={`font-display text-xl font-bold tabular-nums w-12 shrink-0 ${scoreTextClass(svc.score)}`}>
-            {svc.score}
+          <span className={`font-display text-xl font-bold tabular-nums w-12 shrink-0 ${svc.score === null ? "text-[var(--text-muted)]" : scoreTextClass(svc.score)}`}>
+            {svc.score ?? "—"}
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate text-[var(--text)]">
@@ -315,7 +315,7 @@ function ServiceRow({ svc }: { svc: IndexedService }) {
               {svc.feeUsd > 0 ? `$${svc.feeUsd}/call` : "free"} · {svc.latencyMs}ms
             </p>
           </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${scoreTintClass(svc.score)}`}>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${scoreTintClass(svc.score ?? 0)}`}>
             {svc.status}
           </span>
         </div>

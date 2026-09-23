@@ -24,7 +24,8 @@ const BATCH_SIZE = 60;
 
 export interface RegistryRow {
   serviceId: string;
-  score: number;
+  /** Null for unverified rows — published to the registry as score 0. */
+  score: number | null;
   status: keyof typeof STATUS_TO_CODE;
   ours?: boolean;
 }
@@ -41,7 +42,7 @@ export interface RegistryBatch {
  */
 export function diffForChain(
   rows: RegistryRow[],
-  prev: { serviceId: string; score: number; status: string }[] | null | undefined,
+  prev: { serviceId: string; score: number | null; status: string }[] | null | undefined,
 ): RegistryRow[] {
   const prevMap = new Map((prev ?? []).map((r) => [r.serviceId, r]));
   return rows.filter((r) => {
@@ -58,7 +59,7 @@ export function chunkBatches(rows: RegistryRow[], size = BATCH_SIZE): RegistryBa
     const slice = rows.slice(i, i + size);
     batches.push({
       serviceIds: slice.map((r) => BigInt(r.serviceId)),
-      scores: slice.map((r) => Math.round(r.score)),
+      scores: slice.map((r) => Math.round(r.score ?? 0)),
       statuses: slice.map((r) => STATUS_TO_CODE[r.status] ?? 0),
     });
   }

@@ -171,7 +171,9 @@ export async function POST(req: NextRequest) {
 
     const verdict = verdictFor(primary);
     const keyFindings: string[] = [
-      `${primary.agentName} — ${primary.serviceName}: ${primary.score}/100 (${primary.status}) as of ${index.generatedAt}.`,
+      primary.score === null
+        ? `${primary.agentName} — ${primary.serviceName}: not scored (${primary.status}) as of ${index.generatedAt}.`
+        : `${primary.agentName} — ${primary.serviceName}: ${primary.score}/100 (${primary.status}) as of ${index.generatedAt}.`,
     ];
     if (primary.feeUsd > 0 && primary.checks.paymentIntegrity) {
       keyFindings.push(`Payment integrity: ${primary.checks.paymentIntegrity.detail}.`);
@@ -205,7 +207,7 @@ export async function POST(req: NextRequest) {
             }.`
         : verdict === "unknown"
           ? `Unverified: ${primary.endpoint} answered but we could not verify its payment gate or delivery — ${primary.flags[0] ?? "no input contract discovered"}.`
-          : `Avoid for now: ${primary.endpoint} scored ${primary.score}/100 (${primary.status}) — ${primary.flags[0] ?? "failing checks"}.`;
+          : `Avoid for now: ${primary.endpoint} is ${primary.status}${primary.score === null ? "" : ` (scored ${primary.score}/100)`} — ${primary.flags[0] ?? "failing checks"}.`;
 
     void recordEvent("service_score_lookup", {
       hit: "yes",

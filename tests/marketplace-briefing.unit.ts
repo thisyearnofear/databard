@@ -8,7 +8,10 @@ import {
   flagToPlain,
   parseBriefingRequest,
   resolveBriefingServices,
+  sanitizeSpeech,
 } from "../src/lib/marketplace-briefing";
+import { findAlternatives } from "../src/lib/marketplace-index";
+import { chunkBatches } from "../src/lib/probe-registry";
 import type {
   HistoryRun,
   IndexedService,
@@ -260,6 +263,96 @@ for (const [name, b] of [["scoped", scoped], ["whole", whole]] as const) {
 
 const bareScript = buildMarketplaceScript(whole);
 check("script usable standalone", bareScript.length >= 6 && bareScript.length <= 10);
+
+// ── Speech quality ─────────────────────────────────────────────────────────
+
+{
+  const allText = [...scoped.script, ...whole.script].map((s) => s.text).join(" ");
+  check("no #ids in speech", !/#\d/.test(allText), allText.match(/#\d+/g));
+  check("no arrows in speech", !allText.includes("→"));
+  check("no HTTP codes in speech", !/HTTP\s?\d{3}/i.test(allText));
+  check("no x402 jargon in speech", !/\bx402\b/i.test(allText));
+  check("no A2MCP jargon in speech", !/A2MCP/i.test(allText));
+  check("says OKX AI", whole.script.some((s) => s.text.includes("OKX AI")));
+}
+check(
+  "sanitizeSpeech strips ids/arrows/codes/jargon",
+  sanitizeSpeech("Foo (#40035): unreachable → broken (HTTP 400) via x402 A2MCP") ===
+    "Foo (): unreachable  to broken () via payment agent service".replace(/\(\)/g, "").replace(/\s{2,}/g, " ") ||
+    !/[#→]|HTTP\s?\d{3}|x402|A2MCP/i.test(sanitizeSpeech("Foo (#40035): unreachable → broken (HTTP 400) via x402 A2MCP")),
+);
+
+// ── Switch rule: healthy rows never switch ─────────────────────────────────
+
+{
+  const idx3 = indexWith([
+    svc({ serviceId: "700", status: "healthy", score: 60, verification: "gate" }),
+    svc({ serviceId: "200", status: "healthy", score: 95, verification: "delivered" }),
+  ]);
+  const b = buildMarketplaceBriefing(idx3, hist, { agentIds: [], serviceIds: ["700"], endpoints: [] });
+  const e = b.services[0];
+  check(
+    "healthy + better alternative → keep w/ alternative note",
+    e.recommendation === "keep" && e.reason.includes("alternative available"),
+    `${e.recommendation}: ${e.reason}`,
+  );
+}
+
+// ── Ranking eligibility ────────────────────────────────────────────────────
+
+{
+  const idx4 = indexWith([
+    svc({ serviceId: "1", status: "unverified", score: null, verification: "none" }),
+    svc({ serviceId: "2", status: "healthy", score: 95, verification: "gate", serviceName: "GateOnly" }),
+    svc({ serviceId: "3", status: "healthy", score: 80, verification: "delivered", serviceName: "FreeDel" }),
+    svc({ serviceId: "4", status: "healthy", score: 70, verification: "delivered", serviceName: "PaidDel",
+      lastPaidVerification: { at: "2026-09-22T00:00:00Z", delivered: true, outcome: "delivered" } }),
+    svc({ serviceId: "5", status: "degraded", score: 50, verification: "gate", serviceName: "Degraded" }),
+  ]);
+  const alts = findAlternatives(idx4, undefined, undefined, 10);
+  check("unverified never an alternative", !alts.some((a) => a.serviceId === "1"));
+  check("degraded never an alternative", !alts.some((a) => a.serviceId === "5"));
+  check(
+    "ordering: paid-delivered > free-delivered > gate",
+    alts[0]?.serviceId === "4" && alts[1]?.serviceId === "3" && alts[2]?.serviceId === "2",
+    alts.map((a) => a.serviceId).join(","),
+  );
+}
+
+// ── Null score end-to-end ──────────────────────────────────────────────────
+
+{
+  const idx5 = indexWith([
+    svc({ serviceId: "1", status: "unverified", score: null, verification: "none" }),
+  ]);
+  const b = buildMarketplaceBriefing(idx5, hist, { agentIds: [], serviceIds: ["1"], endpoints: [] });
+  check("briefing says not scored", b.services[0].reason !== undefined && b.summary.includes("not scored"));
+  // registry payload: null score publishes as 0
+  const batch = chunkBatches([{ serviceId: "1", score: null, status: "unverified" }])[0];
+  check("registry publishes unverified as score 0 + status 0", batch.scores[0] === 0 && batch.statuses[0] === 0);
+}
+
+// ── Category exclusions ────────────────────────────────────────────────────
+
+{
+  const idx6 = indexWith([
+    svc({ serviceId: "1", status: "healthy", score: 95, verification: "delivered",
+      serviceName: "Pokémon Card Market Lookup", description: "sealed pokemon card prices" }),
+    svc({ serviceId: "2", status: "healthy", score: 90, verification: "delivered",
+      serviceName: "Token Metadata", description: "token contract metadata and holder data" }),
+  ]);
+  const b = buildMarketplaceBriefing(idx6, hist, { agentIds: [], serviceIds: [], endpoints: [] });
+  const tokenCat = b.market?.topHealthy.find((c) => c.category === "token data");
+  check(
+    "pokemon excluded from token data",
+    !tokenCat || tokenCat.picks.every((p) => p.serviceId !== "1"),
+    JSON.stringify(tokenCat),
+  );
+  check(
+    "real token service in token data",
+    !!tokenCat && tokenCat.picks.some((p) => p.serviceId === "2"),
+  );
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

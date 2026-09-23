@@ -138,7 +138,8 @@ export interface SubScores {
 
 export interface IndexedService extends MarketplaceService {
   ours: boolean;
-  score: number;
+  /** Null when unverified — there is no score to show. */
+  score: number | null;
   status: "healthy" | "degraded" | "broken" | "unreachable" | "unverified";
   checks: Record<string, CheckScore>;
   flags: string[];
@@ -1093,7 +1094,9 @@ async function paidVerify(
 // ── Scoring v2 — weighted sub-scores; unknowns stay unknown ───────────────
 
 export interface ListingVerdict {
-  score: number;
+  /** Null when status is "unverified" — availability-only data must never
+      present a headline score ("unverified 100/100" is self-contradictory). */
+  score: number | null;
   status: IndexedService["status"];
   checks: Record<string, CheckScore>;
   flags: string[];
@@ -1420,7 +1423,7 @@ export function scoreListing(
             ? "healthy"
             : "degraded";
 
-  return { score, status, checks, flags, verification, subScores };
+  return { score: status === "unverified" ? null : score, status, checks, flags, verification, subScores };
 }
 
 // ── Verify ledger ($1/day, keyed by UTC date) ──────────────────────────────
@@ -1766,7 +1769,7 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
         "Payment was signed but the service re-issued the challenge — inconclusive, may be client/facilitator incompatibility",
       );
       if (r.status === "healthy") r.status = "degraded";
-      r.score = Math.min(r.score, 79);
+      r.score = r.score === null ? null : Math.min(r.score, 79);
     }
   }
 
@@ -1816,13 +1819,13 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       verifySpentUsd: Number(verifySpent.toFixed(6)),
       verifyAttempted,
     },
-    services: results.sort((a, b) => b.score - a.score || a.agentId.localeCompare(b.agentId)),
+    services: results.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.agentId.localeCompare(b.agentId)),
   };
 
   const compactResults = {
     kind: "okx-marketplace-index",
     generatedAt,
-    services: results.map((r) => ({ serviceId: r.serviceId, score: r.score, status: r.status })),
+    services: results.map((r) => ({ serviceId: r.serviceId, score: r.score ?? 0, status: r.status })),
   };
 
   if (opts.attest) {
@@ -1928,7 +1931,7 @@ export function findServices(
   }
   const seen = new Set<string>();
   return out
-    .sort((a, b) => b.rank - a.rank || b.svc.score - a.svc.score)
+    .sort((a, b) => b.rank - a.rank || (b.svc.score ?? -1) - (a.svc.score ?? -1))
     .map((o) => o.svc)
     .filter((s) => (seen.has(s.serviceId) ? false : (seen.add(s.serviceId), true)));
 }
@@ -1952,13 +1955,30 @@ export function findAlternatives(
     ? `${primary.agentName} ${primary.serviceName} ${primary.description}`
     : (query ?? "");
   const tokens = seedText.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+  // Only verified-healthy services qualify as recommendations: gate-verified
+  // or better, ordered delivered (paid) > delivered (free) > gate, then
+  // score, then latency. Unverified services are never alternatives.
+  const deliveryTier = (s: IndexedService) =>
+    s.lastPaidVerification?.delivered ? 2 : s.verification === "delivered" ? 1 : 0;
   const scored = index.services
-    .filter((s) => !s.ours && s.status === "healthy" && s.serviceId !== primary?.serviceId)
+    .filter(
+      (s) =>
+        !s.ours &&
+        s.status === "healthy" &&
+        (s.verification === "delivered" || s.verification === "gate") &&
+        s.serviceId !== primary?.serviceId,
+    )
     .map((s) => ({
       svc: s,
       overlap: tokens.filter((t) => keywordHay(s).includes(t)).length,
     }))
-    .sort((a, b) => b.overlap - a.overlap || b.svc.score - a.svc.score);
+    .sort(
+      (a, b) =>
+        deliveryTier(b.svc) - deliveryTier(a.svc) ||
+        b.overlap - a.overlap ||
+        (b.svc.score ?? -1) - (a.svc.score ?? -1) ||
+        a.svc.latencyMs - b.svc.latencyMs,
+    );
   const overlapping = scored.filter((s) => s.overlap > 0).map((s) => s.svc);
   const fill = scored.filter((s) => s.overlap === 0).map((s) => s.svc);
   return [...overlapping, ...fill].slice(0, limit);

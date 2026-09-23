@@ -307,5 +307,74 @@ assert(!isSideEffecting("https://x.com/mcp", "get_price"), "read tool allowed");
   assert(body.mystery === "n/a", `unknown string → n/a (got ${JSON.stringify(body)})`);
 }
 
+// ── Regression: OKLink validator messages ──────────────────────────────────
+{
+  // "chainIndex must not be blank; tokenAddress must not be blank"
+  const names = extractFieldNames({
+    code: "400",
+    msg: "参数校验失败: chainIndex must not be blank; tokenAddress must not be blank",
+  });
+  assert(
+    names.includes("chainIndex") && names.includes("tokenAddress"),
+    `must-not-be-blank names extracted (got ${JSON.stringify(names)})`,
+  );
+}
+{
+  // "chainIndex chainIndex 不能为空" — duplicated name + Chinese validator
+  const names = extractFieldNames({ code: "400", msg: "参数校验失败: chainIndex chainIndex 不能为空" });
+  assert(
+    names.length === 1 && names[0] === "chainIndex",
+    `不能为空 names extracted (got ${JSON.stringify(names)})`,
+  );
+}
+{
+  const names = extractFieldNames({ code: "400", msg: "参数校验失败: tokenAddress tokenAddress 不能为空" });
+  assert(
+    names.includes("tokenAddress"),
+    `duplicated 不能为空 name (got ${JSON.stringify(names)})`,
+  );
+}
+
+// ── Description literal field names ────────────────────────────────────────
+{
+  const inputs = discoverInputs({
+    serviceName: "Token Metadata",
+    description:
+      'Token metadata — POST.\nPOST only (GET=405). Requires chainIndex, tokenAddress. Returns name, symbol, decimals.\ne.g. POST {"chainIndex":"1","tokenAddress":"0x..."}',
+    status: 200,
+  });
+  assert(
+    inputs?.source === "description" && inputs.literalNames === true,
+    `literal description names (got ${JSON.stringify(inputs)})`,
+  );
+  const names = inputs!.fields.map((f) => f.name);
+  assert(
+    names.includes("chainIndex") && names.includes("tokenAddress") && !names.includes("symbol"),
+    `literal fields = provider names (got ${names})`,
+  );
+  const body = synthesizeBody(inputs!.fields);
+  assert(
+    body.chainIndex === "1" && body.tokenAddress === "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    `dictionary fills literal names (got ${JSON.stringify(body)})`,
+  );
+  assert(
+    classifyInputs(inputs!) === "dictionary",
+    `literal dictionary-matched names → dictionary (got ${classifyInputs(inputs!)})`,
+  );
+}
+{
+  // Single-name "Required: tokenAddress" form — parenthetical not a field
+  const inputs = discoverInputs({
+    serviceName: "Meme Token Overview",
+    description: "Required: tokenAddress (EVM address or Solana mint). Optional: chainIndex (1/56/501).",
+    status: 200,
+  });
+  const names = inputs!.fields.map((f) => f.name);
+  assert(
+    names.includes("tokenAddress") && !names.includes("EVM") && !names.includes("Solana"),
+    `single required name, no parenthetical junk (got ${names})`,
+  );
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

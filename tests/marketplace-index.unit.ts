@@ -340,7 +340,8 @@ function assert(condition: boolean, label: string) {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 418, latencyMs: 500 }), s);
   assert(v.subScores.availability === 100, "418 availability 100");
-  assert(v.score === 100, `nulls excluded → score 100 (got ${v.score})`);
+  // Unverified rows show no score — "unverified 100/100" is self-contradictory.
+  assert(v.score === null, `unverified → score null (got ${v.score})`);
   assert(v.status === "unverified", "still unverified");
 }
 

@@ -17,7 +17,10 @@ export async function generateMetadata({
   const index = await getLatestIndex();
   const svc = index?.services.find((s) => s.serviceId === serviceId);
   if (!svc) return { title: "Service — DataBard Probe" };
-  const title = `${svc.serviceName || svc.agentName} scored ${svc.score} on DataBard Probe`;
+  const title =
+    svc.score === null
+      ? `${svc.serviceName || svc.agentName} is unverified on DataBard Probe`
+      : `${svc.serviceName || svc.agentName} scored ${svc.score} on DataBard Probe`;
   const description = `${svc.agentName} · ${svc.status} · ${svc.feeUsd > 0 ? `$${svc.feeUsd}/call` : "free"} — checked without payment against its OKX.AI marketplace listing.`;
   return {
     title,
@@ -67,11 +70,11 @@ export default async function MarketplaceServicePage({
               </p>
             </div>
             <div className="text-right shrink-0">
-              <span className={`font-display text-4xl font-bold tabular-nums ${scoreTextClass(svc.score)}`}>
-                {svc.score}
+              <span className={`font-display text-4xl font-bold tabular-nums ${svc.score === null ? "text-[var(--text-muted)]" : scoreTextClass(svc.score)}`}>
+                {svc.score ?? "—"}
               </span>
-              <span className="text-sm text-[var(--text-muted)]"> /100</span>
-              <p className={`mt-1 inline-block rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${scoreTintClass(svc.score)}`}>
+              <span className="text-sm text-[var(--text-muted)]">{svc.score === null ? " not scored" : " /100"}</span>
+              <p className={`mt-1 inline-block rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${scoreTintClass(svc.score ?? 0)}`}>
                 {svc.status}
               </p>
             </div>
@@ -246,7 +249,7 @@ export default async function MarketplaceServicePage({
         <section className="mt-8 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5" aria-labelledby="badge">
           <h2 id="badge" className="text-sm font-semibold">Badge for your README</h2>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={badgeUrl} alt={`DataBard Probe score: ${svc.score} (${svc.status})`} className="mt-3 h-5" />
+          <img src={badgeUrl} alt={svc.score === null ? "DataBard Probe: unverified" : `DataBard Probe score: ${svc.score} (${svc.status})`} className="mt-3 h-5" />
           <pre className="mt-3 overflow-x-auto rounded bg-[var(--bg)] p-3 text-xs text-[var(--text)]">{markdown}</pre>
         </section>
       </div>

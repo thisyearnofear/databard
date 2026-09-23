@@ -40,6 +40,10 @@ export interface DiscoveredInputs {
   fields: FieldSpec[];
   /** Whole example body from a bazaar-style challenge, when present. */
   exampleBody?: Record<string, unknown>;
+  /** Field names came literally from the description ("Requires chainIndex,
+      tokenAddress", inline example bodies) rather than keyword guesses —
+      dictionary-valued names can then rate "dictionary" confidence. */
+  literalNames?: boolean;
 }
 
 export interface McpTool {
@@ -184,6 +188,11 @@ export function extractFieldNames(body: unknown): string[] {
       const patterns = [
         /["'`]([A-Za-z_][\w.-]*)["'`]\s+(?:is\s+)?(?:required|missing|invalid|expected|not set|not provided)/gi,
         /\b([A-Za-z_][\w.-]*)\s+(?:is\s+)?(?:required|missing|not provided|must be provided|is not set)\b/gi,
+        // Java-style "chainIndex must not be blank" / "tokenAddress may not be empty"
+        /\b([A-Za-z_][\w.-]*)\s+(?:must not be blank|cannot be blank|may not be blank|should not be blank|must not be empty|cannot be empty|may not be empty|may not be null)\b/gi,
+        // Chinese validators: "chainIndex 不能为空" / "chainIndex chainIndex 不能为空" / "tokenAddress 必填"
+        /\b([A-Za-z_][\w.-]*)\s+不能为空/g,
+        /\b([A-Za-z_][\w.-]*)\s+必填/g,
         /(?:missing|required|provide|expected|must include|requires?)\s+(?:\w+\s+){0,2}["'`]([A-Za-z_][\w.-]*)["'`]/gi,
         /\b([A-Za-z_][\w.-]*)\s*:\s*(?:Field\s+)?[Rr]equired\b/g,
       ];
@@ -383,6 +392,41 @@ export function pickMcpTool(
   return best ?? safe[0];
 }
 
+/**
+ * Extract literal field names from a listing description: inline example
+ * bodies (`e.g. POST {"chainIndex":"1","tokenAddress":"0x..."}`) and
+ * "Requires chainIndex, tokenAddress" / "Required: tokenAddress" lists.
+ * This is much stronger evidence than keyword guessing — the names are the
+ * provider's own.
+ */
+export function literalFieldsFromDescription(text: string): string[] {
+  const names = new Set<string>();
+  const add = (raw: string) => {
+    const n = raw.trim().replace(/^[<([{]+|[>)\]}.,;:'"`]+$/g, "");
+    if (!/^[A-Za-z_][\w.]*$/.test(n)) return;
+    const leaf = n.split(".").pop() ?? n;
+    if (STOPWORDS.has(leaf.toLowerCase()) || leaf.length > 40) return;
+    names.add(n);
+  };
+  // Inline example bodies — every "key": inside a brace pair.
+  for (const m of text.matchAll(/\{[^{}]*\}/g)) {
+    for (const k of m[0].matchAll(/["']([A-Za-z_]\w*)["']\s*:/g)) add(k[1]);
+  }
+  // "Requires chainIndex, tokenAddress" — comma/and-separated name lists.
+  for (const m of text.matchAll(
+    /(?:requires?|required|needs?|mandatory)\s*[:=]?\s*([A-Za-z_]\w*(?:\s*[,、+]\s*|\s+and\s+)[A-Za-z_]\w*)/gi,
+  )) {
+    for (const tok of m[1].split(/[,、+]|\band\b/)) add(tok);
+  }
+  // "Required: tokenAddress" — a single name ending at punctuation/bracket.
+  for (const m of text.matchAll(
+    /(?:requires?|required|needs?|mandatory)\s*[:=]?\s*\(?([A-Za-z_][\w.]*)\)?(?=[\s(.;,\n]|$)/gi,
+  )) {
+    add(m[1]);
+  }
+  return [...names];
+}
+
 const DESCRIPTION_FIELDS: [RegExp, string][] = [
   [/symbol|ticker|coin|token|asset|pair/i, "symbol"],
   [/wallet|address/i, "address"],
@@ -450,9 +494,19 @@ export function discoverInputs(evidence: {
     };
   }
 
-  // d. Listing description keywords
+  // d. Listing description — literal names first ("Requires chainIndex,
+  // tokenAddress", inline example bodies), keyword guesses as fallback.
+  const descText = `${evidence.serviceName} ${evidence.description}`;
+  const literal = literalFieldsFromDescription(descText);
+  if (literal.length > 0) {
+    return {
+      source: "description",
+      fields: literal.slice(0, 6).map((name) => ({ name, required: true })),
+      literalNames: true,
+    };
+  }
   const descFields = DESCRIPTION_FIELDS.filter(([re]) =>
-    re.test(`${evidence.serviceName} ${evidence.description}`),
+    re.test(descText),
   ).map(([, name]) => ({ name, required: true }));
   if (descFields.length > 0) {
     return { source: "description", fields: descFields.slice(0, 3) };
@@ -470,7 +524,10 @@ export function discoverInputs(evidence: {
 export type InputConfidence = "exact" | "dictionary" | "guess";
 
 export function classifyInputs(inputs: DiscoveredInputs): InputConfidence {
-  if (inputs.source === "description") return "guess";
+  // Keyword-guessed description fields stay "guess"; literal provider names
+  // ("Requires chainIndex, tokenAddress") are classified per-field like any
+  // other evidence — dictionary-matched names rate "dictionary".
+  if (inputs.source === "description" && !inputs.literalNames) return "guess";
   if (inputs.source === "challenge_example") return "exact";
   const required = inputs.fields.filter((f) => f.required);
   if (required.length === 0) return "exact";
