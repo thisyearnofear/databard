@@ -3,8 +3,8 @@ import { ValidationError, rateLimit } from "@/lib/validation";
 import {
   getLatestIndex,
   findServices,
+  findAlternatives,
   type IndexedService,
-  type MarketplaceIndex,
 } from "@/lib/marketplace-index";
 import { recordEvent } from "@/lib/events";
 
@@ -111,30 +111,7 @@ function shape(svc: IndexedService) {
   };
 }
 
-function keywordHay(svc: IndexedService | MarketplaceIndex["services"][number]): string {
-  return `${svc.agentName} ${svc.serviceName} ${svc.description} ${svc.category}`.toLowerCase();
-}
 
-function alternatives(
-  index: MarketplaceIndex,
-  primary: IndexedService | undefined,
-  query: string | undefined,
-): IndexedService[] {
-  const seedText = primary
-    ? `${primary.agentName} ${primary.serviceName} ${primary.description}`
-    : (query ?? "");
-  const tokens = seedText.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
-  const scored = index.services
-    .filter((s) => !s.ours && s.status === "healthy" && s.serviceId !== primary?.serviceId)
-    .map((s) => ({
-      svc: s,
-      overlap: tokens.filter((t) => keywordHay(s).includes(t)).length,
-    }))
-    .sort((a, b) => b.overlap - a.overlap || b.svc.score - a.svc.score);
-  const overlapping = scored.filter((s) => s.overlap > 0).map((s) => s.svc);
-  const fill = scored.filter((s) => s.overlap === 0).map((s) => s.svc);
-  return [...overlapping, ...fill].slice(0, 3);
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -182,7 +159,7 @@ export async function POST(req: NextRequest) {
         ],
         nextStep:
           "Retry with the service's agentId, endpoint URL, or a keyword like \"token security\" — or browse the index at GET /api/probe/marketplace.",
-        alternatives: alternatives(index, undefined, q.query).map((s) => ({
+        alternatives: findAlternatives(index, undefined, q.query).map((s) => ({
           agentId: s.agentId,
           serviceName: s.serviceName,
           score: s.score,
@@ -242,7 +219,7 @@ export async function POST(req: NextRequest) {
       verdict,
       keyFindings,
       nextStep,
-      alternatives: alternatives(index, primary, q.query).map(shape),
+      alternatives: findAlternatives(index, primary, q.query).map(shape),
     });
   } catch (e) {
     if (e instanceof ValidationError) {

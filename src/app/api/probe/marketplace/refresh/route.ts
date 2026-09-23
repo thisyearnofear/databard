@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runIndex, MARKETPLACE_SERVICES } from "@/lib/marketplace-index";
+import { maybeGenerateDailyBriefing } from "@/lib/marketplace-briefing";
 
 export const runtime = "nodejs";
 // A full pass checks every listing serially-batched (concurrency 10) — allow
@@ -20,6 +21,8 @@ export const maxDuration = 300;
  *                (INDEX_DAILY_VERIFY_BUDGET_USD, default $1, max $3)
  *   ?force=ids — one-off paid retry of specific service ids, bypassing the
  *                72h cooldown; spend on forced retries capped at $0.10
+ *   ?brief=1   — after the run, regenerate the daily whole-marketplace
+ *                briefing (script + audio) when the last one is >20h old
  *   ?dryRun=1  — report what would run without checking anything
  *
  * Synchronous by design: the cron caller (curl from 127.0.0.1) waits.
@@ -61,11 +64,24 @@ export async function POST(req: NextRequest) {
 
   const startedAt = Date.now();
   const index = await runIndex({ verify, attest, forceIds: forceIds.length ? forceIds : undefined });
+
+  // Daily whole-marketplace briefing for the /probe/marketplace player —
+  // regenerated at most every 20h; failure never fails the refresh.
+  let briefing: { generated: boolean; reason?: string } | null = null;
+  if (params.get("brief") === "1") {
+    try {
+      briefing = await maybeGenerateDailyBriefing(index);
+    } catch (e) {
+      briefing = { generated: false, reason: e instanceof Error ? e.message : "briefing failed" };
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     durationMs: Date.now() - startedAt,
     generatedAt: index.generatedAt,
     aggregates: index.aggregates,
     attestation: index.attestation ?? null,
+    briefing,
   });
 }

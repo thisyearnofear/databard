@@ -74,7 +74,7 @@ curl -i -X POST https://databard.persidian.com/api/agent/probe \\
               {[
                 ["Discover capabilities", "GET /api/mcp/tools", "Input and output schemas for the available tools."],
                 ["Check data health", "POST /api/mcp/health-check", "Free health findings and recommended actions."],
-                ["Create a briefing", "POST /api/mcp/briefing", "Paid synthesis. Choose audio: none or url to control the output."],
+                ["Marketplace briefing", "POST /api/mcp/briefing", "Paid spoken briefing on OKX.AI agent services — {} for the whole marketplace, or scope with agentIds/query. mode:\"schema\" for the data-estate briefing. audio: none|url|inline."],
                 ["Compare candidate services", "POST /api/agent/probe", "Paid comparison with a cost receipt and optional verdict anchoring."],
               ].map(([title, endpoint, description]) => (
                 <div key={endpoint} className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5"><dt className="text-sm font-semibold">{title}</dt><dd className="mt-2 break-words font-mono text-xs text-[var(--accent)]">{endpoint}</dd><dd className="mt-3 text-sm text-[var(--text-muted)]">{description}</dd></div>

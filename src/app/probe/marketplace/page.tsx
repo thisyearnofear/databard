@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getLatestIndex, type IndexedService } from "@/lib/marketplace-index";
+import { getLatestBriefing } from "@/lib/marketplace-briefing";
 import { scoreTextClass, scoreTintClass } from "@/lib/product/score-tone";
 import { PixelIcon } from "@/components/dither-kit";
 import { recordEvent } from "@/lib/events";
@@ -36,6 +37,7 @@ export default async function MarketplacePage({
   const { status } = await searchParams;
   const filter = STATUS_FILTERS.includes(status as never) ? (status as string) : "all";
   const index = await getLatestIndex();
+  const briefing = await getLatestBriefing();
   void recordEvent("marketplace_index_view", { filter });
 
   const visible = (index?.services ?? []).filter(
@@ -72,6 +74,30 @@ export default async function MarketplacePage({
           </div>
         )}
 
+        {index && briefing?.audioUrl && (
+          <section className="mt-6 border border-[var(--border)] bg-[var(--surface)] px-5 py-4" aria-labelledby="daily-briefing">
+            <h2 className="text-sm font-semibold">Today&apos;s marketplace briefing</h2>
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              {briefing.summary} · generated {new Date(briefing.generatedAt).toUTCString()}
+            </p>
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <audio controls preload="none" src={briefing.audioUrl} className="mt-3 w-full" />
+            <details className="mt-3">
+              <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                Transcript
+              </summary>
+              <ol className="mt-2 flex flex-col gap-2">
+                {briefing.script.map((seg, i) => (
+                  <li key={i} className="text-xs leading-relaxed text-[var(--text-muted)]">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--text)]">{seg.speaker}:</span>{" "}
+                    {seg.text}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          </section>
+        )}
+
         {index && (
           <>
             {/* Headline stat: of the paid calls where settlement actually
@@ -83,6 +109,7 @@ export default async function MarketplacePage({
                   {index.aggregates.paidSettledVerified ?? 0} service
                   {(index.aggregates.paidSettledVerified ?? 0) === 1 ? "" : "s"} where payment settled
                   {(index.aggregates.settledDeliveryRate ?? null) !== null &&
+                    (index.aggregates.paidSettledVerified ?? 0) >= 10 &&
                     ` (${Math.round((index.aggregates.settledDeliveryRate ?? 0) * 100)}%)`}
                 </p>
                 <p className="mt-1 text-[11px] text-[var(--text-muted)]">

@@ -990,7 +990,13 @@ async function sendPaidRequest(
 const USDT0_XLAYER = "0x779ded0c9e1022225f8e0630b35a9b54be713736";
 const USDT0_DOMAIN = { name: "USD₮0", version: "1" };
 
-function challengeDeclaresWrongDomain(challengeHeader: string): boolean {
+/** The token domain a challenge declares for the USDT0 asset on X Layer,
+    when it differs from the real on-chain domain — signing the declared
+    domain produces a signature that can never verify. */
+export function declaredDomainMismatch(
+  challengeHeader: string | null | undefined,
+): { name: string; version: string } | null {
+  if (!challengeHeader) return null;
   try {
     const decoded = JSON.parse(Buffer.from(challengeHeader, "base64").toString("utf-8"));
     for (const a of decoded.accepts ?? []) {
@@ -1000,13 +1006,20 @@ function challengeDeclaresWrongDomain(challengeHeader: string): boolean {
         a.asset.toLowerCase() === USDT0_XLAYER &&
         (a.extra?.name !== USDT0_DOMAIN.name || String(a.extra?.version) !== USDT0_DOMAIN.version)
       ) {
-        return true;
+        return {
+          name: typeof a.extra?.name === "string" ? a.extra.name : "?",
+          version: a.extra?.version !== undefined ? String(a.extra.version) : "?",
+        };
       }
     }
   } catch {
-    // undecodable — no retry
+    // undecodable
   }
-  return false;
+  return null;
+}
+
+function challengeDeclaresWrongDomain(challengeHeader: string): boolean {
+  return declaredDomainMismatch(challengeHeader) !== null;
 }
 
 async function paidVerify(
@@ -1158,6 +1171,15 @@ export function scoreListing(
   const challenge = probe?.challenge ?? check.challenge;
   const challenged = (probe ? probe.status === 402 : false) || check.status === 402;
   const decodableChallenge = challenged && challenge && !challenge.undecodable;
+
+  // Provider-facing note: a challenge declaring the wrong EIP-712 domain for
+  // the settlement token makes every standard x402 client's signature fail.
+  const domainMismatch = declaredDomainMismatch(probe?.challengeHeader ?? check.challengeHeader);
+  if (domainMismatch && feeUsd > 0) {
+    flags.push(
+      `Payment challenge declares token domain ${domainMismatch.name}/${domainMismatch.version} but the token is ${USDT0_DOMAIN.name}/${USDT0_DOMAIN.version} — standard x402 clients will fail to pay`,
+    );
+  }
 
   // MCP tools/call returning text-only content is legitimate freemium
   // (intro/help text explaining the paid flow) — never an accusation.
@@ -1857,6 +1879,17 @@ export async function getLatestIndex(): Promise<MarketplaceIndex | null> {
   }
 }
 
+export interface HistoryRun {
+  runAt: string;
+  results: { serviceId: string; status: string }[];
+}
+
+/** Status history across runs — newest last. The final entry corresponds to
+    the current latest.json (it is appended during the run). */
+export async function getMarketplaceHistory(): Promise<HistoryRun[]> {
+  return readHistory();
+}
+
 export interface FindQuery {
   agentId?: string;
   serviceId?: string;
@@ -1898,4 +1931,35 @@ export function findServices(
     .sort((a, b) => b.rank - a.rank || b.svc.score - a.svc.score)
     .map((o) => o.svc)
     .filter((s) => (seen.has(s.serviceId) ? false : (seen.add(s.serviceId), true)));
+}
+
+function keywordHay(svc: IndexedService): string {
+  return `${svc.agentName} ${svc.serviceName} ${svc.description} ${svc.category}`.toLowerCase();
+}
+
+/**
+ * Healthy alternatives for a service (or a bare query) — same-token overlap
+ * first, then highest-scored healthy services. Shared by service-score and
+ * the marketplace briefing.
+ */
+export function findAlternatives(
+  index: MarketplaceIndex,
+  primary: IndexedService | undefined,
+  query: string | undefined,
+  limit = 3,
+): IndexedService[] {
+  const seedText = primary
+    ? `${primary.agentName} ${primary.serviceName} ${primary.description}`
+    : (query ?? "");
+  const tokens = seedText.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2);
+  const scored = index.services
+    .filter((s) => !s.ours && s.status === "healthy" && s.serviceId !== primary?.serviceId)
+    .map((s) => ({
+      svc: s,
+      overlap: tokens.filter((t) => keywordHay(s).includes(t)).length,
+    }))
+    .sort((a, b) => b.overlap - a.overlap || b.svc.score - a.svc.score);
+  const overlapping = scored.filter((s) => s.overlap > 0).map((s) => s.svc);
+  const fill = scored.filter((s) => s.overlap === 0).map((s) => s.svc);
+  return [...overlapping, ...fill].slice(0, limit);
 }

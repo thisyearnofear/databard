@@ -144,7 +144,9 @@ export default async function MarketplaceServicePage({
                 // Provider-facing notes (paywall hygiene) are styled neutral —
                 // they aren't buyer risk.
                 const providerNote =
-                  f.startsWith("Payment not enforced") || f.startsWith("Returned free content");
+                  f.startsWith("Payment not enforced") ||
+                  f.startsWith("Returned free content") ||
+                  f.startsWith("Payment challenge declares");
                 const neutral =
                   providerNote ||
                   f.startsWith("Couldn't build") ||

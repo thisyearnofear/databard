@@ -8,13 +8,16 @@ import { buildResearchTrail } from "@/lib/research";
 import { buildEvidenceContext, enrichResearchTrail } from "@/lib/evidence-providers";
 import { getDuneTableStats } from "@/lib/dune-adapter";
 import { parseMcpInput } from "@/lib/mcp";
+import {
+  buildMarketplaceBriefing,
+  parseBriefingRequest,
+  storeBriefingAudio,
+  synthesizeBriefingAudio,
+} from "@/lib/marketplace-briefing";
+import { getLatestIndex, getMarketplaceHistory } from "@/lib/marketplace-index";
 import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
 import { getMonidCost } from "@/lib/monid-adapter";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
-import { getDataPath } from "@/lib/data-dir";
-import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { Episode } from "@/lib/types";
 import { ValidationError } from "@/lib/validation";
 import { x402Server, briefingRouteConfig, x402Configured } from "@/lib/x402";
@@ -41,6 +44,101 @@ export const runtime = "nodejs";
  *     -H 'content-type: application/json' \
  *     -d '{"source":"openmetadata","schemaFqn":"db.sales","openmetadata":{"url":"...","token":"..."}}'
  */
+
+/**
+ * Marketplace mode (default): deterministic briefing built from the
+ * persisted Probe index + run history — no LLM, no credentials needed.
+ * Scoped when the caller names services; whole-marketplace otherwise.
+ */
+async function marketplaceBriefing(
+  brief: ReturnType<typeof parseBriefingRequest>,
+): Promise<NextResponse> {
+  const index = await getLatestIndex();
+  if (!index) {
+    // 200 with an honest empty answer — the caller paid, so never 5xx.
+    return NextResponse.json({
+      ok: true,
+      tool: "databard.briefing",
+      serviceVersion: 3,
+      mode: "marketplace",
+      generatedAt: new Date().toISOString(),
+      indexGeneratedAt: null,
+      summary: "No marketplace index has been generated yet — the first health pass has not run.",
+      keyFindings: ["Check back shortly; the index refreshes on a schedule."],
+      nextStep: "Browse GET /api/probe/marketplace for the index once it exists.",
+      services: [],
+      alternatives: [],
+      script: [],
+      audio: null,
+      audioFormat: null,
+      groveUrl: null,
+      groveStatus: "skipped",
+    });
+  }
+
+  const history = await getMarketplaceHistory();
+  const briefing = buildMarketplaceBriefing(index, history, brief);
+
+  let audio: Buffer | undefined;
+  if (brief.audio !== "none") {
+    audio = await synthesizeBriefingAudio(briefing.script);
+  }
+  let audioUrl: string | undefined;
+  if (audio) {
+    const stored = await storeBriefingAudio(audio);
+    audioUrl = stored?.audioUrl;
+    const episode: Episode = {
+      schemaFqn: "okx.marketplace",
+      schemaName: "OKX.AI marketplace health",
+      tableCount: index.aggregates.checked,
+      qualitySummary: {
+        passed: index.aggregates.healthy,
+        failed: index.aggregates.broken + index.aggregates.unreachable,
+        total: index.aggregates.checked,
+      },
+      script: briefing.script,
+      generatedAt: briefing.generatedAt,
+      audioUrl,
+    };
+    void uploadEpisodeToGrove(episode, audio)
+      .then((grove) => console.log(`[MCP briefing] Grove upload done: ${grove.audioUrl}`))
+      .catch((groveErr) => console.warn("[MCP briefing] Grove upload failed (non-fatal):", groveErr));
+  }
+
+  const registry = process.env.PROBE_REGISTRY_ADDRESS;
+  return NextResponse.json({
+    ok: true,
+    tool: "databard.briefing",
+    serviceVersion: 3,
+    mode: "marketplace",
+    generatedAt: briefing.generatedAt,
+    indexGeneratedAt: briefing.indexGeneratedAt,
+    scope: briefing.scope,
+    summary: briefing.summary,
+    keyFindings: briefing.keyFindings,
+    nextStep: briefing.nextStep,
+    services: briefing.services,
+    alternatives: briefing.alternatives,
+    ...(briefing.market ? { market: briefing.market } : {}),
+    ...(registry
+      ? {
+          onchain: {
+            registry,
+            hint: "Read scores yourself: scoreOf(serviceId) / isSafeToPay(serviceId, minScore, maxAge) on ProbeVerdictRegistry (X Layer eip155:196)",
+          },
+        }
+      : {}),
+    verificationCaveat:
+      "\"Payment gate verified\" means the x402 paywall checks out — output quality behind it was only measured for services marked delivered.",
+    script: briefing.script.map((s) => ({ speaker: s.speaker, topic: s.topic, text: s.text })),
+    audioDelivery: brief.audio,
+    ...(audio ? { audio: audio.toString("base64"), audioFormat: "mp3" } : { audio: null, audioFormat: null }),
+    audioUrl,
+    groveUrl: null,
+    groveStatus: audio ? "pending" : "skipped",
+  });
+}
+
 async function briefingHandler(req: NextRequest): Promise<NextResponse> {
   try {
     // A non-JSON or empty body still gets a (demo) briefing — never a 400/500.
@@ -50,7 +148,15 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
     } catch {
       body = {};
     }
-    const { config, schemaFqn, researchQuestion, outputFormat, forceDemo, audio: audioMode } = parseMcpInput(body);
+    // Marketplace mode is the default — `{}`, `{demo:true}`, or service
+    // lookups (agentIds/serviceIds/endpoints/query). The legacy schema
+    // briefing runs only when mode:"schema" or an explicit schema
+    // source/FQN is given.
+    const brief = parseBriefingRequest(body);
+    if (brief.mode === "marketplace") {
+      return await marketplaceBriefing(brief);
+    }
+    const { config, schemaFqn, researchQuestion, outputFormat, forceDemo, audio: audioMode } = parseMcpInput(brief.record);
 
     // Degrade to the labelled demo fixture when the source is unreachable —
     // marketplace reviewers have no credentials, and a 400 after payment is
@@ -81,33 +187,9 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
     const audioModeResolved = audioMode;
     let audio: Buffer | undefined;
     if (audioModeResolved !== "none") {
-      // Cost controls for the $1 call (UNIT_ECONOMICS.md): Flash TTS
-      // (~50% cheaper speech) + bookends SFX (intro + outro only — the
-      // per-topic whooshes are the cost driver). The $49 subscription
-      // product keeps premium voices + full SFX; these envs scope the
-      // cheap path to this route only.
-      const rawMode = (process.env.BRIEFING_SFX_MODE ?? "bookends").toLowerCase();
-      const sfxMode = rawMode === "full" || rawMode === "none" ? rawMode : "bookends";
-      const ttsModel =
-        process.env.BRIEFING_TTS_MODEL ?? process.env.ELEVENLABS_TTS_MODEL ?? "eleven_flash_v2_5";
-      let audioBuffers: Buffer[];
-      try {
-        audioBuffers = await synthesizeEpisode(script, undefined, sfxMode, ttsModel);
-      } catch (apiError: unknown) {
-        const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
-        // Free-tier TTS 402 → web-automation fallback (same as /api/synthesize).
-        if (
-          errorMsg.includes("402") ||
-          errorMsg.includes("payment_required") ||
-          errorMsg.includes("paid_plan_required")
-        ) {
-          const { synthesizeEpisodeViaWeb } = await import("@/lib/audio-engine-providers");
-          audioBuffers = await synthesizeEpisodeViaWeb(script);
-        } else {
-          throw apiError;
-        }
-      }
-      audio = Buffer.concat(audioBuffers);
+      // Cost controls live in synthesizeBriefingAudio (Flash TTS + bookends
+      // SFX — see UNIT_ECONOMICS.md).
+      audio = await synthesizeBriefingAudio(script);
     }
 
     const episode: Episode = {
@@ -129,19 +211,9 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
     // Grove upload is fire-and-forget so the paid response doesn't block on
     // IPFS pinning (~13s, the dominant latency in the old flow).
     let audioUrl: string | undefined;
-    let audioId: string | undefined;
     if (audio) {
-      audioId = createHash("sha256").update(audio).digest("hex");
-      try {
-        const dir = getDataPath("briefing-audio");
-        await mkdir(dir, { recursive: true });
-        await writeFile(path.join(dir, `${audioId}.mp3`), audio);
-        const base = (process.env.NEXT_PUBLIC_URL || "https://databard.persidian.com").replace(/\/+$/, "");
-        audioUrl = `${base}/api/mcp/briefing/audio/${audioId}`;
-      } catch (persistErr) {
-        console.warn("[MCP briefing] audio persist failed (non-fatal):", persistErr);
-        audioId = undefined;
-      }
+      const stored = await storeBriefingAudio(audio);
+      audioUrl = stored?.audioUrl;
       void uploadEpisodeToGrove(episode, audio)
         .then((grove) => console.log(`[MCP briefing] Grove upload done: ${grove.audioUrl}`))
         .catch((groveErr) => console.warn("[MCP briefing] Grove upload failed (non-fatal):", groveErr));
@@ -173,7 +245,8 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       ok: true,
       tool: "databard.briefing",
-      serviceVersion: 2,
+      serviceVersion: 3,
+      mode: "schema",
       generatedAt: new Date().toISOString(),
       schemaFqn,
       schemaName: meta.name,

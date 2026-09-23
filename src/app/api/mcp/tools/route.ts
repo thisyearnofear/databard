@@ -495,20 +495,34 @@ const TOOLS = [
   },
   {
     name: "databard_briefing",
-    summary: "Generate a full AI data-analyst briefing: script, audio, health, and recommended actions. Paid per call.",
+    summary: "Marketplace Briefing: a narrated health briefing on OKX.AI agent services — per-service verdicts or the whole marketplace. Paid per call.",
     description:
-      "Runs the full DataBard synthesis on a schema: fetches metadata, computes health + trend narrative, generates a two-speaker briefing script (Alex + Morgan), synthesises the audio (MP3), uploads to Grove/IPFS, and returns the script, base64 audio, audio URL, health score, critical tables, and prioritised recommended actions. The hero tool — pay-per-call via x402.",
+      "DEFAULT (marketplace mode): a spoken briefing built from DataBard Probe's live health index of every OKX.AI marketplace service. Call with {} for the whole marketplace (status counts, paid-delivery headline, notable changes, top healthy services, provider issues) or scope it with agentIds/serviceIds/endpoints/query for per-service verdicts, what changed, and keep/watch/switch recommendations. Returns summary, keyFindings, script, and narrated MP3 audio. " +
+      "Legacy mode (mode:\"schema\", or an explicit schema source/schemaFqn): the original schema-health briefing on a data estate.",
     method: "POST",
     endpoint: "/api/mcp/briefing",
     pricing: "x402 pay-per-call (exact, USDT0 on X Layer eip155:196)",
     inputSchema: {
       ...connectionSchema,
       properties: {
-        ...connectionSchema.properties,
+        mode: {
+          type: "string",
+          enum: ["marketplace", "schema"],
+          default: "marketplace",
+          description:
+            "\"marketplace\" (default) briefs on OKX.AI agent services from the Probe index. \"schema\" runs the legacy data-estate briefing — also selected automatically when a source/schemaFqn is given.",
+        },
+        agentIds: { type: "array", items: { type: "string" }, description: "OKX.AI agent ids to brief on, e.g. [\"2023\"]. Singular agentId also accepted." },
+        serviceIds: { type: "array", items: { type: "string" }, description: "Marketplace service ids to brief on. Singular serviceId also accepted." },
+        endpoints: { type: "array", items: { type: "string" }, description: "Service endpoint URLs to brief on. Singular endpoint also accepted." },
+        query: {
+          type: "string",
+          description: "Keyword scope, e.g. \"token security\" — matches service/agent names and descriptions. need/q also accepted.",
+        },
         researchQuestion: {
           type: "string",
           description:
-            "Optional focus question for the briefing. 8-240 chars recommended; shorter questions are ignored, longer ones truncated — never an error.",
+            "Optional focus question (schema mode; treated as a query in marketplace mode). 8-240 chars recommended — never an error.",
         },
         outputFormat: { type: "string", enum: ["podcast", "executive-summary"], default: "podcast" },
         audio: {
@@ -520,20 +534,18 @@ const TOOLS = [
         },
       },
       examples: [
+        // Reviewer posture: bare call → whole-marketplace briefing.
+        {},
+        { agentIds: ["2023"], audio: "url" },
+        { query: "token security", audio: "none" },
+        { mode: "schema", demo: true, audio: "url" },
         {
-          // Reviewer posture: no credentials needed, guaranteed 200 deliverable.
-          demo: true,
-          researchQuestion: "What are the biggest risks hiding in this schema?",
-          outputFormat: "executive-summary",
-          audio: "url",
-        },
-        {
+          mode: "schema",
           source: "openmetadata",
           schemaFqn: "db.sales",
           openmetadata: { url: "http://your-openmetadata:8585/api", token: "<token>" },
           researchQuestion: "Which tables broke most recently and what should I fix first?",
         },
-        { source: "dune", schemaFqn: "dune.uniswap", dune: { apiKey: "<DUNE_API_KEY>" } },
       ],
     },
     outputSchema: briefingOutputSchema,
