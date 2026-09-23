@@ -374,13 +374,22 @@ export function spokenName(name: string, agentName?: string): string {
 /** Join display names for speech: non-Latin listings collapse into a count. */
 function spokenNameList(items: { serviceName: string; agentName?: string }[]): string {
   const latin: string[] = [];
+  const counts = new Map<string, number>();
   let nonLatin = 0;
   for (const it of items) {
     const n = spokenName(it.serviceName, it.agentName);
     if (n === "a service with a non-English listing") nonLatin += 1;
-    else latin.push(n);
+    else if (!counts.has(n)) {
+      counts.set(n, 1);
+      latin.push(n);
+    } else {
+      counts.set(n, counts.get(n)! + 1);
+    }
   }
-  const parts = [...latin];
+  const parts = latin.map((n) => {
+    const c = counts.get(n)!;
+    return c > 1 ? `${n} (${numWord(c)} listings)` : n;
+  });
   if (nonLatin > 0) {
     parts.push(`${nonLatin === 1 ? "one service" : `${nonLatin} services`} listed in a non-English language`);
   }
