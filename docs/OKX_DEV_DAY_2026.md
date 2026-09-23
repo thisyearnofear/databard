@@ -193,27 +193,27 @@ honest-failure pattern as `mcp-demo.ts`. **Never fake a score.**
 
 | Direction | Per-call | Notes |
 |---|---|---|
-| User → DataBard Probe | $1.00 USDT | Same pricing shape as `databard_briefing` |
+| User → DataBard Probe | $0.25 USDT | Repriced for the relist — cheaper than `databard_briefing` |
 | DataBard Probe → candidate (if candidate is paid) | $0.05–$0.10 | Set per-candidate; configurable |
 | X Layer attestation write | ~$0.0001 | X Layer gas is negligible |
 
-Per demo run: ~$1 in + ~$0.20–$0.40 out = ~$0.60–$0.80 margin if we bill
-$1. Cost for 5 demo runs at the live finale: ~$3. **Pre-fund the wallet
+Per demo run: ~$0.25 in + ~$0.10–$0.15 out = ~$0.10–$0.15 margin.
+Cost for 5 demo runs at the live finale: ~$0.75. **Pre-fund the wallet
 with $20 USDT0 on X Layer before Sep 25.**
 
 ### Economics & sustainability
 
-**Margin:** ~88% gross margin per call ($1.00 revenue − ~$0.12 COGS).
+**Margin:** ~52–96% gross margin per call ($0.25 revenue − ~$0.01–0.12 COGS).
 This is the best margin in the DataBard suite because there is no TTS or
 LLM cost — just HTTP calls and a tiny on-chain write.
 
 **Sustainability guardrails (built into `probe-runner.ts`):**
 
-1. **Outbound spend cap** (`MAX_OUTBOUND_SPEND_USD = $0.50`): before each
+1. **Outbound spend cap** (`MAX_OUTBOUND_SPEND_USD = $0.15`): before each
    paid call, the runner checks remaining budget. If cumulative cost would
    exceed the cap, remaining paid candidates are skipped and marked
    `"skipped": "spend cap reached"`. Worst-case COGS is bounded well below
-   the $1.00 price.
+   the $0.25 price.
 2. **1-hour result cache**: repeat probes for the same endpoint + body
    within one hour return the cached result without re-spending. Multiple
    callers asking about the same service trigger only one outbound call.
@@ -223,8 +223,9 @@ LLM cost — just HTTP calls and a tiny on-chain write.
    spend cap, so a malicious or careless caller cannot force unbounded
    outbound payments.
 
-**Break-even on Probe alone:** at 5 calls/day ($150/month revenue, ~$18/month
-COGS) the tool contributes ~$132/month margin before fixed costs.
+**Break-even on Probe alone:** at 5 calls/day ($37.50/month revenue, ~$18/month
+worst-case COGS) the tool contributes ~$19.50/month margin before fixed costs —
+volume play, repriced for adoption.
 
 **Outbound wallet:** a dedicated probe wallet (`0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8`,
 funded with 10 USDT0 + 0.01 OKB on X Layer) holds the `PROBE_PAYER_PK`. It is
@@ -500,9 +501,9 @@ agents call before paying.
     GET-only MistTrack); only a clean 2xx body earns the "returned a response
     without requesting payment" finding.
   - Dead endpoints (404 after GET fallback, 5xx) are capped at 40 → `broken`.
-  - Deep checks are opt-in, budgeted (`deepBudget`, hard cap $0.25, services
-    ≤$0.02 only), replay with the recorded `checkedMethod`, and don't change
-    the score.
+  - Paid verification is opt-in (`verify=1`), budgeted by a daily ledger
+    (`INDEX_DAILY_VERIFY_BUDGET_USD`, default $1, max $3), services ≤$0.05,
+    ≥72h between re-checks; spend counts only on settlement or delivery.
   - Our own ASP #9878 rows are checked and displayed but marked `ours` and
     excluded from rankings/aggregates.
 - **Crawler fee bug fixed**: `service-list` returns `fee` (string) not

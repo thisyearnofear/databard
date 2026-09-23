@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const STATUS_FILTERS = ["all", "healthy", "degraded", "broken", "unreachable"] as const;
+const STATUS_FILTERS = ["all", "healthy", "degraded", "unverified", "broken", "unreachable"] as const;
 
 export default async function MarketplacePage({
   searchParams,
@@ -74,11 +74,25 @@ export default async function MarketplacePage({
 
         {index && (
           <>
-            {/* Headline stats — DataBard's own listings are excluded */}
-            <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Headline stat: of the paid services we called with valid
+                requests and real payments, what share actually delivered. */}
+            {(index.aggregates.paidVerified ?? 0) >= 1 && (
+              <div className="mt-6 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-4">
+                <p className="font-display text-lg font-bold">
+                  Of {index.aggregates.paidVerified} paid service{index.aggregates.paidVerified === 1 ? "" : "s"} called with valid requests,{" "}
+                  {Math.round((index.aggregates.deliveryRate ?? 0) * 100)}% delivered
+                </p>
+                <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                  Real x402 payments on X Layer, requests built from each service&apos;s own
+                  input schema — not empty pings.
+                </p>
+              </div>
+            )}
+            <div className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
                 [index.aggregates.healthy, "healthy", "var(--success)"],
                 [index.aggregates.degraded, "degraded", "var(--warning)"],
+                [index.aggregates.unverified ?? 0, "unverified", "var(--text-muted)"],
                 [index.aggregates.broken, "broken", "var(--danger)"],
                 [index.aggregates.unreachable, "unreachable", "var(--text-muted)"],
               ].map(([n, label, color]) => (
@@ -96,8 +110,10 @@ export default async function MarketplacePage({
               Median latency {index.aggregates.medianLatency ?? "—"}ms ·{" "}
               {index.aggregates.priceMismatchCount} price mismatch{index.aggregates.priceMismatchCount === 1 ? "" : "es"} ·{" "}
               {index.aggregates.freeDemandsPaymentCount} free listing{index.aggregates.freeDemandsPaymentCount === 1 ? "" : "s"} demanding payment
-              {index.aggregates.deepChecked > 0 &&
-                ` · ${index.aggregates.deepChecked} verified with a real payment ($${index.aggregates.deepSpentUsd})`}
+              {(index.aggregates.gateVerified ?? 0) > 0 &&
+                ` · ${index.aggregates.gateVerified} reached a payment gate · ${index.aggregates.delivered} delivered`}
+              {(index.aggregates.verifyAttempted ?? 0) > 0 &&
+                ` · ${index.aggregates.verifyAttempted} paid verification${index.aggregates.verifyAttempted === 1 ? "" : "s"} ($${index.aggregates.verifySpentUsd} settled)`}
               {index.attestation?.registry && (
                 <>
                   {" · "}
@@ -166,35 +182,37 @@ export default async function MarketplacePage({
           </h2>
           <ul className="mt-4 flex flex-col gap-3 text-xs leading-relaxed text-[var(--text-muted)]">
             <li>
-              <span className="text-[var(--text)] font-medium">One unpaid request per listing.</span>{" "}
-              We POST an empty JSON body to each endpoint (retrying GET when the listing is
-              GET-only). This verifies the listing answers and that its payment gate matches
-              the advertised price — it does NOT measure the quality of the paid output.
-              Only rows marked “Paid &amp; delivered” were verified end-to-end with a real payment.
+              <span className="text-[var(--text)] font-medium">We send a real request, not an empty ping.</span>{" "}
+              For every listing we discover the input contract — the MCP tool schema from a
+              JSON-RPC handshake, the x402 challenge&apos;s declared input schema, field names in
+              the service&apos;s own validation error, or keywords in the listing description — and
+              synthesize a valid request from a public dictionary (BTC, a known wallet, a real
+              tx hash, today&apos;s date). A 400/422 naming more fields triggers one repair retry.
             </li>
             <li>
-              <span className="text-[var(--text)] font-medium">Responds (25 pts).</span>{" "}
-              The endpoint answers with a non-5xx status. A 402 challenge or a 400/422 complaint
-              about our empty body both count — the service is alive.
+              <span className="text-[var(--text)] font-medium">Three sub-scores, unknown stays unknown.</span>{" "}
+              Availability (responds + latency, 30%), payment integrity (the x402 gate on
+              eip155:196 and the listed price, 30%), and delivery (a substantive payload to a
+              valid request, 40%). A sub-score we could not measure is null, not zero — services
+              with no verifiable gate or delivery are labelled unverified rather than failed.
             </li>
             <li>
-              <span className="text-[var(--text)] font-medium">Payment gate (30 pts).</span>{" "}
-              Paid listings must answer 402 with a decodable x402 challenge on X Layer
-              (eip155:196). Free listings must not demand payment.
+              <span className="text-[var(--text)] font-medium">Verification levels.</span>{" "}
+              “Payment gate verified” means a valid request reached a decodable x402 challenge —
+              free for us, and honest about its limit: output quality behind the paywall was not
+              measured. “Paid &amp; delivered” means we signed a real payment (≤$0.05 fees, inside a
+              disclosed $1/day budget) and the service delivered.
             </li>
             <li>
-              <span className="text-[var(--text)] font-medium">Price match (15 pts).</span>{" "}
-              The challenge amount must equal the marketplace-listed fee.
+              <span className="text-[var(--text)] font-medium">Safety.</span>{" "}
+              Services whose tool name or endpoint suggests side effects (transfer, swap, order,
+              mint, delete…) are never actively called — flagged “Skipped active call” instead.
+              Every request we sent is published on the service&apos;s detail page as evidence.
             </li>
             <li>
-              <span className="text-[var(--text)] font-medium">Latency (15) + JSON (10) + self-describing (5).</span>{" "}
-              Response time bands, a parseable JSON body, and a description/schema in the reply.
-            </li>
-            <li>
-              <span className="text-[var(--text)] font-medium">Deep checks.</span>{" "}
-              When marked “Paid &amp; delivered”, we made a real x402 payment to a ≤$0.02 service
-              within a disclosed per-run budget, and the service answered — the only check that
-              measures actual delivery.
+              <span className="text-[var(--text)] font-medium">Stale data.</span>{" "}
+              Delivered payloads dated more than 7 days ago are flagged and halve the delivery
+              score.
             </li>
             <li>
               <span className="text-[var(--text)] font-medium">Ours — not ranked.</span>{" "}
@@ -224,9 +242,29 @@ function ServiceRow({ svc }: { svc: IndexedService }) {
                   ours — not ranked
                 </span>
               )}
-              {svc.deep?.delivered && (
+              {svc.lastPaidVerification?.delivered && (
                 <span className="ml-2 rounded border border-[var(--success)]/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--success)]">
                   paid &amp; delivered
+                </span>
+              )}
+              {!svc.lastPaidVerification?.delivered && svc.lastPaidVerification && (
+                <span className="ml-2 rounded border border-[var(--danger)]/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--danger)]">
+                  paid &amp; failed
+                </span>
+              )}
+              {!svc.lastPaidVerification && svc.verification === "gate" && (
+                <span className="ml-2 rounded border border-[var(--accent)]/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--accent)]">
+                  gate verified
+                </span>
+              )}
+              {!svc.lastPaidVerification && svc.verification === "delivered" && svc.feeUsd === 0 && (
+                <span className="ml-2 rounded border border-[var(--success)]/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--success)]">
+                  delivered (free)
+                </span>
+              )}
+              {!svc.lastPaidVerification && svc.verification === "none" && svc.status === "unverified" && (
+                <span className="ml-2 rounded border border-[var(--text-muted)]/50 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  listing only
                 </span>
               )}
             </p>

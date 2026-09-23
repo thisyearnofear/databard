@@ -1,12 +1,16 @@
 import {
   scoreListing,
   checkListing,
+  probeValidCall,
   findServices,
+  pickVerifyTargets,
+  dailyVerifyBudget,
   OUR_AGENT_ID,
   type ListingCheck,
   type MarketplaceService,
   type MarketplaceIndex,
   type IndexedService,
+  type ValidCallProbe,
 } from "../src/lib/marketplace-index";
 
 function svc(overrides: Partial<MarketplaceService> = {}): MarketplaceService {
@@ -41,6 +45,19 @@ function check(overrides: Partial<ListingCheck> = {}): ListingCheck {
   };
 }
 
+function probe(overrides: Partial<ValidCallProbe> = {}): ValidCallProbe {
+  return {
+    inputSource: "rejection",
+    attempts: [{ method: "POST", url: "https://api.example.com/mcp", status: 200, snippet: "{}" }],
+    status: 200,
+    bodyJson: {},
+    challenge: null,
+    challengeHeader: null,
+    request: { method: "POST", url: "https://api.example.com/mcp", body: { symbol: "BTC" } },
+    ...overrides,
+  };
+}
+
 function challenge(overrides: Record<string, unknown> = {}) {
   return {
     network: "eip155:196",
@@ -64,155 +81,332 @@ function assert(condition: boolean, label: string) {
   }
 }
 
-// Free listing, healthy: 200 + JSON + fast → full marks
+// Free listing, healthy: 200 + JSON + fast → availability + free-integrity known
 {
   const v = scoreListing(check(), svc({ feeUsd: 0 }));
-  assert(v.score === 95, `free healthy scores 95 (got ${v.score})`); // {} body isn't self-describing
+  assert(v.score === 100, `free healthy scores 100 (got ${v.score})`);
   assert(v.status === "healthy", "free healthy status");
+  assert(v.subScores.paymentIntegrity === 100, "free paymentIntegrity 100");
+  assert(v.subScores.delivery === null, "no valid call → delivery unknown");
+  assert(v.verification === "none", `no valid call → verification none (got ${v.verification})`);
   assert(v.flags.length === 0, `free healthy has no flags (got ${v.flags.join("|")})`);
 }
 
-// Paid listing with a correct challenge → healthy
+// Paid listing with a correct challenge → gate verified, healthy
 {
   const s = svc({ feeUsd: 0.01 });
-  const v = scoreListing(
-    check({ status: 402, challenge: challenge(), bodyJson: null }),
-    s,
-  );
+  const v = scoreListing(check({ status: 402, challenge: challenge(), bodyJson: null }), s);
   assert(v.score === 100, `paid correct challenge scores 100 (got ${v.score})`);
   assert(v.status === "healthy", "paid correct challenge healthy");
+  assert(v.verification === "gate", `gate verification (got ${v.verification})`);
+  assert(v.subScores.paymentIntegrity === 100, "paymentIntegrity 100");
 }
 
-// Charges more than listed → priceMatch fail + flag
+// Charges more than listed → paymentIntegrity dropped + flag
 {
   const s = svc({ feeUsd: 0.01 });
-  const v = scoreListing(
-    check({ status: 402, challenge: challenge({ amountUsd: 0.05 }) }),
-    s,
-  );
-  assert(v.checks.priceMatch.pass === "fail", "overcharge fails priceMatch");
+  const v = scoreListing(check({ status: 402, challenge: challenge({ amountUsd: 0.05 }) }), s);
+  assert(v.subScores.paymentIntegrity === 40, `overcharge → 40 (got ${v.subScores.paymentIntegrity})`);
   assert(v.flags.some((f) => f.includes("Charges $0.05, listing says $0.01")), "overcharge flag");
 }
 
-// Charges less → partial
+// Charges less → smaller penalty
 {
   const s = svc({ feeUsd: 0.10 });
-  const v = scoreListing(
-    check({ status: 402, challenge: challenge({ amountUsd: 0.02 }) }),
-    s,
-  );
-  assert(v.checks.priceMatch.pass === "partial", "undercharge partial priceMatch");
+  const v = scoreListing(check({ status: 402, challenge: challenge({ amountUsd: 0.02 }) }), s);
+  assert(v.subScores.paymentIntegrity === 80, `undercharge → 80 (got ${v.subScores.paymentIntegrity})`);
   assert(v.flags.some((f) => f.startsWith("Charges $0.02")), "undercharge flag");
 }
 
-// Free listing demanding payment → gate fail
+// Free listing demanding payment → integrity 0 → broken
 {
   const s = svc({ feeUsd: 0 });
   const v = scoreListing(check({ status: 402, challenge: challenge() }), s);
-  assert(v.checks.paymentGate.pass === "fail", "free+402 fails gate");
+  assert(v.subScores.paymentIntegrity === 0, "free+402 integrity 0");
+  assert(v.status === "broken", "free+402 → broken");
   assert(v.flags.includes("Listed free but demands payment"), "free-demands-payment flag");
 }
 
-// Paid listing on a non-196 network → partial gate
+// Paid listing on a non-196 network → 60
 {
   const s = svc({ feeUsd: 0.01 });
-  const v = scoreListing(
-    check({ status: 402, challenge: challenge({ network: "eip155:1" }) }),
-    s,
-  );
-  assert(v.checks.paymentGate.pass === "partial", "non-196 gate partial");
+  const v = scoreListing(check({ status: 402, challenge: challenge({ network: "eip155:1" }) }), s);
+  assert(v.subScores.paymentIntegrity === 60, `non-196 → 60 (got ${v.subScores.paymentIntegrity})`);
   assert(v.flags.some((f) => f.includes("eip155:1")), "non-196 flag");
 }
 
-// Undecodable challenge → gate fail, flag
+// Undecodable challenge → integrity unknown → unverified
 {
   const s = svc({ feeUsd: 0.01 });
-  const v = scoreListing(
-    check({ status: 402, challenge: { undecodable: true } }),
-    s,
-  );
-  assert(v.checks.paymentGate.pass === "fail", "undecodable gate fails");
+  const v = scoreListing(check({ status: 402, challenge: { undecodable: true } }), s);
+  assert(v.subScores.paymentIntegrity === null, "undecodable → integrity null");
   assert(v.flags.some((f) => f.includes("could not be decoded")), "undecodable flag");
+  assert(v.status === "unverified", `undecodable → unverified (got ${v.status})`);
 }
 
-// Paid listing, 400 error body → gate not reached (neutral, partial)
+// Paid listing, 400 error body, no input contract → unverified, no accusation
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(
-    check({
-      status: 400,
-      bodyJson: { ok: false, code: "ANSWERS_REQUIRED_BEFORE_PAYMENT", error: "answers required" },
-    }),
+    check({ status: 400, bodyJson: { ok: false, code: "ANSWERS_REQUIRED_BEFORE_PAYMENT", error: "answers required" } }),
     s,
   );
-  assert(v.checks.paymentGate.pass === "partial", "gate-not-reached 400 partial");
-  assert(v.checks.priceMatch.pass === "partial", "gate-not-reached priceMatch partial");
-  assert(
-    v.flags.includes("Payment gate not reached — service rejects empty input before payment"),
-    `gate-not-reached flag (got ${v.flags.join("|")})`,
-  );
-  assert(!v.flags.some((f) => f.includes("did not request payment") || f.includes("without requesting")), "no accusation flag");
+  assert(v.subScores.paymentIntegrity === null, "gate-not-reached integrity null");
+  assert(v.subScores.delivery === null, "no valid call → delivery null");
+  assert(v.status === "unverified", `gate-not-reached → unverified (got ${v.status})`);
+  assert(!v.flags.some((f) => f.includes("without requesting")), "no accusation flag");
 }
 
-// Paid listing, 2xx with ok:false → gate not reached
+// Valid request STILL rejected → honest "gate not reached" flag
 {
-  const s = svc({ feeUsd: 0.5 });
-  const v = scoreListing(check({ status: 200, bodyJson: { ok: false, error: "bad args" } }), s);
-  assert(v.checks.paymentGate.pass === "partial", "2xx ok:false gate partial");
-  assert(v.flags.some((f) => f.startsWith("Payment gate not reached")), "2xx error flag neutral");
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "symbol is required" } }),
+    s,
+    probe({ status: 422, bodyJson: { error: "symbol must be uppercase" } }),
+  );
+  assert(v.status === "unverified", `rejected valid call → unverified (got ${v.status})`);
+  assert(
+    v.flags.some((f) => f.includes("valid request still rejected (HTTP 422)")),
+    `rejected-valid-request flag (got ${v.flags.join("|")})`,
+  );
 }
 
-// Paid listing, 2xx clean JSON body, no 402 → the real finding
+// Paid listing, substantive JSON 200, no 402 → the real accusation
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 200, bodyJson: { data: [1, 2, 3] } }), s);
-  assert(v.checks.paymentGate.pass === "fail", "free content without payment fails gate");
+  assert(v.subScores.paymentIntegrity === 0, "free content without payment → integrity 0");
+  assert(v.status === "broken", "substantive unpaid payload → broken");
   assert(
     v.flags.includes("Listed at $0.01 but returned a response without requesting payment"),
     `no-payment flag (got ${v.flags.join("|")})`,
   );
 }
 
-// 404 → capped at 40 → broken
+// 404 → availability 0 → broken
 {
   const v = scoreListing(check({ status: 404 }), svc());
-  assert(v.checks.responds.pass === "fail", "404 responds fails");
+  assert(v.subScores.availability === 0, "404 availability 0");
   assert(v.flags.includes("Endpoint not found (404)"), "404 flag");
-  assert(v.score <= 40, `404 capped to <=40 (got ${v.score})`);
   assert(v.status === "broken", `404 → broken (got ${v.status})`);
 }
 
-// 5xx → capped broken + server error flag
+// 5xx → broken + server error flag
 {
   const v = scoreListing(check({ status: 503 }), svc());
   assert(v.flags.includes("Server error 503"), "5xx flag");
-  assert(v.score <= 40 && v.status === "broken", `5xx → broken (got ${v.status}, ${v.score})`);
+  assert(v.status === "broken", `5xx → broken (got ${v.status})`);
 }
 
-// Network error → 0 unreachable
+// Network error → unreachable, score 0
 {
   const v = scoreListing(check({ status: 0, error: "Timeout after 10000ms" }), svc());
   assert(v.score === 0, "unreachable scores 0");
   assert(v.status === "unreachable", "unreachable status");
+  assert(v.verification === "none", "unreachable verification none");
 }
 
-// Internal URL in challenge → flag
+// Internal URL in challenge → flag + integrity penalty
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(
     check({ status: 402, challenge: challenge({ resourceUrl: "https://0.0.0.0:42100/api/x" }) }),
     s,
   );
-  assert(
-    v.flags.includes("Payment challenge advertises an internal URL"),
-    "internal URL flag",
-  );
+  assert(v.flags.includes("Payment challenge advertises an internal URL"), "internal URL flag");
+  assert(v.subScores.paymentIntegrity === 50, `internal URL → 50 (got ${v.subScores.paymentIntegrity})`);
 }
 
 // Template substitution flag
 {
   const v = scoreListing(check({ templateSubstituted: true }), svc());
   assert(v.flags.includes("Templated endpoint (checked with BTC)"), "template flag");
+}
+
+// ── Delivery & verification levels ────────────────────────────────────────
+
+// Free listing, valid call delivers substantive payload → delivered
+{
+  const s = svc({ feeUsd: 0 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "symbol is required" } }),
+    s,
+    probe({ status: 200, bodyJson: { price: 67000, symbol: "BTC", change24h: 1.2 } }),
+  );
+  assert(v.verification === "delivered", `free delivered (got ${v.verification})`);
+  assert(v.subScores.delivery === 100, `delivery 100 (got ${v.subScores.delivery})`);
+  assert(v.status === "healthy", `free delivered → healthy (got ${v.status})`);
+}
+
+// Paid listing, valid call unpaid reaches the gate → gate (integrity priced)
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "symbol is required" } }),
+    s,
+    probe({ status: 402, bodyJson: null, challenge: challenge() }),
+  );
+  assert(v.verification === "gate", `paid gate (got ${v.verification})`);
+  assert(v.subScores.paymentIntegrity === 100, "gate reached via valid call → integrity 100");
+  assert(v.status === "healthy", `gate → healthy (got ${v.status})`);
+}
+
+// Paid + signed payment, then non-substantive → failed verification, broken
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 402, challenge: challenge() }),
+    s,
+    probe({ status: 402, challenge: challenge() }),
+    { record: { at: "2026-09-23T00:00:00Z", delivered: false, status: 500, amountUsd: 0.01 }, bodyJson: null, substantive: false },
+  );
+  assert(v.verification === "failed", `paid failed (got ${v.verification})`);
+  assert(v.subScores.delivery === 0, "paid failed → delivery 0");
+  assert(v.status === "broken", `paid failed → broken (got ${v.status})`);
+  assert(v.flags.some((f) => f.includes("Payment signed but request returned HTTP 500")), "paid-failed flag");
+}
+
+// Paid + delivered after payment → delivered
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 402, challenge: challenge() }),
+    s,
+    probe({ status: 402, challenge: challenge() }),
+    {
+      record: { at: "2026-09-23T00:00:00Z", delivered: true, status: 200, amountUsd: 0.01, settlementTx: "0xabc" },
+      bodyJson: { price: 1, symbol: "BTC", ok: true },
+      substantive: true,
+    },
+  );
+  assert(v.verification === "delivered", `paid delivered (got ${v.verification})`);
+  assert(v.subScores.delivery === 100, "paid delivery 100");
+  assert(v.status === "healthy", "paid delivered → healthy");
+}
+
+// Thin payload on a valid call → delivery 60
+{
+  const s = svc({ feeUsd: 0 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "q required" } }),
+    s,
+    probe({ status: 200, bodyJson: { ok: true } }),
+  );
+  assert(v.subScores.delivery === 60, `thin payload → 60 (got ${v.subScores.delivery})`);
+}
+
+// Stale delivered payload → delivery 50 + flag
+{
+  const s = svc({ feeUsd: 0 });
+  const old = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "q required" } }),
+    s,
+    probe({ status: 200, bodyJson: { price: 1, symbol: "BTC", volume: 5, date: old } }),
+  );
+  assert(v.subScores.delivery === 50, `stale → 50 (got ${v.subScores.delivery})`);
+  assert(v.flags.some((f) => f.startsWith("Stale data (dated")), `stale flag (got ${v.flags.join("|")})`);
+}
+
+// Free listing that rejects even a valid request → delivery 0 → broken
+{
+  const s = svc({ feeUsd: 0 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "q required" } }),
+    s,
+    probe({ status: 400, bodyJson: { error: "still bad" } }),
+  );
+  assert(v.subScores.delivery === 0, "free rejected valid call → delivery 0");
+  assert(v.status === "broken", `free rejected → broken (got ${v.status})`);
+}
+
+// Side-effecting service → skipped flag, stays unverified
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(
+    check({ status: 400, bodyJson: { error: "token required" } }),
+    s,
+    probe({ sideEffectSkipped: true, attempts: [], status: undefined, request: undefined }),
+  );
+  assert(v.flags.includes("Skipped active call: service may have side effects"), "side-effect flag");
+  assert(v.status === "unverified", `skipped → unverified (got ${v.status})`);
+}
+
+// Weighted mean excludes nulls: availability only → score = availability
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(check({ status: 418, latencyMs: 500 }), s);
+  assert(v.subScores.availability === 100, "418 availability 100");
+  assert(v.score === 100, `nulls excluded → score 100 (got ${v.score})`);
+  assert(v.status === "unverified", "still unverified");
+}
+
+// MCP neutral flag
+{
+  const s = svc({ feeUsd: 0.5 });
+  const v = scoreListing(check({ status: 200, protocol: "mcp", bodyJson: { jsonrpc: "2.0", result: { tools: [] } } }), s);
+  assert(v.flags.includes("MCP server — payment is enforced per tool call; listing-level gate not checked"), "mcp neutral flag");
+  assert(v.status === "unverified", `mcp gate-not-checked → unverified (got ${v.status})`);
+}
+
+// ── pickVerifyTargets / ledger rules ──────────────────────────────────────
+
+const cand = (id: string, feeUsd: number, over: Record<string, unknown> = {}) => ({
+  serviceId: id,
+  ours: false,
+  feeUsd,
+  callable: true,
+  gateReached: true,
+  sideEffectSkipped: false,
+  ...over,
+});
+const now = Date.now();
+const hours = (h: number) => new Date(now - h * 3600 * 1000).toISOString();
+
+{
+  const targets = pickVerifyTargets(
+    [
+      cand("free", 0),
+      cand("ours", 0.01, { ours: true }),
+      cand("pricey", 0.10),
+      cand("nogate", 0.01, { gateReached: false }),
+      cand("sidefx", 0.01, { sideEffectSkipped: true }),
+      cand("recent", 0.01),
+      cand("old", 0.02),
+      cand("never", 0.03),
+    ],
+    { recent: { at: hours(2), delivered: true }, old: { at: hours(80), delivered: false } },
+    now,
+  );
+  const ids = targets.map((t) => t.serviceId);
+  assert(ids.length === 2, `eligibility keeps 2 (got ${ids.join(",")})`);
+  assert(ids[0] === "never", `never-verified first (got ${ids[0]})`);
+  assert(ids[1] === "old", `>72h eligible (got ${ids[1]})`);
+  assert(!ids.includes("recent"), "<72h excluded");
+}
+
+{
+  // oldest verification wins among previously-verified; cheapest breaks ties
+  const targets = pickVerifyTargets(
+    [cand("b", 0.01), cand("a", 0.05), cand("c", 0.02)],
+    { a: { at: hours(100), delivered: true }, b: { at: hours(200), delivered: false }, c: { at: hours(200), delivered: true } },
+    now,
+  );
+  assert(targets.map((t) => t.serviceId).join(",") === "c,b,a" || targets.map((t) => t.serviceId).join(",") === "b,c,a",
+    `oldest then cheapest (got ${targets.map((t) => t.serviceId).join(",")})`);
+}
+
+{
+  const env = process.env.INDEX_DAILY_VERIFY_BUDGET_USD;
+  delete process.env.INDEX_DAILY_VERIFY_BUDGET_USD;
+  assert(dailyVerifyBudget() === 1.0, "default budget $1");
+  process.env.INDEX_DAILY_VERIFY_BUDGET_USD = "10";
+  assert(dailyVerifyBudget() === 3, `hard cap $3 (got ${dailyVerifyBudget()})`);
+  process.env.INDEX_DAILY_VERIFY_BUDGET_USD = "0.5";
+  assert(dailyVerifyBudget() === 0.5, "env budget honoured");
+  if (env === undefined) delete process.env.INDEX_DAILY_VERIFY_BUDGET_USD;
+  else process.env.INDEX_DAILY_VERIFY_BUDGET_USD = env;
 }
 
 // ── checkListing method fallback (mocked fetch) ──────────────────────────
@@ -248,6 +442,9 @@ function indexed(overrides: Partial<IndexedService> = {}): IndexedService {
     flags: [],
     latencyMs: 100,
     httpStatus: 200,
+    verification: "gate",
+    paid: false,
+    subScores: { availability: 100, paymentIntegrity: 100, delivery: null },
     ...overrides,
   };
 }
@@ -287,7 +484,7 @@ void (async () => {
 await withFetch(
   (m) => (m === "POST" ? { status: 404 } : { status: 200, body: '{"ok":true,"data":[]}' }),
   async () => {
-    const c = await checkListing(svc());
+    const c = await checkListing(svc({ endpoint: "https://api.example.com/data" }));
     assert(c.checkedMethod === "GET", `404 falls back to GET (got ${c.checkedMethod})`);
     assert(c.status === 200, `GET fallback kept 200 (got ${c.status})`);
   },
@@ -300,7 +497,7 @@ await withFetch(
       ? { status: 200, body: '{"error":"Unknown endpoint for POST"}' }
       : { status: 402, body: "{}", headers: { "payment-required": Buffer.from('{"x402Version":2,"accepts":[{"network":"eip155:196","amount":"10000"}]}').toString("base64") } },
   async () => {
-    const c = await checkListing(svc({ feeUsd: 0.01 }));
+    const c = await checkListing(svc({ feeUsd: 0.01, endpoint: "https://api.example.com/data" }));
     assert(c.checkedMethod === "GET", `wrong-method body falls back to GET (got ${c.checkedMethod})`);
     assert(c.status === 402, `GET 402 challenge captured (got ${c.status})`);
     assert(c.challenge?.network === "eip155:196", "challenge decoded after GET fallback");
@@ -311,7 +508,7 @@ await withFetch(
 await withFetch(
   () => ({ status: 404 }),
   async () => {
-    const c = await checkListing(svc());
+    const c = await checkListing(svc({ endpoint: "https://api.example.com/data" }));
     assert(c.status === 404 && c.checkedMethod === "GET", "double-404 recorded");
     const v = scoreListing(c, c.service);
     assert(v.status === "broken", `double-404 → broken (got ${v.status})`);
@@ -336,7 +533,6 @@ await withFetch(
     assert(c.mcpServerName === "coin-signal", `server name (got ${c.mcpServerName})`);
     assert(c.toolCount === 2, `toolCount 2 (got ${c.toolCount})`);
     const v = scoreListing(c, c.service);
-    assert(v.checks.paymentGate.pass === "partial", "mcp gate partial");
     assert(v.flags.includes("MCP server — payment is enforced per tool call; listing-level gate not checked"), "mcp neutral flag");
     assert(!v.flags.some((f) => f.includes("without requesting")), "no accusation on mcp");
   },
@@ -378,7 +574,7 @@ await withFetch(
     assert(c.protocol === "mcp" && c.status === 402, `mcp 402 on tools/list (got ${c.status})`);
     assert(c.challenge?.amountUsd === 0.5, "mcp challenge amount");
     const v = scoreListing(c, c.service);
-    assert(v.checks.paymentGate.pass === "pass", "mcp 402 gate pass");
+    assert(v.subScores.paymentIntegrity === 100, "mcp 402 integrity 100");
     assert(v.status === "healthy", `mcp+402 → healthy (got ${v.status})`);
   },
 );
@@ -390,21 +586,20 @@ await withFetch(
     const c = await checkListing(svc({ endpoint: "https://api.example.com/async", feeUsd: 1 }));
     assert(c.protocol !== "mcp", "failed handshake falls back");
     const v = scoreListing(c, c.service);
-    assert(v.checks.paymentGate.pass === "partial", "202-empty gate partial");
-    assert(v.flags.includes("Returned non-payload content (docs page or empty body); payment gate not reached"), `neutral non-payload flag (got ${v.flags.join("|")})`);
+    assert(v.status === "unverified", `202-empty → unverified (got ${v.status})`);
     assert(!v.flags.some((f) => f.includes("without requesting")), "no accusation on empty 202");
   },
 );
 
-// HTML docs page on a paid listing → neutral, not an accusation
+// HTML docs page on a paid listing → unverified, not an accusation
 await withFetch(
   () => ({ status: 200, body: "<html><body>API docs</body></html>", headers: { "content-type": "text/html" } }),
   async () => {
-    const c = await checkListing(svc({ feeUsd: 2 }));
+    const c = await checkListing(svc({ feeUsd: 2, endpoint: "https://api.example.com/docs" }));
     assert(c.protocol !== "mcp", "html not mcp");
     const v = scoreListing(c, c.service);
-    assert(v.flags.includes("Returned non-payload content (docs page or empty body); payment gate not reached"), "html neutral flag");
-    assert(v.checks.paymentGate.pass === "partial", "html gate partial");
+    assert(v.subScores.paymentIntegrity === null, "html → integrity unknown");
+    assert(v.status === "unverified", `html docs → unverified (got ${v.status})`);
   },
 );
 
@@ -412,7 +607,7 @@ await withFetch(
 {
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 200, bodyJson: { data: [{ x: 1 }], status: "ok" } }), s);
-  assert(v.checks.paymentGate.pass === "fail", "substantive data payload fails gate");
+  assert(v.subScores.paymentIntegrity === 0, "substantive data payload → integrity 0");
   assert(v.flags.some((f) => f.includes("returned a response without requesting payment")), "substantive accusation stays");
 }
 {
@@ -421,11 +616,119 @@ await withFetch(
   assert(v.flags.some((f) => f.includes("returned a response without requesting payment")), "3 substantive keys accusation stays");
 }
 {
-  // thin envelope ({ok:true} only) is NOT substantive
+  // thin envelope ({ok:true} only) is NOT substantive → stays unverified
   const s = svc({ feeUsd: 0.01 });
   const v = scoreListing(check({ status: 200, bodyJson: { ok: true } }), s);
-  assert(v.flags.includes("Returned non-payload content (docs page or empty body); payment gate not reached"), "thin body neutral");
+  assert(v.subScores.paymentIntegrity === null, "thin body → integrity unknown");
+  assert(v.status === "unverified", `thin body → unverified (got ${v.status})`);
 }
+
+// ── probeValidCall: synthesized requests, repair, denylist ────────────────
+
+// Rejection body gives field names → synthesized POST reaches the 402 gate
+await withFetch(
+  (_m, body) => {
+    if (body?.includes('"symbol"')) {
+      const ch = Buffer.from(JSON.stringify({ x402Version: 2, accepts: [{ network: "eip155:196", amount: "10000" }] })).toString("base64");
+      return { status: 402, body: "{}", headers: { "payment-required": ch } };
+    }
+    return { status: 400, body: '{"error":"symbol is required"}' };
+  },
+  async () => {
+    const c = await checkListing(svc({ feeUsd: 0.01, endpoint: "https://api.example.com/price" }));
+    const p = await probeValidCall(c.service, c);
+    assert(p !== null, "probe ran");
+    assert(p!.inputSource === "rejection", `input from rejection body (got ${p!.inputSource})`);
+    assert(p!.status === 402, `synthesized call reached the gate (got ${p!.status})`);
+    assert(p!.attempts[0].body?.includes('"symbol":"BTC"') === true, `evidence body (got ${p!.attempts[0].body})`);
+    const v = scoreListing(c, c.service, p);
+    assert(v.verification === "gate", `verification gate (got ${v.verification})`);
+  },
+);
+
+// Repair loop: 422 names another missing field → retried once with it
+await withFetch(
+  (_m, body) => {
+    if (body?.includes('"chain"')) {
+      const ch = Buffer.from(JSON.stringify({ x402Version: 2, accepts: [{ network: "eip155:196", amount: "10000" }] })).toString("base64");
+      return { status: 402, body: "{}", headers: { "payment-required": ch } };
+    }
+    if (body?.includes('"symbol"')) return { status: 422, body: '{"error":"chain is required"}' };
+    return { status: 400, body: '{"error":"symbol is required"}' };
+  },
+  async () => {
+    const c = await checkListing(svc({ feeUsd: 0.01, endpoint: "https://api.example.com/price" }));
+    const p = await probeValidCall(c.service, c);
+    assert(p !== null && p!.attempts.length === 2, `repair loop → 2 attempts (got ${p?.attempts.length})`);
+    assert(p!.status === 402, `repaired call reached gate (got ${p!.status})`);
+    assert(p!.attempts[1].body?.includes('"chain":"1"') === true, `repair added chain (got ${p!.attempts[1].body})`);
+  },
+);
+
+// GET-only endpoint: synthesized params go in the query string
+await withFetch(
+  (m, body) => {
+    if (m === "GET" && !body) return { status: 200, body: '{"ok":true,"price":67000,"symbol":"BTC","volume":5}' };
+    return { status: 404 };
+  },
+  async () => {
+    const c = await checkListing(svc({ feeUsd: 0, endpoint: "https://api.example.com/quote", description: "Get a price quote for a symbol" }));
+    assert(c.checkedMethod === "GET", "GET-only detected");
+    const p = await probeValidCall(c.service, c);
+    assert(p !== null && p!.attempts.length > 0, "probe ran on GET endpoint");
+    assert(p!.attempts[0].method === "GET", "synthesized call used GET");
+  },
+);
+
+// Side-effecting tool name → skipped, never called
+{
+  const c = check({
+    protocol: "mcp",
+    mcpTools: [{ name: "execute_swap", inputSchema: { properties: { amount: { type: "string" } }, required: ["amount"] } }],
+  });
+  const p = await probeValidCall(svc({ feeUsd: 0.01 }), c);
+  assert(p !== null && p!.sideEffectSkipped === true, "side-effecting tool skipped");
+  assert(p!.attempts.length === 0, "no request sent to side-effecting service");
+}
+
+// MCP tools/call: picks the tool matching the listing, sends synthesized args
+await withFetch(
+  (_m, body) => {
+    if (body?.includes('"initialize"')) {
+      return { status: 200, body: JSON.stringify({ jsonrpc: "2.0", id: 1, result: { serverInfo: { name: "t" }, capabilities: {} } }), headers: { "mcp-session-id": "sx" } };
+    }
+    if (body?.includes('"tools/list"')) {
+      return { status: 200, body: JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [
+        { name: "get_price", description: "token price", inputSchema: { properties: { symbol: { type: "string" } }, required: ["symbol"] } },
+        { name: "list_chains", description: "supported chains", inputSchema: { properties: {} } },
+      ] } }) }; // eslint-disable-line
+    }
+    if (body?.includes('"tools/call"')) {
+      const isPrice = body.includes('"get_price"');
+      return {
+        status: 200,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          result: isPrice
+            ? { content: [{ type: "text", text: '{"price":67000}' }], data: { price: 67000, symbol: "BTC", ok: true } }
+            : { content: [] },
+        }),
+      };
+    }
+    return { status: 202, body: "" };
+  },
+  async () => {
+    const c = await checkListing(
+      svc({ feeUsd: 0.5, serviceName: "Token Price", description: "price lookup", endpoint: "https://api.example.com/mcp" }),
+    );
+    assert(c.protocol === "mcp" && c.toolCount === 2, "tools listed");
+    const p = await probeValidCall(c.service, c);
+    assert(p !== null && p!.toolName === "get_price", `picked get_price (got ${p?.toolName})`);
+    assert(p!.status === 200, `tools/call ran (got ${p!.status})`);
+    assert(p!.request?.mcpSessionId === "sx", "session id carried to paid replay");
+  },
+);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

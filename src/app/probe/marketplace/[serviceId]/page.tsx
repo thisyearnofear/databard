@@ -83,14 +83,39 @@ export default async function MarketplaceServicePage({
           )}
         </div>
 
-        {/* Checks */}
+        {/* Sub-scores + checks */}
         <section className="mt-8" aria-labelledby="checks">
-          <h2 id="checks" className="text-sm font-semibold">What we checked — one unpaid request</h2>
+          <h2 id="checks" className="text-sm font-semibold">What we verified</h2>
           <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-            {svc.deep?.delivered
-              ? "Verified level: paid delivery — a real x402 payment was made and the service answered."
-              : "Verified level: listing — endpoint and payment gate checked without payment; output quality behind the paywall was not measured."}
+            {svc.lastPaidVerification?.delivered
+              ? "Verification: paid & delivered — a real x402 payment was made and the service answered."
+              : svc.verification === "gate"
+                ? "Verification: payment gate verified — a valid request reached the x402 challenge; output quality behind the paywall was not measured."
+                : svc.verification === "delivered"
+                  ? "Verification: delivered — a valid request got a substantive payload without payment."
+                  : svc.verification === "failed"
+                    ? "Verification: failed — payment signed but the service did not deliver."
+                    : "Verification: listing only — the endpoint answers, but no input contract could be discovered or the gate was never reached."}
+            {svc.inputSource && ` Input contract discovered via: ${svc.inputSource}.`}
           </p>
+          {svc.subScores && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {([
+                ["Availability", svc.subScores.availability],
+                ["Payment integrity", svc.subScores.paymentIntegrity],
+                ["Delivery", svc.subScores.delivery],
+              ] as const).map(([label, v]) => (
+                <div key={label} className="border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
+                  <div className="font-display text-lg font-bold tabular-nums">
+                    {v === null || v === undefined ? "—" : v}
+                  </div>
+                  <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    {label}{v === null || v === undefined ? " · unknown" : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <ul className="mt-3 flex flex-col gap-2">
             {Object.entries(svc.checks).map(([name, check]) => (
               <li key={name} className="flex items-center gap-3 border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
@@ -124,19 +149,41 @@ export default async function MarketplaceServicePage({
           </section>
         )}
 
-        {svc.deep && (
+        {/* Evidence: the exact requests we sent */}
+        {svc.attempts && svc.attempts.length > 0 && (
+          <section className="mt-6" aria-labelledby="evidence">
+            <h2 id="evidence" className="text-sm font-semibold">Evidence — requests we sent</h2>
+            <ul className="mt-3 flex flex-col gap-2">
+              {svc.attempts.map((a, i) => (
+                <li key={i} className="border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
+                  <p className="font-mono text-[11px] text-[var(--text)]">
+                    {a.paid ? "PAID " : ""}{a.method} {a.url} → HTTP {a.status}
+                  </p>
+                  {a.body && (
+                    <pre className="mt-1 overflow-x-auto rounded bg-[var(--bg)] p-2 text-[10px] text-[var(--text-muted)]">{a.body}</pre>
+                  )}
+                  {a.snippet && (
+                    <pre className="mt-1 overflow-x-auto rounded bg-[var(--bg)] p-2 text-[10px] text-[var(--text-muted)]">{a.snippet}</pre>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {svc.lastPaidVerification && (
           <section className="mt-6 border border-[var(--border)] bg-[var(--surface)] px-5 py-4" aria-labelledby="deep">
-            <h2 id="deep" className="text-sm font-semibold">Deep check — a real payment</h2>
+            <h2 id="deep" className="text-sm font-semibold">Paid verification — a real payment</h2>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">
-              {svc.deep.delivered
-                ? `Paid $${svc.deep.amountUsd ?? svc.feeUsd} via x402 and the service delivered (HTTP ${svc.deep.status}).`
-                : svc.deep.error
-                  ? `Attempted a payment: ${svc.deep.error}.`
-                  : `Payment signed but the service returned HTTP ${svc.deep.status}.`}
+              {svc.lastPaidVerification.delivered
+                ? `Paid $${svc.lastPaidVerification.amountUsd ?? svc.feeUsd} via x402 on ${svc.lastPaidVerification.at.slice(0, 10)} and the service delivered (HTTP ${svc.lastPaidVerification.status}).`
+                : svc.lastPaidVerification.error
+                  ? `Attempted a payment on ${svc.lastPaidVerification.at.slice(0, 10)}: ${svc.lastPaidVerification.error}.`
+                  : `Payment signed on ${svc.lastPaidVerification.at.slice(0, 10)} but the service returned HTTP ${svc.lastPaidVerification.status}.`}
             </p>
-            {svc.deep.settlementTx && (
+            {svc.lastPaidVerification.settlementTx && (
               <a
-                href={`https://www.oklink.com/xlayer/tx/${svc.deep.settlementTx}`}
+                href={`https://www.oklink.com/xlayer/tx/${svc.lastPaidVerification.settlementTx}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-block text-xs text-[var(--accent)] hover:underline"

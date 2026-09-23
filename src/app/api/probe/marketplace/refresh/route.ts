@@ -12,12 +12,13 @@ export const maxDuration = 300;
  * Auth: same cron-secret pattern as /api/schedules/run — the x-cron-secret
  * header must match CRON_SECRET, and the route fails closed (503) when the
  * env var is unset. This run makes one UNPAID request per listed endpoint;
- * it never pays unless deepBudget is passed.
+ * it never pays unless verify=1 is passed.
  *
  * Query params:
- *   ?attest=1        — anchor the run verdict hash on X Layer (costs gas)
- *   ?deepBudget=0.1  — USD cap for paid deep checks on ≤$0.02 services (max 0.25)
- *   ?dryRun=1        — report what would run without checking anything
+ *   ?attest=1  — publish changed scores to the on-chain registry (costs gas)
+ *   ?verify=1  — paid verification pass under the daily ledger
+ *                (INDEX_DAILY_VERIFY_BUDGET_USD, default $1, max $3)
+ *   ?dryRun=1  — report what would run without checking anything
  *
  * Synchronous by design: the cron caller (curl from 127.0.0.1) waits.
  */
@@ -36,23 +37,24 @@ export async function POST(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const dryRun = params.get("dryRun") === "1";
   const attest = params.get("attest") === "1";
-  const deepBudgetUsd = Math.min(
-    Math.max(Number(params.get("deepBudget") ?? 0) || 0, 0),
-    0.25,
-  );
+  const verify = params.get("verify") === "1";
 
   if (dryRun) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
       wouldCheck: MARKETPLACE_SERVICES.length,
-      deepBudgetUsd,
+      verify,
+      verifyBudgetUsd: Math.min(
+        Number(process.env.INDEX_DAILY_VERIFY_BUDGET_USD) || 1,
+        3,
+      ),
       attest,
     });
   }
 
   const startedAt = Date.now();
-  const index = await runIndex({ deepBudgetUsd, attest });
+  const index = await runIndex({ verify, attest });
   return NextResponse.json({
     ok: true,
     durationMs: Date.now() - startedAt,

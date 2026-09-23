@@ -13,6 +13,7 @@ import { createHash } from "crypto";
 import registryAbi from "./probe-registry.abi.json";
 
 export const STATUS_TO_CODE = {
+  unverified: 0, // on-chain "unknown" — isSafeToPay stays false
   healthy: 1,
   degraded: 2,
   broken: 3,

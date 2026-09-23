@@ -10,7 +10,7 @@ agent tools, and the legacy Pro tier — and this doc tracks each.*
 |---|---|---|---|---|
 | **Commissioned edition** | $25 one-off (PUSD/SOL/USDC) | ~$0 (deterministic compute over cached public data) | ~100% | Live; sales unproven |
 | **`databard_briefing`** (x402) | $1.00/call | ~$0.30–0.35 (Flash TTS + bookends SFX) | ~$0.65 (~65%) | Live; real calls, volume unproven |
-| **`databard_probe`** (x402) | $1.00/call | ~$0.01–0.12 (outbound payments to probed services) | ~88–99% | Live; real calls, volume unproven |
+| **`databard_probe`** (x402) | $0.25/call | ~$0.01–0.12 (outbound payments to probed services, cap $0.15/run) | ~52–96% | Live; repriced for the OKX relist |
 | **Pro subscription** (wizard) | $49/month | ~$3.40/month per team at 1 schema (TTS-dominated) | ~$45/team | Kept; no longer the lead offer |
 | **Free tools** (`health-check`, `writeback`, probe preview) | $0 | ~$0 | — | Acquisition |
 
@@ -91,8 +91,8 @@ Reframed for the three shapes:
 
 - **Editions alone:** one edition per day ($750/month) covers fixed costs ~20×
   over at near-zero marginal cost. The constraint is distribution, not cost.
-- **Probe alone:** 5 paid calls/day ≈ $150/month revenue against ~$18/month
-  worst-case COGS — fixed costs covered by the oracle alone.
+- **Probe alone:** 5 paid calls/day ≈ $37.50/month revenue against ~$18/month
+  worst-case COGS — repriced to $0.25 for the relist; adoption over margin.
 - **Old framing:** 10 paying Pro teams ($490/month) still works, ~$350/month
   net. It's just no longer the plan of record.
 

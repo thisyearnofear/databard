@@ -29,7 +29,7 @@ export const X402_NETWORK = "eip155:196"; // X Layer mainnet
 // references in .env files, so "$1.00" becomes ".00". Use "1.00" (no $) in .env;
 // the SDK's parseMoneyToDecimal handles both "$1.00" and "1.00" formats.
 export const BRIEFING_PRICE = process.env.BRIEFING_PRICE_USD || "$1.00";
-export const PROBE_PRICE = process.env.PROBE_PRICE_USD || "$1.00";
+export const PROBE_PRICE = process.env.PROBE_PRICE_USD || "$0.25";
 
 export const x402Configured = Boolean(
   process.env.PAY_TO_ADDRESS &&

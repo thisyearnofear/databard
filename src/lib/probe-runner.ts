@@ -88,7 +88,7 @@ export type ProbeStageListener = (
 
 const PROBE_TIMEOUT_MS = 15_000;
 const MAX_BODY_SNIPPET = 2_000;
-export const MAX_OUTBOUND_SPEND_USD = 0.50;
+export const MAX_OUTBOUND_SPEND_USD = 0.15;
 
 // ── Simple in-memory cache (1-hour TTL) ───────────────────────────────────
 

@@ -279,7 +279,7 @@ const fleetOutputSchema = {
 const probeInputSchema = {
   type: "object",
   description:
-    "Probe request. All fields are optional: omit everything to run the curated default candidate set (real OKX.AI A2MCP services). DataBard pays any outbound x402 fees itself, capped at $0.50 per run, and never fabricates results — unreachable endpoints are reported honestly.",
+    "Probe request. All fields are optional: omit everything to run the curated default candidate set (real OKX.AI A2MCP services). DataBard pays any outbound x402 fees itself, capped at $0.15 per run, and never fabricates results — unreachable endpoints are reported honestly.",
   properties: {
     question: {
       type: "string",
@@ -430,7 +430,8 @@ const serviceScoreOutputSchema = {
       items: {
         type: "object",
         properties: {
-          verifiedLevel: { type: "string", enum: ["listing", "paid_delivery"], description: "\"listing\" = unpaid check of endpoint + payment gate only; \"paid_delivery\" = a real paid call was verified end-to-end." },
+          verification: { type: "string", enum: ["none", "gate", "delivered", "failed"], description: "none = only the listing responds; gate = a valid request reached a decodable x402 challenge; delivered = a valid request got a substantive payload (free, or after payment); failed = paid but no substantive payload." },
+          paid: { type: "boolean", description: "A real payment was made in the latest verification." },
           serviceId: { type: "string" },
           agentId: { type: "string" },
           agentName: { type: "string" },
@@ -438,11 +439,13 @@ const serviceScoreOutputSchema = {
           endpoint: { type: "string" },
           feeUsd: { type: "number" },
           score: { type: "number", minimum: 0, maximum: 100 },
-          status: { type: "string", enum: ["healthy", "degraded", "broken", "unreachable"] },
+          status: { type: "string", enum: ["healthy", "degraded", "unverified", "broken", "unreachable"] },
           flags: { type: "array", items: { type: "string" } },
           checks: { type: "object" },
+          subScores: { type: "object", nullable: true, description: "availability / paymentIntegrity / delivery, each 0-100 or null = unknown." },
           uptimePct: { type: "number", nullable: true },
-          deep: { type: "object", nullable: true, description: "Paid deep-check result, when one was run (verified delivery, not just listing health)." },
+          lastPaidVerification: { type: "object", nullable: true, description: "Last paid verification (carried forward ≤72h), with settlement tx." },
+          onchain: { type: "object", nullable: true, description: "ProbeVerdictRegistry address + serviceId — read scoreOf(serviceId) on X Layer." },
           badgeUrl: { type: "string" },
           pageUrl: { type: "string" },
         },
@@ -551,10 +554,10 @@ const TOOLS = [
     name: "databard_probe",
     summary: "Probe and rank A2MCP agent services before paying them. Paid per call via x402.",
     description:
-      "DataBard Probe is a quality oracle for the agent economy: it probes candidate A2MCP endpoints (yours or the curated default set), measures schema completeness, latency, freshness, price-value, reliability, and optional Ligis credential verification, then returns a ranked verdict. DataBard pays any outbound x402 fees itself (capped at $0.50/run, 1-hour cache) and never fabricates results — unreachable services are reported honestly. Optionally anchors the verdict hash on X Layer.",
+      "DataBard Probe is a quality oracle for the agent economy: it probes candidate A2MCP endpoints (yours or the curated default set), measures schema completeness, latency, freshness, price-value, reliability, and optional Ligis credential verification, then returns a ranked verdict. DataBard pays any outbound x402 fees itself (capped at $0.15/run, 1-hour cache) and never fabricates results — unreachable services are reported honestly. Optionally anchors the verdict hash on X Layer.",
     method: "POST",
     endpoint: "/api/agent/probe",
-    pricing: "x402 pay-per-call (exact, USDT0 on X Layer eip155:196), $1.00",
+    pricing: "x402 pay-per-call (exact, USDT0 on X Layer eip155:196), $0.25",
     inputSchema: probeInputSchema,
     outputSchema: probeOutputSchema,
   },
@@ -562,7 +565,7 @@ const TOOLS = [
     name: "databard_service_score",
     summary: "Look up an OKX.AI marketplace service's health score before paying it. Free.",
     description:
-      "Answers 'should my agent pay this service?' using DataBard's public marketplace health index: every A2MCP listing checked periodically with ONE unpaid request (we verify the listing answers and that its 402 payment challenge matches the advertised price — output quality behind the paywall is not measured). Returns the score, per-check evidence, flags (price mismatches, dead endpoints, free listings demanding payment), uptime, and healthy alternatives. Free; never errors on missing params.",
+      "Answers 'should my agent pay this service?' using DataBard's public marketplace health index: every A2MCP listing checked periodically with a synthesized VALID request (built from the service's own input schema — MCP tools/list, the 402 challenge's declared inputs, or validation-error field names). We verify the endpoint answers, its x402 gate matches the advertised price, and — under a $1/day budget — whether paid calls actually deliver. Returns score, verification level, sub-scores, flags, and healthy alternatives. Free; never errors on missing params.",
     method: "POST",
     endpoint: "/api/mcp/service-score",
     pricing: "free",

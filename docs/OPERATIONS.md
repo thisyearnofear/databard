@@ -73,16 +73,20 @@ grep/cut instead.
 Hourly is correct: schedules specify a UTC hour, and the runner only executes
 ones whose `nextRunAt` has passed.
 
-**`POST /api/probe/marketplace/refresh`** re-runs the unpaid marketplace health
-index (one request per OKX.AI listing — never pays; optional `deepBudget`
-spends real USDT0 and is NOT used by cron). Same `x-cron-secret` auth;
-`?dryRun=1` verifies without persisting. With `attest=1` the run writes a
-verdict attestation tx on X Layer.
+**`POST /api/probe/marketplace/refresh`** re-runs the marketplace health
+index — a liveness check plus a synthesized valid request per OKX.AI listing
+(input contract from MCP tools/list, the 402 challenge, or validation-error
+fields; side-effecting endpoints are never called). `?verify=1` runs the paid
+verification pass: ≤$0.05 fees, ≥72h between re-checks per service, capped by
+`INDEX_DAILY_VERIFY_BUDGET_USD` (default $1, hard max $3) tracked in
+`data/marketplace-index/spend.json`. Same `x-cron-secret` auth; `?dryRun=1`
+verifies without persisting. With `attest=1` changed scores publish to the
+ProbeVerdictRegistry contract on X Layer (`PROBE_REGISTRY_ADDRESS`).
 
 Cron entry (installed by `scripts/deploy.sh`, idempotent):
 
 ```cron
-17 */6 * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
+17 */6 * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1&verify=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
 ```
 
 ## Deploy

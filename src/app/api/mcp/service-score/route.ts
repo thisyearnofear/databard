@@ -75,17 +75,17 @@ function parseLookup(body: unknown): {
 
 type Verdict = "safe_to_pay" | "caution" | "avoid" | "unknown";
 
-function verdictFor(status: IndexedService["status"]): Verdict {
-  if (status === "healthy") return "safe_to_pay";
-  if (status === "degraded") return "caution";
-  return "avoid";
+function verdictFor(svc: IndexedService): Verdict {
+  if (svc.status === "unverified") return "unknown";
+  if (svc.status === "broken" || svc.status === "unreachable") return "avoid";
+  if (svc.status === "healthy" && svc.verification === "delivered") return "safe_to_pay";
+  return "caution"; // healthy gate-only, or degraded
 }
 
 function shape(svc: IndexedService) {
   return {
-    verifiedLevel: (svc.deep?.delivered ? "paid_delivery" : "listing") as
-      | "listing"
-      | "paid_delivery",
+    verification: svc.verification ?? "none",
+    paid: svc.paid ?? false,
     serviceId: svc.serviceId,
     agentId: svc.agentId,
     agentName: svc.agentName,
@@ -96,8 +96,9 @@ function shape(svc: IndexedService) {
     status: svc.status,
     flags: svc.flags,
     checks: svc.checks,
+    subScores: svc.subScores ?? null,
     uptimePct: svc.uptimePct ?? null,
-    deep: svc.deep ?? null,
+    lastPaidVerification: svc.lastPaidVerification ?? null,
     onchain: process.env.PROBE_REGISTRY_ADDRESS
       ? {
           registry: process.env.PROBE_REGISTRY_ADDRESS,
@@ -191,35 +192,42 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const verdict = verdictFor(primary.status);
+    const verdict = verdictFor(primary);
     const keyFindings: string[] = [
       `${primary.agentName} — ${primary.serviceName}: ${primary.score}/100 (${primary.status}) as of ${index.generatedAt}.`,
     ];
-    if (primary.feeUsd > 0 && primary.checks.priceMatch) {
-      keyFindings.push(`Price check: ${primary.checks.priceMatch.detail}.`);
+    if (primary.feeUsd > 0 && primary.checks.paymentIntegrity) {
+      keyFindings.push(`Payment integrity: ${primary.checks.paymentIntegrity.detail}.`);
     }
     for (const flag of primary.flags.slice(0, 3)) keyFindings.push(flag);
-    if (primary.deep?.delivered) {
+    const lastPaid = primary.lastPaidVerification;
+    if (lastPaid?.delivered) {
       keyFindings.push(
-        `Deep check: a real $${primary.deep.amountUsd ?? primary.feeUsd} payment was made and the service delivered (HTTP ${primary.deep.status}).`,
+        `Paid verification: a real $${lastPaid.amountUsd ?? primary.feeUsd} payment was made and the service delivered (HTTP ${lastPaid.status}).`,
       );
-    } else if (verdict === "safe_to_pay" && primary.feeUsd > 0) {
+    } else if (lastPaid) {
       keyFindings.push(
-        "Listing-level verification only: the endpoint answers and its x402 payment gate matches the listed price — output quality behind the paywall was NOT measured.",
+        `Paid verification on ${lastPaid.at.slice(0, 10)}: payment signed but the service did not deliver a substantive payload${lastPaid.status ? ` (HTTP ${lastPaid.status})` : ""}.`,
+      );
+    } else if (primary.verification === "gate" && primary.feeUsd > 0) {
+      keyFindings.push(
+        "Payment gate verified, delivery not yet verified — the x402 challenge checks out but paid output was not measured.",
       );
     }
 
     const nextStep =
       verdict === "safe_to_pay"
         ? `Safe to pay: ${primary.endpoint} ($${primary.feeUsd}/call) — the payment gate and listed price check out${
-            primary.deep?.delivered
-              ? ", and a real paid call was delivered"
-              : primary.feeUsd > 0
-                ? ". Note: listing verification only — paid-output quality was not measured"
-                : ""
+            lastPaid?.delivered ? ", and a real paid call was delivered" : ""
           }.`
         : verdict === "caution"
-          ? `Proceed with caution: ${primary.endpoint} answered but had flag(s): ${primary.flags[0] ?? "partial checks"}.`
+          ? `Proceed with caution: ${primary.endpoint} — ${
+              primary.verification === "gate"
+                ? "payment gate verified, delivery not yet verified"
+                : `answered but had flag(s): ${primary.flags[0] ?? "partial checks"}`
+            }.`
+        : verdict === "unknown"
+          ? `Unverified: ${primary.endpoint} answered but we could not verify its payment gate or delivery — ${primary.flags[0] ?? "no input contract discovered"}.`
           : `Avoid for now: ${primary.endpoint} scored ${primary.score}/100 (${primary.status}) — ${primary.flags[0] ?? "failing checks"}.`;
 
     void recordEvent("service_score_lookup", {

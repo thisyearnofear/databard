@@ -22,6 +22,15 @@ import { serial } from "./serial-queue";
 import { assertPublicUrl, attemptX402Payment } from "./probe-runner";
 import { attestVerdict } from "./probe-attestation";
 import { diffForChain, chunkBatches, indexHashOf, publishIndexRun } from "./probe-registry";
+import {
+  discoverInputs,
+  extractFieldNames,
+  isSideEffecting,
+  isStalePayload,
+  synthesizeBody,
+  type FieldSpec,
+  type McpTool,
+} from "./service-inputs";
 import snapshot from "./okx-marketplace.snapshot.json";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -65,6 +74,8 @@ export interface ListingCheck {
   bodyJson: unknown;
   challengeHeader: string | null;
   challenge: PaymentChallenge | null;
+  /** Raw decoded challenge JSON (extensions/inputSchema carriers intact). */
+  challengeRaw?: Record<string, unknown> | null;
   error?: string;
   /** Set when the endpoint answered a real MCP (JSON-RPC) handshake. */
   protocol?: "mcp";
@@ -72,6 +83,8 @@ export interface ListingCheck {
   mcpServerName?: string;
   /** tools the server listed, when tools/list succeeded. */
   toolCount?: number;
+  /** Full tools/list entries — input discovery uses their inputSchemas. */
+  mcpTools?: McpTool[];
 }
 
 export interface CheckScore {
@@ -79,8 +92,8 @@ export interface CheckScore {
   detail: string;
 }
 
-export interface DeepCheck {
-  attempted: boolean;
+export interface PaidVerification {
+  at: string;
   delivered: boolean;
   status?: number;
   settlementTx?: string;
@@ -88,15 +101,43 @@ export interface DeepCheck {
   error?: string;
 }
 
+/** One HTTP request we sent during verification, kept as evidence so
+    providers can reproduce the call. */
+export interface AttemptEvidence {
+  method: "POST" | "GET";
+  url: string;
+  body?: string;
+  status: number;
+  snippet: string;
+  paid?: boolean;
+}
+
+export type VerificationLevel = "none" | "gate" | "delivered" | "failed";
+
+export interface SubScores {
+  availability: number | null;
+  paymentIntegrity: number | null;
+  delivery: number | null;
+}
+
 export interface IndexedService extends MarketplaceService {
   ours: boolean;
   score: number;
-  status: "healthy" | "degraded" | "broken" | "unreachable";
+  status: "healthy" | "degraded" | "broken" | "unreachable" | "unverified";
   checks: Record<string, CheckScore>;
   flags: string[];
   latencyMs: number;
   httpStatus: number;
-  deep?: DeepCheck;
+  verification: VerificationLevel;
+  /** True when a paid verification ran this run (fresh money spent). */
+  paid: boolean;
+  subScores: SubScores;
+  /** Request/response evidence for every verification attempt. */
+  attempts?: AttemptEvidence[];
+  /** Last paid verification — this run's or carried forward (≤72h shown). */
+  lastPaidVerification?: PaidVerification;
+  /** Where the synthesized request's inputs came from. */
+  inputSource?: string;
   /** Share of recent runs where this service was healthy or degraded. */
   uptimePct?: number;
   protocol?: "mcp";
@@ -117,8 +158,19 @@ export interface MarketplaceIndex {
     priceMismatchCount: number;
     freeDemandsPaymentCount: number;
     medianLatency: number | null;
-    deepChecked: number;
-    deepSpentUsd: number;
+    unverified: number;
+    /** Reached a decodable x402 gate with a valid request (unpaid). */
+    gateVerified: number;
+    /** Valid request got a substantive payload (free or paid). */
+    delivered: number;
+    /** Paid services whose gate was verified this run or previously. */
+    paidVerified: number;
+    /** Paid services that delivered a substantive payload after payment. */
+    paidDelivered: number;
+    /** paidDelivered / paidVerified (null when no paid verifications). */
+    deliveryRate: number | null;
+    verifySpentUsd: number;
+    verifyAttempted: number;
   };
   attestation?: {
     txHash?: string;
@@ -135,13 +187,18 @@ export interface MarketplaceIndex {
 export const OUR_AGENT_ID = "9878";
 const CHECK_TIMEOUT_MS = 10_000;
 const MAX_BODY = 2_048;
+const SNIPPET_BODY = 300;
 const HISTORY_KEEP = 90;
-const DEEP_MAX_FEE_USD = 0.02;
-const DEEP_HARD_CAP_USD = 0.25;
+/** Paid verification: max fee per service and daily budget guardrails. */
+const VERIFY_MAX_FEE_USD = 0.05;
+const VERIFY_DAILY_MAX_USD = 3;
+const VERIFY_RECHECK_MS = 72 * 3600 * 1000;
 
 const INDEX_DIR = getDataPath("marketplace-index");
 const LATEST_FILE = path.join(INDEX_DIR, "latest.json");
 const HISTORY_FILE = path.join(INDEX_DIR, "history.json");
+const SPEND_FILE = path.join(INDEX_DIR, "spend.json");
+const PAID_VERIFICATIONS_FILE = path.join(INDEX_DIR, "paid-verifications.json");
 
 /** Services from the committed marketplace snapshot. */
 export const MARKETPLACE_SERVICES: MarketplaceService[] = (
@@ -150,10 +207,12 @@ export const MARKETPLACE_SERVICES: MarketplaceService[] = (
 
 // ── Challenge decoding ─────────────────────────────────────────────────────
 
-function decodeChallenge(
+/** Raw decoded challenge object (header base64 or v1-style body), before
+    field extraction — discovery needs extensions/inputSchema carriers. */
+function rawChallengeOf(
   header: string | null,
   bodyJson: unknown,
-): PaymentChallenge | null {
+): { raw: Record<string, unknown> | null; undecodable: boolean } {
   let raw: unknown = null;
   let undecodable = false;
   if (header) {
@@ -174,11 +233,26 @@ function decodeChallenge(
       raw = b;
     }
   }
+  // A 402 body that isn't an accepts envelope still may carry inputSchema —
+  // keep it as raw evidence for discovery.
+  if (raw == null && bodyJson && typeof bodyJson === "object") {
+    raw = bodyJson;
+  }
+  return { raw: (raw as Record<string, unknown>) ?? null, undecodable };
+}
+
+function decodeChallenge(
+  header: string | null,
+  bodyJson: unknown,
+): PaymentChallenge | null {
+  const { raw, undecodable } = rawChallengeOf(header, bodyJson);
   if (raw == null) return undecodable ? { undecodable: true } : null;
 
   const obj = raw as Record<string, unknown>;
   const accepts = (Array.isArray(obj.accepts) ? obj.accepts : undefined) ??
     (Array.isArray(obj.paymentRequirements) ? obj.paymentRequirements : undefined);
+  // No accepts envelope → not a challenge (raw body kept only for discovery).
+  if (!accepts) return undecodable ? { undecodable: true } : null;
   const first = accepts?.[0] as Record<string, unknown> | undefined;
   const resource = obj.resource as Record<string, unknown> | undefined;
 
@@ -219,6 +293,191 @@ function isInternalHost(url: string | undefined): boolean {
   }
 }
 
+// ── HTTP attempts + MCP (JSON-RPC / Streamable HTTP) machinery ────────────
+
+interface Attempt {
+  status: number;
+  latencyMs: number;
+  contentType: string;
+  bodySnippet: string;
+  bodyJson: unknown;
+  challengeHeader: string | null;
+}
+
+/** One HTTP request against a checked URL. GET sends query params; POST a
+    JSON body. Never attaches payment — paid calls go through paidAttempt. */
+async function sendAttempt(
+  url: string,
+  method: "POST" | "GET",
+  body?: Record<string, unknown>,
+  extraHeaders?: Record<string, string>,
+): Promise<Attempt> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+  const start = Date.now();
+  try {
+    let target = url;
+    if (method === "GET" && body && Object.keys(body).length > 0) {
+      const qs = new URLSearchParams();
+      for (const [k, v] of Object.entries(body)) {
+        qs.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+      }
+      target = `${url}${url.includes("?") ? "&" : "?"}${qs.toString()}`;
+    }
+    const res = await fetch(target, {
+      method,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...extraHeaders,
+      },
+      ...(method === "POST" ? { body: JSON.stringify(body ?? {}) } : {}),
+    });
+    const snippet = (await res.text()).slice(0, MAX_BODY);
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(snippet);
+    } catch {
+      // not JSON — fine
+    }
+    return {
+      status: res.status,
+      latencyMs: Date.now() - start,
+      contentType: res.headers.get("content-type") ?? "",
+      bodySnippet: snippet,
+      bodyJson: parsed,
+      challengeHeader:
+        res.headers.get("PAYMENT-REQUIRED") ?? res.headers.get("payment-required"),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const parseJsonRpc = (snippet: string, parsed: unknown): Record<string, unknown> | null => {
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const o = parsed as Record<string, unknown>;
+    if (o.jsonrpc === "2.0" || o.result !== undefined || o.error !== undefined) return o;
+  }
+  // SSE: collect JSON-RPC messages from `data:` lines of the last event block
+  for (const line of snippet.split("\n")) {
+    const t = line.trim();
+    if (!t.startsWith("data:")) continue;
+    try {
+      const o = JSON.parse(t.slice(5).trim());
+      if (o && typeof o === "object" && (o.jsonrpc === "2.0" || o.result !== undefined || o.error !== undefined)) {
+        return o as Record<string, unknown>;
+      }
+    } catch {
+      // not a JSON data line
+    }
+  }
+  return null;
+};
+
+interface McpAttempt extends Attempt {
+  sessionId?: string;
+  rpc?: Record<string, unknown> | null;
+  settleHeader?: string | null;
+}
+
+async function mcpPost(
+  url: string,
+  payload: unknown,
+  sessionId?: string,
+  extraHeaders?: Record<string, string>,
+): Promise<McpAttempt> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+  const start = Date.now();
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        ...(sessionId ? { "MCP-Session-Id": sessionId } : {}),
+        ...extraHeaders,
+      },
+      body: JSON.stringify(payload),
+    });
+    const snippet = (await res.text()).slice(0, MAX_BODY);
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(snippet);
+    } catch {
+      // SSE or non-JSON
+    }
+    return {
+      status: res.status,
+      latencyMs: Date.now() - start,
+      contentType: res.headers.get("content-type") ?? "",
+      bodySnippet: snippet,
+      bodyJson: parsed,
+      challengeHeader: res.headers.get("PAYMENT-REQUIRED") ?? res.headers.get("payment-required"),
+      sessionId: res.headers.get("mcp-session-id") ?? res.headers.get("Mcp-Session-Id") ?? undefined,
+      settleHeader: res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("payment-response"),
+      rpc: parseJsonRpc(snippet, parsed),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+interface McpOutcome {
+  attempt: McpAttempt;
+  serverName?: string;
+  toolCount?: number;
+  tools?: McpTool[];
+  sessionId?: string;
+}
+
+/** initialize → notifications/initialized → tools/list. A 402 at any step is
+    a normal x402 challenge and flows through the same gate/price scoring. */
+async function mcpHandshake(url: string): Promise<McpOutcome | null> {
+  const init = await mcpPost(url, {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "databard-probe", version: "1.0" },
+    },
+  });
+  // A challenge up front still counts — the endpoint IS the paywall.
+  if (init.status === 402) return { attempt: init };
+  const initResult = init.rpc?.result as Record<string, unknown> | undefined;
+  if (!initResult) return null;
+  const serverName =
+    typeof (initResult.serverInfo as Record<string, unknown> | undefined)?.name === "string"
+      ? ((initResult.serverInfo as Record<string, unknown>).name as string)
+      : undefined;
+  const sessionId = init.sessionId;
+
+  // Tell the server we're ready, then list its tools.
+  await mcpPost(url, { jsonrpc: "2.0", method: "notifications/initialized" }, sessionId).catch(() => undefined);
+  const tools = await mcpPost(
+    url,
+    { jsonrpc: "2.0", id: 2, method: "tools/list" },
+    sessionId,
+  );
+  if (tools.status === 402) return { attempt: tools, serverName, sessionId };
+  const toolsResult = tools.rpc?.result as Record<string, unknown> | undefined;
+  const toolList = Array.isArray(toolsResult?.tools)
+    ? (toolsResult.tools as McpTool[])
+    : undefined;
+  return {
+    attempt: tools,
+    serverName,
+    toolCount: toolList?.length,
+    tools: toolList,
+    sessionId,
+  };
+}
+
 // ── Listing check (one unpaid request — never pays) ───────────────────────
 
 export async function checkListing(
@@ -231,51 +490,10 @@ export async function checkListing(
 
   assertPublicUrl(url); // SSRF guard — throws before any network I/O
 
-  const headers = { "Content-Type": "application/json", Accept: "application/json" };
   let latencyMs = 0;
   let checkedMethod: "POST" | "GET" = "POST";
 
-  interface Attempt {
-    status: number;
-    latencyMs: number;
-    contentType: string;
-    bodySnippet: string;
-    bodyJson: unknown;
-    challengeHeader: string | null;
-  }
-
-  async function attempt(method: "POST" | "GET"): Promise<Attempt> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
-    const start = Date.now();
-    try {
-      const res = await fetch(url, {
-        method,
-        signal: controller.signal,
-        headers,
-        ...(method === "POST" ? { body: "{}" } : {}),
-      });
-      const latency = Date.now() - start;
-      const snippet = (await res.text()).slice(0, MAX_BODY);
-      let parsed: unknown = null;
-      try {
-        parsed = JSON.parse(snippet);
-      } catch {
-        // not JSON — fine
-      }
-      return {
-        status: res.status,
-        latencyMs: latency,
-        contentType: res.headers.get("content-type") ?? "",
-        bodySnippet: snippet,
-        bodyJson: parsed,
-        challengeHeader:
-          res.headers.get("PAYMENT-REQUIRED") ?? res.headers.get("payment-required"),
-      };
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
+  const attempt = (method: "POST" | "GET") => sendAttempt(url, method);
 
   // Some listings are GET-only but don't answer 405 — they 404, or return a
   // JSON body saying the endpoint is unknown for POST. Detect and retry GET.
@@ -297,111 +515,6 @@ export async function checkListing(
     if (typeof obj.code === "string" && /ERROR|REQUIRED|INVALID/i.test(obj.code)) return true;
     return false;
   };
-
-  // Many OKX listings are real MCP servers (Streamable HTTP): they speak
-  // JSON-RPC, answer 202/not-JSON to a bare `{}`, and gate payment per tool
-  // call rather than at the listing endpoint. When the listing looks MCP —
-  // path ends in /mcp, status 202, a JSON-RPC-shaped body, or a non-JSON 2xx —
-  // run a real initialize → notifications/initialized → tools/list handshake
-  // so we measure the protocol it actually speaks. A 402 at any step is a
-  // normal x402 challenge and flows through the same gate/price scoring.
-  interface McpOutcome {
-    attempt: Attempt;
-    serverName?: string;
-    toolCount?: number;
-  }
-
-  const parseJsonRpc = (snippet: string, parsed: unknown): Record<string, unknown> | null => {
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      const o = parsed as Record<string, unknown>;
-      if (o.jsonrpc === "2.0" || o.result !== undefined || o.error !== undefined) return o;
-    }
-    // SSE: collect JSON-RPC messages from `data:` lines of the last event block
-    for (const line of snippet.split("\n")) {
-      const t = line.trim();
-      if (!t.startsWith("data:")) continue;
-      try {
-        const o = JSON.parse(t.slice(5).trim());
-        if (o && typeof o === "object" && (o.jsonrpc === "2.0" || o.result !== undefined || o.error !== undefined)) {
-          return o as Record<string, unknown>;
-        }
-      } catch {
-        // not a JSON data line
-      }
-    }
-    return null;
-  };
-
-  async function mcpPost(payload: unknown, sessionId?: string): Promise<Attempt & { sessionId?: string; rpc?: Record<string, unknown> | null }> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
-    const start = Date.now();
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json, text/event-stream",
-          ...(sessionId ? { "MCP-Session-Id": sessionId } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-      const snippet = (await res.text()).slice(0, MAX_BODY);
-      let parsed: unknown = null;
-      try {
-        parsed = JSON.parse(snippet);
-      } catch {
-        // SSE or non-JSON
-      }
-      return {
-        status: res.status,
-        latencyMs: Date.now() - start,
-        contentType: res.headers.get("content-type") ?? "",
-        bodySnippet: snippet,
-        bodyJson: parsed,
-        challengeHeader: res.headers.get("PAYMENT-REQUIRED") ?? res.headers.get("payment-required"),
-        sessionId: res.headers.get("mcp-session-id") ?? res.headers.get("Mcp-Session-Id") ?? undefined,
-        rpc: parseJsonRpc(snippet, parsed),
-      };
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  async function mcpHandshake(): Promise<McpOutcome | null> {
-    const init = await mcpPost({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: {
-        protocolVersion: "2025-06-18",
-        capabilities: {},
-        clientInfo: { name: "databard-probe", version: "1.0" },
-      },
-    });
-    // A challenge up front still counts — the endpoint IS the paywall.
-    if (init.status === 402) return { attempt: init };
-    const initResult = init.rpc?.result as Record<string, unknown> | undefined;
-    if (!initResult) return null;
-    const serverName =
-      typeof (initResult.serverInfo as Record<string, unknown> | undefined)?.name === "string"
-        ? (initResult.serverInfo as Record<string, unknown>).name as string
-        : undefined;
-
-    // Tell the server we're ready, then list its tools.
-    await mcpPost({ jsonrpc: "2.0", method: "notifications/initialized" }, init.sessionId).catch(() => undefined);
-    const tools = await mcpPost(
-      { jsonrpc: "2.0", id: 2, method: "tools/list" },
-      init.sessionId,
-    );
-    if (tools.status === 402) return { attempt: tools, serverName };
-    const toolsResult = tools.rpc?.result as Record<string, unknown> | undefined;
-    const toolCount = Array.isArray(toolsResult?.tools)
-      ? (toolsResult.tools as unknown[]).length
-      : undefined;
-    return { attempt: tools, serverName, toolCount };
-  }
 
   const looksMcp = (a: Attempt): boolean => {
     try {
@@ -434,7 +547,7 @@ export async function checkListing(
     }
     if (looksMcp(a)) {
       try {
-        mcp = await mcpHandshake();
+        mcp = await mcpHandshake(url);
       } catch {
         mcp = null; // handshake failed — fall back to the plain check
       }
@@ -444,6 +557,7 @@ export async function checkListing(
       }
     }
     latencyMs = a.latencyMs;
+    const challenge = a.status === 402 ? decodeChallenge(a.challengeHeader, a.bodyJson) : null;
     return {
       service,
       checkedUrl: url,
@@ -455,9 +569,15 @@ export async function checkListing(
       bodySnippet: a.bodySnippet,
       bodyJson: a.bodyJson,
       challengeHeader: a.challengeHeader,
-      challenge: a.status === 402 ? decodeChallenge(a.challengeHeader, a.bodyJson) : null,
+      challenge,
+      challengeRaw: a.status === 402 ? rawChallengeOf(a.challengeHeader, a.bodyJson).raw : null,
       ...(mcp
-        ? { protocol: "mcp" as const, mcpServerName: mcp.serverName, toolCount: mcp.toolCount }
+        ? {
+            protocol: "mcp" as const,
+            mcpServerName: mcp.serverName,
+            toolCount: mcp.toolCount,
+            mcpTools: mcp.tools,
+          }
         : {}),
     };
   } catch (e) {
@@ -481,13 +601,6 @@ export async function checkListing(
 
 // ── Scoring ────────────────────────────────────────────────────────────────
 
-export interface ListingVerdict {
-  score: number;
-  status: IndexedService["status"];
-  checks: Record<string, CheckScore>;
-  flags: string[];
-}
-
 /** Envelope/protocol keys that don't count as payload content. */
 const META_KEYS = new Set([
   "error", "message", "msg", "code", "ok", "success", "status", "statusCode",
@@ -497,10 +610,28 @@ const META_KEYS = new Set([
 /** True only when a 2xx body carries real content: a non-empty array, a
     populated data/result payload, or ≥3 substantive object keys. Thin or
     empty JSON on a paid listing is NOT proof it skipped the paywall. */
+/** JSON-RPC/MCP protocol metadata keys — a handshake or tools/list result is
+    protocol chatter, not a delivered payload. */
+const RPC_META_KEYS = new Set([
+  "tools", "resources", "prompts", "serverInfo", "capabilities", "protocolVersion",
+]);
+
 function isSubstantiveJson(body: unknown): boolean {
   if (Array.isArray(body)) return body.length > 0;
   if (!body || typeof body !== "object") return false;
   const obj = body as Record<string, unknown>;
+  // JSON-RPC envelope: unwrap result, but treat protocol metadata
+  // (tools/list, initialize responses) as non-substantive.
+  if (obj.jsonrpc === "2.0") {
+    const result = obj.result;
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      return Array.isArray(result) && result.length > 0;
+    }
+    const r = result as Record<string, unknown>;
+    const keys = Object.keys(r);
+    if (keys.length > 0 && keys.every((k) => RPC_META_KEYS.has(k))) return false;
+    return isSubstantiveJson(r);
+  }
   for (const k of ["data", "result"]) {
     const v = obj[k];
     if (Array.isArray(v) && v.length > 0) return true;
@@ -524,9 +655,309 @@ function bodyHasErrorSignal(check: ListingCheck): boolean {
   return false;
 }
 
+// ── Valid-request probe (unpaid — reach the gate or prove delivery) ───────
+
+export interface ValidCallProbe {
+  /** Where the request shape came from. */
+  inputSource?: string;
+  /** Skipped because the tool/endpoint may move money or mutate state. */
+  sideEffectSkipped?: boolean;
+  /** MCP tool called, when protocol is mcp. */
+  toolName?: string;
+  /** Evidence of every request we sent. */
+  attempts: AttemptEvidence[];
+  /** Final synthesized-call outcome. */
+  status?: number;
+  bodyJson?: unknown;
+  challenge?: PaymentChallenge | null;
+  challengeHeader?: string | null;
+  challengeRaw?: Record<string, unknown> | null;
+  /** What to re-send with payment headers. */
+  request?: {
+    method: "POST" | "GET";
+    url: string;
+    body?: Record<string, unknown>;
+    mcpTool?: string;
+    mcpSessionId?: string;
+  };
+}
+
+/**
+ * Build a valid request from whatever the service exposes (MCP inputSchema,
+ * 402 challenge carriers, rejection-body field names, listing description)
+ * and send it unpaid. Repair once on a 400/422 that names more fields.
+ */
+export async function probeValidCall(
+  service: MarketplaceService,
+  check: ListingCheck,
+): Promise<ValidCallProbe | null> {
+  if (check.status === 0 || check.status === 404 || check.status >= 500) return null;
+
+  const inputs = discoverInputs({
+    serviceName: `${service.serviceName} ${service.agentName}`,
+    description: service.description,
+    challengeRaw: check.challengeRaw,
+    bodyJson: check.bodyJson,
+    mcpTools: check.mcpTools,
+  });
+  if (!inputs) {
+    // tools/list succeeded but every tool is side-effecting — record the skip
+    // so the service isn't silently "no input contract".
+    const tools = check.mcpTools ?? [];
+    if (tools.length > 0 && tools.every((t) => isSideEffecting("", t.name))) {
+      return {
+        inputSource: "mcp_tools",
+        sideEffectSkipped: true,
+        toolName: tools[0].name,
+        attempts: [],
+      };
+    }
+    return null;
+  }
+
+  const toolName = inputs.toolName;
+  if (isSideEffecting(service.endpoint, toolName)) {
+    return {
+      inputSource: inputs.source,
+      sideEffectSkipped: true,
+      toolName,
+      attempts: [],
+    };
+  }
+
+  const attempts: AttemptEvidence[] = [];
+
+  // ── MCP: tools/call with synthesized arguments ────────────────────────
+  if (check.protocol === "mcp" && toolName) {
+    const hs = await mcpHandshake(check.checkedUrl).catch(() => null);
+    if (!hs) return null;
+    const args = synthesizeBody(inputs.fields, inputs.exampleBody);
+    const payload = {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: toolName, arguments: args },
+    };
+    const res = await mcpPost(check.checkedUrl, payload, hs?.sessionId);
+    attempts.push({
+      method: "POST",
+      url: check.checkedUrl,
+      body: JSON.stringify(payload).slice(0, 500),
+      status: res.status,
+      snippet: res.bodySnippet.slice(0, SNIPPET_BODY),
+    });
+    const challenge = res.status === 402
+      ? decodeChallenge(res.challengeHeader, res.bodyJson)
+      : null;
+    const bodyJson =
+      res.rpc?.result !== undefined
+        ? (res.rpc.result as Record<string, unknown>)
+        : res.rpc?.error !== undefined
+          ? { error: res.rpc.error }
+          : res.bodyJson;
+    return {
+      inputSource: inputs.source,
+      toolName,
+      attempts,
+      status: res.status,
+      bodyJson,
+      challenge,
+      challengeHeader: res.challengeHeader,
+      challengeRaw: res.status === 402 ? rawChallengeOf(res.challengeHeader, res.bodyJson).raw : null,
+      request: {
+        method: "POST",
+        url: check.checkedUrl,
+        mcpTool: toolName,
+        mcpSessionId: hs?.sessionId,
+        body: args,
+      },
+    };
+  }
+
+  // ── HTTP: synthesized body (POST) or query (GET) ──────────────────────
+  let fields = inputs.fields;
+  let body = synthesizeBody(fields, inputs.exampleBody);
+  const method = check.checkedMethod;
+  let res: Attempt | null = null;
+  for (let tries = 0; tries < 2; tries++) {
+    res = await sendAttempt(check.checkedUrl, method, body);
+    attempts.push({
+      method,
+      url: check.checkedUrl,
+      body: method === "POST" ? JSON.stringify(body).slice(0, 500) : undefined,
+      status: res.status,
+      snippet: res.bodySnippet.slice(0, SNIPPET_BODY),
+    });
+    // Repair: a 400/422 naming new missing fields gets one retry with them.
+    if ((res.status === 400 || res.status === 422) && tries === 0) {
+      const more = extractFieldNames(res.bodyJson).filter(
+        (n) => !fields.some((f) => f.name === n),
+      );
+      if (more.length === 0) break;
+      fields = [...fields, ...more.map((name) => ({ name, required: true }) as FieldSpec)];
+      body = { ...body, ...synthesizeBody(more.map((name) => ({ name, required: true }))) };
+      continue;
+    }
+    break;
+  }
+  if (!res) return null;
+  const challenge = res.status === 402
+    ? decodeChallenge(res.challengeHeader, res.bodyJson)
+    : null;
+  return {
+    inputSource: inputs.source,
+    attempts,
+    status: res.status,
+    bodyJson: res.bodyJson,
+    challenge,
+    challengeHeader: res.challengeHeader,
+    challengeRaw: res.status === 402 ? rawChallengeOf(res.challengeHeader, res.bodyJson).raw : null,
+    request: { method, url: check.checkedUrl, body },
+  };
+}
+
+// ── Paid verification (the $1/day ledger spends here) ─────────────────────
+
+/**
+ * Sign the x402 challenge and re-send the valid request with payment
+ * headers. Counts as spend only when a settlement tx appears or the service
+ * delivered. Returns the verification record + response outcome.
+ */
+async function paidVerify(
+  probe: ValidCallProbe,
+  check: ListingCheck,
+  service: MarketplaceService,
+): Promise<{ record: PaidVerification; bodyJson: unknown; substantive: boolean }> {
+  const record: PaidVerification = {
+    at: new Date().toISOString(),
+    delivered: false,
+    amountUsd: probe.challenge?.amountUsd ?? check.challenge?.amountUsd ?? service.feeUsd,
+  };
+  const challengeHeader = probe.challengeHeader ?? check.challengeHeader;
+  if (!challengeHeader || !probe.request) {
+    record.error = "No 402 challenge or request to replay";
+    return { record, bodyJson: null, substantive: false };
+  }
+  const paymentHeaders = await attemptX402Payment(challengeHeader);
+  if (!paymentHeaders) {
+    record.error = "Could not sign payment (PROBE_PAYER_PK unset or SDK error)";
+    return { record, bodyJson: null, substantive: false };
+  }
+  try {
+    let status: number;
+    let snippet: string;
+    let bodyJson: unknown;
+    let settleHeader: string | null;
+    if (probe.request.mcpTool) {
+      const res = await mcpPost(
+        probe.request.url,
+        {
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: probe.request.mcpTool, arguments: probe.request.body ?? {} },
+        },
+        probe.request.mcpSessionId,
+        paymentHeaders,
+      );
+      status = res.status;
+      snippet = res.bodySnippet;
+      settleHeader = res.settleHeader ?? null;
+      bodyJson =
+        res.rpc?.result !== undefined
+          ? (res.rpc.result as Record<string, unknown>)
+          : res.bodyJson;
+      probe.attempts.push({
+        method: "POST",
+        url: probe.request.url,
+        body: JSON.stringify({ tool: probe.request.mcpTool, arguments: probe.request.body }).slice(0, 500),
+        status,
+        snippet: snippet.slice(0, SNIPPET_BODY),
+        paid: true,
+      });
+    } else {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+      const req = probe.request;
+      let target = req.url;
+      if (req.method === "GET" && req.body && Object.keys(req.body).length > 0) {
+        const qs = new URLSearchParams();
+        for (const [k, v] of Object.entries(req.body)) {
+          qs.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+        }
+        target = `${req.url}${req.url.includes("?") ? "&" : "?"}${qs.toString()}`;
+      }
+      const res = await fetch(target, {
+        method: req.method,
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...paymentHeaders,
+        },
+        ...(req.method === "POST" ? { body: JSON.stringify(req.body ?? {}) } : {}),
+      });
+      clearTimeout(timeout);
+      status = res.status;
+      snippet = (await res.text()).slice(0, MAX_BODY);
+      settleHeader = res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("payment-response");
+      try {
+        bodyJson = JSON.parse(snippet);
+      } catch {
+        bodyJson = null;
+      }
+      probe.attempts.push({
+        method: req.method,
+        url: target,
+        body: req.method === "POST" ? JSON.stringify(req.body).slice(0, 500) : undefined,
+        status,
+        snippet: snippet.slice(0, SNIPPET_BODY),
+        paid: true,
+      });
+    }
+    if (settleHeader) {
+      try {
+        const settle = JSON.parse(Buffer.from(settleHeader, "base64").toString("utf-8"));
+        if (typeof settle?.transaction === "string") record.settlementTx = settle.transaction;
+      } catch {
+        // settlement header not parseable — non-fatal
+      }
+    }
+    record.status = status!;
+    const substantive = status! < 400 && isSubstantiveJson(bodyJson);
+    record.delivered = substantive;
+    return { record, bodyJson, substantive };
+  } catch (e) {
+    record.error = e instanceof Error ? e.message : "Paid verification request failed";
+    return { record, bodyJson: null, substantive: false };
+  }
+}
+
+// ── Scoring v2 — weighted sub-scores; unknowns stay unknown ───────────────
+
+export interface ListingVerdict {
+  score: number;
+  status: IndexedService["status"];
+  checks: Record<string, CheckScore>;
+  flags: string[];
+  verification: VerificationLevel;
+  subScores: SubScores;
+}
+
+/**
+ * Score a listing from the liveness check plus (when possible) a valid
+ * synthesized request and an optional paid verification.
+ *
+ * Sub-scores are 0–100 or null = unknown — the weighted mean only counts
+ * what we actually measured. Hard fails (availability 0, paymentIntegrity 0,
+ * delivery 0) pin the status to broken; an available service whose payment
+ * and delivery are both unknown is "unverified", not "degraded".
+ */
 export function scoreListing(
   check: ListingCheck,
   service: MarketplaceService,
+  probe?: ValidCallProbe | null,
+  paidResult?: { record: PaidVerification; bodyJson: unknown; substantive: boolean } | null,
 ): ListingVerdict {
   const flags: string[] = [];
   const checks: Record<string, CheckScore> = {};
@@ -535,226 +966,284 @@ export function scoreListing(
   if (check.templateSubstituted) {
     flags.push("Templated endpoint (checked with BTC)");
   }
+  if (probe?.sideEffectSkipped) {
+    flags.push("Skipped active call: service may have side effects");
+  }
 
   // Network error / SSRF reject → unreachable, score 0.
   if (check.status === 0) {
-    checks.responds = { pass: "fail", detail: check.error ?? "No response" };
-    return { score: 0, status: "unreachable", checks, flags };
+    checks.availability = { pass: "fail", detail: check.error ?? "No response" };
+    return {
+      score: 0,
+      status: "unreachable",
+      checks,
+      flags,
+      verification: "none",
+      subScores: { availability: 0, paymentIntegrity: null, delivery: null },
+    };
   }
 
-  // ── responds (25) ──────────────────────────────────────────────────────
-  let responds = 0;
-  let dead = false;
+  // ── availability ───────────────────────────────────────────────────────
+  let availability: number;
   if (check.status === 404) {
-    dead = true;
+    availability = 0;
     flags.push("Endpoint not found (404)");
-    checks.responds = {
+    checks.availability = {
       pass: "fail",
       detail: `HTTP 404 — listing endpoint does not exist${check.checkedMethod === "GET" ? " (POST and GET)" : ""}`,
     };
   } else if (check.status >= 500) {
-    dead = true;
+    availability = 0;
     flags.push(`Server error ${check.status}`);
-    checks.responds = { pass: "fail", detail: `HTTP ${check.status}` };
+    checks.availability = { pass: "fail", detail: `HTTP ${check.status}` };
   } else {
-    // Any non-5xx, non-404 response counts — including a 402 challenge and a
-    // 400/422 JSON complaint about our empty body (we sent no arguments).
-    responds = 25;
-    checks.responds = {
+    const latencyBonus =
+      check.latencyMs <= 1000 ? 40 : check.latencyMs <= 3000 ? 30 : check.latencyMs <= 8000 ? 20 : 10;
+    availability = 60 + latencyBonus;
+    checks.availability = {
       pass: "pass",
       detail: `HTTP ${check.status} via ${check.checkedMethod} in ${check.latencyMs}ms`,
     };
   }
 
-  // ── paymentGate (30) ───────────────────────────────────────────────────
-  let gate = 0;
-  const challenged = check.status === 402;
-  const ch = check.challenge;
-  /** Paid listing whose response errored/thinned out before the payment
-      gate — neutral: input validation, docs pages, and MCP servers that gate
-      per tool call are all legitimate designs. */
-  let gateNotReached = false;
+  // ── effective response = best evidence we have ────────────────────────
+  // The synthesized valid call (when it ran) supersedes the bare-{} check:
+  // a 402 to a real request is the gate; a 4xx to `{}` is just validation.
+  const effStatus = probe?.status ?? check.status;
+  const effBody = probe ? probe.bodyJson : check.bodyJson;
+  const challenge = probe?.challenge ?? check.challenge;
+  const challenged = (probe ? probe.status === 402 : false) || check.status === 402;
+  const decodableChallenge = challenged && challenge && !challenge.undecodable;
+
+  // ── paymentIntegrity ──────────────────────────────────────────────────
+  let paymentIntegrity: number | null = null;
   if (feeUsd > 0) {
-    if (!challenged) {
-      if (check.protocol === "mcp") {
-        gateNotReached = true;
-        gate = 15;
-        flags.push("MCP server — payment is enforced per tool call; listing-level gate not checked");
-        checks.paymentGate = {
-          pass: "partial",
-          detail: `MCP ${check.mcpServerName ?? "server"}${check.toolCount !== undefined ? `, ${check.toolCount} tools` : ""} — per-call paywall not visible at listing level`,
-        };
-      } else if (bodyHasErrorSignal(check)) {
-        gateNotReached = true;
-        gate = 15;
-        flags.push("Payment gate not reached — service rejects empty input before payment");
-        checks.paymentGate = {
-          pass: "partial",
-          detail: `HTTP ${check.status} with an error body — input validation may precede the paywall`,
-        };
-      } else if (!isSubstantiveJson(check.bodyJson)) {
-        // Non-JSON or thin/empty JSON — a docs page or an async accept is not
-        // evidence the paywall was skipped. Neutral.
-        gateNotReached = true;
-        gate = 15;
-        flags.push("Returned non-payload content (docs page or empty body); payment gate not reached");
-        checks.paymentGate = {
-          pass: "partial",
-          detail: `HTTP ${check.status}, ${check.bodyJson === null ? "non-JSON" : "thin"} body — no payload without payment`,
-        };
-      } else {
-        flags.push(`Listed at $${feeUsd} but returned a response without requesting payment`);
-        checks.paymentGate = { pass: "fail", detail: `HTTP ${check.status}, no 402 challenge` };
+    if (decodableChallenge) {
+      paymentIntegrity = 100;
+      if (challenge.network !== "eip155:196") {
+        paymentIntegrity = 60;
+        flags.push(`Payment challenge on ${challenge.network ?? "an unknown network"}, not eip155:196`);
       }
-    } else if (ch?.undecodable || !ch) {
+      if (challenge.amountUsd !== undefined) {
+        const listed = feeUsd;
+        const actual = challenge.amountUsd;
+        if (actual > listed * 1.01 + 1e-9) {
+          paymentIntegrity = Math.min(paymentIntegrity, 40);
+          flags.push(`Charges $${actual}, listing says $${listed}`);
+        } else if (actual < listed * 0.99 - 1e-9) {
+          paymentIntegrity = Math.min(paymentIntegrity, 80);
+          flags.push(`Charges $${actual}, listing says $${listed}`);
+        }
+      }
+      if (isInternalHost(challenge.resourceUrl)) {
+        paymentIntegrity = Math.min(paymentIntegrity, 50);
+        flags.push("Payment challenge advertises an internal URL");
+      }
+      checks.paymentIntegrity = {
+        pass: paymentIntegrity >= 100 ? "pass" : "partial",
+        detail: `x402 challenge decodable${challenge.network === "eip155:196" ? " on X Layer (eip155:196)" : ` on ${challenge.network ?? "?"}`}${challenge.amountUsd !== undefined ? `, asks $${challenge.amountUsd} vs listed $${feeUsd}` : ""}`,
+      };
+    } else if (challenged) {
+      // 402 but undecodable — gate exists, integrity unverifiable.
       flags.push("402 but the payment challenge could not be decoded");
-      checks.paymentGate = { pass: "fail", detail: "Undecodable PAYMENT-REQUIRED" };
-    } else if (ch.network === "eip155:196") {
-      gate = 30;
-      checks.paymentGate = { pass: "pass", detail: "x402 exact challenge on X Layer (eip155:196)" };
+      checks.paymentIntegrity = { pass: "partial", detail: "Undecodable PAYMENT-REQUIRED" };
+      paymentIntegrity = null;
+    } else if (effStatus >= 200 && effStatus < 300 && isSubstantiveJson(effBody)) {
+      // Real payload without payment on a paid listing — the one true
+      // accusation, and only on substantive responses.
+      paymentIntegrity = 0;
+      flags.push(`Listed at $${feeUsd} but returned a response without requesting payment`);
+      checks.paymentIntegrity = { pass: "fail", detail: `HTTP ${effStatus}, substantive payload, no 402` };
     } else {
-      gate = 15;
-      flags.push(`Payment challenge on ${ch.network ?? "an unknown network"}, not eip155:196`);
-      checks.paymentGate = { pass: "partial", detail: `Network ${ch.network ?? "?"}` };
+      // Gate never reached — validation errors, docs pages, empty accepts,
+      // MCP per-tool paywalls. Unknown, not bad.
+      paymentIntegrity = null;
+      if (check.protocol === "mcp" && !(probe && probe.status === 402)) {
+        flags.push("MCP server — payment is enforced per tool call; listing-level gate not checked");
+      } else if (probe && effStatus >= 400) {
+        flags.push(`Payment gate not reached — valid request still rejected (HTTP ${effStatus})`);
+      }
+      checks.paymentIntegrity = {
+        pass: "partial",
+        detail: "Payment gate not reached — integrity not verifiable",
+      };
     }
   } else {
     if (challenged) {
+      paymentIntegrity = 0;
       flags.push("Listed free but demands payment");
-      checks.paymentGate = { pass: "fail", detail: "402 challenge on a $0 listing" };
+      checks.paymentIntegrity = { pass: "fail", detail: "402 challenge on a $0 listing" };
     } else {
-      gate = 30;
-      checks.paymentGate = { pass: "pass", detail: "Free listing, no payment demanded" };
+      paymentIntegrity = 100;
+      checks.paymentIntegrity = { pass: "pass", detail: "Free listing, no payment demanded" };
     }
   }
 
-  // ── priceMatch (15) ────────────────────────────────────────────────────
-  let price = 0;
-  if (feeUsd > 0) {
-    if (gateNotReached) {
-      price = 7.5;
-      checks.priceMatch = { pass: "partial", detail: "Not verifiable — gate not reached" };
-    } else if (challenged && ch && !ch.undecodable && ch.amountUsd !== undefined) {
-      const listed = feeUsd;
-      const actual = ch.amountUsd;
-      if (actual > listed * 1.01 + 1e-9) {
-        flags.push(`Charges $${actual}, listing says $${listed}`);
-        checks.priceMatch = { pass: "fail", detail: `Charged $${actual} vs listed $${listed}` };
-      } else if (actual < listed * 0.99 - 1e-9) {
-        price = 7.5;
-        flags.push(`Charges $${actual}, listing says $${listed}`);
-        checks.priceMatch = { pass: "partial", detail: `Charged $${actual} vs listed $${listed}` };
-      } else {
-        price = 15;
-        checks.priceMatch = { pass: "pass", detail: `Charged $${actual} ≈ listed $${listed}` };
-      }
+  // ── delivery ───────────────────────────────────────────────────────────
+  let delivery: number | null = null;
+  let deliveredBody: unknown = null;
+  const validCallRan = probe !== null && probe !== undefined && !probe.sideEffectSkipped;
+  if (paidResult) {
+    if (paidResult.substantive) {
+      deliveredBody = paidResult.bodyJson;
+      delivery = 100;
     } else {
-      checks.priceMatch = { pass: "fail", detail: "No decodable challenge to compare price" };
-    }
-  } else {
-    if (!challenged) {
-      price = 15;
-      checks.priceMatch = { pass: "pass", detail: "Free as listed" };
-    } else {
-      checks.priceMatch = { pass: "fail", detail: "Free listing demanded payment" };
+      delivery = 0;
+      checks.delivery = {
+        pass: "fail",
+        detail: `Paid and ${paidResult.record.error ? `failed: ${paidResult.record.error}` : `returned HTTP ${paidResult.record.status} without a substantive payload`}`,
+      };
+      flags.push(
+        paidResult.record.error
+          ? `Paid verification failed: ${paidResult.record.error}`
+          : `Payment signed but request returned HTTP ${paidResult.record.status}`,
+      );
     }
   }
-
-  // ── latency (15) ───────────────────────────────────────────────────────
-  const latency =
-    check.latencyMs <= 1000 ? 15 : check.latencyMs <= 3000 ? 10 : check.latencyMs <= 8000 ? 5 : 0;
-  checks.latency = {
-    pass: latency === 15 ? "pass" : latency > 0 ? "partial" : "fail",
-    detail: `${check.latencyMs}ms`,
-  };
-
-  // ── json (10) ──────────────────────────────────────────────────────────
-  const isJson =
-    check.bodyJson !== null ||
-    check.protocol === "mcp" || // JSON-RPC payload (may arrive via SSE)
-    (challenged && ch !== null && !ch.undecodable);
-  checks.json = {
-    pass: isJson ? "pass" : "fail",
-    detail: isJson ? (check.protocol === "mcp" ? "JSON-RPC response" : "JSON response") : "Non-JSON body",
-  };
-
-  // ── selfDescribing (5) ─────────────────────────────────────────────────
-  let selfDescribing = check.protocol === "mcp" && check.toolCount !== undefined;
-  if (ch?.resourceDescription && ch.resourceDescription.trim()) {
-    selfDescribing = true;
-  } else if (check.bodyJson && typeof check.bodyJson === "object") {
-    const b = check.bodyJson as Record<string, unknown>;
-    selfDescribing = selfDescribing ||
-      typeof b.description === "string" ||
-      typeof b.error === "string" ||
-      b.schema !== undefined ||
-      b.inputSchema !== undefined ||
-      b.tools !== undefined;
+  if (delivery === null && validCallRan && effStatus >= 200 && effStatus < 300) {
+    if (isSubstantiveJson(effBody)) {
+      deliveredBody = effBody;
+      delivery = 100;
+    } else {
+      delivery = 60;
+    }
+  } else if (delivery === null && validCallRan && feeUsd === 0 && effStatus >= 400) {
+    // Free listing that fails a best-effort valid request — broken in
+    // practice, not merely unknown.
+    delivery = 0;
+    flags.push(`Free service rejected a synthesized valid request (HTTP ${effStatus})`);
   }
-  checks.selfDescribing = {
-    pass: selfDescribing ? "pass" : "fail",
-    detail: selfDescribing ? "Response describes itself" : "No description/schema in response",
-  };
-
-  if (isInternalHost(ch?.resourceUrl)) {
-    flags.push("Payment challenge advertises an internal URL");
+  // Stale data halves delivery credit — honest, dated payload is still a
+  // payload but the service isn't fresh.
+  if (deliveredBody) {
+    const staleDate = isStalePayload(deliveredBody);
+    if (staleDate) {
+      delivery = 50;
+      flags.push(`Stale data (dated ${staleDate})`);
+    }
+  }
+  if (delivery === null && !checks.delivery) {
+    checks.delivery = {
+      pass: "partial",
+      detail: validCallRan
+        ? `Valid request returned HTTP ${effStatus} — delivery not proven`
+        : probe?.sideEffectSkipped
+          ? "Not called — service may have side effects"
+          : "No input contract discovered — not called",
+    };
+  } else if (delivery !== null) {
+    checks.delivery = {
+      pass: delivery >= 80 ? "pass" : delivery > 0 ? "partial" : "fail",
+      detail:
+        delivery === 100
+          ? `Delivered a substantive payload (HTTP ${effStatus}${paidResult ? ", paid" : ""})`
+          : delivery === 60
+            ? `HTTP ${effStatus} but thin/empty payload`
+            : delivery === 50
+              ? "Delivered but data is stale"
+              : (checks.delivery?.detail ?? "Delivery failed"),
+    };
   }
 
-  let score = Math.round(responds + gate + price + latency + (isJson ? 10 : 0) + (selfDescribing ? 5 : 0));
-  // A dead endpoint must never pass for degraded — cap it to "broken".
-  if (dead) score = Math.min(score, 40);
+  // ── verification level ─────────────────────────────────────────────────
+  const verification: VerificationLevel =
+    paidResult && !paidResult.substantive
+      ? "failed"
+      : delivery === 100 || (delivery === 60 && feeUsd === 0) || (deliveredBody !== null && delivery !== 0)
+        ? "delivered"
+        : decodableChallenge
+          ? "gate"
+          : "none";
+
+  // ── overall ────────────────────────────────────────────────────────────
+  const subScores: SubScores = { availability, paymentIntegrity, delivery };
+  const weights: [number | null, number][] = [
+    [availability, 30],
+    [paymentIntegrity, 30],
+    [delivery, 40],
+  ];
+  const known = weights.filter(([v]) => v !== null) as [number, number][];
+  const score = known.length
+    ? Math.round(known.reduce((s, [v, w]) => s + v * w, 0) / known.reduce((s, [, w]) => s + w, 0))
+    : 0;
+
   const status: IndexedService["status"] =
-    score >= 80 ? "healthy" : score >= 50 ? "degraded" : "broken";
-  return { score, status, checks, flags };
+    availability === 0 || paymentIntegrity === 0 || delivery === 0
+      ? "broken"
+      : paymentIntegrity === null && delivery === null
+        ? "unverified"
+        : score >= 80
+          ? "healthy"
+          : "degraded";
+
+  return { score, status, checks, flags, verification, subScores };
 }
 
-// ── Deep check (opt-in paid verification, hard-capped) ────────────────────
+// ── Verify ledger ($1/day, keyed by UTC date) ──────────────────────────────
 
-async function deepCheck(
-  check: ListingCheck,
-  service: MarketplaceService,
-): Promise<DeepCheck> {
-  const deep: DeepCheck = { attempted: true, delivered: false };
-  if (!check.challengeHeader || check.status !== 402) {
-    deep.error = "No 402 challenge to pay";
-    return deep;
-  }
-  const paymentHeaders = await attemptX402Payment(check.challengeHeader);
-  if (!paymentHeaders) {
-    deep.error = "Could not sign payment (PROBE_PAYER_PK unset or SDK error)";
-    return deep;
-  }
+interface SpendLedger {
+  [date: string]: { spentUsd: number; entries: { serviceId: string; amountUsd: number; settlementTx?: string }[] };
+}
+
+async function readSpend(): Promise<SpendLedger> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
-    const res = await fetch(check.checkedUrl, {
-      method: check.checkedMethod,
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...paymentHeaders,
-      },
-      ...(check.checkedMethod === "POST" ? { body: "{}" } : {}),
-    });
-    clearTimeout(timeout);
-    deep.status = res.status;
-    deep.delivered = res.status < 400;
-    deep.amountUsd = check.challenge?.amountUsd ?? service.feeUsd;
-    const settleHeader =
-      res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("payment-response");
-    if (settleHeader) {
-      try {
-        const settle = JSON.parse(Buffer.from(settleHeader, "base64").toString("utf-8"));
-        if (typeof settle?.transaction === "string") deep.settlementTx = settle.transaction;
-      } catch {
-        // settlement header not parseable — non-fatal
-      }
-    }
-    await res.text(); // drain
-  } catch (e) {
-    deep.error = e instanceof Error ? e.message : "Deep check request failed";
+    return JSON.parse(await fs.readFile(SPEND_FILE, "utf-8"));
+  } catch {
+    return {};
   }
-  return deep;
+}
+
+async function readPaidVerifications(): Promise<Record<string, PaidVerification>> {
+  try {
+    return JSON.parse(await fs.readFile(PAID_VERIFICATIONS_FILE, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+export function dailyVerifyBudget(): number {
+  const n = Number(process.env.INDEX_DAILY_VERIFY_BUDGET_USD);
+  const budget = Number.isFinite(n) && n > 0 ? n : 1.0;
+  return Math.min(budget, VERIFY_DAILY_MAX_USD);
+}
+
+export interface VerifyCandidate {
+  serviceId: string;
+  ours: boolean;
+  feeUsd: number;
+  /** A valid request can be replayed with payment headers. */
+  callable: boolean;
+  /** A decodable x402 challenge was seen this run (probe or plain check). */
+  gateReached: boolean;
+  sideEffectSkipped: boolean;
+}
+
+/**
+ * Paid-verification eligibility + ordering: non-ours, fee ≤ $0.05, callable,
+ * gate reached, no side effects, not verified in the last 72h. Never-verified
+ * first, then oldest verification, then cheapest.
+ */
+export function pickVerifyTargets(
+  candidates: VerifyCandidate[],
+  prevPaid: Record<string, PaidVerification>,
+  now = Date.now(),
+): VerifyCandidate[] {
+  return candidates
+    .filter((r) => {
+      if (r.ours || r.feeUsd <= 0 || r.feeUsd > VERIFY_MAX_FEE_USD) return false;
+      if (!r.callable || !r.gateReached || r.sideEffectSkipped) return false;
+      const last = prevPaid[r.serviceId];
+      if (last && now - Date.parse(last.at) < VERIFY_RECHECK_MS) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const la = prevPaid[a.serviceId]?.at;
+      const lb = prevPaid[b.serviceId]?.at;
+      if (!la && lb) return -1;
+      if (la && !lb) return 1;
+      if (la && lb && la !== lb) return la.localeCompare(lb);
+      return a.feeUsd - b.feeUsd;
+    });
 }
 
 // ── Index run ──────────────────────────────────────────────────────────────
@@ -787,18 +1276,24 @@ function computeUptime(
 }
 
 export interface RunIndexOptions {
-  /** USD budget for paid deep checks on ≤$0.02 services. 0 = unpaid run only. */
-  deepBudgetUsd?: number;
+  /** Paid verification pass under the daily ledger budget. */
+  verify?: boolean;
   /** Write the index verdict hash to X Layer. */
   attest?: boolean;
 }
 
 export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceIndex> {
-  const deepBudget = Math.min(Math.max(opts.deepBudgetUsd ?? 0, 0), DEEP_HARD_CAP_USD);
   const generatedAt = new Date().toISOString();
+  const prevIndex = await getLatestIndex();
+  const prevPaid = await readPaidVerifications();
+  const spend = await readSpend();
+  const today = generatedAt.slice(0, 10);
+  const daySpend = spend[today]?.spentUsd ?? 0;
+  const budget = dailyVerifyBudget();
 
   const results: IndexedService[] = [];
   const checkById = new Map<string, ListingCheck>();
+  const probeById = new Map<string, ValidCallProbe | null>();
   const queue = [...MARKETPLACE_SERVICES];
 
   async function worker() {
@@ -816,16 +1311,31 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
           score: 0,
           status: "unreachable",
           checks: {
-            responds: { pass: "fail", detail: e instanceof Error ? e.message : "Rejected" },
+            availability: { pass: "fail", detail: e instanceof Error ? e.message : "Rejected" },
           },
           flags: [],
           latencyMs: 0,
           httpStatus: 0,
+          verification: "none",
+          paid: false,
+          subScores: { availability: 0, paymentIntegrity: null, delivery: null },
         });
         continue;
       }
       checkById.set(service.serviceId, check);
-      const verdict = scoreListing(check, service);
+      // The fair call: synthesize a valid request and try it unpaid. Never
+      // runs for dead endpoints or side-effecting services.
+      let probe: ValidCallProbe | null = null;
+      if (!ours) {
+        try {
+          probe = await probeValidCall(service, check);
+        } catch {
+          probe = null;
+        }
+      }
+      probeById.set(service.serviceId, probe);
+      const verdict = scoreListing(check, service, probe);
+      const prior = prevPaid[service.serviceId];
       results.push({
         ...service,
         ours,
@@ -835,6 +1345,12 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
         flags: verdict.flags,
         latencyMs: check.latencyMs,
         httpStatus: check.status,
+        verification: verdict.verification,
+        paid: false,
+        subScores: verdict.subScores,
+        attempts: probe && probe.attempts.length > 0 ? probe.attempts : undefined,
+        inputSource: probe?.inputSource,
+        ...(prior ? { lastPaidVerification: prior } : {}),
         ...(check.protocol ? { protocol: check.protocol, mcpServerName: check.mcpServerName, toolCount: check.toolCount } : {}),
       });
     }
@@ -843,31 +1359,83 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
     Array.from({ length: Math.min(10, queue.length) }, () => worker()),
   );
 
-  // Optional deep checks: cheapest paid listings first, within budget.
-  let deepSpent = 0;
-  let deepChecked = 0;
-  if (deepBudget > 0) {
+  // ── Paid verification, budgeted by the daily ledger ────────────────────
+  // Eligible: gate reached this run (or a challenge captured), fee ≤ $0.05,
+  // no side effects, not paid-verified in the last 72h. Never-verified
+  // first, then oldest, then cheapest. Spend counts only when the payment
+  // settled or the service delivered.
+  let verifySpent = 0;
+  let verifyAttempted = 0;
+  const newPaid: Record<string, PaidVerification> = { ...prevPaid };
+  const todayEntries: { serviceId: string; amountUsd: number; settlementTx?: string }[] = [
+    ...(spend[today]?.entries ?? []),
+  ];
+  if (opts.verify) {
     const byId = new Map(results.map((r) => [r.serviceId, r]));
-    const eligible = results
-      .filter((r) => !r.ours && r.httpStatus === 402 && r.feeUsd > 0 && r.feeUsd <= DEEP_MAX_FEE_USD)
-      .sort((a, b) => a.feeUsd - b.feeUsd);
+    const eligible = pickVerifyTargets(
+      results.map((r) => {
+        const probe = probeById.get(r.serviceId);
+        const gateNow = !!(
+          probe &&
+          probe.status === 402 &&
+          probe.challenge &&
+          !probe.challenge.undecodable
+        );
+        const ch = checkById.get(r.serviceId)?.challenge;
+        const gateCheck = r.httpStatus === 402 && !!ch && !ch.undecodable;
+        return {
+          serviceId: r.serviceId,
+          ours: r.ours,
+          feeUsd: r.feeUsd,
+          callable: !!(probe && probe.request),
+          gateReached: gateNow || gateCheck,
+          sideEffectSkipped: !!probe?.sideEffectSkipped,
+        };
+      }),
+      prevPaid,
+    )
+      .map((c) => byId.get(c.serviceId))
+      .filter((r): r is IndexedService => !!r);
     for (const svc of eligible) {
       const cost = svc.feeUsd;
-      if (deepSpent + cost > deepBudget) break;
+      if (daySpend + verifySpent + cost > budget) break;
       const check = checkById.get(svc.serviceId);
-      if (!check) continue;
-      const deep = await deepCheck(check, svc);
-      deepChecked += 1;
-      if (deep.delivered || deep.settlementTx) deepSpent += deep.amountUsd ?? cost;
+      const probe = probeById.get(svc.serviceId);
+      if (!check || !probe) continue;
+      verifyAttempted += 1;
+      const paidResult = await paidVerify(probe, check, svc);
+      newPaid[svc.serviceId] = paidResult.record;
+      if (paidResult.record.delivered || paidResult.record.settlementTx) {
+        const amt = paidResult.record.amountUsd ?? cost;
+        verifySpent += amt;
+        todayEntries.push({
+          serviceId: svc.serviceId,
+          amountUsd: amt,
+          settlementTx: paidResult.record.settlementTx,
+        });
+      }
+      // Re-score with the paid evidence included.
+      const verdict = scoreListing(check, svc, probe, paidResult);
       const row = byId.get(svc.serviceId);
       if (row) {
-        row.deep = deep;
-        if (deep.delivered) {
+        row.score = verdict.score;
+        row.status = verdict.status;
+        row.checks = verdict.checks;
+        row.flags = verdict.flags;
+        row.verification = verdict.verification;
+        row.subScores = verdict.subScores;
+        row.paid = true;
+        row.attempts = probe.attempts;
+        row.lastPaidVerification = paidResult.record;
+        if (paidResult.record.delivered) {
           row.flags = [...row.flags, "Paid & delivered"];
-        } else if (deep.status) {
-          row.flags = [...row.flags, `Payment signed but request returned ${deep.status}`];
         }
       }
+    }
+  }
+  for (const r of results) {
+    if (!r.lastPaidVerification && newPaid[r.serviceId]) {
+      r.lastPaidVerification = newPaid[r.serviceId];
     }
   }
 
@@ -881,6 +1449,13 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
     });
     const trimmed = prev.slice(-HISTORY_KEEP);
     await fs.writeFile(HISTORY_FILE, JSON.stringify(trimmed), "utf-8");
+    // Paid-verification carry-forward + daily spend ledger.
+    await fs.writeFile(PAID_VERIFICATIONS_FILE, JSON.stringify(newPaid), "utf-8");
+    spend[today] = {
+      spentUsd: Number((daySpend + verifySpent).toFixed(6)),
+      entries: todayEntries,
+    };
+    await fs.writeFile(SPEND_FILE, JSON.stringify(spend), "utf-8");
     return trimmed;
   });
   const uptime = computeUptime(history);
@@ -900,11 +1475,22 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       degraded: ranked.filter((r) => r.status === "degraded").length,
       broken: ranked.filter((r) => r.status === "broken").length,
       unreachable: ranked.filter((r) => r.status === "unreachable").length,
+      unverified: ranked.filter((r) => r.status === "unverified").length,
       priceMismatchCount: ranked.filter((r) => r.flags.some((f) => f.startsWith("Charges $"))).length,
       freeDemandsPaymentCount: ranked.filter((r) => r.flags.includes("Listed free but demands payment")).length,
       medianLatency,
-      deepChecked,
-      deepSpentUsd: Number(deepSpent.toFixed(6)),
+      gateVerified: ranked.filter((r) => r.verification === "gate" || r.verification === "delivered" || r.verification === "failed").length,
+      delivered: ranked.filter((r) => r.verification === "delivered").length,
+      paidVerified: ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification).length,
+      paidDelivered: ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification?.delivered).length,
+      deliveryRate: (() => {
+        const v = ranked.filter((r) => r.feeUsd > 0 && r.lastPaidVerification);
+        return v.length
+          ? Number((v.filter((r) => r.lastPaidVerification?.delivered).length / v.length).toFixed(3))
+          : null;
+      })(),
+      verifySpentUsd: Number(verifySpent.toFixed(6)),
+      verifyAttempted,
     },
     services: results.sort((a, b) => b.score - a.score || a.agentId.localeCompare(b.agentId)),
   };
@@ -921,7 +1507,6 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       // On-chain registry: publish only what changed since the last run —
       // other contracts gate payments on scoreOf / isSafeToPay.
       try {
-        const prevIndex = await getLatestIndex();
         // Diff against what this registry last published, not the previous
         // index — a prev run without a matching registry attestation means
         // nothing is on-chain yet, so publish all non-ours services.

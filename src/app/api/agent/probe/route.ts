@@ -10,7 +10,7 @@ import { recordEvent } from "@/lib/events";
 export const runtime = "nodejs";
 
 /**
- * POST /api/agent/probe — PAID (x402, $1 USDT on X Layer)
+ * POST /api/agent/probe — PAID (x402, $0.25 USDT on X Layer)
  *
  * Probes a set of A2MCP agent-service endpoints, scores each on schema
  * completeness, latency, freshness, price-per-value, reliability, and
