@@ -1,6 +1,7 @@
 import {
   scoreListing,
   checkListing,
+  finalizeVerdict,
   probeValidCall,
   findServices,
   pickVerifyTargets,
@@ -909,6 +910,51 @@ await withFetch(
     new Set(["guess", "cooldown"]),
   );
   assert(forced.length === 2, `force bypasses cooldown+confidence (got ${forced.length})`);
+}
+
+// ── Transient failure rule + score caps ──────────────────────────────────
+
+{
+  const netDown = check({ status: 0, error: "Timeout after 10000ms" });
+  const down = scoreListing(netDown, svc({ feeUsd: 0.02 }));
+  assert(down.status === "unreachable", `net failure → unreachable (got ${down.status})`);
+
+  const firstMiss = finalizeVerdict(down, "healthy");
+  assert(
+    firstMiss.status === "degraded" && firstMiss.flags.includes("Missed the latest check"),
+    `first miss after live run → degraded + flag (got ${firstMiss.status})`,
+  );
+  const secondMiss = finalizeVerdict(down, "unreachable");
+  assert(secondMiss.status === "unreachable", "second consecutive miss stays unreachable");
+  const afterBroken = finalizeVerdict(down, "broken");
+  assert(afterBroken.status === "unreachable", "failed run after broken stays unreachable");
+  const unaffected = finalizeVerdict(
+    { score: 90, status: "healthy", checks: {}, flags: [], verification: "delivered",
+      subScores: { availability: 100, paymentIntegrity: 100, delivery: 80 } },
+    "unreachable",
+  );
+  assert(unaffected.status === "healthy", "non-unreachable verdicts untouched");
+}
+
+{
+  // Degraded caps at 79 — "degraded, 100 out of 100" is contradictory.
+  const rejected = scoreListing(
+    check({ status: 402, challenge: challenge(), bodyJson: null }),
+    svc({ feeUsd: 0.02 }),
+    probe({ status: 402, challenge: challenge() }),
+    {
+      record: { at: new Date().toISOString(), delivered: false, status: 402, outcome: "payment_rejected" },
+      bodyJson: null,
+      substantive: false,
+    },
+  );
+  assert(rejected.status === "degraded" && (rejected.score ?? 100) <= 79,
+    `degraded caps at 79 (got ${rejected.status} ${rejected.score})`);
+
+  // Broken caps at 40.
+  const dead = scoreListing(check({ status: 530 }), svc({ feeUsd: 0.02 }));
+  assert(dead.status === "broken" && (dead.score ?? 100) <= 40,
+    `broken caps at 40 (got ${dead.status} ${dead.score})`);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

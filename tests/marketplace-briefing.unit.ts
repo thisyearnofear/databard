@@ -9,6 +9,7 @@ import {
   parseBriefingRequest,
   resolveBriefingServices,
   sanitizeSpeech,
+  spokenName,
 } from "../src/lib/marketplace-briefing";
 import { findAlternatives } from "../src/lib/marketplace-index";
 import { chunkBatches } from "../src/lib/probe-registry";
@@ -332,26 +333,80 @@ check(
   check("registry publishes unverified as score 0 + status 0", batch.scores[0] === 0 && batch.statuses[0] === 0);
 }
 
-// ── Category exclusions ────────────────────────────────────────────────────
+// ── Evidence-backed delivery list (replaces keyword categories) ────────────
 
 {
+  const fresh = { at: "2026-09-22T10:00:00.000Z", delivered: true, outcome: "delivered" as const };
   const idx6 = indexWith([
-    svc({ serviceId: "1", status: "healthy", score: 95, verification: "delivered",
-      serviceName: "Pokémon Card Market Lookup", description: "sealed pokemon card prices" }),
-    svc({ serviceId: "2", status: "healthy", score: 90, verification: "delivered",
-      serviceName: "Token Metadata", description: "token contract metadata and holder data" }),
+    svc({ serviceId: "1", serviceName: "Paid Newer", lastPaidVerification: fresh }),
+    svc({ serviceId: "2", serviceName: "Paid Older",
+      lastPaidVerification: { at: "2026-09-21T00:00:00.000Z", delivered: true, outcome: "delivered" } }),
+    svc({ serviceId: "3", serviceName: "Paid Stale", status: "degraded", score: 50,
+      lastPaidVerification: { at: "2026-09-10T00:00:00.000Z", delivered: true, outcome: "delivered" } }),
+    svc({ serviceId: "4", serviceName: "Gate Only", verification: "gate", lastPaidVerification: undefined }),
+    svc({ serviceId: "5", serviceName: "Unver", status: "unverified", score: null, verification: "none" }),
   ]);
   const b = buildMarketplaceBriefing(idx6, hist, { agentIds: [], serviceIds: [], endpoints: [] });
-  const tokenCat = b.market?.topHealthy.find((c) => c.category === "token data");
-  check(
-    "pokemon excluded from token data",
-    !tokenCat || tokenCat.picks.every((p) => p.serviceId !== "1"),
-    JSON.stringify(tokenCat),
-  );
-  check(
-    "real token service in token data",
-    !!tokenCat && tokenCat.picks.some((p) => p.serviceId === "2"),
-  );
+  const rd = b.market?.recentDeliveries ?? [];
+  check("recentDeliveries: only last-72h paid deliveries marked paid",
+    rd.filter((d) => d.paid).map((d) => d.serviceId).join(",") === "1,2",
+    JSON.stringify(rd));
+  check("recentDeliveries pads to 3 with healthy gate-verified",
+    rd.length === 3 && rd.some((d) => d.serviceId === "4" && !d.paid));
+  check("recentDeliveries never includes unverified",
+    !rd.some((d) => d.serviceId === "5" || d.serviceId === "3"));
+  const text = b.script.map((s) => s.text).join(" ");
+  check("paid-deliveries sentence spoken", /delivered a real answer to a paid request/.test(text), text.slice(0, 200));
+  check("72h-stale delivery not spoken", !text.includes("Paid Stale"));
+}
+
+// ── Speech: spokenName, transition filter, paid line, per-segment dedupe ───
+
+check("spokenName keeps latin", spokenName("Token Metadata", "Agent") === "Token Metadata");
+check("spokenName falls back to latin agent", spokenName("地址行为分析服务", "ChainLens") === "ChainLens");
+check("spokenName generic when both non-latin", spokenName("地址行为分析服务", "链眼") === "a service with a non-English listing");
+
+{
+  // Transitions to/from unverified are method noise — never spoken.
+  const prev: HistoryRun = {
+    runAt: "2026-09-22T11:00:00.000Z",
+    results: [
+      { serviceId: "1", status: "unverified" },
+      { serviceId: "2", status: "healthy" },
+    ],
+  };
+  const idx7 = indexWith([
+    svc({ serviceId: "1", serviceName: "Quiet", status: "degraded", score: 50, verification: "none" }),
+    svc({ serviceId: "2", serviceName: "Loud", status: "broken", score: 20 }),
+  ]);
+  const h2 = [...hist.slice(0, -1), prev, hist[hist.length - 1]];
+  const b = buildMarketplaceScript(buildMarketplaceBriefing(idx7, h2, { agentIds: [], serviceIds: [], endpoints: [] }));
+  const text = b.map((s) => s.text).join(" ");
+  check("unverified transition not spoken", !text.includes("Quiet"), text);
+  check("healthy→broken transition spoken", text.includes("Loud went from healthy to broken"), text);
+}
+
+{
+  // Two delivered-paid services both say the line — dedupe is per-segment.
+  const paidRec = { at: "2026-09-22T10:00:00.000Z", delivered: true, outcome: "delivered" as const };
+  const idx8 = indexWith([
+    svc({ serviceId: "1", serviceName: "Alpha Svc", lastPaidVerification: paidRec }),
+    svc({ serviceId: "2", serviceName: "Beta Svc", lastPaidVerification: paidRec }),
+  ]);
+  const b = buildMarketplaceBriefing(idx8, hist, { agentIds: [], serviceIds: ["1", "2"], endpoints: [] });
+  const lines = b.script.filter((s) => /delivered a real answer to a paid request/.test(s.text));
+  check("paid line repeated per service (per-segment dedupe)", lines.length === 2,
+    b.script.map((s) => s.text).join(" | "));
+  check("sentences capitalised", !b.script.some((s) => /[a-z]/.test(s.text.charAt(0))),
+    b.script.map((s) => s.text.charAt(0)).join(","));
+}
+
+{
+  // Paid headline spoken in the fixed phrasing.
+  const idx9 = indexWith([svc({ serviceId: "1" })]);
+  const b = buildMarketplaceScript(buildMarketplaceBriefing(idx9, hist, { agentIds: [], serviceIds: [], endpoints: [] }));
+  const text = b.map((s) => s.text).join(" ");
+  check("paid line phrasing", /We made real payments on X Layer: 1 of 2 services that settled delivered a real answer/.test(text), text);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

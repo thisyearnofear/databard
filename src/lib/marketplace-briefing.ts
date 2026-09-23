@@ -180,8 +180,10 @@ export interface MarketplaceBriefing {
     counts: Record<string, number>;
     paidHeadline: string | null;
     notableChanges: string[];
-    topHealthy: { category: string; picks: { serviceId: string; serviceName: string; score: number }[] }[];
-    providerIssues: string[];
+    /** Evidence-backed list — `paid` = delivered a real answer to a paid
+        request in the last 72h; `!paid` = healthy gate-verified padding. */
+    recentDeliveries: { serviceId: string; serviceName: string; agentName: string; score: number; paid: boolean }[];
+    providerIssues: { serviceId: string; serviceName: string; agentName: string; kind: "domain" | "paywall"; flag: string }[];
   };
   script: ScriptSegment[];
 }
@@ -360,22 +362,30 @@ function serviceEntry(
   };
 }
 
-const CATEGORY_KEYWORDS: { category: string; include: RegExp; exclude?: RegExp }[] = [
-  {
-    category: "token data",
-    include: /\b(token|contract|metadata|price feed|chain info|holder)\b/i,
-    exclude: /\b(card|pokemon|pokémon|sealed|property|apartment)\b/i,
-  },
-  {
-    category: "security",
-    include: /\b(security|audit|risk|honeypot|scam|phishing|approval)\b/i,
-  },
-  {
-    category: "market signals",
-    include: /\b(signal|signals|market|sentiment|trend|trends|alpha)\b/i,
-    exclude: /\b(card|cards|pokemon|pokémon|sealed|property|apartment)\b/i,
-  },
-];
+/** Name safe to say aloud — English TTS mangles non-Latin listings, so fall
+    back to the agent name and, failing that, a generic label. */
+export function spokenName(name: string, agentName?: string): string {
+  const latin = /^[\x20-\x7E]*$/;
+  if (latin.test(name) && name.trim()) return name;
+  if (agentName && latin.test(agentName) && agentName.trim()) return agentName;
+  return "a service with a non-English listing";
+}
+
+/** Join display names for speech: non-Latin listings collapse into a count. */
+function spokenNameList(items: { serviceName: string; agentName?: string }[]): string {
+  const latin: string[] = [];
+  let nonLatin = 0;
+  for (const it of items) {
+    const n = spokenName(it.serviceName, it.agentName);
+    if (n === "a service with a non-English listing") nonLatin += 1;
+    else latin.push(n);
+  }
+  const parts = [...latin];
+  if (nonLatin > 0) {
+    parts.push(`${nonLatin === 1 ? "one service" : `${nonLatin} services`} listed in a non-English language`);
+  }
+  return parts.join(", ");
+}
 
 function marketView(index: MarketplaceIndex, prev: Map<string, string>): NonNullable<MarketplaceBriefing["market"]> {
   const agg = index.aggregates;
@@ -387,29 +397,49 @@ function marketView(index: MarketplaceIndex, prev: Map<string, string>): NonNull
     .slice(0, 5)
     .map((x) => `${x.s.serviceName || x.s.agentName} (#${x.s.serviceId}): ${x.change}`);
 
-  // Word-boundary keyword sets on name+description, with exclusions — a
-  // "Pokémon card" service is not "token data". Skip a category rather than
-  // pad it with weak matches.
-  const topHealthy = CATEGORY_KEYWORDS.map(({ category, include, exclude }) => ({
-    category,
-    picks: index.services
-      .filter((s) => {
-        if (s.ours || s.status !== "healthy") return false;
-        if (s.verification !== "delivered" && s.verification !== "gate") return false;
-        const hay = `${s.serviceName} ${s.description}`;
-        return include.test(hay) && !(exclude && exclude.test(hay));
-      })
-      .sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.latencyMs - b.latencyMs)
-      .slice(0, 3)
-      .map((s) => ({ serviceId: s.serviceId, serviceName: s.serviceName, score: s.score ?? 0 })),
-  })).filter((c) => c.picks.length > 0);
+  // One evidence-backed list: services that delivered a real answer to a
+  // paid request in the last 72h, most recent first. Fewer than 3 → pad with
+  // healthy gate-verified services, labelled differently so the claim stays
+  // exact.
+  const cutoff = Date.parse(index.generatedAt) - 72 * 3600_000;
+  const paidDelivered = index.services
+    .filter((s) => {
+      const lp = s.lastPaidVerification;
+      return !s.ours && lp?.outcome === "delivered" && Date.parse(lp.at) >= cutoff;
+    })
+    .sort((a, b) => Date.parse(b.lastPaidVerification!.at) - Date.parse(a.lastPaidVerification!.at))
+    .slice(0, 5)
+    .map((s) => ({ serviceId: s.serviceId, serviceName: s.serviceName, agentName: s.agentName, score: s.score ?? 0, paid: true }));
+  const recentDeliveries =
+    paidDelivered.length >= 3
+      ? paidDelivered
+      : [
+          ...paidDelivered,
+          ...index.services
+            .filter(
+              (s) =>
+                !s.ours &&
+                s.status === "healthy" &&
+                (s.verification === "delivered" || s.verification === "gate") &&
+                !paidDelivered.some((p) => p.serviceId === s.serviceId),
+            )
+            .sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.latencyMs - b.latencyMs)
+            .slice(0, Math.max(0, 3 - paidDelivered.length))
+            .map((s) => ({ serviceId: s.serviceId, serviceName: s.serviceName, agentName: s.agentName, score: s.score ?? 0, paid: false })),
+        ];
 
   const providerIssues = index.services
     .filter((s) => !s.ours)
     .flatMap((s) =>
       s.flags
         .filter((f) => f.startsWith("Payment challenge declares") || f.startsWith("Payment not enforced"))
-        .map((f) => `${s.serviceName || s.agentName} (#${s.serviceId}): ${f}`),
+        .map((f) => ({
+          serviceId: s.serviceId,
+          serviceName: s.serviceName || s.agentName,
+          agentName: s.agentName,
+          kind: (f.startsWith("Payment challenge declares") ? "domain" : "paywall") as "domain" | "paywall",
+          flag: f,
+        })),
     )
     .slice(0, 6);
 
@@ -426,7 +456,7 @@ function marketView(index: MarketplaceIndex, prev: Map<string, string>): NonNull
         ? `Paid & delivered ${agg.paidDeliveredVerified} of ${agg.paidSettledVerified} settled calls with verified inputs`
         : null,
     notableChanges,
-    topHealthy,
+    recentDeliveries,
     providerIssues,
   };
 }
@@ -496,7 +526,9 @@ export function buildMarketplaceBriefing(
         `Status: ${agg.healthy} healthy, ${agg.degraded} degraded, ${agg.unverified} unverified, ${agg.broken} broken, ${agg.unreachable} unreachable.`,
         ...(market?.paidHeadline ? [market.paidHeadline + "."] : []),
         ...((market?.notableChanges ?? []).map((c) => `Changed since last run — ${c}.`)),
-        ...(market?.providerIssues.slice(0, 2).map((p) => `Provider issue — ${p}`) ?? []),
+        ...(market?.providerIssues
+          .slice(0, 2)
+          .map((p) => `Provider issue — ${p.serviceName} (#${p.serviceId}): ${p.flag}`) ?? []),
       ];
 
   const switchTarget = services.find((s) => s.recommendation === "switch");
@@ -545,12 +577,22 @@ function seg(speaker: "Alex" | "Morgan", topic: string, text: string): ScriptSeg
  * Two-speaker script from the deterministic briefing content — 6–10
  * segments, alternating Alex/Morgan, short sentences, ~60–90s of speech.
  */
-/** "healthy → broken" in JSON becomes "went from healthy to broken" aloud. */
+/** "healthy → broken" in JSON becomes "went from healthy to broken" aloud.
+    Only transitions a buyer cares about are spoken — moves to/from
+    "unverified" mostly reflect our method changes, so they stay JSON-only. */
 function spokenChange(change: string | null): string | null {
   if (!change) return null;
   const [from, to] = change.split("→").map((x) => x.trim());
-  return from && to ? `went from ${from} to ${to}` : change;
+  if (!from || !to) return change;
+  const involves = (s: string) => s === "broken" || s === "unreachable";
+  const healthPair = (f: string, t: string) =>
+    (f === "healthy" || f === "degraded") && (t === "healthy" || t === "degraded");
+  if (!involves(from) && !involves(to) && !healthPair(from, to)) return null;
+  return `went from ${from} to ${to}`;
 }
+
+const SPELL_NUM = ["no", "one", "two", "three", "four", "five", "six"] as const;
+const numWord = (n: number) => (n < SPELL_NUM.length ? SPELL_NUM[n] : String(n));
 
 export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] {
   const parts: [string, string][] = [];
@@ -567,44 +609,56 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
     if (b.market?.paidHeadline) {
       parts.push([
         "Paid verification",
-        `On the paid side, we made real payments on X Layer. ${b.market.paidHeadline}, counting only calls built on verified inputs.`,
+        `We made real payments on X Layer: ${b.market.paidHeadline.replace(/^Paid & delivered (\d+) of (\d+).*$/, "$1 of $2 services that settled delivered a real answer")}, using inputs we could verify.`,
       ]);
     }
-    const changes = (b.market?.notableChanges ?? []).slice(0, 3);
+    const changes = (b.market?.notableChanges ?? [])
+      .map((c) => {
+        const m = c.match(/^(.*)\s*\(#\d+\):\s*(.*)$/);
+        if (!m) return null;
+        const spoken = spokenChange(m[2].trim());
+        return spoken ? `${m[1].trim()} ${spoken}` : null;
+      })
+      .filter((c): c is string => c !== null)
+      .slice(0, 3);
     if (changes.length) {
-      parts.push([
-        "What changed",
-        `Since the last run: ${changes
-          .map((c) => {
-            const m = c.match(/^(.*)\s*\(#\d+\):\s*(.*)$/);
-            if (!m) return c;
-            return `${m[1].trim()} ${spokenChange(m[2].trim()) ?? m[2].trim()}`;
-          })
-          .join(". ")}.`,
-      ]);
+      parts.push(["What changed", `Since the last run: ${changes.join(". ")}.`]);
     }
-    for (const cat of (b.market?.topHealthy ?? []).slice(0, 3)) {
-      if (!cat.picks.length) continue;
-      parts.push([
-        `Top picks — ${cat.category}`,
-        `For ${cat.category}, the strongest verified services are ${cat.picks
-          .map((p) => `${p.serviceName} at ${p.score}`)
-          .join(", ")}.`,
-      ]);
+    const deliveries = b.market?.recentDeliveries ?? [];
+    if (deliveries.length) {
+      const paid = deliveries.filter((d) => d.paid);
+      const gate = deliveries.filter((d) => !d.paid);
+      let text = "";
+      if (paid.length) {
+        text =
+          `In the last 72 hours, ${numWord(paid.length)} service${paid.length === 1 ? "" : "s"} delivered a real answer ` +
+          `to a paid request: ${spokenNameList(paid)}.`;
+      }
+      if (gate.length) {
+        text += `${text ? " " : ""}Also verified at the payment gate: ${spokenNameList(gate)}.`;
+      }
+      parts.push(["Delivered & verified", text]);
     }
-    const issues = (b.market?.providerIssues ?? []).slice(0, 2);
+    // Provider issues grouped by kind — one sentence per issue type, with
+    // names joined (non-Latin listings collapse into a count for TTS).
+    const issues = b.market?.providerIssues ?? [];
     if (issues.length) {
-      parts.push([
-        "Provider issues",
-        `Worth flagging to providers: ${issues
-          .map((i) => {
-            const m = i.match(/^(.*)\s*\(#\d+\):\s*(.*)$/);
-            const name = m ? m[1].trim() : "One service";
-            const flag = m ? m[2] : i;
-            return `${name}: ${flagToPlain(flag)}`;
-          })
-          .join(" ")}`,
-      ]);
+      const domain = issues.filter((i) => i.kind === "domain");
+      const paywall = issues.filter((i) => i.kind === "paywall");
+      const sentences: string[] = [];
+      if (domain.length) {
+        sentences.push(
+          `${numWord(domain.length)} service${domain.length === 1 ? " declares" : "s declare"} the wrong token details ` +
+            `in their payment request, so standard payment clients can't pay them: ${spokenNameList(domain)}.`,
+        );
+      }
+      if (paywall.length) {
+        sentences.push(
+          `${numWord(paywall.length)} service${paywall.length === 1 ? " returned" : "s returned"} a full response ` +
+            `without charging — a provider note, not buyer risk: ${spokenNameList(paywall)}.`,
+        );
+      }
+      parts.push(["Provider issues", `Worth flagging to providers: ${sentences.join(" ")}`]);
     }
   } else {
     parts.push([
@@ -612,17 +666,17 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
       `You asked about ${b.services.length} marketplace service${b.services.length === 1 ? "" : "s"}, as of ${when}. Here is where each stands.`,
     ]);
     for (const s of b.services.slice(0, 4)) {
-      const name = s.serviceName || s.agentName;
+      const name = spokenName(s.serviceName || s.agentName, s.agentName);
       const change = spokenChange(s.changeSincePrev);
       const note = s.notes[0] ? ` ${s.notes[0]}` : "";
       const verLine =
         s.verification === "delivered" && (s.paidOutcome === "delivered" || s.paidOutcome === "thin")
-          ? "it delivered a real answer to a paid request"
+          ? "It delivered a real answer to a paid request"
           : (VERIFICATION_SPOKEN[s.verification] ?? "verification unknown");
       parts.push([
         name,
         `${name} is ${STATUS_SPOKEN[s.status]}, ${scoreWords(s.score)}. ` +
-          `${verLine}.` +
+          `${verLine.charAt(0).toUpperCase()}${verLine.slice(1)}.` +
           (change ? ` Since the last run it ${change}.` : "") +
           note,
       ]);
@@ -634,7 +688,7 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
         recs
           .slice(0, 3)
           .map((s) => {
-            const name = s.serviceName || s.agentName;
+            const name = spokenName(s.serviceName || s.agentName, s.agentName);
             const alt = s.recommendation === "switch" && s.alternatives[0]
               ? ` Consider ${s.alternatives[0].serviceName} instead.`
               : "";
@@ -659,10 +713,11 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
   // Alternate speakers, cap at 10; every text passes the speech sanitiser —
   // no ids, arrows, HTTP codes or protocol jargon make it to audio.
   const capped = parts.slice(0, 10);
-  const seen = new Set<string>();
   const script = capped.map(([topic, text], i) => {
     let t = sanitizeSpeech(text);
-    // Dedupe identical sentences within a segment (translated flags can repeat).
+    // Dedupe identical sentences within a segment only — a repeated line
+    // across different services ("it delivered…") is correct, not noise.
+    const seen = new Set<string>();
     t = t
       .split(/(?<=[.!?])\s+/)
       .filter((sent) => (seen.has(sent) ? false : (seen.add(sent), true)))

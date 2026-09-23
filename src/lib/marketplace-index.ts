@@ -1423,7 +1423,31 @@ export function scoreListing(
             ? "healthy"
             : "degraded";
 
-  return { score: status === "unverified" ? null : score, status, checks, flags, verification, subScores };
+  // Score/status consistency: a degraded headline can't read "100 out of
+  // 100" — the cap carries through to the registry payload and every page.
+  const capped =
+    status === "degraded" ? Math.min(score, 79) : status === "broken" ? Math.min(score, 40) : score;
+  return { score: status === "unverified" ? null : capped, status, checks, flags, verification, subScores };
+}
+
+/**
+ * One missed check is not "unreachable" — transient network/timeout errors
+ * are common. Only two consecutive failed runs earn `unreachable`; the first
+ * miss after a live run downgrades to `degraded` with a neutral flag.
+ * `prevStatus` comes from the previous index run.
+ */
+export function finalizeVerdict(
+  verdict: ListingVerdict,
+  prevStatus: string | undefined,
+): ListingVerdict {
+  if (verdict.status !== "unreachable") return verdict;
+  if (prevStatus === "unreachable" || prevStatus === "broken") return verdict;
+  return {
+    ...verdict,
+    status: "degraded",
+    score: Math.min(verdict.score ?? 0, 79),
+    flags: [...verdict.flags, "Missed the latest check"],
+  };
 }
 
 // ── Verify ledger ($1/day, keyed by UTC date) ──────────────────────────────
@@ -1595,6 +1619,9 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
   const results: IndexedService[] = [];
   const checkById = new Map<string, ListingCheck>();
   const probeById = new Map<string, ValidCallProbe | null>();
+  const prevStatusById = new Map(
+    (prevIndex?.services ?? []).map((s) => [s.serviceId, s.status as string]),
+  );
   const queue = [...MARKETPLACE_SERVICES];
 
   async function worker() {
@@ -1605,16 +1632,33 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
       let check: ListingCheck;
       try {
         check = await checkListing(service);
+        // One retry after ~2s before a network failure counts — transient
+        // timeouts must not flip a service to unreachable on a single blip.
+        if (check.status === 0) {
+          await new Promise((r) => setTimeout(r, 2000));
+          check = await checkListing(service);
+        }
       } catch (e) {
+        const v = finalizeVerdict(
+          {
+            score: 0,
+            status: "unreachable",
+            checks: {
+              availability: { pass: "fail", detail: e instanceof Error ? e.message : "Rejected" },
+            },
+            flags: [],
+            verification: "none",
+            subScores: { availability: 0, paymentIntegrity: null, delivery: null },
+          },
+          prevStatusById.get(service.serviceId),
+        );
         results.push({
           ...service,
           ours,
-          score: 0,
-          status: "unreachable",
-          checks: {
-            availability: { pass: "fail", detail: e instanceof Error ? e.message : "Rejected" },
-          },
-          flags: [],
+          score: v.score,
+          status: v.status,
+          checks: v.checks,
+          flags: v.flags,
           latencyMs: 0,
           httpStatus: 0,
           verification: "none",
@@ -1635,7 +1679,10 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
         }
       }
       probeById.set(service.serviceId, probe);
-      const verdict = scoreListing(check, service, probe);
+      const verdict = finalizeVerdict(
+        scoreListing(check, service, probe),
+        prevStatusById.get(service.serviceId),
+      );
       const prior = prevPaid[service.serviceId];
       results.push({
         ...service,
@@ -1725,7 +1772,10 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
         });
       }
       // Re-score with the paid evidence included.
-      const verdict = scoreListing(check, svc, probe, paidResult);
+      const verdict = finalizeVerdict(
+        scoreListing(check, svc, probe, paidResult),
+        prevStatusById.get(svc.serviceId),
+      );
       const row = byId.get(svc.serviceId);
       if (row) {
         row.score = verdict.score;
