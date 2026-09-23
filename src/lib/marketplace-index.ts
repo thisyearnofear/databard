@@ -65,6 +65,12 @@ export interface ListingCheck {
   challengeHeader: string | null;
   challenge: PaymentChallenge | null;
   error?: string;
+  /** Set when the endpoint answered a real MCP (JSON-RPC) handshake. */
+  protocol?: "mcp";
+  /** result.serverInfo.name from initialize, when known. */
+  mcpServerName?: string;
+  /** tools the server listed, when tools/list succeeded. */
+  toolCount?: number;
 }
 
 export interface CheckScore {
@@ -92,6 +98,9 @@ export interface IndexedService extends MarketplaceService {
   deep?: DeepCheck;
   /** Share of recent runs where this service was healthy or degraded. */
   uptimePct?: number;
+  protocol?: "mcp";
+  mcpServerName?: string;
+  toolCount?: number;
 }
 
 export interface MarketplaceIndex {
@@ -282,6 +291,126 @@ export async function checkListing(
     return false;
   };
 
+  // Many OKX listings are real MCP servers (Streamable HTTP): they speak
+  // JSON-RPC, answer 202/not-JSON to a bare `{}`, and gate payment per tool
+  // call rather than at the listing endpoint. When the listing looks MCP —
+  // path ends in /mcp, status 202, a JSON-RPC-shaped body, or a non-JSON 2xx —
+  // run a real initialize → notifications/initialized → tools/list handshake
+  // so we measure the protocol it actually speaks. A 402 at any step is a
+  // normal x402 challenge and flows through the same gate/price scoring.
+  interface McpOutcome {
+    attempt: Attempt;
+    serverName?: string;
+    toolCount?: number;
+  }
+
+  const parseJsonRpc = (snippet: string, parsed: unknown): Record<string, unknown> | null => {
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const o = parsed as Record<string, unknown>;
+      if (o.jsonrpc === "2.0" || o.result !== undefined || o.error !== undefined) return o;
+    }
+    // SSE: collect JSON-RPC messages from `data:` lines of the last event block
+    for (const line of snippet.split("\n")) {
+      const t = line.trim();
+      if (!t.startsWith("data:")) continue;
+      try {
+        const o = JSON.parse(t.slice(5).trim());
+        if (o && typeof o === "object" && (o.jsonrpc === "2.0" || o.result !== undefined || o.error !== undefined)) {
+          return o as Record<string, unknown>;
+        }
+      } catch {
+        // not a JSON data line
+      }
+    }
+    return null;
+  };
+
+  async function mcpPost(payload: unknown, sessionId?: string): Promise<Attempt & { sessionId?: string; rpc?: Record<string, unknown> | null }> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+    const start = Date.now();
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          ...(sessionId ? { "MCP-Session-Id": sessionId } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      const snippet = (await res.text()).slice(0, MAX_BODY);
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(snippet);
+      } catch {
+        // SSE or non-JSON
+      }
+      return {
+        status: res.status,
+        latencyMs: Date.now() - start,
+        contentType: res.headers.get("content-type") ?? "",
+        bodySnippet: snippet,
+        bodyJson: parsed,
+        challengeHeader: res.headers.get("PAYMENT-REQUIRED") ?? res.headers.get("payment-required"),
+        sessionId: res.headers.get("mcp-session-id") ?? res.headers.get("Mcp-Session-Id") ?? undefined,
+        rpc: parseJsonRpc(snippet, parsed),
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function mcpHandshake(): Promise<McpOutcome | null> {
+    const init = await mcpPost({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "databard-probe", version: "1.0" },
+      },
+    });
+    // A challenge up front still counts — the endpoint IS the paywall.
+    if (init.status === 402) return { attempt: init };
+    const initResult = init.rpc?.result as Record<string, unknown> | undefined;
+    if (!initResult) return null;
+    const serverName =
+      typeof (initResult.serverInfo as Record<string, unknown> | undefined)?.name === "string"
+        ? (initResult.serverInfo as Record<string, unknown>).name as string
+        : undefined;
+
+    // Tell the server we're ready, then list its tools.
+    await mcpPost({ jsonrpc: "2.0", method: "notifications/initialized" }, init.sessionId).catch(() => undefined);
+    const tools = await mcpPost(
+      { jsonrpc: "2.0", id: 2, method: "tools/list" },
+      init.sessionId,
+    );
+    if (tools.status === 402) return { attempt: tools, serverName };
+    const toolsResult = tools.rpc?.result as Record<string, unknown> | undefined;
+    const toolCount = Array.isArray(toolsResult?.tools)
+      ? (toolsResult.tools as unknown[]).length
+      : undefined;
+    return { attempt: tools, serverName, toolCount };
+  }
+
+  const looksMcp = (a: Attempt): boolean => {
+    try {
+      if (/\/mcp\/?$/i.test(new URL(url).pathname)) return true;
+    } catch {
+      // malformed URL — assertPublicUrl already ran, ignore
+    }
+    if (a.status === 202) return true;
+    const obj = a.bodyJson && typeof a.bodyJson === "object" ? (a.bodyJson as Record<string, unknown>) : null;
+    if (obj && (obj.jsonrpc !== undefined || (obj.error !== undefined && obj.id !== undefined))) return true;
+    if (a.status >= 200 && a.status < 300 && a.bodyJson === null) return true;
+    return false;
+  };
+
+  let mcp: McpOutcome | null = null;
+
   try {
     let a = await attempt("POST");
     if (a.status === 404 || a.status === 405 || (a.status >= 200 && a.status < 500 && saysWrongMethod(a))) {
@@ -296,6 +425,17 @@ export async function checkListing(
       a = better;
       checkedMethod = a === g ? "GET" : "POST";
     }
+    if (looksMcp(a)) {
+      try {
+        mcp = await mcpHandshake();
+      } catch {
+        mcp = null; // handshake failed — fall back to the plain check
+      }
+      if (mcp) {
+        a = mcp.attempt;
+        checkedMethod = "POST";
+      }
+    }
     latencyMs = a.latencyMs;
     return {
       service,
@@ -309,6 +449,9 @@ export async function checkListing(
       bodyJson: a.bodyJson,
       challengeHeader: a.challengeHeader,
       challenge: a.status === 402 ? decodeChallenge(a.challengeHeader, a.bodyJson) : null,
+      ...(mcp
+        ? { protocol: "mcp" as const, mcpServerName: mcp.serverName, toolCount: mcp.toolCount }
+        : {}),
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Request failed";
@@ -336,6 +479,28 @@ export interface ListingVerdict {
   status: IndexedService["status"];
   checks: Record<string, CheckScore>;
   flags: string[];
+}
+
+/** Envelope/protocol keys that don't count as payload content. */
+const META_KEYS = new Set([
+  "error", "message", "msg", "code", "ok", "success", "status", "statusCode",
+  "jsonrpc", "id", "timestamp", "requestId", "request_id", "detail",
+]);
+
+/** True only when a 2xx body carries real content: a non-empty array, a
+    populated data/result payload, or ≥3 substantive object keys. Thin or
+    empty JSON on a paid listing is NOT proof it skipped the paywall. */
+function isSubstantiveJson(body: unknown): boolean {
+  if (Array.isArray(body)) return body.length > 0;
+  if (!body || typeof body !== "object") return false;
+  const obj = body as Record<string, unknown>;
+  for (const k of ["data", "result"]) {
+    const v = obj[k];
+    if (Array.isArray(v) && v.length > 0) return true;
+    if (v && typeof v === "object" && Object.keys(v).length > 0) return true;
+    if (typeof v === "string" && v.trim().length > 0) return true;
+  }
+  return Object.keys(obj).filter((k) => !META_KEYS.has(k)).length >= 3;
 }
 
 /** True when the response signals an application-level error rather than a
@@ -398,18 +563,37 @@ export function scoreListing(
   let gate = 0;
   const challenged = check.status === 402;
   const ch = check.challenge;
-  /** Paid listing whose response errored before reaching the payment gate —
-      neutral: input validation before payment is a legitimate design. */
+  /** Paid listing whose response errored/thinned out before the payment
+      gate — neutral: input validation, docs pages, and MCP servers that gate
+      per tool call are all legitimate designs. */
   let gateNotReached = false;
   if (feeUsd > 0) {
     if (!challenged) {
-      if (bodyHasErrorSignal(check)) {
+      if (check.protocol === "mcp") {
+        gateNotReached = true;
+        gate = 15;
+        flags.push("MCP server — payment is enforced per tool call; listing-level gate not checked");
+        checks.paymentGate = {
+          pass: "partial",
+          detail: `MCP ${check.mcpServerName ?? "server"}${check.toolCount !== undefined ? `, ${check.toolCount} tools` : ""} — per-call paywall not visible at listing level`,
+        };
+      } else if (bodyHasErrorSignal(check)) {
         gateNotReached = true;
         gate = 15;
         flags.push("Payment gate not reached — service rejects empty input before payment");
         checks.paymentGate = {
           pass: "partial",
           detail: `HTTP ${check.status} with an error body — input validation may precede the paywall`,
+        };
+      } else if (!isSubstantiveJson(check.bodyJson)) {
+        // Non-JSON or thin/empty JSON — a docs page or an async accept is not
+        // evidence the paywall was skipped. Neutral.
+        gateNotReached = true;
+        gate = 15;
+        flags.push("Returned non-payload content (docs page or empty body); payment gate not reached");
+        checks.paymentGate = {
+          pass: "partial",
+          detail: `HTTP ${check.status}, ${check.bodyJson === null ? "non-JSON" : "thin"} body — no payload without payment`,
         };
       } else {
         flags.push(`Listed at $${feeUsd} but returned a response without requesting payment`);
@@ -477,19 +661,22 @@ export function scoreListing(
   };
 
   // ── json (10) ──────────────────────────────────────────────────────────
-  const isJson = check.bodyJson !== null || (challenged && ch !== null && !ch.undecodable);
+  const isJson =
+    check.bodyJson !== null ||
+    check.protocol === "mcp" || // JSON-RPC payload (may arrive via SSE)
+    (challenged && ch !== null && !ch.undecodable);
   checks.json = {
     pass: isJson ? "pass" : "fail",
-    detail: isJson ? "JSON response" : "Non-JSON body",
+    detail: isJson ? (check.protocol === "mcp" ? "JSON-RPC response" : "JSON response") : "Non-JSON body",
   };
 
   // ── selfDescribing (5) ─────────────────────────────────────────────────
-  let selfDescribing = false;
+  let selfDescribing = check.protocol === "mcp" && check.toolCount !== undefined;
   if (ch?.resourceDescription && ch.resourceDescription.trim()) {
     selfDescribing = true;
   } else if (check.bodyJson && typeof check.bodyJson === "object") {
     const b = check.bodyJson as Record<string, unknown>;
-    selfDescribing =
+    selfDescribing = selfDescribing ||
       typeof b.description === "string" ||
       typeof b.error === "string" ||
       b.schema !== undefined ||
@@ -641,6 +828,7 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
         flags: verdict.flags,
         latencyMs: check.latencyMs,
         httpStatus: check.status,
+        ...(check.protocol ? { protocol: check.protocol, mcpServerName: check.mcpServerName, toolCount: check.toolCount } : {}),
       });
     }
   }

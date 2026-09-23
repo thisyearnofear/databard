@@ -218,16 +218,15 @@ function assert(condition: boolean, label: string) {
 // ── checkListing method fallback (mocked fetch) ──────────────────────────
 
 async function withFetch(
-  handler: (method: string) => { status: number; body?: string; headers?: Record<string, string> },
+  handler: (method: string, body?: string) => { status: number; body?: string; headers?: Record<string, string | undefined> },
   fn: () => Promise<void>,
 ) {
   const orig = globalThis.fetch;
-  globalThis.fetch = (async (_url: unknown, init?: { method?: string }) => {
-    const r = handler((init?.method ?? "GET").toUpperCase());
-    return new Response(r.body ?? "", {
-      status: r.status,
-      headers: { "content-type": "application/json", ...(r.headers ?? {}) },
-    });
+  globalThis.fetch = (async (_url: unknown, init?: { method?: string; body?: string }) => {
+    const r = handler((init?.method ?? "GET").toUpperCase(), init?.body);
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    for (const [k, v] of Object.entries(r.headers ?? {})) if (v !== undefined) headers[k] = v;
+    return new Response(r.body ?? "", { status: r.status, headers });
   }) as typeof fetch;
   try {
     await fn();
@@ -318,6 +317,115 @@ await withFetch(
     assert(v.status === "broken", `double-404 → broken (got ${v.status})`);
   },
 );
+
+// MCP server on /mcp path — plain {} POST gets JSON-RPC error, handshake lists tools
+await withFetch(
+  (_m, body) => {
+    if (body?.includes('"initialize"')) {
+      return { status: 200, body: JSON.stringify({ jsonrpc: "2.0", id: 1, result: { serverInfo: { name: "coin-signal" }, capabilities: {} } }), headers: { "mcp-session-id": "sess1" } };
+    }
+    if (body?.includes('"tools/list"')) {
+      return { status: 200, body: JSON.stringify({ jsonrpc: "2.0", id: 2, result: { tools: [{ name: "price" }, { name: "signals" }] } }) };
+    }
+    if (body?.includes('"notifications/initialized"')) return { status: 202, body: "" };
+    return { status: 400, body: '{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid Request"}}' };
+  },
+  async () => {
+    const c = await checkListing(svc({ endpoint: "https://api.example.com/mcp", feeUsd: 0.5 }));
+    assert(c.protocol === "mcp", `mcp detected (got ${c.protocol})`);
+    assert(c.mcpServerName === "coin-signal", `server name (got ${c.mcpServerName})`);
+    assert(c.toolCount === 2, `toolCount 2 (got ${c.toolCount})`);
+    const v = scoreListing(c, c.service);
+    assert(v.checks.paymentGate.pass === "partial", "mcp gate partial");
+    assert(v.flags.includes("MCP server — payment is enforced per tool call; listing-level gate not checked"), "mcp neutral flag");
+    assert(!v.flags.some((f) => f.includes("without requesting")), "no accusation on mcp");
+  },
+);
+
+// MCP over SSE — data: lines instead of a JSON body
+await withFetch(
+  (_m, body) => {
+    if (body?.includes('"initialize"')) {
+      return { status: 200, body: 'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"sse-mcp"},"capabilities":{}}}\n\n', headers: { "content-type": "text/event-stream" } };
+    }
+    if (body?.includes('"tools/list"')) {
+      return { status: 200, body: 'data: {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"t1"}]}}\n\n', headers: { "content-type": "text/event-stream" } };
+    }
+    return { status: 202, body: "" };
+  },
+  async () => {
+    const c = await checkListing(svc({ endpoint: "https://api.example.com/mcp", feeUsd: 0 }));
+    assert(c.protocol === "mcp" && c.mcpServerName === "sse-mcp" && c.toolCount === 1, `sse mcp (got ${c.protocol}/${c.mcpServerName}/${c.toolCount})`);
+    const v = scoreListing(c, c.service);
+    assert(v.status === "healthy", `sse mcp free → healthy (got ${v.status} ${v.score})`);
+  },
+);
+
+// MCP server that 402s on tools/list → real challenge captured, gate scores normally
+await withFetch(
+  (_m, body) => {
+    if (body?.includes('"initialize"')) {
+      return { status: 200, body: JSON.stringify({ jsonrpc: "2.0", id: 1, result: { serverInfo: { name: "paid-mcp" } } }), headers: { "mcp-session-id": "s9" } };
+    }
+    if (body?.includes('"tools/list"')) {
+      const ch = Buffer.from(JSON.stringify({ x402Version: 2, accepts: [{ network: "eip155:196", amount: "500000" }] })).toString("base64");
+      return { status: 402, body: "{}", headers: { "payment-required": ch } };
+    }
+    return { status: 202, body: "" };
+  },
+  async () => {
+    const c = await checkListing(svc({ endpoint: "https://api.example.com/mcp", feeUsd: 0.5 }));
+    assert(c.protocol === "mcp" && c.status === 402, `mcp 402 on tools/list (got ${c.status})`);
+    assert(c.challenge?.amountUsd === 0.5, "mcp challenge amount");
+    const v = scoreListing(c, c.service);
+    assert(v.checks.paymentGate.pass === "pass", "mcp 402 gate pass");
+    assert(v.status === "healthy", `mcp+402 → healthy (got ${v.status})`);
+  },
+);
+
+// 202 empty on a non-/mcp path — handshake attempted, fails, plain check kept
+await withFetch(
+  (_m, body) => (body?.includes('"initialize"') ? { status: 404 } : { status: 202, body: "" }),
+  async () => {
+    const c = await checkListing(svc({ endpoint: "https://api.example.com/async", feeUsd: 1 }));
+    assert(c.protocol !== "mcp", "failed handshake falls back");
+    const v = scoreListing(c, c.service);
+    assert(v.checks.paymentGate.pass === "partial", "202-empty gate partial");
+    assert(v.flags.includes("Returned non-payload content (docs page or empty body); payment gate not reached"), `neutral non-payload flag (got ${v.flags.join("|")})`);
+    assert(!v.flags.some((f) => f.includes("without requesting")), "no accusation on empty 202");
+  },
+);
+
+// HTML docs page on a paid listing → neutral, not an accusation
+await withFetch(
+  () => ({ status: 200, body: "<html><body>API docs</body></html>", headers: { "content-type": "text/html" } }),
+  async () => {
+    const c = await checkListing(svc({ feeUsd: 2 }));
+    assert(c.protocol !== "mcp", "html not mcp");
+    const v = scoreListing(c, c.service);
+    assert(v.flags.includes("Returned non-payload content (docs page or empty body); payment gate not reached"), "html neutral flag");
+    assert(v.checks.paymentGate.pass === "partial", "html gate partial");
+  },
+);
+
+// Substantive JSON 200 on paid listing → the real accusation survives
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(check({ status: 200, bodyJson: { data: [{ x: 1 }], status: "ok" } }), s);
+  assert(v.checks.paymentGate.pass === "fail", "substantive data payload fails gate");
+  assert(v.flags.some((f) => f.includes("returned a response without requesting payment")), "substantive accusation stays");
+}
+{
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(check({ status: 200, bodyJson: { prices: { BTC: 1 }, chains: ["x"], updated: "today" } }), s);
+  assert(v.flags.some((f) => f.includes("returned a response without requesting payment")), "3 substantive keys accusation stays");
+}
+{
+  // thin envelope ({ok:true} only) is NOT substantive
+  const s = svc({ feeUsd: 0.01 });
+  const v = scoreListing(check({ status: 200, bodyJson: { ok: true } }), s);
+  assert(v.flags.includes("Returned non-payload content (docs page or empty body); payment gate not reached"), "thin body neutral");
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
