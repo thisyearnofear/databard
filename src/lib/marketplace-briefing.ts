@@ -679,7 +679,7 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
       const change = spokenChange(s.changeSincePrev);
       const note = s.notes[0] ? ` ${s.notes[0]}` : "";
       const verLine =
-        s.verification === "delivered" && (s.paidOutcome === "delivered" || s.paidOutcome === "thin")
+        s.paidOutcome === "delivered" || s.paidOutcome === "thin"
           ? "It delivered a real answer to a paid request"
           : (VERIFICATION_SPOKEN[s.verification] ?? "verification unknown");
       parts.push([
