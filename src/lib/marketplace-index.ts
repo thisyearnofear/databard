@@ -21,6 +21,7 @@ import { getDataPath } from "./data-dir";
 import { serial } from "./serial-queue";
 import { assertPublicUrl, attemptX402Payment } from "./probe-runner";
 import { attestVerdict } from "./probe-attestation";
+import { diffForChain, chunkBatches, indexHashOf, publishIndexRun } from "./probe-registry";
 import snapshot from "./okx-marketplace.snapshot.json";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -119,7 +120,13 @@ export interface MarketplaceIndex {
     deepChecked: number;
     deepSpentUsd: number;
   };
-  attestation?: { txHash?: string; error?: string };
+  attestation?: {
+    txHash?: string;
+    registry?: string;
+    txHashes?: string[];
+    updated?: number;
+    error?: string;
+  };
   services: IndexedService[];
 }
 
@@ -902,16 +909,38 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
     services: results.sort((a, b) => b.score - a.score || a.agentId.localeCompare(b.agentId)),
   };
 
+  const compactResults = {
+    kind: "okx-marketplace-index",
+    generatedAt,
+    services: results.map((r) => ({ serviceId: r.serviceId, score: r.score, status: r.status })),
+  };
+
   if (opts.attest) {
-    try {
-      const att = await attestVerdict({
-        kind: "okx-marketplace-index",
-        generatedAt,
-        services: results.map((r) => ({ serviceId: r.serviceId, score: r.score, status: r.status })),
-      });
-      index.attestation = { txHash: att.txHash };
-    } catch (e) {
-      index.attestation = { error: e instanceof Error ? e.message : "Attestation failed" };
+    const registry = process.env.PROBE_REGISTRY_ADDRESS;
+    if (registry) {
+      // On-chain registry: publish only what changed since the last run —
+      // other contracts gate payments on scoreOf / isSafeToPay.
+      try {
+        const prevIndex = await getLatestIndex();
+        const changed = diffForChain(results, prevIndex?.services);
+        const batches = chunkBatches(changed);
+        const pub = await publishIndexRun(
+          indexHashOf(compactResults),
+          generatedAt,
+          ranked.length,
+          batches,
+        );
+        index.attestation = pub;
+      } catch (e) {
+        index.attestation = { error: e instanceof Error ? e.message : "Registry publish failed" };
+      }
+    } else {
+      try {
+        const att = await attestVerdict(compactResults);
+        index.attestation = { txHash: att.txHash };
+      } catch (e) {
+        index.attestation = { error: e instanceof Error ? e.message : "Attestation failed" };
+      }
     }
   }
 

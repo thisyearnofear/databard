@@ -147,6 +147,28 @@ export default async function MarketplaceServicePage({
           </section>
         )}
 
+        {/* On-chain read for contracts/agents */}
+        {process.env.PROBE_REGISTRY_ADDRESS && (
+          <section className="mt-6 border border-[var(--border)] bg-[var(--surface)] px-5 py-4" aria-labelledby="onchain">
+            <h2 id="onchain" className="text-sm font-semibold">For contracts — read this score on-chain</h2>
+            <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">
+              Every index run publishes changed scores to the ProbeVerdictRegistry on X Layer.
+              Gate a payment on it directly:
+            </p>
+            <pre className="mt-3 overflow-x-auto rounded bg-[var(--bg)] p-3 text-xs text-[var(--text)]">{`isSafeToPay(${svc.serviceId}, 70, 1 days)
+// → true when the last published verdict is healthy/degraded,
+//   score ≥ 70, checked within 1 day`}</pre>
+            <a
+              href={`https://www.oklink.com/xlayer/address/${process.env.PROBE_REGISTRY_ADDRESS}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-xs text-[var(--accent)] hover:underline"
+            >
+              Registry {process.env.PROBE_REGISTRY_ADDRESS.slice(0, 6)}…{process.env.PROBE_REGISTRY_ADDRESS.slice(-4)} on OKLink ↗
+            </a>
+          </section>
+        )}
+
         {/* Badge for the provider's README */}
         <section className="mt-8 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5" aria-labelledby="badge">
           <h2 id="badge" className="text-sm font-semibold">Badge for your README</h2>

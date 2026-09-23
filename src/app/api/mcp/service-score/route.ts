@@ -98,6 +98,13 @@ function shape(svc: IndexedService) {
     checks: svc.checks,
     uptimePct: svc.uptimePct ?? null,
     deep: svc.deep ?? null,
+    onchain: process.env.PROBE_REGISTRY_ADDRESS
+      ? {
+          registry: process.env.PROBE_REGISTRY_ADDRESS,
+          serviceId: svc.serviceId,
+          hint: `Read it yourself: scoreOf(${svc.serviceId}) on ProbeVerdictRegistry (X Layer eip155:196)`,
+        }
+      : null,
     badgeUrl: `${PUBLIC_BASE}/api/probe/badge/${svc.serviceId}`,
     pageUrl: `${PUBLIC_BASE}/probe/marketplace/${svc.serviceId}`,
   };

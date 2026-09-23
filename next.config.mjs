@@ -25,6 +25,7 @@ const nextConfig = {
   outputFileTracingExcludes: {
     "*": [
       "./contracts/**/*",
+      "./contracts-src/**/*",
       "./video/**/*",
       "./videos/**/*",
       "./docs/**/*",

@@ -98,7 +98,21 @@ export default async function MarketplacePage({
               {index.aggregates.freeDemandsPaymentCount} free listing{index.aggregates.freeDemandsPaymentCount === 1 ? "" : "s"} demanding payment
               {index.aggregates.deepChecked > 0 &&
                 ` · ${index.aggregates.deepChecked} verified with a real payment ($${index.aggregates.deepSpentUsd})`}
-              {index.attestation?.txHash && (
+              {index.attestation?.registry && (
+                <>
+                  {" · "}
+                  <a
+                    href={`https://www.oklink.com/xlayer/address/${index.attestation.registry}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--accent)] hover:underline"
+                  >
+                    Scores on-chain: registry {index.attestation.registry.slice(0, 6)}…{index.attestation.registry.slice(-4)}
+                  </a>
+                  {index.attestation.updated !== undefined && ` · ${index.attestation.updated} updated`}
+                </>
+              )}
+              {index.attestation?.txHash && !index.attestation?.registry && (
                 <>
                   {" · "}
                   <a
