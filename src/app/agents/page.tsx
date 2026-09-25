@@ -14,7 +14,10 @@ export const metadata: Metadata = {
   description: "Give your agent a free data health check, compare services before paying, and inspect the evidence behind an answer.",
 };
 
-export const revalidate = 21600;
+/* The landscape is grown from the marketplace index, which lives in the
+   server's data dir — the local build machine cannot prerender it, so read
+   per request (same treatment as /probe/marketplace). */
+export const dynamic = "force-dynamic";
 
 /** The hero landscape, grown from the marketplace index it reports on. */
 async function AgentsLandscape() {
