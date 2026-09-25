@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Give your agent a free data health check, compare services before paying, and inspect the evidence behind an answer.",
 };
 
-export const revalidate = 6 * 3600;
+export const revalidate = 21600;
 
 /** The hero landscape, grown from the marketplace index it reports on. */
 async function AgentsLandscape() {
