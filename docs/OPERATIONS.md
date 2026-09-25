@@ -83,10 +83,16 @@ verification pass: ≤$0.05 fees, ≥72h between re-checks per service, capped b
 verifies without persisting. With `attest=1` changed scores publish to the
 ProbeVerdictRegistry contract on X Layer (`PROBE_REGISTRY_ADDRESS`).
 
-Cron entry (installed by `scripts/deploy.sh`, idempotent):
+Cron entries (installed by `scripts/deploy.sh`, idempotent) — split cadence
+since Sep 25 2026: unpaid gate checks are free and stay 6-hourly; the paid
+verification pass runs every 48h (pre-demand the 72h re-verify cooldown paces
+spend, not the cron — actuals were ~$0.27 over Sep 23–25 against the $1/day
+cap). Paid records carry forward ≤72h, so paid data is never more than ~48h
+stale:
 
 ```cron
-17 */6 * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1&verify=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
+17 */6 * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1&brief=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
+37 5 */2 * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1&verify=1&brief=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
 ```
 
 ## Deploy

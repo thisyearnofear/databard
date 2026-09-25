@@ -219,18 +219,24 @@ ssh "$REMOTE" bash <<EOF
   { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$CRON_LINE"; } | grep -v '^\$' | crontab - \
     || echo "   ⚠️  crontab install failed — existing crontab left untouched"
 
-  # Marketplace health index refresh: unpaid listing checks every 6h at :17,
-  # with on-chain attestation. Idempotent like the watchdog cron above.
-  echo "   Installing marketplace-index cron..."
+  # Marketplace health index refresh, split cadence (Sep 2026: paid verify
+  # every 48h is plenty pre-demand — the 72h re-verify cooldown paces spend,
+  # not the cron; unpaid gate checks are free and stay 6-hourly):
+  #   - unpaid listing checks + attest + daily briefing, every 6h at :17
+  #   - paid verification pass (+attest), every 2 days at 05:37
+  # Idempotent like the watchdog cron above.
+  echo "   Installing marketplace-index crons..."
   # Don't source .env — unquoted values like EMAIL_FROM break `.`; extract just
   # CRON_SECRET via grep/cut. The cron line is base64'd through the heredoc so
   # its quotes and $ survive both shells untouched.
   IDX_CRON=\$(echo 'Q1JPTl9TRUNSRVQ9JChncmVwICdeQ1JPTl9TRUNSRVQ9JyAvb3B0L2RhdGFiYXJkLy5lbnYgfCBjdXQgLWQ9IC1mMi0gfCB0ciAtZCAnXDA0MlwwNDcnKSAmJiBjdXJsIC1zIC1tIDI4MCAtWCBQT1NUIC1IICJ4LWNyb24tc2VjcmV0OiAkQ1JPTl9TRUNSRVQiICJodHRwOi8vMTI3LjAuMC4xOjQyMTAwL2FwaS9wcm9iZS9tYXJrZXRwbGFjZS9yZWZyZXNoP2F0dGVzdD0xJnZlcmlmeT0xJmJyaWVmPTEiID4+IC9vcHQvZGF0YWJhcmQvbG9ncy9jcm9uLW1hcmtldHBsYWNlLWluZGV4LmxvZyAyPiYx' | base64 -d)
   IDX_CRON="17 */6 * * * \$IDX_CRON"
+  IDX_VERIFY_CRON=\$(echo 'Q1JPTl9TRUNSRVQ9JChncmVwICdeQ1JPTl9TRUNSRVQ9JyAvb3B0L2RhdGFiYXJkLy5lbnYgfCBjdXQgLWQ9IC1mMi0gfCB0ciAtZCAnXDA0MlwwNDcnKSAmJiBjdXJsIC1zIC1tIDI4MCAtWCBQT1NUIC1IICJ4LWNyb24tc2VjcmV0OiAkQ1JPTl9TRUNSRVQiICJodHRwOi8vMTI3LjAuMC4xOjQyMTAwL2FwaS9wcm9iZS9tYXJrZXRwbGFjZS9yZWZyZXNoP2F0dGVzdD0xJnZlcmlmeT0xJmJyaWVmPTEiID4+IC9vcHQvZGF0YWJhcmQvbG9ncy9jcm9uLW1hcmtldHBsYWNlLWluZGV4LmxvZyAyPiYx' | base64 -d)
+  IDX_VERIFY_CRON="37 5 */2 * * \$IDX_VERIFY_CRON"
   EXISTING=\$(crontab -l 2>/dev/null || true)
   FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v 'probe/marketplace/refresh' || true)
   mkdir -p /opt/databard/logs 2>/dev/null || true
-  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$IDX_CRON"; } | grep -v '^\$' | crontab - \
+  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$IDX_CRON"; printf '%s\n' "\$IDX_VERIFY_CRON"; } | grep -v '^\$' | crontab - \
     || echo "   ⚠️  crontab install failed — existing crontab left untouched"
 
   # Cleanup old releases (keep last 5)
