@@ -148,7 +148,7 @@ DataBard is registered as an Agent Service Provider (ASP) on OKX.AI, exposing th
 - Briefing: `exact` EIP-3009 USDT0 transfer on X Layer (`eip155:196`), default `$1.00`/call (set `BRIEFING_PRICE_USD`). Text-only marketplace briefing costs ~nothing (no LLM/TTS); a scoped fresh briefing spends ≤$0.10 outbound paid-verification (own cap + shared $1/day ledger) — margin ~$0.90. Schema-mode with audio costs ~$0.30–0.35 (Flash TTS + bookends SFX via `BRIEFING_SFX_MODE`). Settlement only happens after the handler returns <400, so failed synthesis never charges the caller.
 
 ### x402 server setup (`src/lib/x402.ts`)
-Uses the OKX Payment SDK (`@okxweb3/x402-core` + `@okxweb3/x402-evm` + `@okxweb3/x402-next`). The paid route is wrapped with `withX402(handler, briefingRouteConfig, x402Server)` — the SDK handles the 402 challenge (base64 `PAYMENT-REQUIRED` header), signature verification, and on-chain settlement via the OKX facilitator (`syncSettle: true` — the response waits for confirmation; async was tried Sep 25 and settled nothing, so verified payments moved $0).
+Uses the OKX Payment SDK (`@okxweb3/x402-core` + `@okxweb3/x402-evm` + `@okxweb3/x402-next`). The paid route is wrapped with `withX402(handler, briefingRouteConfig, x402Server)` — the SDK handles the 402 challenge (base64 `PAYMENT-REQUIRED` header), signature verification, and on-chain settlement via the OKX facilitator (`syncSettle: true` — the response waits for confirmation; async was tried Sep 25 and returned 200s with no settlement receipt, so `true` stays load-bearing for revenue).
 
 ### Required production env (for the paid endpoint to go live)
 - `PAY_TO_ADDRESS` — X Layer EVM address that receives funds (your Agentic Wallet address)
