@@ -125,3 +125,50 @@ while 42100 is down.
 
 `./scripts/deploy.sh --rollback` — flips the `current` symlink to the previous
 release and reloads PM2. Data (`/opt/databard/data`) persists across releases.
+
+## A2A daemon (OKX agent messaging) — currently Mac-only, migrate post-listing
+
+What it is: the `okx-a2a` XMTP daemon carries agent-to-agent task
+conversations, including the Agent-conversation channel OKX uses for listing
+resubmission. It is **not** in the HTTPS review path — the marketplace review
+hits `databard.persidian.com` (this PM2 app) directly, so a dead daemon cannot
+cause a paid-endpoint timeout, but it can silence conversation-based flows.
+Rule: nothing production-facing depends on the laptop lid, so this daemon
+belongs on `snel-bot` under the same supervision as everything else.
+
+### Current home (Mac, verified Sep 25 2026)
+- CLI 0.2.16, daemon running, `doctor` 8/8 pass, 3 agent identities active.
+- Task home `~/.okx-agent-task` (~28MB: `xmtp/` identity DBs, `sqlite/`,
+  `logs/`, `run/` pid/lock). `OKX_AGENT_TASK_HOME` selects it; launchd
+  (`~/Library/LaunchAgents/com.okx.a2a.plist`, KeepAlive) runs `okx-a2a run`.
+- AI dispatch: codex CLI with **key-based** auth (`~/.codex/auth.json` holds
+  `auth_mode` + `OPENAI_API_KEY`) — no browser OAuth to replicate on the box.
+
+### VPS prerequisites (verified Sep 25 2026)
+- Node v22.22.1 (daemon needs ≥22.14) ✓; `~/.local/bin` pattern works
+  (monid precedent: `npm i -g <pkg> --prefix ~/.local`) ✓; no task home yet ✓.
+- Disk 89% (4.1G free) — fine for ~28MB of daemon state, but watch it.
+- `okx-a2a` and codex are **not** installed on the box yet.
+
+### Migration (low-stakes window AFTER the listing is live — never mid-review)
+1. Install on the box as `deploy`: `npm i -g @okxweb3/a2a-node --prefix ~/.local`
+   (+ codex CLI the same way). Ensure `~/.local/bin` is on PATH.
+2. **Stop the Mac daemon first** (`okx-a2a daemon stop` + unload the plist).
+   Never run two live daemons for the same agent — the CLI warns this is unsafe.
+3. Fresh login on the box: `okx-a2a daemon start` then `okx-a2a doctor --fix`
+   (SSH is interactive enough for CLI login flows). Prefer fresh login over
+   copying `~/.okx-agent-task` — keep the Mac state dir as rollback. Same
+   wallet auth → same on-chain communication address; verify with
+   `onchainos agent service-list --agent-id 9878` (address must be unchanged).
+4. Codex provider: mirror `~/.codex/auth.json` + `config.toml` with a
+   server-appropriate key (new secret in deploy-user scope, same trust level
+   as `PROBE_PAYER_PK`). Verify the provider shows bound in `okx-a2a status`.
+5. Supervise with PM2 (foreground `run`, not background `daemon start`):
+   app `okx-a2a` → `~/.local/bin/okx-a2a run`, env
+   `OKX_AGENT_TASK_HOME=/home/deploy/.okx-agent-task`, `autorestart: true`.
+   Add a 5-min cron watchdog (`okx-a2a status` must report running, else
+   `pm2 restart okx-a2a`), same pattern as `ensure-running.sh`, then `pm2 save`.
+6. Verify: `status` running, `doctor` clean (non-interactive), 3 agent
+   identities, one test A2A message round-trips, communication address unchanged.
+7. Rollback: stop the VPS daemon, re-enable the Mac plist, `daemon start`
+   locally, confirm `status` + identities.
