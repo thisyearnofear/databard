@@ -3,6 +3,10 @@ node_modules/
 .netlify/
 .env
 .env.local
+# Never dump secrets into repo files — env backups included (Sep 2026: a
+# plaintext .env.bak with live keys sat unignored in the repo root).
+*.bak
+.env.bak*
 
 # LOOP internals (transient commit messages, sandbox dirs)
 .loop/

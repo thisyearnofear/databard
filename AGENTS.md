@@ -252,7 +252,7 @@ resubmit the listing through the Agent conversation as the email instructs.
 ### Deploy state
 - Production tracks `main` via `./scripts/deploy.sh` (local Next standalone build → scp tarball → PM2 `startOrReload` → `/api/insights` health gate → ensure-running cron). Pushing git alone does not ship.
 - x402 env vars live in `/opt/databard/.env` on the production host (symlinked into each release by `deploy.sh`). NOT in `ecosystem.config.cjs` — the PM2 env block is for non-secret runtime config only.
-- Local `.env` is gitignored; the deploy script never ships it. Never `npm install` on `snel-bot` for this app.
+- Local `.env` is gitignored; the deploy script never ships it. Never dump env into repo files either (`*.bak` / `.env.bak*` are gitignored as a backstop — Sep 2026: a plaintext `.env.bak` with live keys sat unignored in the root until deleted). Never `npm install` on `snel-bot` for this app.
 
 ### Remaining steps (user actions)
 1. ~~Wait for OKX final approval~~ Listed Sep 8, 2026 — **de-listed by Sep 23 (approvalStatus 6); relist pending.**
