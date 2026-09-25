@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { scoreTextClass } from "@/lib/product/score-tone";
-import { DitherButton } from "@/components/dither-kit";
+import { DitherButton, PixelIcon } from "@/components/dither-kit";
 import { track } from "@/lib/track";
 
 interface HealthExample {
@@ -62,8 +62,8 @@ export function AgentHealthDemo() {
   }
 
   return (
-    <section id="try-health-check" aria-labelledby="health-example-title" className="scroll-mt-8 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-7">
-      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]">Try the actual tool</p>
+    <section id="try-health-check" aria-labelledby="health-example-title" className="enter-up enter-delay-2 dither-grain l-brackets relative scroll-mt-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8">
+      <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]"><PixelIcon name="flask" size={14} />Try the actual tool</p>
       <h2 id="health-example-title" className="mt-3 text-2xl font-bold">From a check to a next step.</h2>
       <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">Run a real health check on a sample dataset. See the answer your agent receives.</p>
       <p className="mt-4 text-xs text-[var(--text-muted)]">Sample data · no credentials · no payment</p>
