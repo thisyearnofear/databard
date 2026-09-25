@@ -16,7 +16,7 @@ export function PublicReportHeader() {
     { href: "/earn", label: "Reports", active: pathname === "/earn" || pathname.startsWith("/earn/"), extra: "" },
     { href: "/agents", label: "Agent services", active: pathname === "/agents" || pathname.startsWith("/probe"), extra: "" },
     { href: "/superteam", label: "Example", active: pathname.startsWith("/superteam"), extra: "" },
-    { href: "/#divisions", label: "Your own data", active: false, extra: "hidden md:inline-flex" },
+    { href: "/#divisions", label: "Connect your data", active: false, extra: "hidden md:inline-flex" },
   ];
 
   return (
