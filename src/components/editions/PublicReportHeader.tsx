@@ -30,7 +30,7 @@ export function PublicReportHeader() {
             Reports
           </Link>
           <Link href="/agents" aria-current={pathname === "/agents" || pathname === "/probe" ? "page" : undefined} className={linkClass(pathname === "/agents" || pathname === "/probe")}>
-            For agents
+            Agent services
           </Link>
           <Link href="/superteam" aria-current={pathname === "/superteam" ? "page" : undefined} className={`hidden min-h-11 items-center whitespace-nowrap rounded-md px-3 text-xs font-medium sm:inline-flex ${pathname === "/superteam" ? "text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}>
             Example

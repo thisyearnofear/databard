@@ -4,6 +4,7 @@ import { getLatestIndex, type IndexedService } from "@/lib/marketplace-index";
 import { getLatestBriefing } from "@/lib/marketplace-briefing";
 import { scoreTextClass, scoreTintClass } from "@/lib/product/score-tone";
 import { PixelIcon } from "@/components/dither-kit";
+import { ServiceLookup } from "@/components/probe/ServiceLookup";
 import { recordEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
@@ -186,6 +187,7 @@ export default async function MarketplacePage({
             </p>
 
             {/* Filter */}
+            <ServiceLookup />
             <nav className="mt-8 flex flex-wrap gap-2" aria-label="Filter by status">
               {STATUS_FILTERS.map((s) => (
                 <Link

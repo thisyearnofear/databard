@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { loadEarnListings } from "@/lib/superteam-earn";
+import { getLatestIndex } from "@/lib/marketplace-index";
 import { buildReportExamples } from "@/lib/report-examples";
 import { buildEarnSeries, seedFromString } from "@/lib/dither-field";
 import { editionPricePusd } from "@/lib/pusd";
@@ -62,6 +63,23 @@ async function MastheadStats() {
     return (
       <span className="hidden md:inline">
         {loaded.listings.length.toLocaleString("en-US")} listings accounted · {sponsors} sponsors · observed {observed}
+      </span>
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Live marketplace counts for the agent-services panel — real totals,
+    quietly stated. Renders nothing when the index is unavailable. */
+async function ProbeCounts() {
+  try {
+    const index = await getLatestIndex();
+    if (!index) return null;
+    const a = index.aggregates;
+    return (
+      <span>
+        {a.checked} services checked · {a.healthy} healthy · {a.broken + a.unreachable} failing
       </span>
     );
   } catch {
@@ -281,22 +299,39 @@ export function ReportLanding() {
           </div>
         </section>
 
-        {/* Agent tools — a contrasting ink panel, a change of pace */}
+        {/* Agent services — a contrasting ink panel, a change of pace.
+            Three equal doors: probe a service, browse the whole-marketplace
+            index, verify an anchored record. No single ecosystem dominates —
+            the same engine grades data estates, agent services, and anchors. */}
         <section className="py-14" aria-labelledby="agent-tools-title">
           <div className="dither-grain l-brackets relative grid gap-8 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--accent)]">For agents</p>
-              <h2 id="agent-tools-title" className="mt-3 text-2xl font-bold tracking-tight">Your agent can use DataBard, too.</h2>
-              <p className="mt-4 max-w-[48ch] text-sm leading-relaxed text-[var(--text-muted)]">Check data health, compare services before paying, and inspect the evidence behind an answer.</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--accent)]">For agents — and the humans who pay them</p>
+              <h2 id="agent-tools-title" className="mt-3 text-2xl font-bold tracking-tight">Decide what deserves your dollar.</h2>
+              <p className="mt-4 max-w-[48ch] text-sm leading-relaxed text-[var(--text-muted)]">Before your agent pays another agent, ask Probe first. Check a service free, browse every listing we score, or verify an anchored record on Solana.</p>
               <div className="mt-6 flex flex-wrap items-center gap-5">
                 <ReportLink href="/agents" cta="agent_tools" className="inline-flex min-h-11 items-center whitespace-nowrap rounded-lg bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-[var(--bg)] transition-opacity hover:opacity-90">Explore agent tools</ReportLink>
                 <ReportLink href="/probe" cta="service_check" className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--accent)] hover:underline">Try a service check →</ReportLink>
               </div>
             </div>
             <ul className="divide-y divide-[var(--border)] text-sm">
-              <li className="py-4"><strong className="font-semibold">Free health checks</strong><p className="mt-1 text-[var(--text-muted)]">A finding and a recommended next step.</p></li>
-              <li className="py-4"><strong className="font-semibold">Service comparison</strong><p className="mt-1 text-[var(--text-muted)]">Inspect quality before authorizing a paid call.</p></li>
-              <li className="py-4"><strong className="font-semibold">Inspectable receipts</strong><p className="mt-1 text-[var(--text-muted)]">Keep evidence and payment records distinct.</p></li>
+              <li className="py-4">
+                <Link href="/probe" className="font-semibold hover:underline">Probe a service</Link>
+                <p className="mt-1 text-[var(--text-muted)]">Ask whether an agent service is worth paying for. Free preview, no wallet.</p>
+              </li>
+              <li className="py-4">
+                <Link href="/probe/marketplace" className="font-semibold hover:underline">Browse the index</Link>
+                <p className="mt-1 text-[var(--text-muted)]">
+                  <Suspense fallback={null}>
+                    <ProbeCounts />
+                  </Suspense>
+                  {" "}— every listing checked with one unpaid request.
+                </p>
+              </li>
+              <li className="py-4">
+                <Link href="/verify" className="font-semibold hover:underline">Verify the record</Link>
+                <p className="mt-1 text-[var(--text-muted)]">Inspect Solana-anchored reports and on-chain commitments. No wallet needed.</p>
+              </li>
             </ul>
           </div>
         </section>
