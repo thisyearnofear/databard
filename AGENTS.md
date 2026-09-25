@@ -63,6 +63,8 @@ Two-layer analytics system:
 - `agent_demo_run` — ran the free health-check example on /agents
 - `earn_index_view` — visited `/earn` (sponsor report index)
 - `shared_clip_play` — played the clip on a shared score-card page
+- `marketplace_index_view` — visited `/probe/marketplace` (OKX.AI health index)
+- `service_score_lookup` — `databard_service_score` tool called
 
 ### Adding new events
 1. Add the event type to `EVENT_TYPES` in `src/lib/events.ts`
@@ -91,7 +93,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/app/probe/page.tsx` — Probe demo UI (question input, free preview, paid-endpoint check with 402 explainer, ranked result cards, cost + attestation)
 - `src/components/probe/ResultCard.tsx` — probe result card (score, 6-dimension breakdown, x402 paid/402-challenge/cached badges, flags)
 - `src/app/api/mcp/health-check/route.ts` — FREE A2MCP tool: schema health score + recommended actions
-- `src/app/api/mcp/briefing/route.ts` — PAID A2MCP tool (x402): full synthesis (script + audio + health)
+- `src/app/api/mcp/briefing/route.ts` — PAID A2MCP tool (x402): marketplace briefing (whole-market cached, or scoped with live re-check) or legacy schema synthesis (script + audio + health)
 - `src/app/api/mcp/tools/route.ts` — A2MCP service discovery (tool list + JSON schemas)
 - `src/lib/datahub-adapter.ts` — DataHub GMS adapter: GraphQL read (datasets, lineage, owners, tags, assertions, profile) + write-back (tags + AI descriptions)
 - `src/lib/monid-adapter.ts` — Monid metered-endpoint adapter: shells to the `monid` CLI (execFile), maps arbitrary run results → `SchemaMeta`, captures the measured per-run cost (`getMonidCost` sidecar)
@@ -112,6 +114,9 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/components/dither-kit/icon.tsx` — `PixelIcon` glyph set (8×8 bitmaps rendered as crisp-edged SVG); use these instead of emoji on shell, landing, dashboard, player, league and onchain surfaces
 - `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)
 - `scripts/probe-smoke.mjs` — paid x402 smoke test for `/api/agent/probe` (pays the challenge with `PROBE_PAYER_PK` from `.env`, prints the verdict)
+- `src/lib/marketplace-index.ts` — OKX.AI marketplace health index: unpaid listing checks (x402 gate + price match, never pays), scoring, persistence, optional budgeted deep checks. Index checks verify the listing/payment gate only — NOT paid output quality; "gate not reached" is a neutral flag, not an accusation. Our own ASP #9878 rows are marked `ours` and excluded from aggregates. Also exports `recheckServicesLive` — the paid-briefing scoped path (live unpaid checks + budgeted paid re-verify for named services only, per-service timeout, cached fallback, shared spend ledger).
+- `scripts/crawl-okx-marketplace.mjs` — rebuilds `src/lib/okx-marketplace.snapshot.json` via `onchainos agent search` + `service-list` for explicit agent ids (9878)
+- `GET /api/probe/marketplace` — latest index; `POST /api/probe/marketplace/refresh` — cron-secret refresh (`attest`, `deepBudget`, `dryRun`); `GET /api/probe/badge/[serviceId]` — shields SVG; `POST /api/mcp/service-score` — free `databard_service_score` lookup tool; pages `/probe/marketplace` + `/probe/marketplace/[serviceId]`
 
 ## Theming
 Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["databard:theme"]` and sets `data-theme` on `<html>` before first paint, so light mode never flashes dark; `data-theme="dark"` stays the no-JS default. Light mode is opt-in via the `ThemeToggle` component (persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components. Type: headings (`h1,h2,h3`) and score numerals use the self-hosted Space Grotesk face via `--font-display` / `.font-display`; body copy stays system-ui.
@@ -134,16 +139,16 @@ DataBard is registered as an Agent Service Provider (ASP) on OKX.AI, exposing th
 
 ### Endpoints (live at `https://databard.persidian.com`)
 - `POST /api/mcp/health-check` — **FREE**. `databard_health_check`: health score, critical tables, stale/ownerless/undocumented counts, prioritised recommended actions. No LLM, no audio. The discovery driver.
-- `POST /api/mcp/briefing` — **PAID (x402)**. `databard_briefing`: full synthesis — script (Alex + Morgan) + audio (MP3, base64 + Grove URL) + health + recommended actions. The hero tool.
+- `POST /api/mcp/briefing` — **PAID (x402)**. `databard_briefing`: marketplace briefing by default (whole-market from the Probe index with `{}`, or scoped per-service verdicts via `agentIds`/`serviceIds`/`endpoints`/`query`); legacy schema-health briefing with `mode:"schema"`. Scoped briefings re-verify the named services live (`freshness: live|partial|cached`, opt out with `fresh:false`). Audio is opt-in (`audio:"url"|"inline"`, default `"none"` text-only). The hero tool.
 - `GET /api/mcp/tools` — service discovery: tool list + JSON input/output schemas.
 - `POST /api/mcp/writeback` — **FREE** (additional tool, not a registered OKX service). `databard_write_back`: analyses a DataHub schema and writes findings back into the DataHub graph — health + defect tags and an idempotent AI summary description. Requires `source: "datahub"`.
 
 ### Pricing
 - Health check: free (`fee: "0"`).
-- Briefing: `exact` EIP-3009 USDT0 transfer on X Layer (`eip155:196`), default `$1.00`/call (set `BRIEFING_PRICE_USD`). Cost-per-briefing is ~$0.30–0.35 (Flash TTS + bookends SFX via `BRIEFING_SFX_MODE`), so ~$0.65 margin per call. Settlement only happens after the handler returns <400, so failed synthesis never charges the caller.
+- Briefing: `exact` EIP-3009 USDT0 transfer on X Layer (`eip155:196`), default `$1.00`/call (set `BRIEFING_PRICE_USD`). Text-only marketplace briefing costs ~nothing (no LLM/TTS); a scoped fresh briefing spends ≤$0.10 outbound paid-verification (own cap + shared $1/day ledger) — margin ~$0.90. Schema-mode with audio costs ~$0.30–0.35 (Flash TTS + bookends SFX via `BRIEFING_SFX_MODE`). Settlement only happens after the handler returns <400, so failed synthesis never charges the caller.
 
 ### x402 server setup (`src/lib/x402.ts`)
-Uses the OKX Payment SDK (`@okxweb3/x402-core` + `@okxweb3/x402-evm` + `@okxweb3/x402-next`). The paid route is wrapped with `withX402(handler, briefingRouteConfig, x402Server)` — the SDK handles the 402 challenge (base64 `PAYMENT-REQUIRED` header), signature verification, and on-chain settlement via the OKX facilitator (`syncSettle: true` waits for confirmation).
+Uses the OKX Payment SDK (`@okxweb3/x402-core` + `@okxweb3/x402-evm` + `@okxweb3/x402-next`). The paid route is wrapped with `withX402(handler, briefingRouteConfig, x402Server)` — the SDK handles the 402 challenge (base64 `PAYMENT-REQUIRED` header), signature verification, and on-chain settlement via the OKX facilitator (`syncSettle: false` — verify-before-handler stays, settlement happens async so the paid response isn't blocked on confirmation).
 
 ### Required production env (for the paid endpoint to go live)
 - `PAY_TO_ADDRESS` — X Layer EVM address that receives funds (your Agentic Wallet address)
@@ -188,7 +193,7 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
 - Unit-tested: `tests/mcp-parse.unit.ts` (12 tests, in `test:unit`).
 - **Agent-first upgrade shipped before resubmitting** (commits `0c794ad`, `6e0627a`):
   `summary` / `keyFindings` / `nextStep` + `serviceVersion`/`generatedAt` on both
-  routes; `audio: "inline"|"url"|"none"` on the briefing (none skips TTS);
+  routes; `audio: "inline"|"url"|"none"` on the briefing (default `"none"` text-only since Sep 25 — narration is opt-in);
   writeback degrades to a labelled demo (200, `writeBack.delivered: false`) instead
   of 500ing on an unreachable DataHub. Prod self-check re-verified after deploy.
 - **RESUBMITTED Sep 7, 2026** via `onchainos agent activate --agent-id 9878
@@ -201,10 +206,37 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
   `approvalStatus` flipped to `4` (approved) on agent #9878. DataBard is now
   visible/searchable on OKX.AI and eligible for recommendation. No further
   registration steps remain; future updates go through the Agent conversation.
+- **DE-LISTED again (found Sep 23, 2026):** `onchainos agent service-list --agent-id 9878`
+  shows `approvalStatus: 6`, `status: 2` (listed agents such as #2023 show `4` / `1`),
+  and #9878 no longer appears in `agent search`. Remark: Data Briefing "never responded
+  to any test request (timeout, no status code)". Exact rejection date is not exposed by
+  the CLI; the last `updatedAt` before Sep 23 was **2026-09-21 14:50:46 UTC**, identical
+  across #9878, #9874 (OnPoint) and #6462 (Wowowify), which are all also `6`/`2` —
+  check the owner email for OKX's notice. Likely cause: the paid briefing took ~23s
+  (Grove upload blocked the response); fixed Sep 23 (`a9bd389`, ~1.8s paid). The prod
+  watchdog logged only one outage (2026-09-22 06:10, ~5s), after that timestamp.
+  `salesCount: 2` comes from our own paid test calls on Sep 23, not real buyers.
+  Relist: `okx-a2a doctor --fix` (needs interactive login), then `agent update`
+  (add Service Health Score) → `agent activate --agent-id 9878 --preferred-language en-US`.
+- **Round-3 rejection (Sep 25, 2026):** same symptom — paid Data Briefing "timeout,
+  no status code". The unpaid 402 answered in ~0.2s, so the post-payment handler
+  was the culprit: a bare `{}` paid call defaulted to `audio:"inline"` (8–10 TTS
+  calls + SFX, 10–20s), `syncSettle:true` blocked on confirmation, and any TTS
+  failure 500'd/hung the paid call. Fixes (deployed Sep 25, self-check green):
+  default audio `"none"` (bare paid call ~1–2s text; narration opt-in via
+  `audio:"url"|"inline"`); TTS wrapped in a 25s budget that degrades to text-only
+  200 instead of throwing (`BRIEFING_TTS_TIMEOUT_MS`); `syncSettle:false`;
+  **scoped fresh re-verification** (`recheckServicesLive` in
+  `src/lib/marketplace-index.ts`): scoped briefings re-run the cron's unpaid
+  checks + budgeted paid verification (same gates, $0.10/call cap + shared
+  $1/day ledger, per-service 15s budget via `BRIEFING_LIVE_TIMEOUT_MS`) for just
+  the named services, answering `freshness: live|partial|cached` + per-service
+  `fresh`/`checkedAt` (`fresh:false` opts out). Unit-tested:
+  `tests/briefing-live.unit.ts` (10 tests, in `test:unit`). Relist pending.
 Before resubmitting: deploy, run the self-check above against prod, then
 resubmit the listing through the Agent conversation as the email instructs.
 
-### Registration status (DONE — pending final OKX review)
+### Registration status (registered; listing currently NOT live — see de-listing note above)
 - **ASP identity #9878** — `DataBard`, registered on X Layer (chainIndex 196).
   - Owner address: `0x5e32740122999bb98a50055d68593f94d2a0711e` (Agentic Wallet, `papaandthejimjams@gmail.com`).
   - Create tx: `0xcb9d3fd178b0b90ee1a9553f4431359d2906afad50c68deafc261e5c65d4019d`
@@ -223,7 +255,7 @@ resubmit the listing through the Agent conversation as the email instructs.
 - Local `.env` is gitignored; the deploy script never ships it. Never `npm install` on `snel-bot` for this app.
 
 ### Remaining steps (user actions)
-1. ~~Wait for OKX final approval~~ **DONE — listed Sep 8, 2026.**
+1. ~~Wait for OKX final approval~~ Listed Sep 8, 2026 — **de-listed by Sep 23 (approvalStatus 6); relist pending.**
 2. Record a 90s X demo post with `#OKXAI` — see `docs/OKX_AI_ASP.md` for the shot list.
 3. Submit the [OKX.AI Genesis Hackathon Google form](https://forms.gle/mddEUagmDbyV37ws8) (deadline was Jul 28 23:59 UTC; may be extended — verify before submitting).
 
@@ -240,6 +272,60 @@ resubmit the listing through the Agent conversation as the email instructs.
 - Identities live on XLayer only (`eip155:196`); never pass `--chain` to identity commands.
 - The recurring-digest half of DataBard (scheduled digests, persisted connections, alerts) does NOT fit A2MCP — only the one-shot synthesis is exposed as the ASP.
 - fal.ai key for avatar generation is stored in the macOS keychain (service `fal.ai`, account `$USER`); retrieve with `security find-generic-password -s "fal.ai" -w` (may prompt via GUI on macOS).
+
+## Jev Intent Layer (Optionality)
+
+Jev is an optional intent-based evaluation layer that can be layered on top of the existing synthesis engine. It does **not** replace any current pipeline — it adds a new dimension: reading *intent* from column headers, queries, or prompts and producing instant classifications (~100ms, pennies per call).
+
+### Concept
+
+DataBard currently reads data and produces health scores, trend narratives, and recommended next steps via the LLM synthesis engine. Jev offers a complementary mode: **the user types an intent, and Jev figures out what they want from the data and classifies each row in real-time.**
+
+### Example patterns
+
+- User types "Urgency" as a column header → Jev reads the data and rates each finding from "no follow-up needed" to "urgent" in ~100ms
+- User types "Confidence" → Jev reads each data anomaly and assigns a confidence score
+- User types "Priority" → Jev reads the data estate and ranks findings by impact
+
+### How it would work (additive, not replacement)
+
+1. The existing synthesis engine (`synthesize`, `synthesize-stream`) continues to run unchanged
+2. A new optional `jev-intent` flag triggers Jev-based classification on top of the data
+3. Jev reads the column intent, queries the data via the existing adapters (`datahub-adapter`, `monid-adapter`), and returns classifications
+4. Results are displayed alongside the existing health scores and narratives
+
+### Why optionality
+
+- The LLM synthesis engine captures *meaning* — Jev captures *intent-driven classification*
+- Not every query needs intent-based rating — the user chooses when to invoke it
+- Jev is ~100ms and pennies — it's a real-time co-pilot, not the main analysis engine
+- If Jev is unavailable or the user doesn't want it, the existing pipeline is untouched
+
+### Architecture sketch
+
+```
+User types intent (e.g., "Urgency")
+        │
+        ▼
+[jev-intent router] ← optional, opt-in
+        │
+        ├── reads data via existing adapters (datahub-adapter.ts, monid-adapter.ts)
+        ├── sends intent + data to Jev
+        └── returns: per-row classification with confidence scores
+                │
+                ▼
+    Displayed alongside existing health scores, trend narratives, next steps
+```
+
+### Key files to reference (if implementing)
+
+- `src/lib/schema-analysis.ts` — existing health score, critical tables, trend diffs (unchanged)
+- `src/lib/datahub-adapter.ts` — existing DataHub GMS adapter (reused for data access)
+- `src/lib/monid-adapter.ts` — existing Monid metered-endpoint adapter (reused)
+- `src/app/api/mcp/health-check/route.ts` — existing free health-check (could expose Jev ratings)
+- `src/app/api/mcp/briefing/route.ts` — existing paid briefing (could include Jev intent layer in output)
+
+---
 
 ## Monid integration (We Kill hackathon)
 DataBard is entered in Monid's **"We Kill" hackathon** (Sep 1–10, 2026). Monid is

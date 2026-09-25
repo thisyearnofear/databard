@@ -52,6 +52,10 @@ export interface BriefingRequest {
   mode: "marketplace" | "schema";
   audio: "inline" | "url" | "none";
   demo: boolean;
+  /** Scoped briefings only: re-verify the named services live before
+      briefing (default true — fresh evidence is the paid value; false
+      forces the cached index). Whole-marketplace calls always use cache. */
+  fresh: boolean;
   agentIds: string[];
   serviceIds: string[];
   endpoints: string[];
@@ -78,6 +82,14 @@ function firstStr(record: Record<string, unknown>, keys: string[]): string | und
     if (typeof v === "number") return String(v);
   }
   return undefined;
+}
+
+/** Explicit opt-out only: fresh:false (or live:false, "false"/"no"/"0").
+    Anything else — including omission — means live re-verification. */
+export function parseFreshFlag(v: unknown): boolean {
+  if (v === false) return false;
+  if (typeof v === "string" && /^(false|no|0|off)$/i.test(v.trim())) return false;
+  return true;
 }
 
 /**
@@ -113,13 +125,18 @@ export function parseBriefingRequest(body: unknown): BriefingRequest {
     modeRaw === "schema" || Object.keys(record).some((k) => SCHEMA_INTENT_KEYS.has(k));
 
   const audioRaw = firstStr(record, ["audio", "audioDelivery"]);
+  // Default "none" (text-only, fastest): a bare paid call must answer in a
+  // couple of seconds so marketplace reviewers never hit a client timeout.
+  // Callers that want narration opt in with audio:"url" (hosted MP3) or
+  // audio:"inline" (base64 MP3).
   const audio: BriefingRequest["audio"] =
-    audioRaw === "url" || audioRaw === "none" ? audioRaw : "inline";
+    audioRaw === "url" || audioRaw === "inline" ? audioRaw : "none";
 
   return {
     mode: schemaIntent ? "schema" : "marketplace",
     audio,
     demo: record.demo === true,
+    fresh: parseFreshFlag(record.fresh ?? record.live),
     agentIds: [
       ...stringList(record.agentIds),
       ...stringList(record.agentId),
@@ -151,6 +168,11 @@ export interface BriefingServiceEntry {
   score: number | null;
   status: IndexedService["status"];
   verification: string;
+  /** True when this row was re-verified live for this briefing (scoped +
+      fresh path); false = cached index row. */
+  fresh: boolean;
+  /** When the live re-check for this row completed (null when cached). */
+  checkedAt: string | null;
   /** Outcome of our last paid verification call, if any. */
   paidOutcome?: string;
   subScores: IndexedService["subScores"];
@@ -170,6 +192,11 @@ export interface MarketplaceBriefing {
   generatedAt: string;
   indexGeneratedAt: string;
   scope: "services" | "marketplace";
+  /** live = every scoped row re-verified this call; cached = index rows
+      only; partial = some rows fresh, the rest cached (see liveNote). */
+  freshness: "live" | "cached" | "partial";
+  /** Set when freshness is partial, or the live re-check was unavailable. */
+  liveNote?: string;
   summary: string;
   keyFindings: string[];
   nextStep: string;
@@ -327,9 +354,11 @@ function serviceEntry(
   index: MarketplaceIndex,
   prev: Map<string, string>,
   dayAgo: Map<string, string>,
+  live?: Map<string, { fresh: boolean; checkedAt: string | null }>,
 ): BriefingServiceEntry {
   const alts = findAlternatives(index, svc, undefined, ALTERNATIVE_CAP);
   const { rec, reason } = recommend(svc, alts);
+  const lv = live?.get(svc.serviceId);
   return {
     serviceId: svc.serviceId,
     agentId: svc.agentId,
@@ -340,6 +369,8 @@ function serviceEntry(
     score: svc.score,
     status: svc.status,
     verification: svc.verification,
+    fresh: lv?.fresh ?? false,
+    checkedAt: lv?.checkedAt ?? null,
     paidOutcome: svc.lastPaidVerification?.outcome,
     subScores: svc.subScores,
     uptimePct: svc.uptimePct,
@@ -495,6 +526,7 @@ export function buildMarketplaceBriefing(
   index: MarketplaceIndex,
   history: HistoryRun[],
   req: Pick<BriefingRequest, "agentIds" | "serviceIds" | "endpoints" | "query">,
+  live?: Map<string, { fresh: boolean; checkedAt: string | null }>,
 ): MarketplaceBriefing {
   const generatedAt = new Date().toISOString();
   // The last history entry IS the current run (appended during runIndex) —
@@ -507,14 +539,34 @@ export function buildMarketplaceBriefing(
   const matched = resolveBriefingServices(index, req).filter((s) => !s.ours);
   const scoped = matched.length > 0;
 
-  const services = matched.map((s) => serviceEntry(s, index, prev, dayAgo));
+  const services = matched.map((s) => serviceEntry(s, index, prev, dayAgo, live));
   const market = scoped ? undefined : marketView(index, prev);
 
+  // Freshness of the scoped rows: live = all re-verified this call,
+  // partial = some fresh, cached = index rows only.
+  const freshCount = services.filter((s) => s.fresh).length;
+  const freshness: MarketplaceBriefing["freshness"] =
+    !live || services.length === 0
+      ? "cached"
+      : freshCount === services.length
+        ? "live"
+        : freshCount === 0
+          ? "cached"
+          : "partial";
+
   const agg = index.aggregates;
+  const freshLine =
+    scoped && live
+      ? freshness === "live"
+        ? ` Freshness: live — all ${services.length} re-verified just now.`
+        : freshness === "partial"
+          ? ` Freshness: partial — ${freshCount}/${services.length} re-verified just now, the rest are cached.`
+          : ` Freshness: cached — the live re-check did not complete; rows are from the index.`
+      : "";
   const summary = scoped
     ? `${services.length} marketplace service${services.length === 1 ? "" : "s"}: ` +
       services.map((s) => `${s.serviceName || s.agentName} is ${s.status} (${s.score === null ? "not scored" : `${s.score}/100`}, ${s.recommendation})`).join("; ") +
-      ` — index from ${index.generatedAt}.`
+      ` — index from ${index.generatedAt}.${freshLine}`
     : `OKX.AI marketplace: ${agg.healthy} healthy, ${agg.degraded} degraded, ${agg.unverified} unverified, ` +
       `${agg.broken + agg.unreachable} failing of ${agg.checked} checked` +
       (market?.paidHeadline ? ` — ${market.paidHeadline.toLowerCase()}` : "") +
@@ -556,6 +608,7 @@ export function buildMarketplaceBriefing(
     generatedAt,
     indexGeneratedAt: index.generatedAt,
     scope: scoped ? "services" : "marketplace",
+    freshness,
     summary,
     keyFindings: keyFindings.slice(0, 12),
     nextStep,
@@ -739,15 +792,38 @@ export function buildMarketplaceScript(b: MarketplaceBriefing): ScriptSegment[] 
 // ── Audio + daily store ────────────────────────────────────────────────────
 
 /** TTS for a marketplace/schema briefing script — same cost-controlled
-    settings as the paid route (Flash model + bookends SFX). */
+    settings as the paid route (Flash model + bookends SFX).
+    Never throws: TTS is a bonus layer, so any failure (no key, quota,
+    provider hang) degrades to `undefined` and the caller returns a
+    text-only 200 — a paid call must never 500 or time out over audio. */
 export async function synthesizeBriefingAudio(script: ScriptSegment[]): Promise<Buffer | undefined> {
   const rawMode = (process.env.BRIEFING_SFX_MODE ?? "bookends").toLowerCase();
   const sfxMode = rawMode === "full" || rawMode === "none" ? rawMode : "bookends";
   const ttsModel =
     process.env.BRIEFING_TTS_MODEL ?? process.env.ELEVENLABS_TTS_MODEL ?? "eleven_flash_v2_5";
+  // Wall-clock budget for TTS inside a paid call — exceeding it degrades to
+  // text-only instead of timing out the reviewer's client.
+  const timeoutMs = Number(process.env.BRIEFING_TTS_TIMEOUT_MS ?? 25000);
+  const withTimeout = <T>(p: Promise<T>, label: string): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      p.then(
+        (v) => {
+          clearTimeout(t);
+          resolve(v);
+        },
+        (e) => {
+          clearTimeout(t);
+          reject(e);
+        },
+      );
+    });
   let audioBuffers: Buffer[];
   try {
-    audioBuffers = await synthesizeEpisode(script, undefined, sfxMode, ttsModel);
+    audioBuffers = await withTimeout(
+      synthesizeEpisode(script, undefined, sfxMode, ttsModel),
+      "briefing TTS",
+    );
   } catch (apiError: unknown) {
     const errorMsg = apiError instanceof Error ? apiError.message : String(apiError);
     if (
@@ -755,10 +831,16 @@ export async function synthesizeBriefingAudio(script: ScriptSegment[]): Promise<
       errorMsg.includes("payment_required") ||
       errorMsg.includes("paid_plan_required")
     ) {
-      const { synthesizeEpisodeViaWeb } = await import("./audio-engine-providers");
-      audioBuffers = await synthesizeEpisodeViaWeb(script);
+      try {
+        const { synthesizeEpisodeViaWeb } = await import("./audio-engine-providers");
+        audioBuffers = await withTimeout(synthesizeEpisodeViaWeb(script), "briefing web TTS");
+      } catch (webErr) {
+        console.warn("[briefing] TTS unavailable, returning text-only briefing:", webErr);
+        return undefined;
+      }
     } else {
-      throw apiError;
+      console.warn("[briefing] TTS failed, returning text-only briefing:", errorMsg);
+      return undefined;
     }
   }
   return Buffer.concat(audioBuffers);

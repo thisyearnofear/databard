@@ -51,7 +51,7 @@ export interface McpRequestInput {
   researchQuestion?: string;
   /** Briefing only: "podcast" (two-speaker, default) or "executive-summary". */
   outputFormat?: "podcast" | "executive-summary";
-  /** Briefing only: how to deliver the narrated audio. Default "inline" (base64). */
+  /** Briefing only: how to deliver the narrated audio. Default "none" (text-only, fastest). */
   audio?: "inline" | "url" | "none";
 }
 
@@ -66,7 +66,7 @@ export interface ParsedMcpInput {
   adjustedResearchQuestion: boolean;
   /** Caller explicitly requested the demo analysis (`demo: true`). */
   forceDemo: boolean;
-  /** Briefing audio delivery: "inline" (base64, default) | "url" | "none" (skip TTS). */
+  /** Briefing audio delivery: "none" (text-only, default, fastest — skips TTS) | "url" | "inline". */
   audio: "inline" | "url" | "none";
 }
 
@@ -246,8 +246,10 @@ export function parseMcpInput(body: unknown): ParsedMcpInput {
       : "podcast";
 
   const audioRaw = (record.audio ?? record.audioDelivery) as string | undefined;
+  // Default "none": a bare paid call must answer fast (reviewer timeouts),
+  // and LLM callers prefer text. Narration is opt-in via "url"/"inline".
   const audio: "inline" | "url" | "none" =
-    audioRaw === "url" || audioRaw === "none" ? audioRaw : "inline";
+    audioRaw === "url" || audioRaw === "inline" ? audioRaw : "none";
 
   return {
     config,

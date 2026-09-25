@@ -100,12 +100,13 @@ describe("parseMcpInput — leniency (OKX review fix)", () => {
     assert.equal(parseMcpInput({ outputFormat: "nonsense" }).outputFormat, "podcast");
   });
 
-  it("parses the audio delivery option (inline default, url/none accepted)", () => {
-    assert.equal(parseMcpInput({}).audio, "inline");
+  it("parses the audio delivery option (none default, url/inline accepted)", () => {
+    assert.equal(parseMcpInput({}).audio, "none");
     assert.equal(parseMcpInput({ audio: "none" }).audio, "none");
     assert.equal(parseMcpInput({ audio: "url" }).audio, "url");
-    assert.equal(parseMcpInput({ audioDelivery: "none" }).audio, "none");
-    assert.equal(parseMcpInput({ audio: "base64-please" }).audio, "inline");
+    assert.equal(parseMcpInput({ audio: "inline" }).audio, "inline");
+    assert.equal(parseMcpInput({ audioDelivery: "inline" }).audio, "inline");
+    assert.equal(parseMcpInput({ audio: "base64-please" }).audio, "none");
   });
 
   it("keeps a recognised source even when other blocks are absent", () => {

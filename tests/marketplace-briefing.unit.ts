@@ -125,9 +125,11 @@ check(
     "2023,40042,9878",
 );
 check(
-  "audio none honoured",
-  parseBriefingRequest({ audio: "none" }).audio === "none" &&
-    parseBriefingRequest({}).audio === "inline",
+  "audio none default (bare paid call stays fast), url/inline opt-in",
+  parseBriefingRequest({}).audio === "none" &&
+    parseBriefingRequest({ audio: "none" }).audio === "none" &&
+    parseBriefingRequest({ audio: "url" }).audio === "url" &&
+    parseBriefingRequest({ audio: "inline" }).audio === "inline",
 );
 
 // ── resolveBriefingServices ────────────────────────────────────────────────

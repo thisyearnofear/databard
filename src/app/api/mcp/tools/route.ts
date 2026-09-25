@@ -192,6 +192,12 @@ const briefingOutputSchema = {
     tool: { type: "string", const: "databard.briefing" },
     researchQuestion: { type: "string" },
     outputFormat: { type: "string", enum: ["podcast", "executive-summary"] },
+    freshness: {
+      type: "string",
+      enum: ["live", "cached", "partial"],
+      description: "live = every scoped row re-verified this call; cached = index rows only; partial = some rows fresh (see liveNote).",
+    },
+    liveNote: { type: "string", nullable: true, description: "Set when freshness is partial or the live re-check was unavailable." },
     script: {
       type: "array",
       items: {
@@ -497,7 +503,7 @@ const TOOLS = [
     name: "databard_briefing",
     summary: "Marketplace Briefing: a narrated health briefing on OKX.AI agent services — per-service verdicts or the whole marketplace. Paid per call.",
     description:
-      "DEFAULT (marketplace mode): a spoken briefing built from DataBard Probe's live health index of every OKX.AI marketplace service. Call with {} for the whole marketplace (status counts, paid-delivery headline, notable changes, top healthy services, provider issues) or scope it with agentIds/serviceIds/endpoints/query for per-service verdicts, what changed, and keep/watch/switch recommendations. Returns summary, keyFindings, script, and narrated MP3 audio. " +
+      "DEFAULT (marketplace mode): a spoken briefing built from DataBard Probe's live health index of every OKX.AI marketplace service. Call with {} for the whole marketplace (status counts, paid-delivery headline, notable changes, top healthy services, provider issues) or scope it with agentIds/serviceIds/endpoints/query for per-service verdicts, what changed, and keep/watch/switch recommendations. Scoped briefings re-verify the named services live before answering (freshness: live/partial/cached) — pass fresh:false for the cached index. Returns summary, keyFindings, script, and narrated MP3 audio. " +
       "Legacy mode (mode:\"schema\", or an explicit schema source/schemaFqn): the original schema-health briefing on a data estate.",
     method: "POST",
     endpoint: "/api/mcp/briefing",
@@ -519,6 +525,12 @@ const TOOLS = [
           type: "string",
           description: "Keyword scope, e.g. \"token security\" — matches service/agent names and descriptions. need/q also accepted.",
         },
+        fresh: {
+          type: "boolean",
+          default: true,
+          description:
+            "Scoped briefings only: re-verify the named services live before answering (default true — fresh evidence is the paid value; false forces the cached index). Whole-marketplace calls always use the cached index.",
+        },
         researchQuestion: {
           type: "string",
           description:
@@ -528,16 +540,16 @@ const TOOLS = [
         audio: {
           type: "string",
           enum: ["inline", "url", "none"],
-          default: "inline",
+          default: "none",
           description:
-            "Audio delivery. \"none\" = text-only briefing (fastest; recommended for LLM callers). \"url\" = hosted MP3 link (recommended when the human wants to listen). \"inline\" = base64 MP3 in the response (large). The text script, summary and keyFindings are always returned regardless.",
+            "Audio delivery. \"none\" = text-only briefing (fastest; the default — the script, summary and keyFindings are always returned). \"url\" = hosted MP3 link (recommended when the human wants to listen). \"inline\" = base64 MP3 in the response (large and slow; only request it explicitly).",
         },
       },
       examples: [
         // Reviewer posture: bare call → whole-marketplace briefing.
         {},
         { agentIds: ["2023"], audio: "url" },
-        { query: "token security", audio: "none" },
+        { query: "token security", fresh: true, audio: "none" },
         { mode: "schema", demo: true, audio: "url" },
         {
           mode: "schema",

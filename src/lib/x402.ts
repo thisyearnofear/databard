@@ -50,9 +50,12 @@ export const x402Server = x402Configured
         apiKey: process.env.OKX_API_KEY!,
         secretKey: process.env.OKX_SECRET_KEY!,
         passphrase: process.env.OKX_PASSPHRASE!,
-        // Wait for on-chain confirmation before reporting settlement success,
-        // so a delivered briefing always corresponds to a confirmed payment.
-        syncSettle: true,
+        // Async settlement: the facilitator verifies the signature BEFORE
+        // the handler runs, and settles on-chain AFTER it returns. Waiting
+        // for confirmation (sync) added seconds to every paid response and
+        // timed out the marketplace reviewer's client — so settle in the
+        // background and return the briefing immediately.
+        syncSettle: false,
       })
     ).register(X402_NETWORK, new ExactEvmScheme())
   : null;

@@ -11,10 +11,11 @@ import { parseMcpInput } from "@/lib/mcp";
 import {
   buildMarketplaceBriefing,
   parseBriefingRequest,
+  resolveBriefingServices,
   storeBriefingAudio,
   synthesizeBriefingAudio,
 } from "@/lib/marketplace-briefing";
-import { getLatestIndex, getMarketplaceHistory } from "@/lib/marketplace-index";
+import { getLatestIndex, getMarketplaceHistory, recheckServicesLive } from "@/lib/marketplace-index";
 import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
 import { getMonidCost } from "@/lib/monid-adapter";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
@@ -63,6 +64,7 @@ async function marketplaceBriefing(
       mode: "marketplace",
       generatedAt: new Date().toISOString(),
       indexGeneratedAt: null,
+      freshness: "cached",
       summary: "No marketplace index has been generated yet — the first health pass has not run.",
       keyFindings: ["Check back shortly; the index refreshes on a schedule."],
       nextStep: "Browse GET /api/probe/marketplace for the index once it exists.",
@@ -77,7 +79,37 @@ async function marketplaceBriefing(
   }
 
   const history = await getMarketplaceHistory();
-  const briefing = buildMarketplaceBriefing(index, history, brief);
+
+  // Scoped + fresh (the default): re-verify just the named services live so
+  // the $1 call sells fresh evidence. Unscoped calls and fresh:false stay on
+  // the cached index (fast path — also the reviewer's bare-call posture).
+  // Any failure degrades to cached rows; the paid call always answers.
+  let services = index.services;
+  let live: Map<string, { fresh: boolean; checkedAt: string | null }> | undefined;
+  let liveNote: string | undefined;
+  if (brief.fresh) {
+    const scopedCached = resolveBriefingServices(index, brief).filter((s) => !s.ours);
+    if (scopedCached.length > 0) {
+      try {
+        const rechecked = await recheckServicesLive(scopedCached);
+        const freshRows = new Map(rechecked.map((r) => [r.row.serviceId, r.row]));
+        live = new Map(
+          rechecked.map((r) => [r.row.serviceId, { fresh: r.fresh, checkedAt: r.checkedAt }]),
+        );
+        services = index.services.map((s) => freshRows.get(s.serviceId) ?? s);
+        const n = rechecked.filter((r) => r.fresh).length;
+        if (n < rechecked.length) {
+          liveNote =
+            `${n}/${rechecked.length} services re-verified live just now; ` +
+            `the rest did not answer in time and are shown cached.`;
+        }
+      } catch (e) {
+        liveNote = "Live re-check unavailable; showing the cached index.";
+        console.warn("[MCP briefing] live re-check failed (cached fallback):", e);
+      }
+    }
+  }
+  const briefing = buildMarketplaceBriefing({ ...index, services }, history, brief, live);
 
   let audio: Buffer | undefined;
   if (brief.audio !== "none") {
@@ -114,6 +146,8 @@ async function marketplaceBriefing(
     generatedAt: briefing.generatedAt,
     indexGeneratedAt: briefing.indexGeneratedAt,
     scope: briefing.scope,
+    freshness: briefing.freshness,
+    ...(liveNote ? { liveNote } : {}),
     summary: briefing.summary,
     keyFindings: briefing.keyFindings,
     nextStep: briefing.nextStep,
@@ -180,10 +214,10 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       format: outputFormat,
     });
 
-    // Audio is optional: "none" skips TTS entirely (fastest, text-only briefing),
-    // "url" returns a Grove link with inline base64 as fallback, "inline" (default)
-    // returns base64 MP3. LLM callers should prefer "url" or "none" — an inline
-    // MP3 is unreadable context to a model.
+    // Audio is optional and defaults to "none" (text-only, fastest): a bare
+    // paid call must answer in seconds for marketplace reviewers. "url"
+    // returns a hosted MP3 link, "inline" returns base64 MP3 (large/slow).
+    // The text script, summary and keyFindings are always returned.
     const audioModeResolved = audioMode;
     let audio: Buffer | undefined;
     if (audioModeResolved !== "none") {

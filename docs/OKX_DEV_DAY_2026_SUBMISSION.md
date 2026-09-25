@@ -42,7 +42,10 @@ like any other A2MCP tool (full schemas in the OKX.AI service discovery
 document), and humans evaluating services at `/probe`.
 
 **Core integration.** OKX AI + X Layer end to end, on mainnet. DataBard is a
-listed ASP (#9878); Probe pays real third-party OKX.AI services via the x402
+registered ASP (#9878 — approved and listed 8 Sep, briefly de-listed 23 Sep
+after a slow-response window in the paid briefing, re-submitted 25 Sep with
+the fix verified live: the endpoint now answers its 402 challenge in ~0.25s);
+Probe pays real third-party OKX.AI services via the x402
 Payment SDK, receives its own $1 fee via x402, and writes verdict
 attestations to X Layer (eip155:196). Verified live on 18 Sep 2026: inbound
 $1 settlement (tx 0x581d13…60a7), outbound payment to a third-party service
@@ -77,7 +80,9 @@ history on `main` from 15 Sep documents the work.
 
 ## Remaining before 25 Sep
 
-- [ ] Demo video (2–4 min) — script + recording
+- [ ] Demo video (2–4 min) — in production: `videos/databard-probe-devday/`
 - [ ] Submit the form
+- [x] Relist ASP #9878 — re-submitted 25 Sep (approvalStatus 2 = under review;
+      ~24h, will not clear before the form deadline — copy reworded to be honest)
 - [ ] Optional: register `databard_probe` as a third service on ASP #9878 via
       onchainos (strengthens the "publish a working service" criterion)

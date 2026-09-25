@@ -1921,6 +1921,213 @@ export async function runIndex(opts: RunIndexOptions = {}): Promise<MarketplaceI
   return index;
 }
 
+// ── Live re-check (paid-briefing scoped path) ─────────────────────────────
+// A scoped briefing (the caller named a few services) re-runs the unpaid
+// checks plus budgeted paid verification for just those services, so the $1
+// call sells fresh evidence instead of a longer free answer.
+// Whole-marketplace calls stay on the cached index. Every service is bounded
+// by its own wall-clock budget and any failure degrades to the cached row —
+// a paid call never hangs or 500s over verification.
+
+function raceTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), Math.max(ms, 1));
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
+export interface LiveRecheckOptions {
+  /** Per-service wall-clock budget incl. paid re-verify (default 15000, env BRIEFING_LIVE_TIMEOUT_MS). */
+  timeoutMs?: number;
+  /** Outbound paid-verification cap for this call (default 0.10, env BRIEFING_LIVE_PAID_BUDGET_USD). 0 disables paid. */
+  paidBudgetUsd?: number;
+}
+
+export interface LiveRecheckedService {
+  /** Freshly scored row, or the cached row when the live check did not finish. */
+  row: IndexedService;
+  fresh: boolean;
+  checkedAt: string | null;
+  note?: string;
+}
+
+/** Score one freshly-checked service — same construction as the cron worker:
+    unpaid verdict, paid evidence folded in when present, prior paid record
+    carried forward (with the same carried payment_rejected downgrade). */
+function buildFreshRow(
+  cached: IndexedService,
+  check: ListingCheck,
+  probe: ValidCallProbe | null,
+  paidResult?: { record: PaidVerification; bodyJson: unknown; substantive: boolean } | null,
+): IndexedService {
+  const verdict = finalizeVerdict(
+    scoreListing(check, cached, probe, paidResult ?? null),
+    cached.status,
+  );
+  const row: IndexedService = {
+    ...cached,
+    ours: false,
+    score: verdict.score,
+    status: verdict.status,
+    checks: verdict.checks,
+    flags: verdict.flags,
+    latencyMs: check.latencyMs,
+    httpStatus: check.status,
+    verification: verdict.verification,
+    paid: !!paidResult,
+    subScores: verdict.subScores,
+    attempts: probe && probe.attempts.length > 0 ? probe.attempts : undefined,
+    inputSource: probe?.inputSource,
+    ...(check.protocol ? { protocol: check.protocol, mcpServerName: check.mcpServerName, toolCount: check.toolCount } : {}),
+  };
+  if (paidResult) {
+    row.lastPaidVerification = paidResult.record;
+    if (paidResult.record.delivered) row.flags = [...row.flags, "Paid & delivered"];
+  } else {
+    // No fresh money spent — carry the prior record forward, with the same
+    // downgrade the cron applies when a rejection is still the last word.
+    const lp = cached.lastPaidVerification;
+    if (
+      lp &&
+      !lp.delivered &&
+      (lp.outcome === "payment_rejected" || lp.status === 402) &&
+      !row.flags.some((f) => f.includes("re-issued the challenge"))
+    ) {
+      row.flags.push(
+        "Payment was signed but the service re-issued the challenge — inconclusive, may be client/facilitator incompatibility",
+      );
+      if (row.status === "healthy") row.status = "degraded";
+      row.score = row.score === null ? null : Math.min(row.score, 79);
+    }
+  }
+  // Uptime comes from run history, not one check — keep the cached value.
+  if (cached.uptimePct !== undefined) row.uptimePct = cached.uptimePct;
+  return row;
+}
+
+export async function recheckServicesLive(
+  cached: IndexedService[],
+  opts: LiveRecheckOptions = {},
+): Promise<LiveRecheckedService[]> {
+  const timeoutMs = opts.timeoutMs ?? Number(process.env.BRIEFING_LIVE_TIMEOUT_MS ?? 15000);
+  const paidBudget = opts.paidBudgetUsd ?? Number(process.env.BRIEFING_LIVE_PAID_BUDGET_USD ?? 0.1);
+  const prevPaid = await readPaidVerifications();
+  const spend = await readSpend();
+  const today = new Date().toISOString().slice(0, 10);
+  const daySpend = spend[today]?.spentUsd ?? 0;
+  const dailyBudget = dailyVerifyBudget();
+  // Shared spend reservation — mutated only in sync code, so parallel
+  // services cannot interleave between check and reserve.
+  const state = { callSpent: 0 };
+  const newPaid: Record<string, PaidVerification> = {};
+  const todayEntries: { serviceId: string; amountUsd: number; settlementTx?: string }[] = [];
+
+  const recheckOne = async (c: IndexedService): Promise<LiveRecheckedService> => {
+    const stale = (note: string): LiveRecheckedService => ({ row: c, fresh: false, checkedAt: null, note });
+    if (c.ours) return stale("Own service — shown from the cached index, never self-checked.");
+    const t0 = Date.now();
+    const remaining = () => timeoutMs - (Date.now() - t0);
+    try {
+      let check = await raceTimeout(checkListing(c), remaining() - 500, "live listing check");
+      if (check.status === 0) {
+        // One immediate retry — a single blip must not downgrade a service.
+        check = await raceTimeout(checkListing(c), remaining() - 500, "live listing retry");
+      }
+      const probe = await raceTimeout(probeValidCall(c, check), remaining() - 500, "live valid-call probe").catch(
+        () => null,
+      );
+      let row = buildFreshRow(c, check, probe, null);
+      // Paid re-verification under the same gates as the cron (fee cap,
+      // callable, gate reached, no side effects, exact/dictionary inputs,
+      // 72h cooldown — never force-bypassed here), plus this call's spend
+      // cap and the shared daily budget. Attempted only with ≥4s left.
+      const gateNow = !!(probe && probe.status === 402 && probe.challenge && !probe.challenge.undecodable);
+      const gateCheck = check.status === 402 && !!check.challenge && !check.challenge.undecodable;
+      const eligible = pickVerifyTargets(
+        [
+          {
+            serviceId: c.serviceId,
+            ours: false,
+            feeUsd: c.feeUsd,
+            callable: !!(probe && probe.request),
+            gateReached: gateNow || gateCheck,
+            sideEffectSkipped: !!probe?.sideEffectSkipped,
+            inputConfidence: probe?.inputConfidence,
+          },
+        ],
+        { ...prevPaid, ...newPaid },
+        Date.now(),
+      );
+      const fee = c.feeUsd;
+      if (
+        eligible.length > 0 &&
+        probe &&
+        paidBudget > 0 &&
+        fee > 0 &&
+        state.callSpent + fee <= paidBudget + 1e-9 &&
+        daySpend + state.callSpent + fee <= dailyBudget + 1e-9 &&
+        remaining() >= 4000
+      ) {
+        state.callSpent += fee; // reserve upfront; refunded below when unsettled
+        try {
+          const paidResult = await raceTimeout(
+            paidVerify(probe, check, c),
+            remaining() - 200,
+            "live paid verification",
+          );
+          newPaid[c.serviceId] = paidResult.record;
+          if (paidResult.record.delivered || paidResult.record.settlementTx) {
+            const amt = paidResult.record.amountUsd ?? fee;
+            todayEntries.push({
+              serviceId: c.serviceId,
+              amountUsd: amt,
+              settlementTx: paidResult.record.settlementTx,
+            });
+          } else {
+            state.callSpent -= fee; // unsettled spend doesn't count (mirrors cron)
+          }
+          row = buildFreshRow(c, check, probe, paidResult);
+        } catch {
+          state.callSpent -= fee;
+          row = buildFreshRow(c, check, probe, null);
+        }
+      }
+      return { row, fresh: true, checkedAt: new Date().toISOString() };
+    } catch {
+      return stale("Live re-check did not finish in time; showing the cached row.");
+    }
+  };
+
+  const out = await Promise.all(cached.map(recheckOne));
+
+  // Persist paid records + spend through the shared ledger (serial-guarded,
+  // same files the cron reads, so the next index run benefits). Fresh rows
+  // themselves stay ephemeral — the cron owns the published index.
+  if (Object.keys(newPaid).length > 0 || todayEntries.length > 0) {
+    const spent = todayEntries.reduce((s, e) => s + e.amountUsd, 0);
+    await serial("marketplace-index", async () => {
+      const [curPaid, curSpend] = await Promise.all([readPaidVerifications(), readSpend()]);
+      await fs.writeFile(PAID_VERIFICATIONS_FILE, JSON.stringify({ ...curPaid, ...newPaid }), "utf-8");
+      const day = curSpend[today] ?? { spentUsd: 0, entries: [] };
+      curSpend[today] = {
+        spentUsd: Number((day.spentUsd + spent).toFixed(6)),
+        entries: [...day.entries, ...todayEntries],
+      };
+      await fs.writeFile(SPEND_FILE, JSON.stringify(curSpend), "utf-8");
+    });
+  }
+  return out;
+}
+
 // ── Reads ──────────────────────────────────────────────────────────────────
 
 export async function getLatestIndex(): Promise<MarketplaceIndex | null> {
