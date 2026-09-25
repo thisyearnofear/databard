@@ -4,6 +4,8 @@ import { getLatestIndex, type IndexedService } from "@/lib/marketplace-index";
 import { getLatestBriefing } from "@/lib/marketplace-briefing";
 import { scoreTextClass, scoreTintClass } from "@/lib/product/score-tone";
 import { PixelIcon } from "@/components/dither-kit";
+import { DitherField } from "@/components/editions/DitherField";
+import { buildMarketplaceSeries, seedFromString } from "@/lib/dither-field";
 import { ServiceLookup } from "@/components/probe/ServiceLookup";
 import { recordEvent } from "@/lib/events";
 
@@ -44,6 +46,7 @@ export default async function MarketplacePage({
   const visible = (index?.services ?? []).filter(
     (s) => filter === "all" || s.status === filter,
   );
+  const terrain = index ? buildMarketplaceSeries(index.services) : null;
 
   return (
     <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
@@ -67,6 +70,19 @@ export default async function MarketplacePage({
             ? `${index.aggregates.checked} listings checked as of ${new Date(index.generatedAt).toUTCString()} — marketplace snapshot crawled ${new Date(index.crawledAt).toUTCString()}`
             : "The first health pass has not run yet."}
         </p>
+
+        {index && terrain && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none relative mt-6 h-32 overflow-hidden rounded-xl border border-[var(--border)] md:h-40 [mask-image:linear-gradient(to_right,transparent_0%,black_15%,black_85%,transparent_100%)]"
+          >
+            <DitherField
+              series={terrain}
+              seed={seedFromString(index.generatedAt)}
+              className="h-full w-full"
+            />
+          </div>
+        )}
 
         {!index && (
           <div className="mt-8 border border-[var(--border)] bg-[var(--surface)] px-5 py-6 text-sm text-[var(--text-muted)]">

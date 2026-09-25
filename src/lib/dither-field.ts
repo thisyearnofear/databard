@@ -74,3 +74,22 @@ export function focusSeriesFromRace(race: RaceSeries, focusName: string): number
   }
   return out;
 }
+
+/**
+ * Terrain of the marketplace index: every scored service is a ridge column,
+ * at its composite score height. Unverified services have no score and read
+ * as low ground. The index is stored score-descending, so the silhouette is
+ * the market's ranking — the same evidence the index page tabulates.
+ */
+export function buildMarketplaceSeries(
+  services: ReadonlyArray<{ score: number | null }>,
+  target = 24,
+): number[] | null {
+  if (services.length < 2) return null;
+  const step = Math.max(1, Math.floor(services.length / target));
+  const out: number[] = [];
+  for (let i = 0; i < services.length; i += step) {
+    out.push(services[i].score ?? 0);
+  }
+  return out.some((v) => v > 0) ? out : null;
+}

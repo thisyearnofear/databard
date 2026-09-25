@@ -1,21 +1,49 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { AgentHealthDemo } from "@/components/agents/AgentHealthDemo";
 import { AgentsPageTracker } from "@/components/agents/AgentsPageTracker";
 import { AgentIntegrationDetails } from "@/components/agents/AgentIntegrationDetails";
 import { PixelIcon } from "@/components/dither-kit";
+import { DitherField } from "@/components/editions/DitherField";
+import { getLatestIndex } from "@/lib/marketplace-index";
+import { buildMarketplaceSeries, seedFromString } from "@/lib/dither-field";
 
 export const metadata: Metadata = {
   title: "DataBard for agents — Check, explain, verify",
   description: "Give your agent a free data health check, compare services before paying, and inspect the evidence behind an answer.",
 };
 
+export const revalidate = 6 * 3600;
+
+/** The hero landscape, grown from the marketplace index it reports on. */
+async function AgentsLandscape() {
+  try {
+    const index = await getLatestIndex();
+    if (!index) return null;
+    const series = buildMarketplaceSeries(index.services);
+    if (!series) return null;
+    return <DitherField series={series} seed={seedFromString(index.generatedAt)} className="h-full w-full" />;
+  } catch {
+    return null;
+  }
+}
+
 export default function AgentsPage() {
   return (
     <main className="report-surface bg-[var(--bg)] px-5 py-14 sm:py-20">
       <AgentsPageTracker />
       <div className="mx-auto max-w-6xl">
-        <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,.95fr)_minmax(0,1.05fr)]">
+        <section className="relative isolate">
+          <div
+            className="pointer-events-none absolute inset-x-0 -inset-y-10 opacity-40 sm:opacity-100 [mask-image:linear-gradient(to_right,transparent_0%,black_48%)]"
+            aria-hidden="true"
+          >
+            <Suspense fallback={null}>
+              <AgentsLandscape />
+            </Suspense>
+          </div>
+          <div className="relative grid items-start gap-12 lg:grid-cols-[minmax(0,.95fr)_minmax(0,1.05fr)]">
           <div>
             <p className="enter-up font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">DataBard for agents</p>
             <h1 className="enter-up enter-delay-1 mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Useful answers.<br />Inspectable evidence.</h1>
@@ -45,7 +73,8 @@ export default function AgentsPage() {
             </ol>
           </div>
           <AgentHealthDemo />
-        </div>
+          </div>
+        </section>
         <hr className="dither-rule mt-16" aria-hidden="true" />
         <section className="pt-8" aria-label="Agent integration">
           <AgentIntegrationDetails>
