@@ -504,6 +504,7 @@ const TOOLS = [
     summary: "Marketplace Briefing: a narrated health briefing on OKX.AI agent services — per-service verdicts or the whole marketplace. Paid per call.",
     description:
       "DEFAULT (marketplace mode): a spoken briefing built from DataBard Probe's live health index of every OKX.AI marketplace service. Call with {} for the whole marketplace (status counts, paid-delivery headline, notable changes, top healthy services, provider issues) or scope it with agentIds/serviceIds/endpoints/query for per-service verdicts, what changed, and keep/watch/switch recommendations. Scoped briefings re-verify the named services live before answering (freshness: live/partial/cached) — pass fresh:false for the cached index. Returns summary, keyFindings, script, and narrated MP3 audio. " +
+      "The machine verdict alone is free via databard_service_score — the briefing adds the narrative layer (summary, script, audio) for your human. " +
       "Legacy mode (mode:\"schema\", or an explicit schema source/schemaFqn): the original schema-health briefing on a data estate.",
     method: "POST",
     endpoint: "/api/mcp/briefing",

@@ -93,6 +93,7 @@ export function ServiceLookup() {
       </h2>
       <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
         Look up any OKX.AI listing by agent ID, service name, or keyword — free, from the same index below.
+        To run fresh checks on the default set instead, <Link href="/probe" className="text-[var(--accent)] hover:underline">use the free probe</Link>.
       </p>
       <form
         className="mt-4 flex flex-col gap-3 sm:flex-row"
