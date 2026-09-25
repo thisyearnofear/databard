@@ -50,12 +50,13 @@ export const x402Server = x402Configured
         apiKey: process.env.OKX_API_KEY!,
         secretKey: process.env.OKX_SECRET_KEY!,
         passphrase: process.env.OKX_PASSPHRASE!,
-        // Async settlement: the facilitator verifies the signature BEFORE
-        // the handler runs, and settles on-chain AFTER it returns. Waiting
-        // for confirmation (sync) added seconds to every paid response and
-        // timed out the marketplace reviewer's client — so settle in the
-        // background and return the briefing immediately.
-        syncSettle: false,
+        // Sync settlement: the paid response waits for on-chain confirmation
+        // (~2-5s on X Layer). We tried async (Sep 25) for speed, but the
+        // facilitator then settled nothing — verified payments never moved
+        // funds (payer spent $0 across 3 paid smoke calls). With the default
+        // text-only briefing (~1s handler) the total stays ~3-6s, safely
+        // inside reviewer timeouts. Never trade settlement for latency.
+        syncSettle: true,
       })
     ).register(X402_NETWORK, new ExactEvmScheme())
   : null;
