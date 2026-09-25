@@ -9,7 +9,7 @@ import { DataContextChip } from "./DataContextChip";
 import { DataSourceSwitch } from "./DataSourceSwitch";
 import { AccountMenu } from "./AccountMenu";
 import { PublicReportHeader } from "./editions/PublicReportHeader";
-import { homeHref, isNavItemActive, WORKSPACES, workspaceFromRoute, workspaceHref } from "@/lib/product/workspaces";
+import { homeHref, hasWizardParam, isNavItemActive, WORKSPACES, workspaceFromRoute, workspaceHref } from "@/lib/product/workspaces";
 import { track } from "@/lib/track";
 
 const WalletButton = dynamic(
@@ -27,8 +27,12 @@ function HeaderBarInner() {
   const searchParams = useSearchParams();
   const workspace = workspaceFromRoute(pathname, searchParams.toString());
 
-  if (pathname === "/" || pathname.startsWith("/episode/")) return null;
-  if (["/earn", "/superteam", "/agents", "/probe", "/verify"].includes(pathname) || pathname.startsWith("/earn/")) {
+  if (pathname.startsWith("/episode/")) return null;
+  if (pathname === "/") {
+    return hasWizardParam(searchParams.keys()) ? null : <PublicReportHeader />;
+  }
+  const publicSurfaces = ["/earn", "/superteam", "/agents", "/probe", "/verify", "/league", "/roast"];
+  if (publicSurfaces.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return <PublicReportHeader />;
   }
   const definition = WORKSPACES[workspace];
@@ -36,8 +40,8 @@ function HeaderBarInner() {
   return (
     <header className="sticky top-3 z-50 mx-auto mt-3 w-[min(100%-2rem,68rem)]">
       <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur px-3 py-2 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
-        <Link href={homeHref(workspace)} aria-label="Back to DataBard home" className="inline-flex shrink-0 items-center py-1 text-sm font-semibold tracking-tight hover:text-[var(--accent)] transition-colors">
-          DataBard <span className="ml-1 hidden text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-muted)] sm:inline">Home</span>
+        <Link href={homeHref(workspace)} aria-label={`Back to DataBard ${definition.label} home`} className="inline-flex shrink-0 items-center py-1 text-sm font-semibold tracking-tight hover:text-[var(--accent)] transition-colors">
+          DataBard <span className="ml-1 hidden text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-muted)] sm:inline">{definition.label}</span>
         </Link>
         <div className="flex shrink-0 rounded-md border border-[var(--border)] p-0.5" aria-label="Workspace">
           {(["teams", "protocols"] as const).map((target) => (
@@ -74,7 +78,7 @@ function HeaderBarInner() {
           ))}
         </nav>
         <div className="flex items-center gap-1.5">
-          {workspace === "protocols" && pathname !== "/league" && <WalletButton />}
+          {workspace === "protocols" && <WalletButton />}
           <DataContextChip />
           <DataSourceSwitch workspace={workspace} />
           <AccountMenu workspace={workspace} />

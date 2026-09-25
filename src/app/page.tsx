@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import WizardHome from "@/components/wizard/WizardHome";
-import { PublicReportHeader } from "@/components/editions/PublicReportHeader";
 import { ReportLanding } from "@/components/editions/ReportLanding";
+import { hasWizardParam } from "@/lib/product/workspaces";
 
 export const metadata: Metadata = {
   title: "DataBard — Reports worth sharing",
@@ -12,11 +12,6 @@ export const metadata: Metadata = {
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
-  if (params.start || params.workspace || params.persona) return <WizardHome />;
-  return (
-    <>
-      <PublicReportHeader />
-      <ReportLanding />
-    </>
-  );
+  if (hasWizardParam(Object.keys(params))) return <WizardHome />;
+  return <ReportLanding />;
 }

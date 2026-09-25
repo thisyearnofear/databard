@@ -12,6 +12,13 @@ export function PublicReportHeader() {
       active ? "text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"
     }`;
 
+  const items = [
+    { href: "/earn", label: "Reports", active: pathname === "/earn" || pathname.startsWith("/earn/"), extra: "" },
+    { href: "/agents", label: "Agent services", active: pathname === "/agents" || pathname.startsWith("/probe"), extra: "" },
+    { href: "/superteam", label: "Example", active: pathname.startsWith("/superteam"), extra: "" },
+    { href: "/#divisions", label: "Your own data", active: false, extra: "hidden md:inline-flex" },
+  ];
+
   return (
     <header className="border-b border-[var(--border)] bg-[var(--bg)]">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 sm:px-5">
@@ -26,18 +33,16 @@ export function PublicReportHeader() {
           </span>
         </Link>
         <nav aria-label="Reports navigation" className="flex items-center gap-1">
-          <Link href="/earn" aria-current={pathname === "/earn" || pathname.startsWith("/earn/") ? "page" : undefined} className={linkClass(pathname === "/earn" || pathname.startsWith("/earn/"))}>
-            Reports
-          </Link>
-          <Link href="/agents" aria-current={pathname === "/agents" || pathname === "/probe" ? "page" : undefined} className={linkClass(pathname === "/agents" || pathname === "/probe")}>
-            Agent services
-          </Link>
-          <Link href="/superteam" aria-current={pathname === "/superteam" ? "page" : undefined} className={`hidden min-h-11 items-center whitespace-nowrap rounded-md px-3 text-xs font-medium sm:inline-flex ${pathname === "/superteam" ? "text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text)]"}`}>
-            Example
-          </Link>
-          <Link href="/#divisions" className="hidden min-h-11 items-center whitespace-nowrap rounded-md px-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)] focus-visible:outline-2 focus-visible:outline-[var(--accent)] sm:px-3 md:inline-flex">
-            Your own data
-          </Link>
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={item.active ? "page" : undefined}
+              className={`${linkClass(item.active)}${item.extra ? ` ${item.extra}` : ""}`}
+            >
+              {item.label}
+            </Link>
+          ))}
           <ThemeToggle />
         </nav>
       </div>

@@ -9,6 +9,14 @@ export type Workspace = "teams" | "protocols";
 
 export const WORKSPACE_QUERY_KEY = "workspace";
 
+/** Query params that switch "/" from the public landing to the wizard flow. */
+export const WIZARD_PARAMS = ["start", "workspace", "persona"] as const;
+
+export function hasWizardParam(keys: Iterable<string>): boolean {
+  const set = new Set(keys);
+  return WIZARD_PARAMS.some((p) => set.has(p));
+}
+
 export const WORKSPACES = {
   teams: {
     label: "Teams",
@@ -78,5 +86,6 @@ export function homeHref(workspace: Workspace): string {
 }
 
 export function isNavItemActive(href: string, pathname: string): boolean {
-  return href.split("?")[0] === pathname;
+  const base = href.split("?")[0];
+  return pathname === base || pathname.startsWith(base + "/");
 }
