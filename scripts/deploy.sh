@@ -196,14 +196,34 @@ ssh "$REMOTE" bash <<EOF
   # Record the deployed commit for prod↔git correlation
   echo "$GIT_SHA" > "\$RELEASE_DIR/COMMIT"
 
+  # Snapshot the previous release's bridge BEFORE flipping the symlink, so we
+  # only bounce coral-bridge when its code actually changed (it is a stable
+  # bridge; reloading it on every web deploy is pure PM2 restart churn).
+  OLD_CORAL_SHA=""
+  OLD_CURRENT=\$(readlink "$DEPLOY_DIR/current" 2>/dev/null || echo "")
+  if [ -n "\$OLD_CURRENT" ] && [ -f "\$OLD_CURRENT/scripts/coral-bridge.mjs" ]; then
+    OLD_CORAL_SHA=\$(sha256sum "\$OLD_CURRENT/scripts/coral-bridge.mjs" | cut -d' ' -f1)
+  fi
+
   # Update current symlink
   ln -sfn "\$RELEASE_DIR" "$DEPLOY_DIR/current"
 
-  # Restart via PM2
+  # Restart via PM2 — databard always; coral-bridge only on bridge change
+  # (or if it is somehow missing from PM2, so a fresh box still converges).
   echo "   Reloading PM2..."
   cd "$DEPLOY_DIR/current"
   chmod +x "$DEPLOY_DIR/current/scripts/ensure-running.sh" 2>/dev/null || true
-  /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --update-env
+  /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --only databard --update-env
+  NEW_CORAL_SHA=\$(sha256sum "\$RELEASE_DIR/scripts/coral-bridge.mjs" | cut -d' ' -f1)
+  if [ "\$NEW_CORAL_SHA" != "\$OLD_CORAL_SHA" ]; then
+    echo "   coral-bridge.mjs changed — reloading coral-bridge..."
+    /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --only coral-bridge --update-env
+  elif ! /usr/local/bin/pm2 describe coral-bridge >/dev/null 2>&1; then
+    echo "   coral-bridge missing from PM2 — starting it..."
+    /usr/local/bin/pm2 startOrReload ecosystem.config.cjs --only coral-bridge --update-env
+  else
+    echo "   coral-bridge.mjs unchanged — leaving coral-bridge running."
+  fi
   /usr/local/bin/pm2 save
 
   # Keep DataBard in the shared PM2 dump even if another app later `pm2 save`s

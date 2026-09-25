@@ -33,8 +33,9 @@ which would trace the entire project directory (including Rust build artifacts).
 
 Live site: `https://databard.persidian.com` (PM2 `databard` on port 42100). Shared
 host PM2 with other apps — see `docs/OPERATIONS.md` stay-alive section.
-`scripts/ensure-running.sh` runs every 2 minutes and `startOrReload`s this
-ecosystem if `/api/insights` is not 200, then `pm2 save`s so we stay in the dump.
+`scripts/ensure-running.sh` runs every 2 minutes and reloads each service
+independently when only it is unhealthy (databard: `/api/insights` ≠ 200;
+coral-bridge: no HTTP response on 42101), then `pm2 save`s so we stay in the dump.
 
 ## Analytics
 Two-layer analytics system:

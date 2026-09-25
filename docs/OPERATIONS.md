@@ -119,9 +119,16 @@ dropped out of the dump on 2026-08-08 and nginx 502'd until the process was
 started again.
 
 `scripts/ensure-running.sh` runs every 2 minutes (installed by `deploy.sh`).
-If `http://127.0.0.1:42100/api/insights` is not 200, it `startOrReload`s only
-this ecosystem, then `pm2 save`s so we are back in the dump. It does not
+Each service is checked independently and only the unhealthy one is reloaded:
+databard must answer 200 on `http://127.0.0.1:42100/api/insights`; coral-bridge
+must answer any HTTP on `http://127.0.0.1:42101/` (it 404s unknown routes when
+alive — only "no response" counts as down). A sick databard never bounces a
+healthy bridge. Then `pm2 save`s so we are back in the dump. It does not
 delete or restart other apps. Log: `/opt/databard/logs/ensure.log`.
+
+Deploys follow the same rule: `deploy.sh` always reloads databard but reloads
+coral-bridge only when `scripts/coral-bridge.mjs` changed since the previous
+release (or when it is missing from PM2).
 
 Do not `pm2 delete all`. Other deploys should `pm2 restart <their-app>` or
 `pm2 startOrReload` their own ecosystem — never a dump that omits DataBard
