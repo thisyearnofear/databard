@@ -59,3 +59,4 @@ screenshots-review/
 screenshots-review-v2/
 next-env.d.ts
 data/pageviews.json
+data/probe-verdicts.json

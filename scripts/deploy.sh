@@ -272,6 +272,17 @@ ssh "$REMOTE" bash <<EOF
   { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$LAT_CRON"; } | grep -v '^\$' | crontab - \
     || echo "   ⚠️  crontab install failed — existing crontab left untouched"
 
+  # Weekly Probe verdict publish (the "Wirecutter for agent services" content
+  # engine): probes the curated default set unpaid and publishes to
+  # /probe/verdicts only when the run is clean. Mondays 06:41.
+  echo "   Installing verdict-publish cron..."
+  VRD_CRON=\$(echo 'Q1JPTl9TRUNSRVQ9JChncmVwICdeQ1JPTl9TRUNSRVQ9JyAvb3B0L2RhdGFiYXJkLy5lbnYgfCBjdXQgLWQ9IC1mMi0gfCB0ciAtZCAnXDA0MlwwNDcnKSAmJiBjdXJsIC1zIC1tIDI4MCAtWCBQT1NUIC1IICJ4LWNyb24tc2VjcmV0OiAkQ1JPTl9TRUNSRVQiICJodHRwOi8vMTI3LjAuMC4xOjQyMTAwL2FwaS9wcm9iZS92ZXJkaWN0cy9yZWZyZXNoIiA+PiAvb3B0L2RhdGFiYXJkL2xvZ3MvY3Jvbi12ZXJkaWN0cy5sb2cgMj4mMQo=' | base64 -d)
+  VRD_CRON="41 6 * * 1 \$VRD_CRON"
+  EXISTING=\$(crontab -l 2>/dev/null || true)
+  FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v 'probe/verdicts/refresh' || true)
+  { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$VRD_CRON"; } | grep -v '^\$' | crontab - \
+    || echo "   ⚠️  crontab install failed — existing crontab left untouched"
+
   # Cleanup old releases (keep last 5)
   echo "   Cleaning up old releases..."
   ls -dt "$DEPLOY_DIR/releases/"* 2>/dev/null | tail -n +6 | xargs rm -rf || true

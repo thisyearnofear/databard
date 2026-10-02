@@ -76,6 +76,7 @@ Funnel (GTM instrumentation):
 - `monday_signup` — email on the finding: send this every Monday (pre-Pro habit)
 - `integration_cta_click` — direct self-serve CTA: demo vs connect vs copy_curl
 - `probe_run` — Probe executed (meta: mode=preview for the free route, candidate count, top pick, attest flag)
+- `verdict_publish` — weekly cron published a Probe verdict to /probe/verdicts
 - `agents_page_view` — visited `/agents` (agent-tool doorway)
 - `agent_demo_run` — ran the free health-check example on /agents
 - `earn_index_view` — visited `/earn` (sponsor report index)
@@ -149,6 +150,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/marketplace-index.ts` — OKX.AI marketplace health index: unpaid listing checks (x402 gate + price match, never pays), scoring, persistence, optional budgeted deep checks. Index checks verify the listing/payment gate only — NOT paid output quality; "gate not reached" is a neutral flag, not an accusation. Our own ASP #9878 rows are marked `ours` and excluded from aggregates. Also exports `recheckServicesLive` — the paid-briefing scoped path (live unpaid checks + budgeted paid re-verify for named services only, per-service timeout, cached fallback, shared spend ledger).
 - `scripts/crawl-okx-marketplace.mjs` — rebuilds `src/lib/okx-marketplace.snapshot.json` via `onchainos agent search` + `service-list` for explicit agent ids (9878)
 - `GET /api/probe/marketplace` — latest index; `POST /api/probe/marketplace/refresh` — cron-secret refresh (`attest`, `deepBudget`, `dryRun`); `GET /api/probe/badge/[serviceId]` — shields SVG; `POST /api/mcp/service-score` — free `databard_service_score` lookup tool; pages `/probe/marketplace` + `/probe/marketplace/[serviceId]`
+- `src/lib/probe-verdicts.ts` — published Probe verdict store (`data/probe-verdicts.json`, rolling 50) + shared preview-pipeline scoring helpers; `POST /api/probe/verdicts/refresh` — cron-secret weekly publish (unpaid, curated defaults only, withheld on unclean runs); public page `/probe/verdicts`
 
 ## Theming
 Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["databard:theme"]` and sets `data-theme` on `<html>` before first paint, so light mode never flashes dark; `data-theme="dark"` stays the no-JS default. Light mode is opt-in via the `ThemeToggle` component (persisted to `localStorage["databard:theme"]`). All colors use CSS variables (`var(--bg)`, `var(--surface)`, `var(--text)`, etc.) defined in `globals.css` — no hardcoded Tailwind color classes in components. Type: headings (`h1,h2,h3`) and score numerals use the self-hosted Space Grotesk face via `--font-display` / `.font-display`; body copy stays system-ui.

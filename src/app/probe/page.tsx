@@ -122,7 +122,7 @@ export default function ProbePage() {
         <div className="mt-6 max-w-3xl">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">Agent tools · Probe</p>
           <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Check a service before you pay.</h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">Free preview compares the default service set — no wallet, no payment, and paid-only responses stay out of scope. <Link href="/probe/marketplace" className="text-[var(--accent)] hover:underline">Browse the marketplace index →</Link></p>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">Free preview compares the default service set — no wallet, no payment, and paid-only responses stay out of scope. <Link href="/probe/marketplace" className="text-[var(--accent)] hover:underline">Browse the marketplace index →</Link> <Link href="/probe/verdicts" className="text-[var(--accent)] hover:underline">Latest verdicts →</Link></p>
         </div>
 
         {/* Input */}

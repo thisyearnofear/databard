@@ -111,6 +111,13 @@ key — hourly ≈ 1,440/month, ~1.4% of the 100k/month plan quota. Don't run it
 more often than hourly; if quota ever tightens, `BRIEFING_LATENCY_BUDGET_MS`
 and the cadence are the levers, not disabling it.
 
+**`POST /api/probe/verdicts/refresh`** runs weekly (Mondays 06:41, installed
+by `deploy.sh`): probes the curated default service set unpaid and publishes
+the run to `/probe/verdicts` only when at least half the candidates answered
+— an outage sweep is withheld as noise, not published as content. Verdicts
+persist to `data/probe-verdicts.json` (rolling 50). Each publish records a
+`verdict_publish` event; log at `/opt/databard/logs/cron-verdicts.log`.
+
 ## Deploy
 
 ```bash

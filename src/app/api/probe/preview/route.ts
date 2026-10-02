@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, ValidationError } from "@/lib/validation";
 import { probeAll, DEFAULT_CANDIDATES } from "@/lib/probe-runner";
-import { scoreProbe } from "@/lib/probe-scorer";
+import {
+  scoreResult,
+  buildSummary,
+  rankedPayload,
+  type ScoredCandidate,
+} from "@/lib/probe-verdicts";
 import { recordEvent } from "@/lib/events";
 
 export const runtime = "nodejs";
@@ -23,62 +28,6 @@ export const runtime = "nodejs";
  * This endpoint exists so humans can see the product from the browser without
  * a wallet; agents use the paid endpoint POST /api/agent/probe.
  */
-interface ScoredCandidate {
-  name: string;
-  endpoint: string;
-  agentId?: string;
-  knownPriceUsd: number | null;
-  score: ReturnType<typeof scoreProbe>;
-  reachable: boolean;
-  error: string | null;
-  payment: unknown;
-  fromCache: boolean;
-  /** DataBard's own service — probed for reference, never ranked. */
-  reference: boolean;
-}
-
-function scoreResult(r: Awaited<ReturnType<typeof probeAll>>[number]): ScoredCandidate {
-  return {
-    name: r.candidate.name,
-    endpoint: r.candidate.endpoint,
-    agentId: r.candidate.agentId,
-    knownPriceUsd: r.candidate.knownPriceUsd ?? null,
-    score: scoreProbe(r.metrics),
-    reachable: r.metrics.reachable,
-    error: r.error ?? null,
-    payment: r.payment ?? null,
-    fromCache: r.fromCache ?? false,
-    reference: r.candidate.reference === true,
-  };
-}
-
-function buildSummary(scored: ScoredCandidate[]): string {
-  return (
-    `Free preview: probed ${scored.length} services without paying any outbound fees. ` +
-    `Top pick: ${scored[0]?.name ?? "n/a"} (${scored[0]?.score.total ?? 0}/100). ` +
-    `${scored.filter((s) => !s.reachable).length} unreachable.`
-  );
-}
-
-function rankedPayload(scored: ScoredCandidate[]) {
-  return scored.map((s, i) => ({
-    rank: i + 1,
-    name: s.name,
-    endpoint: s.endpoint,
-    agentId: s.agentId,
-    score: s.score.total,
-    label: s.score.label,
-    breakdown: s.score.breakdown,
-    flags: s.score.flags,
-    reachable: s.reachable,
-    knownPriceUsd: s.knownPriceUsd,
-    error: s.error ?? null,
-    payment: s.payment,
-    fromCache: s.fromCache,
-    reference: s.reference,
-  }));
-}
-
 export async function POST(req: NextRequest) {
   try {
     rateLimit(req, { maxRequests: 10, windowMs: 3600000 });

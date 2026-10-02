@@ -241,6 +241,19 @@ Playwright E2E wizard flow tests (`npm run test:e2e` stays green).
 
 ## Workstream F: Heighten utility — turn Probe into the content engine GTM already names
 
+**Status: shipped (Oct 2, 2026).** `src/lib/probe-verdicts.ts` persists
+verdicts to `data/probe-verdicts.json` (rolling 50) and now owns the shared
+preview-pipeline scoring helpers (`scoreResult`/`buildSummary`/
+`rankedPayload`) so preview and publish can't drift. `POST
+/api/probe/verdicts/refresh` is cron-secret gated (fail-closed without
+`CRON_SECRET`), always probes the curated `DEFAULT_CANDIDATES` unpaid —
+consent by construction, user candidates can't leak — and withholds the
+verdict when the run isn't clean (majority unreachable). `/probe/verdicts`
+lists them (ResultCard reuse, per-service links to marketplace entries,
+permalinks). `verdict_publish` whitelisted + in AGENTS.md; weekly cron
+Mondays 06:41 installed by deploy.sh. Local smoke: 401/401 → real run → 200
+published `2026-10-02-8de0e8ed`, page rendered, event recorded.
+
 **Problem:** `GTM.md` Hook 3 ("Wirecutter for agent services") is written but
 unbuilt — Probe runs produce verdicts that currently die after one API
 response. This is the most direct "more utility, more offering" lever that's
