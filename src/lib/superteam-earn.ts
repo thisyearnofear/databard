@@ -79,9 +79,28 @@ export const UK_FOCUS: SponsorFocus = {
   handle: "SuperteamUK",
 };
 
-/** Prose-friendly focus for any other sponsor: exact-name match, no handle. */
+/**
+ * Verified X handles keyed by canonical Earn `sponsor.name`. Drives the
+ * @-mention in share copy — a tagged share notifies the subject, which is
+ * the ignition step of the edition share loop. Add entries only after
+ * confirming the handle; a wrong tag is worse than a bare name.
+ */
+const SPONSOR_HANDLES: Record<string, string> = {
+  "Superteam Nigeria": "SuperteamNG",
+  "Superteam UK": "SuperteamUK",
+  Tars: "tarsprotocol",
+  BAXUS: "BAXUSco",
+  Areta: "areta_io",
+};
+
+/** Prose-friendly focus for any other sponsor: exact-name match + handle lookup. */
 export function sponsorFocus(name: string, path: string): SponsorFocus {
-  return { name, short: name.replace(/^superteam\s*/i, "").trim() || name, path };
+  return {
+    name,
+    short: name.replace(/^superteam\s*/i, "").trim() || name,
+    path,
+    handle: SPONSOR_HANDLES[name],
+  };
 }
 
 export interface EarnListingCard {

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
  */
 export async function GET() {
   const edition = buildLeagueEdition();
-  const { headline, rows, weekLabel, average } = edition;
+  const { headline, rows, weekLabel, average, sample } = edition;
   const top = rows.slice(0, 4);
   const change =
     headline.change === 0 ? "" : headline.change > 0 ? `↑${headline.change}` : `↓${Math.abs(headline.change)}`;
@@ -32,7 +32,7 @@ export async function GET() {
             <div style={{ display: "flex", flexDirection: "column", fontSize: "18px", letterSpacing: "0.28em", textTransform: "uppercase", color: "#7c5bf5" }}>
               DataBard league
             </div>
-            <div style={{ display: "flex", flexDirection: "column", fontSize: "22px", color: "#8888a0", marginTop: "8px" }}>{weekLabel}</div>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: "22px", color: "#8888a0", marginTop: "8px" }}>{sample ? `${weekLabel} · sample roster` : weekLabel}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
             <div style={{ display: "flex", flexDirection: "column", fontSize: "40px", fontWeight: 700 }}>{average}</div>
@@ -44,7 +44,7 @@ export async function GET() {
 
         <div style={{ display: "flex", flexDirection: "column", marginTop: "36px" }}>
           <div style={{ display: "flex", flexDirection: "column", fontSize: "18px", color: "#f55b5b", letterSpacing: "0.18em", textTransform: "uppercase" }}>
-            This week
+            {sample ? "Sample finding" : "This week"}
           </div>
           <div style={{ display: "flex", flexDirection: "column", fontSize: "48px", fontWeight: 700, marginTop: "8px", letterSpacing: "-0.03em" }}>
             {`${headline.schemaName} ${headline.score} ${change}`}

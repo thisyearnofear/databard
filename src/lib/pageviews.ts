@@ -56,6 +56,12 @@ export interface PageviewStats {
   bySource: Record<string, number>;
 }
 
+/** Reads-on-record count for a single path — the public social-proof chip. */
+export async function getPageviewCount(path: string): Promise<number> {
+  const all = await serial("pageviews", readAll);
+  return all.reduce((n, v) => (v.path === path ? n + 1 : n), 0);
+}
+
 export async function getPageviewStats(): Promise<PageviewStats> {
   const all = await serial("pageviews", readAll);
   const byPath: Record<string, number> = {};

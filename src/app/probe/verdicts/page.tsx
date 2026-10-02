@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadVerdicts, type PublishedVerdict } from "@/lib/probe-verdicts";
+import { getPageviewCount } from "@/lib/pageviews";
 import { ResultCard } from "@/components/probe/ResultCard";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function VerdictsPage() {
-  const verdicts = await loadVerdicts();
+  const [verdicts, views] = await Promise.all([loadVerdicts(), getPageviewCount("/probe/verdicts")]);
 
   return (
     <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
@@ -43,6 +44,7 @@ export default async function VerdictsPage() {
 
         <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
           <span>Public accounting — published verdicts</span>
+          {views > 0 && <span>{views.toLocaleString("en-US")} reads on record</span>}
           <span>Generated weekly · never crafted</span>
         </div>
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--accent)] mt-4">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { loadEarnEdition, loadEarnListings, sponsorFocus } from "@/lib/superteam-earn";
+import { getPageviewCount } from "@/lib/pageviews";
 import { sponsorForSlug } from "@/lib/editions";
 import { editionPricePusd } from "@/lib/pusd";
 import { SponsorEdition, SponsorEditionShareRow } from "@/components/editions/SponsorEdition";
@@ -68,6 +69,9 @@ export default async function EarnSponsorPage({ params }: PageProps) {
   const terrain = edition ? focusSeriesFromRace(edition.race, edition.focus.name) : [];
   const showTerrain = terrain.length >= 2 && terrain.some((v) => v > 0);
 
+  // Reads-on-record: the internal pageview ledger, surfaced as social proof.
+  const views = await getPageviewCount(`/earn/${slug}`);
+
   return (
     <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
       <div className="max-w-6xl mx-auto">
@@ -80,6 +84,7 @@ export default async function EarnSponsorPage({ params }: PageProps) {
 
         <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
           <span>DataBard Registry — Earn division</span>
+          {views > 0 && <span>{views.toLocaleString("en-US")} reads on record</span>}
           <span>{published ? "Dated edition · filed" : "Open filing · preview"}</span>
         </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)] mt-4">
@@ -100,7 +105,7 @@ export default async function EarnSponsorPage({ params }: PageProps) {
         {!published && (
           <div className="mt-3 flex flex-wrap items-center gap-4">
             <p className="text-sm text-[var(--text-muted)]">
-              Read the report free. Publish to preserve a dated version.
+              Read the report free. Publish to file it — dated, commissioned, checkable.
             </p>
             <a
               href="#publish-report"
