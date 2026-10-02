@@ -111,6 +111,13 @@ key — hourly ≈ 1,440/month, ~1.4% of the 100k/month plan quota. Don't run it
 more often than hourly; if quota ever tightens, `BRIEFING_LATENCY_BUDGET_MS`
 and the cadence are the levers, not disabling it.
 
+Self-pay cycles the USDT0 into our own `PAY_TO_ADDRESS`, not out of the
+business — but it drains the `PROBE_PAYER_PK` wallet at ~$24/day. Keep float
+on `0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8` (~$50 ≈ 2 days between
+sweeps) and periodically send accumulated USDT0 from `PAY_TO_ADDRESS` back.
+An `insufficient_balance` alert is a payer funding problem, not an endpoint
+outage.
+
 **`POST /api/probe/verdicts/refresh`** runs weekly (Mondays 06:41, installed
 by `deploy.sh`): probes the curated default service set unpaid and publishes
 the run to `/probe/verdicts` only when at least half the candidates answered
