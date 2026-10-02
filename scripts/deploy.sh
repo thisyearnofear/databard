@@ -114,6 +114,17 @@ echo "→ Packaging release $TIMESTAMP..."
 
 # Collect exactly what the server needs
 TARFILE="/tmp/databard-$TIMESTAMP.tar.gz"
+
+# Bundle the latency monitor self-contained: the standalone build inlines the
+# x402 SDKs into webpack chunks, so scripts/ has no node_modules to resolve on
+# the box. esbuild produces one file that runs with plain `node`.
+MONITOR_STAGING="$(mktemp -d)/scripts"
+mkdir -p "$MONITOR_STAGING"
+"$LOCAL_DIR/node_modules/.bin/esbuild" "$LOCAL_DIR/scripts/briefing-latency-check.mjs" \
+  --bundle --format=esm --platform=node --target=node20 \
+  --outfile="$MONITOR_STAGING/briefing-latency-check.mjs" >/dev/null
+echo "   Monitor bundle: $(du -h "$MONITOR_STAGING/briefing-latency-check.mjs" | cut -f1)"
+
 tar czf "$TARFILE" \
   -C "$LOCAL_DIR" \
   .next/standalone/.next \
@@ -124,7 +135,9 @@ tar czf "$TARFILE" \
   ecosystem.config.cjs \
   scripts/coral-bridge.mjs \
   scripts/ensure-running.sh \
+  -C "$(dirname "$MONITOR_STAGING")" \
   scripts/briefing-latency-check.mjs \
+  -C "$LOCAL_DIR" \
   package.json \
   2>/dev/null
 

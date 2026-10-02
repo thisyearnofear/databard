@@ -9,7 +9,12 @@
  * webhook) before the reviewer does.
  *
  * The payment settles to our own PAY_TO_ADDRESS, so the only real cost is
- * X Layer gas.
+ * X Layer gas — but the payer wallet still needs USDT0 float; sweep funds
+ * back from PAY_TO periodically.
+ *
+ * On the box this runs as an esbuild bundle (deploy.sh ships
+ * scripts/briefing-latency-check.mjs bundled — standalone node_modules
+ * doesn't carry @okxweb3/viem; plain `node` must run it with no deps).
  *
  * Usage:
  *   node scripts/briefing-latency-check.mjs [targetUrl] [budgetMs]
@@ -146,7 +151,27 @@ if (settleHeader) {
 
 if (res.status !== 200) {
   const text = (await res.text()).slice(0, 300);
-  await alert(`briefing paid call returned ${res.status} in ${paidMs}ms — ${text}`);
+  // A retried 402 carries a fresh PAYMENT-REQUIRED challenge whose `error`
+  // field names the verify failure (e.g. insufficient_balance, OKX 401) —
+  // surface it; the bare response body is {}.
+  let reason = "";
+  const retryChallenge = res.headers.get("payment-required");
+  if (retryChallenge) {
+    try {
+      reason = JSON.parse(Buffer.from(retryChallenge, "base64").toString("utf8"))?.error ?? "";
+    } catch { /* leave empty */ }
+  }
+  if (res.status === 402 && reason === "insufficient_balance") {
+    // Payer-side failure: the endpoint is fine, our probe wallet is dry.
+    // Funds self-pay to PAY_TO_ADDRESS — sweep them back periodically.
+    await alert(
+      `briefing monitor payer wallet underfunded (insufficient_balance) — top up the PROBE_PAYER wallet with USDT0 on X Layer; paid path unverified this run (${paidMs}ms)`,
+    );
+    process.exit(1);
+  }
+  await alert(
+    `briefing paid call returned ${res.status} in ${paidMs}ms${reason ? ` — ${reason}` : ""} — ${text}`,
+  );
   process.exit(1);
 }
 if (paidMs > BUDGET_MS) {
