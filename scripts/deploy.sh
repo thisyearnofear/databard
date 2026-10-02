@@ -124,6 +124,7 @@ tar czf "$TARFILE" \
   ecosystem.config.cjs \
   scripts/coral-bridge.mjs \
   scripts/ensure-running.sh \
+  scripts/briefing-latency-check.mjs \
   package.json \
   2>/dev/null
 
