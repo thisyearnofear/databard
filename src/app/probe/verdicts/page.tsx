@@ -16,8 +16,18 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Probe Verdicts — DataBard",
     description,
-    openGraph: { title: "Probe Verdicts", description, url: `${PUBLIC_BASE}/probe/verdicts` },
-    twitter: { card: "summary", title: "Probe Verdicts — DataBard", description },
+    openGraph: {
+      title: "Probe Verdicts",
+      description,
+      url: `${PUBLIC_BASE}/probe/verdicts`,
+      images: [{ url: "/api/og/verdicts", width: 1200, height: 630, alt: "Latest DataBard Probe verdict" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Probe Verdicts — DataBard",
+      description,
+      images: ["/api/og/verdicts"],
+    },
   };
 }
 

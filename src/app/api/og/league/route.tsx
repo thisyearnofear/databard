@@ -29,27 +29,27 @@ export async function GET() {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: "18px", letterSpacing: "0.28em", textTransform: "uppercase", color: "#7c5bf5" }}>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: "18px", letterSpacing: "0.28em", textTransform: "uppercase", color: "#7c5bf5" }}>
               DataBard league
             </div>
-            <div style={{ fontSize: "22px", color: "#8888a0", marginTop: "8px" }}>{weekLabel}</div>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: "22px", color: "#8888a0", marginTop: "8px" }}>{weekLabel}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-            <div style={{ fontSize: "40px", fontWeight: 700 }}>{average}</div>
-            <div style={{ fontSize: "14px", color: "#8888a0", letterSpacing: "0.16em", textTransform: "uppercase" }}>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: "40px", fontWeight: 700 }}>{average}</div>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: "14px", color: "#8888a0", letterSpacing: "0.16em", textTransform: "uppercase" }}>
               avg health
             </div>
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", marginTop: "36px" }}>
-          <div style={{ fontSize: "18px", color: "#f55b5b", letterSpacing: "0.18em", textTransform: "uppercase" }}>
+          <div style={{ display: "flex", flexDirection: "column", fontSize: "18px", color: "#f55b5b", letterSpacing: "0.18em", textTransform: "uppercase" }}>
             This week
           </div>
-          <div style={{ fontSize: "48px", fontWeight: 700, marginTop: "8px", letterSpacing: "-0.03em" }}>
-            {headline.schemaName} {headline.score} {change}
+          <div style={{ display: "flex", flexDirection: "column", fontSize: "48px", fontWeight: 700, marginTop: "8px", letterSpacing: "-0.03em" }}>
+            {`${headline.schemaName} ${headline.score} ${change}`}
           </div>
-          <div style={{ fontSize: "22px", color: "#b0b0c8", marginTop: "10px", maxWidth: "980px" }}>
+          <div style={{ display: "flex", flexDirection: "column", fontSize: "22px", color: "#b0b0c8", marginTop: "10px", maxWidth: "980px" }}>
             {headline.line}
           </div>
         </div>
@@ -67,8 +67,8 @@ export async function GET() {
                 minWidth: "200px",
               }}
             >
-              <div style={{ fontSize: "14px", color: "#8888a0" }}>#{row.rank} {row.schemaName}</div>
-              <div style={{ fontSize: "32px", fontWeight: 700, marginTop: "4px" }}>{row.score}</div>
+              <div style={{ display: "flex", flexDirection: "column", fontSize: "14px", color: "#8888a0" }}>{`#${row.rank} ${row.schemaName}`}</div>
+              <div style={{ display: "flex", flexDirection: "column", fontSize: "32px", fontWeight: 700, marginTop: "4px" }}>{row.score}</div>
             </div>
           ))}
         </div>

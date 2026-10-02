@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div
-            style={{
+            style={{ display: "flex", flexDirection: "column",
               fontSize: "18px",
               letterSpacing: "0.28em",
               textTransform: "uppercase",
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
             DataBard
           </div>
           {card && card.failed > 0 && (
-            <div style={{ fontSize: "18px", color: "#f55b5b" }}>
+            <div style={{ display: "flex", flexDirection: "column", fontSize: "18px", color: "#f55b5b" }}>
               {card.failed} failing
             </div>
           )}
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
         <div style={{ display: "flex", alignItems: "flex-end", gap: "28px", marginTop: "48px" }}>
           <div
-            style={{
+            style={{ display: "flex", flexDirection: "column",
               fontSize: "128px",
               fontWeight: 700,
               lineHeight: 0.85,
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", paddingBottom: "12px" }}>
             <div
-              style={{
+              style={{ display: "flex", flexDirection: "column",
                 fontSize: "22px",
                 letterSpacing: "0.16em",
                 textTransform: "uppercase",
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
               Health
             </div>
             <div
-              style={{
+              style={{ display: "flex", flexDirection: "column",
                 fontSize: "44px",
                 fontWeight: 700,
                 letterSpacing: "-0.03em",
@@ -104,11 +104,11 @@ export async function GET(req: NextRequest) {
             maxWidth: "980px",
           }}
         >
-          <div style={{ fontSize: "28px", lineHeight: 1.35, color: "#b0b0c8" }}>
+          <div style={{ display: "flex", flexDirection: "column", fontSize: "28px", lineHeight: 1.35, color: "#b0b0c8" }}>
             {`"${quote}"`}
           </div>
-          <div style={{ fontSize: "18px", color: "#8888a0", marginTop: "12px" }}>
-            — {speaker}
+          <div style={{ display: "flex", flexDirection: "column", fontSize: "18px", color: "#8888a0", marginTop: "12px" }}>
+            {`— ${speaker}`}
           </div>
         </div>
 
