@@ -172,19 +172,34 @@ export default async function EarnSponsorPage({ params }: PageProps) {
               ) : (
                 <>
                   <h2 id="publish-title" className="text-sm font-semibold">
-                    Publish this report
+                    Make it official
                   </h2>
                   <p className="mt-1 font-display text-2xl font-bold tabular-nums">
                     {"$"}{price} <span className="text-xs font-normal text-[var(--text-muted)]">one-time</span>
                   </p>
+                  <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
+                    Anyone can quote a number. A published edition is a dated public
+                    record of this finding — commissioned by you, receipted on-chain,
+                    and frozen so the version you cite is the version everyone sees.
+                  </p>
+                  <div className="mt-3 border border-dashed border-[var(--palm)]/40 bg-[var(--palm)]/5 px-3 py-2.5 flex items-center gap-2.5">
+                    <span className="w-2 h-2 rounded-full bg-[var(--palm-light)] shrink-0 opacity-70" aria-hidden="true" />
+                    <p className="text-[10px] leading-relaxed text-[var(--text-muted)]">
+                      Adds to this page:{" "}
+                      <span className="text-[var(--text)]">
+                        “Commissioned edition · paid ${price} · published {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}”
+                      </span>{" "}
+                      + payment receipt link
+                    </p>
+                  </div>
                   <ul className="mt-4 flex flex-col gap-2 text-xs leading-relaxed text-[var(--text-muted)]">
-                    <li>Preserve a dated snapshot</li>
-                    <li>Keep the report and evidence receipt together</li>
-                    <li>Include payment attribution</li>
+                    <li>Permanent permalink — the report as computed at publication</li>
+                    <li>Evidence receipt stays attached; anyone can verify the numbers</li>
+                    <li>Payment attribution shows the subject commissioned it</li>
                   </ul>
                   <p className="mt-4 text-[11px] leading-relaxed text-[var(--text-muted)]">
-                    Preview links update. Published editions preserve the report computed at
-                    publication. Five-year retention. Network fees additional.
+                    Free previews recompute live; published editions do not. Five-year
+                    retention. Network fees additional.
                   </p>
                   <div className="mt-4">
                     <EditionCheckout sponsor={name} slug={slug} pricePusd={price} />

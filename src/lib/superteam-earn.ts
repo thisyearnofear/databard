@@ -455,14 +455,35 @@ export function computeEarnEdition(
   }
 
   // One constant, two renderers (page headline + OG card) — they cannot drift.
+  // The headline leads with the sponsor's STRONGEST rank — the whole point of
+  // the artifact is that it flatters its subject. Always claiming listings
+  // buries a top-3 rewards rank under a mediocre listings rank (Areta was
+  // "#167 by listings" while being #3 of 593 by reward volume).
   const listingsLeadClaim =
     "has published more Earn listings than any other sponsor in the network";
-  const rankPhrase =
-    rankByListings === 1
-      ? `${focus.name} ${listingsLeadClaim}`
-      : rankByRewards === 1
-        ? `${focus.name} leads the Earn economy on reward dollars`
-        : `${focus.name} ranks #${rankByListings || "?"} by listings in the Earn economy`;
+  const rankCandidates = [
+    { dim: "listings", rank: rankByListings, pool: allSponsors.length },
+    { dim: "rewards", rank: rankByRewards, pool: allSponsors.length },
+    ...(isChapter && rankByRewardsChapters > 0
+      ? [{ dim: "chapters", rank: rankByRewardsChapters, pool: chapters.length }]
+      : []),
+  ].filter((c) => c.rank > 0);
+  const best =
+    rankCandidates.sort((a, b) => a.rank - b.rank || b.pool - a.pool)[0] ??
+    { dim: "listings", rank: 0, pool: allSponsors.length };
+  const claimBody =
+    best.dim === "listings" && best.rank === 1
+      ? listingsLeadClaim
+      : best.dim === "rewards" && best.rank === 1
+        ? "leads the Earn economy on reward dollars"
+        : best.dim === "chapters" && best.rank === 1
+          ? `leads all ${best.pool} Superteam chapters on reward dollars`
+          : best.dim === "chapters"
+            ? `ranks #${best.rank} of ${best.pool} chapters by reward volume`
+            : best.dim === "rewards"
+              ? `ranks #${best.rank || "?"} by reward volume in the Earn economy`
+              : `ranks #${best.rank || "?"} by listings in the Earn economy`;
+  const rankPhrase = `${focus.name} ${claimBody}`;
   const rewardRankLine = isChapter
     ? `#${rankByRewardsChapters || "?"} of ${chapters.length} chapters by reward volume`
     : `#${rankByRewards || "?"} of ${allSponsors.length} sponsors by reward volume`;
@@ -470,21 +491,16 @@ export function computeEarnEdition(
     claim: rankPhrase,
     line: `${focusEd.listings} listings · ${money(focusEd.usdRewards)} in USD rewards · ${focusEd.submissions.toLocaleString("en-US")} builder submissions — ${rewardRankLine}.`,
     card:
-      rankByListings === 1
-        ? `${focus.name} ${listingsLeadClaim}.`
-        : rankByRewards === 1
-          ? `${focus.name} leads the Earn economy on reward dollars.`
-          : `#${rankByListings || "?"} by listings in the Earn economy.`,
+      best.rank === 1
+        ? `${rankPhrase}.`
+        : best.dim === "chapters"
+          ? `#${best.rank} of ${best.pool} chapters by reward volume.`
+          : `#${best.rank || "?"} by ${best.dim === "rewards" ? "reward volume" : "listings"} in the Earn economy.`,
   };
 
   const permalink = `${PUBLIC_BASE}${focus.path}`;
   const mention = focus.handle ? `@${focus.handle}` : focus.name;
-  const focusClaim =
-    rankByListings === 1
-      ? listingsLeadClaim
-      : rankByRewards === 1
-        ? "leads the Earn economy on reward dollars"
-        : `ranks #${rankByListings || "?"} by listings`;
+  const focusClaim = claimBody;
   // Tweet copy is length-budgeted: X counts the URL as 23 chars, so keep the
   // rest under 257. Two reward leaders only — names and totals both grow.
   const leaders = topRewards.map((c) => `${c.name.replace("Superteam ", "")} ${money(c.usdRewards)}`).join(" · ");
