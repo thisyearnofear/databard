@@ -117,24 +117,13 @@ export default function ProbePage() {
       <div className="mx-auto max-w-5xl">
         <Link href="/agents" className="inline-flex min-h-11 items-center text-sm text-[var(--text-muted)] hover:text-[var(--text)]">← Agent tools</Link>
 
-        {/* Hero */}
+        {/* Header — /probe is door #2 of /agents, not a separate pitch. The
+            page-level sell lives on /agents; here we go straight to the tool. */}
         <div className="mt-6 max-w-3xl">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">DataBard Probe</p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Check a service before you pay.</h1>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[var(--text-muted)]">Compare response quality across our default service set. The free preview makes no payments and cannot inspect paid-only responses.</p>
-          <p className="mt-4 text-sm">
-            <Link href="/probe/marketplace" className="text-[var(--accent)] hover:underline">
-              Browse the OKX.AI marketplace health index →
-            </Link>
-          </p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">Agent tools · Probe</p>
+          <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Check a service before you pay.</h1>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">Free preview compares the default service set — no wallet, no payment, and paid-only responses stay out of scope. <Link href="/probe/marketplace" className="text-[var(--accent)] hover:underline">Browse the marketplace index →</Link></p>
         </div>
-
-        {/* How it works */}
-        <ol className="mt-10 grid gap-5 border-y border-[var(--border)] py-6 text-sm sm:grid-cols-3">
-          <li><span className="font-mono text-xs text-[var(--accent)]">01</span><h2 className="mt-2 font-semibold">Check what responds</h2><p className="mt-2 leading-relaxed text-[var(--text-muted)]">Call the default services without authorizing payments.</p></li>
-          <li><span className="font-mono text-xs text-[var(--accent)]">02</span><h2 className="mt-2 font-semibold">Compare the evidence</h2><p className="mt-2 leading-relaxed text-[var(--text-muted)]">Inspect quality scores, response flags, and pricing information.</p></li>
-          <li><span className="font-mono text-xs text-[var(--accent)]">03</span><h2 className="mt-2 font-semibold">Decide with context</h2><p className="mt-2 leading-relaxed text-[var(--text-muted)]">Use the observations as a starting point—not a guarantee of suitability.</p></li>
-        </ol>
 
         {/* Input */}
         <div className="dither-grain mt-10 max-w-2xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">

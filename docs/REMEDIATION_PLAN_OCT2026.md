@@ -145,6 +145,28 @@ regression on `onchainos agent service-list --agent-id 9878`.
 
 ## Workstream D: Collapse front-door sprawl → one spine, four doors with explicit roles
 
+**Status: shipped (Oct 2, 2026).** Better starting state than feared —
+`PublicReportHeader` already spans every public surface
+(`/`/`/earn`/`/agents`/`/probe`/`/verify`/`/league`/`/roast`) with all four
+doors linked, and `/agents` already numbered `/probe` as door #2. Actual
+deltas shipped: `/probe`'s standalone hero pitch collapsed into a tool
+header (kicker "Agent tools · Probe" anchors it under `/agents`; the 3-step
+sell and duplicate subtitle removed — that copy lives on door #2), and the
+wizard's own top bar now carries a "Connect your data" surface label so
+stale-link visitors know which product they're in.
+
+**IA note — one job per surface:**
+- `/` (ReportLanding) — see a public finding; the share loop's front door.
+- `/earn` — the sponsor report index; the share loop's money step.
+- `/agents` — the agent doorway: one pitch, four numbered doors
+  (free health-check demo → `/probe` → marketplace index → `/verify`).
+- `/probe` — door #2 made concrete: run the comparison preview. Tool page,
+  not a pitch.
+- `/probe/marketplace` — the public health index (Probe's reputation loop).
+- `/verify` — check an anchored report commitment.
+- Wizard (`/?workspace=…`) — "connect your own data", the supporting
+  surface; now labeled in its top bar.
+
 **Problem:** `/`, `/agents`, `/probe`, and the wizard each carry an
 independent hero/CTA set. Not wrong individually, but a cold visitor can land
 on any of the four and get a different one-sentence pitch.

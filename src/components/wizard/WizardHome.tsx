@@ -65,6 +65,9 @@ export default function WizardHome() {
               DataBard
             </span>
           </Link>
+          <span className="hidden text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--text-muted)] sm:inline" aria-hidden="true">
+            Connect your data
+          </span>
           <PersonaToggle />
           <div className="flex shrink-0 items-center justify-end gap-2">
             <ThemeToggle />

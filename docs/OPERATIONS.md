@@ -106,6 +106,10 @@ healthy is ~3–6s = ~1s handler + 2–5s sync settlement). On breach or a faile
 paid call it logs `ALERT …` to `/opt/databard/logs/briefing-latency.log` and,
 when `BRIEFING_ALERT_WEBHOOK` is set in `/opt/databard/.env`, POSTs `{text}`.
 Exit 0 green / 1 breach-or-failure / 2 no `PROBE_PAYER_PK` / 3 malformed 402.
+Quota: each run spends ~2 facilitator calls (verify + settle) on the OKX API
+key — hourly ≈ 1,440/month, ~1.4% of the 100k/month plan quota. Don't run it
+more often than hourly; if quota ever tightens, `BRIEFING_LATENCY_BUDGET_MS`
+and the cadence are the levers, not disabling it.
 
 ## Deploy
 
