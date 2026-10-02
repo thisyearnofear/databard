@@ -11,6 +11,8 @@ export interface PendingCheckout {
   txSignature: string;
   amountLabel: string;
   createdAt: string;
+  /** Last verify failure — why the record is still pending (feeds meta.reason). */
+  lastError?: string;
 }
 
 export function checkoutStorageKey(purpose: "edition" | "pro", reference: string): string {
@@ -49,6 +51,7 @@ function isPendingCheckout(value: unknown): value is PendingCheckout {
   if (!METHODS.includes(p.method as CheckoutMethod)) return false;
   if (typeof p.txSignature !== "string" || !BASE58_SIGNATURE.test(p.txSignature)) return false;
   if (typeof p.amountLabel !== "string" || typeof p.createdAt !== "string") return false;
+  if (p.lastError !== undefined && typeof p.lastError !== "string") return false;
   if (!Number.isFinite(Date.parse(p.createdAt as string))) return false;
   if (p.method === "sol" && (typeof p.quoteId !== "string" || p.quoteId.length === 0)) return false;
   if (p.purpose === "edition") {
@@ -128,21 +131,48 @@ export function verifyCheckoutRequest(pending: PendingCheckout): {
   };
 }
 
+const UNCONFIRMED_MESSAGE =
+  "Payment not confirmed yet. Check its status before paying again.";
+
+/**
+ * Verify a saved payment against the server. With `attempts`/`intervalMs` the
+ * call polls while the server reports the payment unsettled (`pending: true`)
+ * — sendRawTransaction resolves before confirmation, so the first verify often
+ * races the chain. A hard verdict (mismatched, unknown intent) throws on the
+ * first response and is never retried.
+ */
 export async function recoverCheckout(
   pending: PendingCheckout,
   request: typeof fetch = fetch,
+  opts?: { attempts?: number; intervalMs?: number },
 ): Promise<Record<string, unknown>> {
+  const attempts = Math.max(1, Math.floor(opts?.attempts ?? 1));
+  const intervalMs = Math.max(0, opts?.intervalMs ?? 0);
   const { url, body } = verifyCheckoutRequest(pending);
-  const res = await request(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok || !data?.ok) {
-    throw new Error(data?.error || "Payment not confirmed yet. Check its status before paying again.");
+  let lastError = new Error(UNCONFIRMED_MESSAGE);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (attempt > 0 && intervalMs > 0) {
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+    let data: Record<string, unknown> | null = null;
+    try {
+      const res = await request(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      data = (await res.json()) as Record<string, unknown>;
+      if (res.ok && data?.ok === true) return data;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(UNCONFIRMED_MESSAGE);
+      continue;
+    }
+    if (data?.pending !== true) {
+      throw new Error(typeof data?.error === "string" ? data.error : UNCONFIRMED_MESSAGE);
+    }
+    lastError = new Error(typeof data?.error === "string" ? data.error : UNCONFIRMED_MESSAGE);
   }
-  return data;
+  throw lastError;
 }
 
 export async function submitRecoverableCheckout(

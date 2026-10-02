@@ -21,6 +21,7 @@ import {
   type PendingCheckout,
 } from "@/lib/checkout-recovery";
 import { explorerUrl } from "@/lib/settlement/verifier";
+import { track } from "@/lib/track";
 
 type CheckoutState = "idle" | "ready" | "signing" | "confirming" | "pending" | "success" | "error";
 type PayMethod = "pusd" | "usdc" | "sol";
@@ -47,6 +48,7 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
   const [checking, setChecking] = useState(false);
   const [restored, setRestored] = useState(false);
   const inFlight = useRef(false);
+  const checkPaymentRef = useRef<((record: PendingCheckout) => void) | null>(null);
 
   const walletKey = publicKey?.toBase58() ?? null;
   const walletRef = useRef<string | null>(null);
@@ -70,6 +72,9 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
         setPending(saved);
         setPaidLabel(saved.amountLabel);
         setState("pending");
+        // A saved payment re-checks itself — the tx may have confirmed while
+        // the user was away. One automatic pass per mount.
+        void checkPaymentRef.current?.(saved);
       } else {
         setState("idle");
       }
@@ -89,28 +94,38 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
     onSuccess?.(signature);
   }, [onSuccess]);
 
-  const checkPayment = useCallback(async (record: PendingCheckout) => {
+  const checkPayment = useCallback(async (record: PendingCheckout, via: "auto" | "manual" = "manual") => {
     if (inFlight.current) return;
     inFlight.current = true;
     setChecking(true);
     setError(null);
     const recordKey = checkoutStorageKey("pro", record.walletAddress);
+    track("pro_payment_recovery", {
+      method: record.method,
+      via,
+      reason: record.lastError ?? "no previous error recorded",
+    });
     try {
-      const data = await recoverCheckout(record);
+      const data = await recoverCheckout(record, fetch, { attempts: 4, intervalMs: 2500 });
       clearPendingCheckout(window.localStorage, recordKey);
       if (walletRef.current === record.walletAddress || walletRef.current === null) {
         setPaidLabel(record.amountLabel);
         markSuccess(record.txSignature, data.explorerUrl as string | undefined);
       }
     } catch (e) {
+      const msg = e instanceof Error ? e.message : "Payment not confirmed yet. Check its status before paying again.";
       if (walletRef.current === record.walletAddress || walletRef.current === null) {
-        setError(e instanceof Error ? e.message : "Payment not confirmed yet. Check its status before paying again.");
+        setError(msg);
       }
+      try {
+        savePendingCheckout(window.localStorage, recordKey, { ...record, lastError: msg.slice(0, 120) });
+      } catch { }
     } finally {
       inFlight.current = false;
       setChecking(false);
     }
   }, [markSuccess]);
+  checkPaymentRef.current = (record) => void checkPayment(record);
 
   const handleCheckout = useCallback(async () => {
     if (!publicKey || !signTransaction || !storageKey || inFlight.current) return;
@@ -194,8 +209,10 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
           await connection.sendRawTransaction(signedTx.serialize());
         },
         verify: async (p) => {
-          // 5. Verify payment and activate Pro
-          verifyData = await recoverCheckout(p) as typeof verifyData;
+          // 5. Verify payment and activate Pro — polls while the chain
+          // settles: sendRawTransaction resolves before confirmation, so a
+          // single-shot verify races it every time.
+          verifyData = await recoverCheckout(p, fetch, { attempts: 8, intervalMs: 2500 }) as typeof verifyData;
           if (!verifyData!.ok) throw new Error(verifyData!.error || "Payment verification failed");
         },
       });
@@ -219,7 +236,12 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
       if (walletRef.current !== payWallet) return;
       if (persisted) {
         try {
-          setPending(readPendingCheckout(window.localStorage, storageKey));
+          const rec = readPendingCheckout(window.localStorage, storageKey);
+          if (rec) {
+            const annotated = { ...rec, lastError: msg.slice(0, 120) };
+            savePendingCheckout(window.localStorage, storageKey, annotated);
+            setPending(annotated);
+          }
         } catch { }
         setError(msg);
         setState("pending");
@@ -286,6 +308,9 @@ export function PalmUsdCheckout({ onSuccess, compact = false }: PalmUsdCheckoutP
           {pending.amountLabel} · reference{" "}
           <code className="select-all font-mono text-[11px] break-all">{pending.txSignature}</code>
         </p>
+        {pending.lastError && (
+          <p className="text-xs text-[var(--text-muted)]">Last check: {pending.lastError}</p>
+        )}
         {otherWallet && (
           <p className="text-xs text-[var(--text-muted)]">
             This payment belongs to {pending.walletAddress.slice(0, 4)}…{pending.walletAddress.slice(-4)}.

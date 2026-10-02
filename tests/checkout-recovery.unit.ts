@@ -152,6 +152,18 @@ describe("readPendingCheckout", () => {
     const broken = { getItem: () => { throw new Error("denied"); } };
     assert.throws(() => readPendingCheckout(broken, key), new RegExp(CORRUPT_PENDING_MESSAGE));
   });
+
+  it("round-trips lastError (why the payment went pending) and rejects a non-string one", () => {
+    const storage = memStorage();
+    savePendingCheckout(storage, key, pending({ lastError: "Transaction not found on-chain" }));
+    assert.equal(
+      readPendingCheckout(storage, key)?.lastError,
+      "Transaction not found on-chain",
+    );
+
+    const bad = memStorage({ [key]: JSON.stringify({ ...pending(), lastError: 42 }) });
+    assert.throws(() => readPendingCheckout(bad, key), new RegExp(CORRUPT_PENDING_MESSAGE));
+  });
 });
 
 describe("savePendingCheckout", () => {
@@ -294,6 +306,59 @@ describe("recoverCheckout", () => {
   it("rejects when the server answers ok:false", async () => {
     const { request } = stubFetch(() => ({ status: 200, json: { ok: false, error: "not confirmed" } }));
     await assert.rejects(recoverCheckout(pending(), request), /not confirmed/);
+  });
+
+  it("polls while the server marks the payment pending, then returns the verdict", async () => {
+    const responses = [
+      { status: 400, json: { ok: false, pending: true, error: "Transaction not found on-chain" } },
+      { status: 400, json: { ok: false, pending: true, error: "Transaction not found on-chain" } },
+      { status: 200, json: { ok: true, explorerUrl: "https://x" } },
+    ];
+    let i = 0;
+    const { request, calls } = stubFetch(() => responses[i++]);
+    const data = await recoverCheckout(pending(), request, { attempts: 5, intervalMs: 0 });
+    assert.equal(data.ok, true);
+    assert.equal(calls.length, 3);
+  });
+
+  it("a hard verdict (no pending flag) never retries — one call, one refusal", async () => {
+    const { request, calls } = stubFetch(() => ({
+      status: 400,
+      json: { ok: false, error: "Transaction was not funded by the claiming wallet" },
+    }));
+    await assert.rejects(
+      recoverCheckout(pending(), request, { attempts: 5, intervalMs: 0 }),
+      /not funded by the claiming wallet/,
+    );
+    assert.equal(calls.length, 1);
+  });
+
+  it("exhausting the pending window throws the last server reason", async () => {
+    const { request, calls } = stubFetch(() => ({
+      status: 400,
+      json: { ok: false, pending: true, error: "Transaction not found on-chain" },
+    }));
+    await assert.rejects(
+      recoverCheckout(pending(), request, { attempts: 3, intervalMs: 0 }),
+      /not found on-chain/,
+    );
+    assert.equal(calls.length, 3);
+  });
+
+  it("a transport failure is retryable inside the attempt budget", async () => {
+    let n = 0;
+    const request = (async () => {
+      n++;
+      if (n === 1) throw new Error("offline blip");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      } as Response;
+    }) as typeof fetch;
+    const data = await recoverCheckout(pending(), request, { attempts: 3, intervalMs: 0 });
+    assert.equal(data.ok, true);
+    assert.equal(n, 2);
   });
 });
 

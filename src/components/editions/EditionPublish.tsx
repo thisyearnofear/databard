@@ -91,21 +91,6 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
     return saved;
   }, [storageKey]);
 
-  useEffect(() => {
-    setPending(null);
-    setPrepared(null);
-    setError(null);
-    try {
-      const saved = loadPending();
-      if (!saved) setState("idle");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Saved payment could not be read");
-      setState("error");
-    } finally {
-      setRestored(true);
-    }
-  }, [loadPending]);
-
   const markPublished = useCallback((data: { permalink?: string; explorerUrl?: string }) => {
     setPermalink(data.permalink ?? `/earn/${slug}`);
     setExplorer(data.explorerUrl ?? null);
@@ -115,25 +100,59 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
     router.refresh();
   }, [router, slug, sponsor]);
 
-  const checkPayment = useCallback(async (record: PendingCheckout) => {
+  /** Persist the failure reason on the pending record — it feeds meta.reason. */
+  const recordFailure = useCallback((key: string, record: PendingCheckout, msg: string) => {
+    try {
+      const annotated = { ...record, lastError: msg.slice(0, 120) };
+      savePendingCheckout(window.localStorage, key, annotated);
+      setPending(annotated);
+    } catch { }
+  }, []);
+
+  const checkPayment = useCallback(async (record: PendingCheckout, via: "auto" | "manual" = "manual") => {
     if (inFlight.current) return;
     inFlight.current = true;
     setChecking(true);
     setError(null);
-    track("edition_payment_recovery", { slug: record.slug ?? slug, method: record.method });
+    track("edition_payment_recovery", {
+      slug: record.slug ?? slug,
+      method: record.method,
+      via,
+      reason: record.lastError ?? "no previous error recorded",
+    });
     try {
-      const data = await recoverCheckout(record);
+      const data = await recoverCheckout(record, fetch, { attempts: 4, intervalMs: 2500 });
       clearPendingCheckout(window.localStorage, checkoutStorageKey("edition", record.slug ?? slug));
       if (slugRef.current === (record.slug ?? slug)) {
         markPublished(data as { permalink?: string; explorerUrl?: string });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment not confirmed yet. Check its status before paying again.");
+      const msg = e instanceof Error ? e.message : "Payment not confirmed yet. Check its status before paying again.";
+      setError(msg);
+      recordFailure(checkoutStorageKey("edition", record.slug ?? slug), record, msg);
     } finally {
       inFlight.current = false;
       setChecking(false);
     }
-  }, [markPublished, slug]);
+  }, [markPublished, slug, recordFailure]);
+
+  useEffect(() => {
+    setPending(null);
+    setPrepared(null);
+    setError(null);
+    try {
+      const saved = loadPending();
+      if (!saved) setState("idle");
+      // A refreshed page with a saved payment re-checks itself — the tx may
+      // have confirmed while the user was away. One automatic pass per mount.
+      else void checkPayment(saved, "auto");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Saved payment could not be read");
+      setState("error");
+    } finally {
+      setRestored(true);
+    }
+  }, [loadPending, checkPayment]);
 
   const handlePrepare = useCallback(async () => {
     if (!publicKey || !signTransaction || inFlight.current) return;
@@ -278,7 +297,9 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
         },
         verify: async (p) => {
           setState("publishing");
-          verifyData = await recoverCheckout(p) as typeof verifyData;
+          // Poll while the chain settles — sendRawTransaction resolves before
+          // confirmation, so a single-shot verify races it every time.
+          verifyData = await recoverCheckout(p, fetch, { attempts: 8, intervalMs: 2500 }) as typeof verifyData;
           if (!verifyData!.ok) throw new Error(verifyData!.error || "Payment verification failed");
         },
       });
@@ -302,7 +323,8 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
       }
       if (persisted) {
         try {
-          setPending(readPendingCheckout(window.localStorage, storageKey));
+          const rec = readPendingCheckout(window.localStorage, storageKey);
+          if (rec) recordFailure(storageKey, rec, msg);
         } catch { }
         setError(msg);
         setState("pending");
@@ -313,7 +335,7 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
     } finally {
       inFlight.current = false;
     }
-  }, [publicKey, signTransaction, prepared, storageKey, markPublished, loadPending]);
+  }, [publicKey, signTransaction, prepared, storageKey, markPublished, loadPending, recordFailure]);
 
   const handleRetry = useCallback(() => {
     try {
@@ -365,6 +387,9 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
           {pending.amountLabel} · reference{" "}
           <code className="select-all font-mono text-[11px] break-all">{pending.txSignature}</code>
         </p>
+        {pending.lastError && (
+          <p className="text-xs text-[var(--text-muted)]">Last check: {pending.lastError}</p>
+        )}
         {otherWallet && (
           <p className="text-xs text-[var(--text-muted)]">
             This payment belongs to {pending.walletAddress.slice(0, 4)}…{pending.walletAddress.slice(-4)}.

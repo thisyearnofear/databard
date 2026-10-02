@@ -146,7 +146,14 @@ export async function POST(req: NextRequest) {
       expectedBefore,
     });
     if (result.status !== "verified") {
-      return NextResponse.json({ ok: false, error: result.detail ?? result.status }, { status: 400 });
+      // "pending"/"not-found" mean the chain hasn't settled yet — the client
+      // polls these (sendRawTransaction resolves before confirmation). A
+      // "mismatched" verdict is final and must not be retried.
+      const unsettled = result.status === "pending" || result.status === "not-found";
+      return NextResponse.json(
+        { ok: false, pending: unsettled || undefined, error: result.detail ?? result.status },
+        { status: 400 },
+      );
     }
 
     let details: EditionPaymentDetails | undefined;

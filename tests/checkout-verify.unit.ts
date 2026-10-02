@@ -183,6 +183,22 @@ describe("refusals stay refused", () => {
     });
     assert.equal(res.status, 400);
   });
+
+  it("unsettled verdicts carry pending:true so clients poll; hard verdicts do not", async () => {
+    stubBackend("pusd", { status: "not-found", detail: "Transaction not found on-chain" });
+    const walletAddress = `Wallet_${randomBytes(4).toString("hex")}`;
+    const pendingRes = await call({
+      walletAddress, txSignature: sig(), purpose: "pro", method: "pusd",
+    });
+    assert.equal((await pendingRes.json()).pending, true);
+
+    stubBackend("pusd", { status: "mismatched", detail: "wrong amount" });
+    const hardRes = await call({
+      walletAddress, txSignature: sig(), purpose: "pro", method: "pusd",
+    });
+    assert.equal(hardRes.status, 400);
+    assert.equal((await hardRes.json()).pending, undefined);
+  });
 });
 
 describe("edition publish", () => {
