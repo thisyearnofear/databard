@@ -98,24 +98,25 @@ stale:
 ```
 
 **`scripts/briefing-latency-check.mjs`** pays a real `/api/mcp/briefing` call
-hourly (at :23, installed by `deploy.sh`) and times it — the paid endpoint is
+daily (05:23, installed by `deploy.sh`) and times it — the paid endpoint is
 what OKX's reviewer hits, and two of the three delistings were paid-endpoint
-timeouts found *after* review. It pays our own `PAY_TO_ADDRESS`, so cost is
-X Layer gas only. Budget: `BRIEFING_LATENCY_BUDGET_MS` (default 15000ms —
+timeouts found *after* review. It pays our own `PAY_TO_ADDRESS`, so the $1
+rotates back to us; only facilitator-paid gas leaves. Budget: `BRIEFING_LATENCY_BUDGET_MS` (default 15000ms —
 healthy is ~3–6s = ~1s handler + 2–5s sync settlement). On breach or a failed
 paid call it logs `ALERT …` to `/opt/databard/logs/briefing-latency.log` and,
 when `BRIEFING_ALERT_WEBHOOK` is set in `/opt/databard/.env`, POSTs `{text}`.
 Exit 0 green / 1 breach-or-failure / 2 no `PROBE_PAYER_PK` / 3 malformed 402.
 Quota: each run spends ~2 facilitator calls (verify + settle) on the OKX API
-key — hourly ≈ 1,440/month, ~1.4% of the 100k/month plan quota. Don't run it
-more often than hourly; if quota ever tightens, `BRIEFING_LATENCY_BUDGET_MS`
-and the cadence are the levers, not disabling it.
+key — daily ≈ 60/month, noise against the 100k/month plan quota. Cadence is
+daily, not hourly, on purpose: the check exists to catch a dead paid surface
+before a reviewer does, and daily is plenty — hourly just cycled $24/day of
+float through the payer wallet for no real gain.
 
 Self-pay cycles the USDT0 into our own `PAY_TO_ADDRESS`, not out of the
-business — but it drains the `PROBE_PAYER_PK` wallet at ~$24/day. Keep float
-on `0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8` (~$50 ≈ 2 days between
-sweeps) and periodically send accumulated USDT0 from `PAY_TO_ADDRESS` back.
-An `insufficient_balance` alert is a payer funding problem, not an endpoint
+business — it drains the `PROBE_PAYER_PK` wallet at $1/day. Keep ~$30 float
+on `0x49D551cA1F2532C82473b6c919d1a099ef5FA8D8` (≈ a month between sweeps)
+and periodically send accumulated USDT0 from `PAY_TO_ADDRESS` back. An
+`insufficient_balance` alert is a payer funding problem, not an endpoint
 outage.
 
 **`POST /api/probe/verdicts/refresh`** runs weekly (Mondays 06:41, installed

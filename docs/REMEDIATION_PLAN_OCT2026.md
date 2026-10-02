@@ -98,8 +98,10 @@ zero recovery events, or the dashboard shows the reason distribution shrinking.
 ## Workstream C: Stop the OKX delist cycle (agent-loop stability)
 
 **Status: shipped (Oct 2, 2026).** `scripts/briefing-latency-check.mjs` pays a
-real `/api/mcp/briefing` call against prod and times it (self-pay → gas only);
-hourly cron installed by `deploy.sh` at :23, breaches log to
+real `/api/mcp/briefing` call against prod and times it (self-pay → the $1
+rotates back to our own `PAY_TO_ADDRESS`, so cost ≈ $0); daily cron at 05:23
+installed by `deploy.sh` — hourly was rejected as wasted float churn —
+breaches log to
 `briefing-latency.log` + optional `BRIEFING_ALERT_WEBHOOK` POST.
 `tests/briefing-config.unit.ts` guards `syncSettle:true` (source-level — the
 plan's `false` was wrong; async settled nothing on Sep 25) and the

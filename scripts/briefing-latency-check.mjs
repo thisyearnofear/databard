@@ -5,7 +5,7 @@
  * Pays a real /api/mcp/briefing call and times it — the paid endpoint is what
  * OKX's reviewer hits, and two of the three delistings were paid-endpoint
  * timeouts discovered *after* OKX's own request failed. This is the canary:
- * run it hourly from cron and a regression pages the log (and optionally a
+ * run it daily from cron and a regression pages the log (and optionally a
  * webhook) before the reviewer does.
  *
  * The payment settles to our own PAY_TO_ADDRESS, so the only real cost is

@@ -273,14 +273,14 @@ ssh "$REMOTE" bash <<EOF
   { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$IDX_CRON"; printf '%s\n' "\$IDX_VERIFY_CRON"; } | grep -v '^\$' | crontab - \
     || echo "   ⚠️  crontab install failed — existing crontab left untouched"
 
-  # Paid-endpoint synthetic check: pays a real /api/mcp/briefing call hourly
+  # Paid-endpoint synthetic check: pays a real /api/mcp/briefing call daily
   # and times it — the paid route is what OKX's reviewer hits, and two of the
   # three delistings were paid-endpoint timeouts found *after* review. Pays to
   # our own PAY_TO_ADDRESS so the cost is gas only. Breaches append to the
   # cron log and POST to BRIEFING_ALERT_WEBHOOK when set.
   echo "   Installing briefing-latency cron..."
   LAT_CRON=\$(echo 'Y2QgL29wdC9kYXRhYmFyZC9jdXJyZW50ICYmIFBBVEg9IiRIT01FLy5sb2NhbC9iaW46L3Vzci9sb2NhbC9iaW46JFBBVEgiIG5vZGUgc2NyaXB0cy9icmllZmluZy1sYXRlbmN5LWNoZWNrLm1qcyA+PiAvb3B0L2RhdGFiYXJkL2xvZ3MvYnJpZWZpbmctbGF0ZW5jeS5sb2cgMj4mMQo=' | base64 -d)
-  LAT_CRON="23 * * * * \$LAT_CRON"
+  LAT_CRON="23 5 * * * \$LAT_CRON"
   EXISTING=\$(crontab -l 2>/dev/null || true)
   FILTERED=\$(printf '%s\n' "\$EXISTING" | grep -v 'briefing-latency-check' || true)
   { printf '%s\n' "\$FILTERED"; printf '%s\n' "\$LAT_CRON"; } | grep -v '^\$' | crontab - \
