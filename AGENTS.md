@@ -41,24 +41,40 @@ coral-bridge: no HTTP response on 42101), then `pm2 save`s so we stay in the dum
 Two-layer analytics system:
 
 1. **Pageviews** — Plausible (optional). Set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` env var to enable. Without it, no pageview tracking.
-2. **Custom events** — self-hosted event ledger at `src/lib/events.ts`. Client-side `track()` function in `src/lib/track.ts` fires events via POST `/api/events`. Events stored in `data/events.json` (rolling 10k window). View stats via GET `/api/events`.
+2. **Custom events** — self-hosted event ledger at `src/lib/events.ts`. Client-side `track()` function in `src/lib/track.ts` fires events via POST `/api/events`. Events stored in `data/events.json` (rolling 10k window). View stats via GET `/api/events`, or the internal funnel dashboard at `/admin/funnel?key=$ADMIN_SECRET` (404s unless `ADMIN_SECRET` is set and the key matches).
 
 ### Tracked funnel events
-- `landing_cta_click` — which CTA (demo vs connect) on landing page
-- `demo_play` — demo episode actually played (not just clicked)
-- `persona_toggle` — Teams vs Protocols workspace switch
+Mirrors `EVENT_TYPES` in `src/lib/events.ts` — keep the two in sync.
+
+Legacy / wizard-era:
+- `demo_start` — demo flow started
 - `connect_start` — user clicked connect
+- `listen_start` / `listen_complete` — episode playback began / finished (completion rate is derived from these)
+- `drilldown_open` — opened a drill-down detail
+- `insights_view` — viewed the insights surface
+- `share` — generic share action
+- `mint_click` — clicked mint
+- `feedback_yes` / `feedback_no` — episode feedback votes
+
+Funnel (GTM instrumentation):
+- `page_view` — universal route denominator — stored in `pageviews.json`, not the funnel ledger
+- `landing_cta_click` — which CTA: demo vs connect
+- `demo_play` — zero-friction demo played (not just clicked)
+- `persona_toggle` — Teams vs Protocols workspace switch
 - `generate_complete` — analysis finished, landed on dashboard
 - `dashboard_listen_click` — clicked "Listen to this analysis" on dashboard
 - `schedule_setup` — clicked "Set up weekly digest" (Pro path)
-- `monday_signup` — email on the finding: send this every Monday (pre-Pro habit)
 - `clip_share` — clicked "Share card" (score card + deep link)
 - `shared_episode_open` — someone opened a shared episode / score-card link
 - `shared_episode_cta_click` — CTA on shared page (league / get this / dashboard)
-- `league_page_view` — visited `/league` (weekly protocol accounting magnet)
-- `league_share_copy` — copied tweet, email, or permalink from the league
 - `roast_page_view` — visited /roast
 - `roast_cta_click` — clicked "Roast my data" on /roast
+- `league_page_view` — visited `/league` (weekly protocol accounting magnet)
+- `league_share_copy` — copied tweet, email, or permalink from the league
+- `superteam_page_view` — visited `/superteam` (Earn economy accounting)
+- `superteam_share_copy` — copied Superteam tweet, LinkedIn, email, or link
+- `monday_signup` — email on the finding: send this every Monday (pre-Pro habit)
+- `integration_cta_click` — direct self-serve CTA: demo vs connect vs copy_curl
 - `probe_run` — Probe executed (meta: mode=preview for the free route, candidate count, top pick, attest flag)
 - `agents_page_view` — visited `/agents` (agent-tool doorway)
 - `agent_demo_run` — ran the free health-check example on /agents
@@ -66,11 +82,26 @@ Two-layer analytics system:
 - `shared_clip_play` — played the clip on a shared score-card page
 - `marketplace_index_view` — visited `/probe/marketplace` (OKX.AI health index)
 - `service_score_lookup` — `databard_service_score` tool called
+- `pro_payment_recovery` — Pro checkout needed a re-check (meta: method, via=auto|manual, reason)
+
+Story layer (progressive disclosure):
+- `story_expand` — opened a Why-it-matters / Details disclosure
+- `evidence_open` — opened evidence from a story context
+- `finding_share` — per-segment finding shared
+
+Commissioned editions (PUSD paywall):
+- `edition_preview` — sponsor opened their free preview
+- `edition_intent` — payment intent created for a sponsor edition
+- `edition_publish_start` — publish flow started
+- `edition_published` — edition published after verified PUSD payment
+- `edition_payment_recovery` — publish needed payment recovery (meta: slug, method, via=auto|manual, reason)
+- `edition_share_copy` — copied an edition share
 
 ### Adding new events
 1. Add the event type to `EVENT_TYPES` in `src/lib/events.ts`
 2. Call `track("event_name", { meta_key: "value" })` at the right point in the UI
 3. Meta values must be strings, max 5 keys, max 120 chars each
+4. New types appear automatically on `/admin/funnel` — no dashboard wiring needed
 
 ## Email Delivery
 Scheduled digest emails use `src/lib/notifications.ts`. Two methods:

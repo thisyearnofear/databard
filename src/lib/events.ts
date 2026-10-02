@@ -3,6 +3,10 @@
  * Records what users actually do (listen, drill down, share, mint) so product
  * hypotheses can be tested against past behavior instead of opinion.
  * No PII: no emails, no wallets, no IPs — just anonymous usage signals.
+ *
+ * New event types added to EVENT_TYPES appear automatically on the internal
+ * funnel dashboard at /admin/funnel (ADMIN_SECRET-gated) — keep AGENTS.md's
+ * "Tracked funnel events" list in sync with EVENT_TYPES.
  */
 import { promises as fs } from "fs";
 import path from "path";
@@ -51,6 +55,7 @@ export const EVENT_TYPES = [
   "shared_clip_play",         // played the clip on a shared score-card page
   "marketplace_index_view",   // visited /probe/marketplace (OKX.AI health index)
   "service_score_lookup",     // databard_service_score A2MCP tool was called
+  "pro_payment_recovery",     // Pro checkout needed a re-check (meta: method, via, reason)
   // Story-layer events (Phase 1 progressive disclosure)
   "story_expand",             // opened a Why-it-matters / Details disclosure
   "evidence_open",            // opened evidence from a story context
@@ -91,6 +96,15 @@ export async function recordEvent(type: EventType, meta?: Record<string, string>
     const trimmed = all.length > MAX_EVENTS ? all.slice(-MAX_EVENTS) : all;
     await fs.writeFile(EVENTS_FILE, JSON.stringify(trimmed), "utf-8");
   });
+}
+
+/**
+ * Raw read for internal dashboards (see /admin/funnel) — every event in the
+ * rolling window, meta included, so callers can bucket by time or tally meta
+ * values. Not exposed via the public /api/events route.
+ */
+export async function listEvents(): Promise<UsageEvent[]> {
+  return serial("events", readAll);
 }
 
 export interface EventStats {

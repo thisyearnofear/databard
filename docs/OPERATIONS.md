@@ -31,6 +31,7 @@ runs (deploys build locally), not on the server.
 | `EDITION_PRICE_PUSD` | Commissioned `/earn/[slug]` editions price at the $25 default (PUSD/USDC = 25 tokens; SOL = live Jupiter quote) | Optional override (whole-dollar number) |
 
 Checkout accepts `method: "pusd" | "usdc" | "sol"` on `POST /api/checkout/palmusd` (and `/verify`). SPL methods build an idempotent treasury-ATA create + token transfer; `sol` locks a Jupiter SOL/USD quote server-side for 10 min (CoinGecko fallback) and the client echoes `quoteId` back to `/verify`, which binds it to wallet + purpose + intent. PUSD has no DEX liquidity — SOL/USDC are the practical rails.
+| `ADMIN_SECRET` | `/admin/funnel` dashboard 404s (fails closed) — the funnel numbers live behind it | Any random secret; then open `/admin/funnel?key=<secret>` |
 | `DATABARD_API_SECRET` | ⚠️ Do **not** set in prod as-is: it guards `/api/synthesize` and `/api/regenerate`, which the browser calls — setting it breaks the UI generation flow. Locking those routes down properly needs a session-based guard first. | — |
 
 ## Portable attestation routes (pending deployment)
