@@ -97,6 +97,23 @@ zero recovery events, or the dashboard shows the reason distribution shrinking.
 
 ## Workstream C: Stop the OKX delist cycle (agent-loop stability)
 
+**Status: shipped (Oct 2, 2026).** `scripts/briefing-latency-check.mjs` pays a
+real `/api/mcp/briefing` call against prod and times it (self-pay → gas only);
+hourly cron installed by `deploy.sh` at :23, breaches log to
+`briefing-latency.log` + optional `BRIEFING_ALERT_WEBHOOK` POST.
+`tests/briefing-config.unit.ts` guards `syncSettle:true` (source-level — the
+plan's `false` was wrong; async settled nothing on Sep 25) and the
+`audio:"none"` default in `parseMcpInput`. Pending: a week of green runs.
+
+**First-run finding (Oct 2):** the monitor's first live run caught a real
+outage — paid calls return `OKX verify failed: 401`, i.e. the facilitator
+rejects the prod `OKX_API_KEY/SECRET_KEY/PASSPHRASE` (present in
+`/opt/databard/.env`, unchanged since Sep 25). Both `/api/mcp/briefing` and
+`/api/agent/probe` affected. Fix = verify/rotate the creds in the OKX
+Developer Portal, update the box, redeploy. Until then the paid surface is
+down and an OKX reviewer call would fail — the exact scenario the monitor
+exists to catch.
+
 **Problem:** Delisted 3 times for paid-endpoint timeout, each time fixed
 *after* OKX's own test request failed — reactive, not caught in advance.
 

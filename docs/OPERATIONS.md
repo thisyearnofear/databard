@@ -32,6 +32,7 @@ runs (deploys build locally), not on the server.
 
 Checkout accepts `method: "pusd" | "usdc" | "sol"` on `POST /api/checkout/palmusd` (and `/verify`). SPL methods build an idempotent treasury-ATA create + token transfer; `sol` locks a Jupiter SOL/USD quote server-side for 10 min (CoinGecko fallback) and the client echoes `quoteId` back to `/verify`, which binds it to wallet + purpose + intent. PUSD has no DEX liquidity — SOL/USDC are the practical rails.
 | `ADMIN_SECRET` | `/admin/funnel` dashboard 404s (fails closed) — the funnel numbers live behind it | Any random secret; then open `/admin/funnel?key=<secret>` |
+| `BRIEFING_ALERT_WEBHOOK` | `briefing-latency-check` breaches only land in the cron log | Optional Slack/Zapier webhook — gets a POST `{text}` on latency breach or failed paid call |
 | `DATABARD_API_SECRET` | ⚠️ Do **not** set in prod as-is: it guards `/api/synthesize` and `/api/regenerate`, which the browser calls — setting it breaks the UI generation flow. Locking those routes down properly needs a session-based guard first. | — |
 
 ## Portable attestation routes (pending deployment)
@@ -95,6 +96,16 @@ stale:
 17 */6 * * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1&brief=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
 37 5 */2 * * CRON_SECRET=$(grep '^CRON_SECRET=' /opt/databard/.env | cut -d= -f2- | tr -d '\042\047') && curl -s -m 280 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:42100/api/probe/marketplace/refresh?attest=1&verify=1&brief=1" >> /opt/databard/logs/cron-marketplace-index.log 2>&1
 ```
+
+**`scripts/briefing-latency-check.mjs`** pays a real `/api/mcp/briefing` call
+hourly (at :23, installed by `deploy.sh`) and times it — the paid endpoint is
+what OKX's reviewer hits, and two of the three delistings were paid-endpoint
+timeouts found *after* review. It pays our own `PAY_TO_ADDRESS`, so cost is
+X Layer gas only. Budget: `BRIEFING_LATENCY_BUDGET_MS` (default 15000ms —
+healthy is ~3–6s = ~1s handler + 2–5s sync settlement). On breach or a failed
+paid call it logs `ALERT …` to `/opt/databard/logs/briefing-latency.log` and,
+when `BRIEFING_ALERT_WEBHOOK` is set in `/opt/databard/.env`, POSTs `{text}`.
+Exit 0 green / 1 breach-or-failure / 2 no `PROBE_PAYER_PK` / 3 malformed 402.
 
 ## Deploy
 
