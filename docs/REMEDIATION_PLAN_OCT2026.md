@@ -201,6 +201,16 @@ other two and knows the wizard is "connect your own data," without being told.
 
 ## Workstream E: Make "supporting surface" real for the wizard (lighter, not just lower-priority)
 
+**Status: shipped (Oct 2, 2026).** Prod gate data confirmed the premise
+before any code was touched: `connect_start` 1, `demo_start`/`demo_play`/
+`generate_complete`/`listen_start` all 0 in the live event ledger — the
+agent loop (122 marketplace views, 14 probe runs) dwarfs it. Dead-code
+sweep: removed action types `ADD_GEN_FINDING`, `RESET_GEN`,
+`SET_DUNE_NAMESPACE` (zero dispatch sites each), the `duneNamespace` state
+field it could never set (always `""` → `namespace: undefined` on the wire,
+identical request bodies), its four reader fallbacks, and the unused
+`episodeReady` context action. 49→46 action types. Wizard E2E: 10/10 green.
+
 **Problem:** `wizard-context.tsx`/`wizard-reducer.ts` (5-domain composed
 reducer) carries real maintenance weight under a surface with near-zero
 tracked usage in the current sample (`demo_play`/`generate_complete`/

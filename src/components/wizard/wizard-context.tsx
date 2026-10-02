@@ -106,9 +106,7 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
               ? "Cross-source SQL"
               : state.source === "datahub"
                 ? state.dhServerUrl || "No DataHub GMS set"
-                : state.duneNamespace
-                  ? `Dune user: ${state.duneNamespace}`
-                  : "Dune username optional";
+                : "Dune username optional";
 
   // Convenience actions
   const setStep = useCallback((step: WizardStep) => dispatch({ type: "SET_STEP", step }), []);
@@ -124,7 +122,6 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
   }, [state.source]);
   const startGenerating = useCallback(() => dispatch({ type: "SET_STEP", step: "generating" }), []);
   const backToSchema = useCallback(() => dispatch({ type: "SET_STEP", step: "pick-schema" }), []);
-  const episodeReady = useCallback(() => dispatch({ type: "SET_STEP", step: "episode" }), []);
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
 
   const value: WizardContextValue = {
@@ -135,7 +132,6 @@ export function WizardProvider({ children, sandboxUrl = DEFAULT_OM_SANDBOX_URL }
     connected,
     startGenerating,
     backToSchema,
-    episodeReady,
     reset,
     filteredSchemas,
     recommendedSchema,

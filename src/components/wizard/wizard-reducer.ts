@@ -31,8 +31,7 @@ export function connectionReducer(state: WizardState, action: WizardAction): Wiz
       return { ...state, graphApiKey: action.key, connectionTested: "idle" };
     case "SET_DUNE_API_KEY":
       return { ...state, duneApiKey: action.key, connectionTested: "idle" };
-    case "SET_DUNE_NAMESPACE":
-      return { ...state, duneNamespace: action.ns };
+
     case "SET_DUNE_QUERY_URL":
       return { ...state, duneQueryUrl: action.url };
     case "SET_DH_SERVER_URL":
@@ -96,24 +95,12 @@ export function generationReducer(state: WizardState, action: WizardAction): Wiz
       return { ...state, genTotal: action.total };
     case "SET_GEN_STARTED_AT":
       return { ...state, genStartedAt: action.time };
-    case "ADD_GEN_FINDING":
-      return { ...state, genFindings: [...state.genFindings, action.finding] };
     case "SET_GEN_FINDINGS":
       return { ...state, genFindings: action.findings };
     case "SET_LIVE_SIGNAL":
       return { ...state, liveSignal: action.signal };
     case "SET_STATUS":
       return { ...state, status: action.status };
-    case "RESET_GEN":
-      return {
-        ...state,
-        genStep: -1,
-        genSegments: 0,
-        genTotal: 0,
-        genStartedAt: 0,
-        genFindings: [],
-        liveSignal: null,
-      };
     default:
       return state;
   }

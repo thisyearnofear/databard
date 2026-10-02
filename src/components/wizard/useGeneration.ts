@@ -85,7 +85,6 @@ export function useGeneration() {
       } else if (state.source === "dune") {
         body.dune = {
           apiKey: state.duneApiKey,
-          namespace: state.duneNamespace || undefined,
           queryUrl: state.duneQueryUrl || undefined,
         };
       } else if (state.source === "coral") {

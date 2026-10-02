@@ -32,7 +32,6 @@ export interface WizardState {
   graphUrl: string;
   graphApiKey: string;
   duneApiKey: string;
-  duneNamespace: string;
   duneQueryUrl: string;
   dhServerUrl: string;
   dhToken: string;
@@ -98,7 +97,6 @@ export type WizardAction =
   | { type: "SET_GRAPH_URL"; url: string }
   | { type: "SET_GRAPH_API_KEY"; key: string }
   | { type: "SET_DUNE_API_KEY"; key: string }
-  | { type: "SET_DUNE_NAMESPACE"; ns: string }
   | { type: "SET_DUNE_QUERY_URL"; url: string }
   | { type: "SET_DH_SERVER_URL"; url: string }
   | { type: "SET_DH_TOKEN"; token: string }
@@ -116,7 +114,6 @@ export type WizardAction =
   | { type: "SET_GEN_SEGMENTS"; count: number }
   | { type: "SET_GEN_TOTAL"; total: number }
   | { type: "SET_GEN_STARTED_AT"; time: number }
-  | { type: "ADD_GEN_FINDING"; finding: string }
   | { type: "SET_GEN_FINDINGS"; findings: string[] }
   | { type: "SET_LIVE_SIGNAL"; signal: LiveBriefingSignal | null }
   | { type: "SET_STATUS"; status: string }
@@ -133,7 +130,6 @@ export type WizardAction =
   | { type: "SET_SHOW_EMAIL_GATE"; show: boolean }
   | { type: "SET_LEAD_EMAIL"; email: string }
   | { type: "SET_MINT_STATS"; stats: { total: number; recent: Array<{ schemaName: string; healthScore: number; walletAddress: string; txSignature: string; network: string; createdAt: string }> } | null }
-  | { type: "RESET_GEN" }
   | { type: "RESET" };
 
 // ─── Initial State ───────────────────────────────────────────────────────────
@@ -156,7 +152,6 @@ export const initialState: WizardState = {
   graphUrl: "",
   graphApiKey: "",
   duneApiKey: "",
-  duneNamespace: "",
   duneQueryUrl: "",
   dhServerUrl: "http://localhost:8080",
   dhToken: "",
@@ -208,7 +203,6 @@ export interface WizardContextValue {
   connected: (schemas: string[]) => void;
   startGenerating: () => void;
   backToSchema: () => void;
-  episodeReady: () => void;
   reset: () => void;
 
   // Helpers

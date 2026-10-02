@@ -251,9 +251,9 @@ export function usePublishDataContext(state: WizardState, sandboxUrl: string) {
           : state.source === "datahub"
             ? state.dhServerUrl || "not connected"
             : state.source === "dune"
-              ? `Dune · ${state.duneNamespace || "user"}`
+              ? "Dune"
               : state.source;
       setDataContext({ kind: "connected", label: state.source, detail, source: state.source });
     }
-  }, [state.step, state.source, state.omMode, state.omUrl, state.dhServerUrl, state.duneNamespace, sandboxUrl]);
+  }, [state.step, state.source, state.omMode, state.omUrl, state.dhServerUrl, sandboxUrl]);
 }

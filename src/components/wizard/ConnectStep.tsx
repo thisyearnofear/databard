@@ -98,7 +98,7 @@ export function ConnectStep() {
       body.theGraph = { subgraphUrl: state.graphUrl, apiKey: state.graphApiKey || undefined };
     } else if (state.source === "dune") {
       if (!state.duneApiKey) { showError("Dune API key required"); return null; }
-      body.dune = { apiKey: state.duneApiKey, namespace: state.duneNamespace || undefined, queryUrl: state.duneQueryUrl || undefined };
+      body.dune = { apiKey: state.duneApiKey, queryUrl: state.duneQueryUrl || undefined };
     } else if (state.source === "datahub") {
       if (!state.dhServerUrl) { showError("DataHub server URL required"); return null; }
       body.datahub = { serverUrl: state.dhServerUrl, token: state.dhToken || undefined };
