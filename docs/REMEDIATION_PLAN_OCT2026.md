@@ -99,13 +99,13 @@ zero recovery events, or the dashboard shows the reason distribution shrinking.
 
 **Status: shipped (Oct 2, 2026).** `scripts/briefing-latency-check.mjs` pays a
 real `/api/mcp/briefing` call against prod and times it (self-pay → the $1
-rotates back to our own `PAY_TO_ADDRESS`, so cost ≈ $0); daily cron at 05:23
-installed by `deploy.sh` — hourly was rejected as wasted float churn —
-breaches log to
+rotates back to our own `PAY_TO_ADDRESS`, so cost ≈ $0); weekly cron at
+Mondays 05:23 installed by `deploy.sh` — faster cadence was rejected as
+wasted float churn — breaches log to
 `briefing-latency.log` + optional `BRIEFING_ALERT_WEBHOOK` POST.
 `tests/briefing-config.unit.ts` guards `syncSettle:true` (source-level — the
 plan's `false` was wrong; async settled nothing on Sep 25) and the
-`audio:"none"` default in `parseMcpInput`. Pending: a week of green runs.
+`audio:"none"` default in `parseMcpInput`. Pending: sustained green runs.
 
 **First-run finding (Oct 2, resolved same day):** the monitor's first live
 run caught a real outage — paid calls returned `OKX verify failed: 401`, and
