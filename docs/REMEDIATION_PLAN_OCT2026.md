@@ -105,14 +105,16 @@ hourly cron installed by `deploy.sh` at :23, breaches log to
 plan's `false` was wrong; async settled nothing on Sep 25) and the
 `audio:"none"` default in `parseMcpInput`. Pending: a week of green runs.
 
-**First-run finding (Oct 2):** the monitor's first live run caught a real
-outage — paid calls return `OKX verify failed: 401`, i.e. the facilitator
-rejects the prod `OKX_API_KEY/SECRET_KEY/PASSPHRASE` (present in
-`/opt/databard/.env`, unchanged since Sep 25). Both `/api/mcp/briefing` and
-`/api/agent/probe` affected. Fix = verify/rotate the creds in the OKX
-Developer Portal, update the box, redeploy. Until then the paid surface is
-down and an OKX reviewer call would fail — the exact scenario the monitor
-exists to catch.
+**First-run finding (Oct 2, resolved same day):** the monitor's first live
+run caught a real outage — paid calls returned `OKX verify failed: 401`, and
+a direct signed call to the facilitator confirmed OKX was rejecting the API
+key itself (`50125: no access to current services`). Root cause: the OKX
+Developer Portal **trial plan expired** (key provisioned Sep 25 for the Dev
+Day work), which revoked the key's access to the `x402/pay` service — unpaid
+402s kept flowing, so every existing check looked green while every real
+payment died. Fixed by upgrading the OKX plan; post-fix run:
+`green: unpaid 282ms, paid 1239ms, settled=true`. Lesson now wired in:
+unpaid checks can't see a dead facilitator — only a paying call can.
 
 **Problem:** Delisted 3 times for paid-endpoint timeout, each time fixed
 *after* OKX's own test request failed — reactive, not caught in advance.
