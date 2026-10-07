@@ -60,3 +60,15 @@ Allowed patterns for our free → paid ladders:
 - Connect: [CHATGPT_PLUGIN_CONNECT.md](./CHATGPT_PLUGIN_CONNECT.md) — Streamable HTTP at `/mcp`
 - Eval intents: [CHATGPT_PLUGIN_EVAL.md](./CHATGPT_PLUGIN_EVAL.md)
 - Starter prompts: [CHATGPT_PLUGIN_STARTER_PROMPTS.md](./CHATGPT_PLUGIN_STARTER_PROMPTS.md)
+
+## Usage-only scoreboard (Plugin Lane)
+
+Watch weekly. **Usage-first; don't chase ARPU yet** — no paid conversion, checkout, or monetisation metrics on this board. Free MCP wedge in ChatGPT: `health_check` (aliases `is_my_data_healthy`, `databard_health_check`); narrated briefing / x402 stays off-platform if mentioned at all and is out of scope here. Instrument when you have analytics (MCP/`/mcp` request logs, Plausible / event ledger, stable client ids); do not invent dashboards until those exist.
+
+| # | Metric | What “good” looks like |
+| --- | --- | --- |
+| 1 | Plugin connects | Successful connect + `tools/list` for `https://databard.persidian.com/mcp` |
+| 2 | Free tool calls / week | Calls to live free tool: `health_check` (incl. alias calls `is_my_data_healthy` / `databard_health_check`) |
+| 3 | Return users | ≥2 sessions in 7 days (same ChatGPT user / stable client id if logged) |
+
+Related: [CONNECT](./CHATGPT_PLUGIN_CONNECT.md) · free `health_check` vs product-side briefing.

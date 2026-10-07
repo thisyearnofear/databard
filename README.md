@@ -114,6 +114,7 @@ DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP #
 - Intent eval set: [docs/CHATGPT_PLUGIN_EVAL.md](docs/CHATGPT_PLUGIN_EVAL.md)
 - Directory starter prompts: [docs/CHATGPT_PLUGIN_STARTER_PROMPTS.md](docs/CHATGPT_PLUGIN_STARTER_PROMPTS.md)
 - Playbook (monetization, annotations, listing rules): [docs/CHATGPT_PLUGIN_PLAYBOOK.md](docs/CHATGPT_PLUGIN_PLAYBOOK.md)
+- Scoreboard: usage-only funnel (connect → free tool → return) in [docs/CHATGPT_PLUGIN_PLAYBOOK.md](docs/CHATGPT_PLUGIN_PLAYBOOK.md#usage-only-scoreboard-plugin-lane) — usage-first; don’t chase ARPU yet
 
 Description in user words (“is my data healthy?”). Free health check first (discovery + mid-conversation recommendation). Narrated `briefing` stays on product URLs / existing accounts — **not** in-plugin checkout (OpenAI allows plugin commerce for physical goods only; keep x402/paid APIs on `/api/mcp/briefing` and [/pro](https://databard.persidian.com/pro)).
 
