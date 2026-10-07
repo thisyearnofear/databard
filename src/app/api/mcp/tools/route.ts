@@ -615,6 +615,13 @@ export async function GET() {
     ok: true,
     asp: "DataBard",
     description: "AI data analyst that synthesises a data estate into health scores, briefings, and recommended actions.",
+    // ChatGPT / Codex Streamable HTTP MCP (free health_check). REST tools below remain for OKX A2MCP.
+    chatgptMcp: {
+      transport: "streamable-http",
+      endpoint: "/mcp",
+      tools: ["health_check"],
+      docs: "docs/CHATGPT_PLUGIN_CONNECT.md",
+    },
     tools: TOOLS,
   });
 }

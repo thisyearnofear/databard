@@ -106,6 +106,17 @@ DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP #
 | `databard_write_back` | Free | `POST /api/mcp/writeback` |
 | Service discovery | — | `GET /api/mcp/tools` |
 
+### ChatGPT plugin — "is my data healthy?"
+
+**MCP endpoint (Streamable HTTP):** [`/mcp`](https://databard.persidian.com/mcp) — free tool `health_check` (`readOnlyHint: true`). Same analysis engine as `POST /api/mcp/health-check`; ChatGPT must use `/mcp`, not the OKX REST paths above.
+
+- Connect + Inspector smoke: [docs/CHATGPT_PLUGIN_CONNECT.md](docs/CHATGPT_PLUGIN_CONNECT.md)
+- Intent eval set: [docs/CHATGPT_PLUGIN_EVAL.md](docs/CHATGPT_PLUGIN_EVAL.md)
+- Directory starter prompts: [docs/CHATGPT_PLUGIN_STARTER_PROMPTS.md](docs/CHATGPT_PLUGIN_STARTER_PROMPTS.md)
+- Playbook (monetization, annotations, listing rules): [docs/CHATGPT_PLUGIN_PLAYBOOK.md](docs/CHATGPT_PLUGIN_PLAYBOOK.md)
+
+Description in user words (“is my data healthy?”). Free health check first (discovery + mid-conversation recommendation). Narrated `briefing` stays on product URLs / existing accounts — **not** in-plugin checkout (OpenAI allows plugin commerce for physical goods only; keep x402/paid APIs on `/api/mcp/briefing` and [/pro](https://databard.persidian.com/pro)).
+
 ### DataBard Probe — service-quality oracle (OKX Dev Day 2026)
 
 Before an agent pays another agent, it asks Probe: *is this service worth it?*

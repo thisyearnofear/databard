@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createEvidenceReceipt, hashEvidence } from "@/lib/evidence-receipt";
-import { analyzeSchema, generateActionItems } from "@/lib/schema-analysis";
-import { parseMcpInput } from "@/lib/mcp";
-import { fetchSchemaMetaLenient } from "@/lib/mcp-demo";
-import { getMonidCost, MonidCliError } from "@/lib/monid-adapter";
-import { ValidationError, rateLimit } from "@/lib/validation";
+import { runHealthCheck } from "@/lib/mcp-health-check";
 
 export const runtime = "nodejs";
 
@@ -17,6 +12,10 @@ export const runtime = "nodejs";
  * script generation, no audio — cheap and fast, the discovery driver for the
  * paid Data Briefing.
  *
+ * ChatGPT / Codex should prefer the Streamable HTTP MCP endpoint at `/mcp`
+ * (tool `health_check`) which wraps this same logic with informational
+ * upgrade guidance (no in-plugin checkout).
+ *
  * Self-check (must return HTTP 200):
  *   curl -i -X POST https://databard.persidian.com/api/mcp/health-check \
  *     -H 'content-type: application/json' \
@@ -27,144 +26,17 @@ export const runtime = "nodejs";
  *     -d '{"source":"datahub","schemaFqn":"db.sales","datahub":{"serverUrl":"http://localhost:8080","token":"..."}}'
  */
 export async function POST(req: NextRequest) {
+  let body: unknown = {};
   try {
-    // Light abuse guard — the expensive work is on the caller's data source,
-    // not on us, but the metadata fetch + analysis isn't free.
-    rateLimit(req, { maxRequests: 60, windowMs: 3600000 });
-
-    // A non-JSON or empty body still gets a (demo) analysis — never a 400/500.
-    let body: unknown = {};
-    try {
-      body = await req.json();
-    } catch {
-      body = {};
-    }
-    const { config, schemaFqn, forceDemo } = parseMcpInput(body);
-
-    // Degrade to the labelled demo fixture when the source is unreachable —
-    // reviewer agents have no credentials, so this is the success path.
-    const { meta, demo, connectionNotice } = await fetchSchemaMetaLenient(config, schemaFqn, { forceDemo });
-    const observedAt = new Date().toISOString();
-    const insights = analyzeSchema(meta);
-    const actions = generateActionItems(insights);
-
-    // Monid runs are metered — surface the measured per-run cost as a receipt.
-    // This is the "kill" evidence: an agent-paid per-call cost that can sit next
-    // to a human-seat price. Only monid populates the sidecar.
-    const monidCost = config.source === "monid" ? getMonidCost(schemaFqn) : undefined;
-
-    // Agent-first payload: quotable summary + findings the calling LLM can
-    // relay verbatim, plus a natural upsell to the paid briefing.
-    const topAction = actions[0];
-    const summary =
-      `${meta.name} scores ${insights.healthScore}/100 (${insights.healthLabel}): ` +
-      `${insights.failingTests} failing test${insights.failingTests === 1 ? "" : "s"} across ${meta.tables.length} tables` +
-      (insights.criticalTables.length
-        ? `; highest risk: ${insights.criticalTables[0].table.name} (${insights.criticalTables[0].downstreamCount} downstream)`
-        : "") +
-      (topAction ? `. Start with: ${topAction.title}.` : ".");
-    const keyFindings = [
-      `Health score ${insights.healthScore}/100 — ${insights.healthLabel}`,
-      `${insights.failingTests} failing / ${insights.totalTests} total quality tests (coverage ${insights.testCoverage}%)`,
-      `${insights.staleTables.length} stale tables, doc coverage ${insights.docCoverage}%`,
-      ...insights.criticalTables.slice(0, 2).map(
-        (ct) => `Critical table ${ct.table.name}: ${ct.failingTests} failing tests, ${ct.downstreamCount} downstream dependents`
-      ),
-    ].slice(0, 5);
-
-    const response = {
-      ok: true,
-      tool: "databard.health-check",
-      serviceVersion: 2,
-      generatedAt: new Date().toISOString(),
-      schemaFqn,
-      schemaName: meta.name,
-      ...(demo ? { demo: true, connectionNotice } : {}),
-      summary,
-      keyFindings,
-      ...(topAction ? { nextStep: topAction.title } : {}),
-      // The upsell: this free check is the numbers — the paid briefing is the
-      // story (two-speaker script + narrated MP3). Machine-readable so the
-      // calling agent can offer it to its human or chain the call itself.
-      upgrade: {
-        tool: "databard_briefing",
-        endpoint: "/api/mcp/briefing",
-        priceUsd: "1.00",
-        includes: [
-          "two-speaker briefing script (Alex + Morgan)",
-          "narrated MP3 audio (url or inline)",
-          "trend narrative plus the health score and actions above",
-        ],
-        howToCall:
-          'POST the same body to /api/mcp/briefing (x402 pay-per-call, exact USDT0 on X Layer). Prefer audio "url" or "none" — "inline" base64 is unreadable context to a model.',
-      },
-      tableCount: meta.tables.length,
-      health: {
-        score: insights.healthScore,
-        label: insights.healthLabel,
-        failingTests: insights.failingTests,
-        passingTests: insights.passingTests,
-        totalTests: insights.totalTests,
-        testCoverage: insights.testCoverage,
-        docCoverage: insights.docCoverage,
-        staleTables: insights.staleTables.length,
-        ownerlessTables: insights.ownerlessTables.length,
-        undocumentedTables: insights.undocumentedTables.length,
-      },
-      criticalTables: insights.criticalTables.slice(0, 8).map((ct) => ({
-        name: ct.table.name,
-        failingTests: ct.failingTests,
-        downstreamCount: ct.downstreamCount,
-        risk: ct.risk,
-      })),
-      staleTables: insights.staleTables.slice(0, 8).map((t) => ({
-        name: t.name,
-        hoursAgo: t.hoursAgo,
-      })),
-      recommendedActions: actions.slice(0, 12).map((a) => ({
-        priority: a.priority,
-        category: a.category,
-        title: a.title,
-        description: a.description,
-        table: a.table,
-        effort: a.effort,
-      })),
-      ...(monidCost ? { monidCost } : {}),
-    };
-    // Hash exactly what JSON consumers receive (optional undefined fields are omitted).
-    // Do not include config: connector URLs, credentials and query bodies are private.
-    const result = JSON.parse(JSON.stringify(response));
-    const evidenceReceipt = createEvidenceReceipt({
-      issuer: "databard",
-      analysis: { tool: response.tool, serviceVersion: response.serviceVersion },
-      generatedAt: response.generatedAt,
-      request: { source: config.source, schemaFqn },
-      evidence: {
-        kind: "schema-metadata",
-        source: demo ? "demo-fixture" : config.source,
-        schemaFqn: meta.fqn,
-        demo,
-        observedAt,
-        freshness: meta.tables.map((table) => ({
-          table: table.fqn,
-          reportedUpdatedAt: table.freshness ?? null,
-        })),
-        snapshotHash: hashEvidence(JSON.parse(JSON.stringify(meta))),
-      },
-      resultHash: hashEvidence(result),
-    });
-    return NextResponse.json({ ...result, evidenceReceipt });
-  } catch (e) {
-    if (e instanceof ValidationError) {
-      const status = e.message.startsWith("Rate limit") ? 429 : 400;
-      return NextResponse.json({ ok: false, error: e.message }, { status });
-    }
-    // A hard Monid failure (CLI missing, no/bad key, no balance, bad request) is
-    // the caller's to act on — 400 with the actionable message, not a 500.
-    if (e instanceof MonidCliError && e.hard) {
-      return NextResponse.json({ ok: false, error: e.message, kind: e.kind }, { status: 400 });
-    }
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    body = await req.json();
+  } catch {
+    body = {};
   }
+
+  const result = await runHealthCheck(body, { req, upgradeMode: "x402" });
+  if (!result.ok) {
+    const { status, ...payload } = result;
+    return NextResponse.json(payload, { status });
+  }
+  return NextResponse.json(result);
 }
