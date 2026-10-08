@@ -121,7 +121,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/probe-runner.ts` — DataBard Probe: fetches & measures A2MCP endpoints, x402 client payment, returns ProbeMetrics
 - `src/lib/probe-scorer.ts` — composite 6-dimension quality score (schema, latency, freshness, price/value, reliability, credentials)
 - `src/lib/probe-attestation.ts` — writes verdict hash to X Layer via viem (zero-value self-send); signs with `PROBE_ATTESTATION_PK`, falling back to `PROBE_PAYER_PK`
-- `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402, $1): probes candidate services, returns ranked verdict + cost receipt + optional on-chain attestation
+- `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402, $0.25): probes candidate services, returns ranked verdict + cost receipt + optional on-chain attestation
 - `src/app/api/probe/preview/route.ts` — FREE preview of Probe (default candidates, outbound payments disabled, 10/hr rate limit) for browser demos
 - `src/app/probe/page.tsx` — Probe demo UI (question input, free preview, paid-endpoint check with 402 explainer, ranked result cards, cost + attestation)
 - `src/components/probe/ResultCard.tsx` — probe result card (score, 6-dimension breakdown, x402 paid/402-challenge/cached badges, flags)

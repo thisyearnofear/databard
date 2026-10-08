@@ -46,10 +46,10 @@ registered ASP (#9878 — approved and listed 8 Sep, briefly de-listed 23 Sep
 after a slow-response window in the paid briefing, re-submitted 25 Sep with
 the fix verified live: the endpoint now answers its 402 challenge in ~0.25s);
 Probe pays real third-party OKX.AI services via the x402
-Payment SDK, receives its own $1 fee via x402, and writes verdict
+Payment SDK, receives its own $0.25 fee via x402, and writes verdict
 attestations to X Layer (eip155:196). Verified live on 18 Sep 2026: inbound
-$1 settlement (tx 0x581d13…60a7), outbound payment to a third-party service
-(0xeb22c2…63be6), verdict attestation anchored at block 70981029
+$0.25 settlement (tx 0x581d13…60a7), outbound payment to a third-party
+service (0xeb22c2…63be6), verdict attestation anchored at block 70981029
 (0x5519c3…ac7a59) — the full agent-to-agent money loop in one run.
 
 **Built during the hackathon window (15–25 Sep):** the entire probe layer —

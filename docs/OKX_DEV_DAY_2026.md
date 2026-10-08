@@ -233,19 +233,19 @@ separate from the revenue-receiving `PAY_TO_ADDRESS`, so probe spend is auditabl
 and can never drain earnings. Just ensure it holds ≥ $10 USDT0 for outbound
 probe payments.
 
-**Why $1.00 (value-based pricing rationale):** the buyer is an agent about to
+**Why $0.25 (value-based pricing rationale):** the buyer is an agent about to
 spend *its own* money on an unknown service. One bad choice — an unreachable
 endpoint, a stale feed, a schema the agent can't parse — costs that agent at
 least one failed paid call ($0.05–$1) plus retries and wrong data downstream.
-A $1.00 quality verdict on up to 10 candidates is therefore cheap insurance:
+A $0.25 quality verdict on up to 10 candidates is therefore cheap insurance:
 it is priced against the decision it protects, not against its own COGS. The
 cost ladder that makes this legible:
 
 | Tier | Price | What you get |
 |---|---|---|
 | Free preview (`/api/probe/preview`) | $0 | Same scorer on the curated candidate set, no outbound payments — paid services show an honest "402 challenge" flag. Rate-limited 10/hr. |
-| Standard probe (`/api/agent/probe`) | $1.00 | Full probe incl. outbound x402 payments (capped $0.50), ranked verdict, cost receipt, `probe_run` telemetry. |
-| Attested probe (`attest: true`) | $1.00 + gas | Same as standard plus the verdict hash anchored on X Layer for verifiable provenance. |
+| Standard probe (`/api/agent/probe`) | $0.25 | Full probe incl. outbound x402 payments (capped $0.15), ranked verdict, cost receipt, `probe_run` telemetry. |
+| Attested probe (`attest: true`) | $0.25 + gas | Same as standard plus the verdict hash anchored on X Layer for verifiable provenance. |
 
 The free tier is the discovery driver (mirrors `databard_health_check`); the
 paid tier is where the margin lives.
@@ -467,7 +467,7 @@ joins, assign Sep 22–24 (UI polish + video) to them.
 
 ### Sep 23, 2026 — Marketplace Health Index
 
-Probe grew from "pay $1 to rank 5 hand-picked services" into a **free, public
+Probe grew from "pay $0.25 to rank 5 hand-picked services" into a **free, public
 health index of every A2MCP service listed on OKX.AI**, plus a free lookup tool
 agents call before paying.
 
