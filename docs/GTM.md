@@ -76,12 +76,21 @@ Every share carries the implication "this can be checked." For web3-native
 audiences, the hash and the on-chain payment attribution are status. Make the
 receipt visible on the page, not buried in a FAQ.
 
-### Hook 3: Probe as the "Wirecutter for agent services"
+### Hook 3: Probe as the "Wirecutter for agent services" (strongest differentiator — Oct 2026)
 
-Probe reviews agent services so agents don't have to gamble. That is a content
-engine: every probe run is a potential public verdict — "we measured five
+Monid finds 1,700+ tools. x402 Agent.market lets agents find and pay. Nobody
+measures paid output quality. Probe does: it pays the x402 challenge, scores
+6 dimensions, returns a cost receipt, and publishes verdicts with `listing`
+vs `paid_delivery` honesty.
+
+Proof point: same "read webpage" job on Monid — top result $0.02376 vs
+$0.0009 (26×) at the top of the list. Discovery without measurement misleads.
+That is Probe's opening slide.
+
+Every probe run is a potential public verdict — "we measured five
 token-price endpoints; here's the one worth paying." Publish the interesting
-ones.
+ones. Priority: ship one paid deep-check verdict with settlement tx to upgrade
+`listing` → `paid_delivery` — that unlocks the Wirecutter claim.
 
 ### Hook 4: "Roast my data"
 
@@ -90,16 +99,20 @@ Loop 1; don't invest further unless the numbers say so.
 
 ---
 
-## The First 10 (manual, per operating principle 2)
+## The First 10 (manual, per operating principle 2 — Oct 2026 update)
 
 1. Earn sponsors with the most flattering previews — send the link, ask the
    one question: "Did this surface something you didn't already know?"
+   Template in `docs/OUTREACH_OCT2026.md`. One per day; log preview→share.
 2. Protocol data teams (the five named in earlier outreach) — the league is
    the conversation opener.
 3. Agent builders on OKX.AI / Monid — the free health check is the hello;
-   Probe is the differentiator.
+   Probe is the differentiator. One-pager in `docs/OUTREACH_OCT2026.md`;
+   lead with the 26× Monid price gap.
 
 The answer that matters is not "do you like it" but "did you share it."
+Honest state: distinctive and unproven — 2 sales are our own tests, relist
+pending (`approvalStatus: 6`). The 10-preview test decides it.
 
 ---
 

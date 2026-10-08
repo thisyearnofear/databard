@@ -11,17 +11,25 @@ public reports and commissioned editions. Machine front door: A2MCP tools with
 x402 payment. One deterministic engine underneath; the wizard and its audio
 briefings remain as a supporting surface.
 
-## Where We Are (September 2026)
+## Where We Are (October 2026)
 
 - **Live:** report-first landing with interactive examples; `/earn` directory +
   free previews; commissioned editions ($25 PUSD/SOL/USDC, pinned snapshot,
-  receipt, attribution); `/superteam` showcase; `/league`; `/roast`; `/verify`.
+  receipt, attribution, subject @-mentions); `/superteam` showcase; `/league`;
+  `/roast`; `/verify`.
 - **Live (agents):** A2MCP tools — free `health-check`, $1 `briefing` (x402 on
-  X Layer), $1 `probe` (service-quality oracle), `writeback`, `tools`
-  discovery. Listed on OKX.AI; Monid adapter shipped. Real calls happening;
-  volume unproven.
-- **Kept, supporting:** the wizard (connect dbt, catalogs, Dune, subgraphs,
+  X Layer), $0.25 `probe` (service-quality oracle, repriced for the relist),
+  `writeback`, `tools` discovery. ChatGPT plugin: free `health_check` via
+  Streamable HTTP at `/mcp` (Oct 7; usage-only scoreboard). Published probe
+  verdicts at `/probe/verdicts` (cron-gated). Listed on OKX.AI (relist pending
+  after Sep de-listing, `approvalStatus: 6`); Monid adapter shipped. Real calls
+  happening; volume unproven.
+- **Kept, supporting:** the wizard (trimmed Oct 2 after prod data confirmed
+  near-zero usage of dead actions; connect dbt, catalogs, Dune, subgraphs,
   DataHub, Monid → synthesis + optional audio briefing), Pro digests, alerts.
+- **Infra (Oct 2):** paid-briefing latency monitor (daily) + probe-payer float
+  docs in OPERATIONS; `/admin/funnel` dashboard with remediation plan; payment
+  verification polling instead of recovery dead-ends.
 - **Honest gaps:** no proven edition sales yet; league live-scan cron still
   open; user interviews still owed (Phase 7 debt, carried into Phase 11).
 

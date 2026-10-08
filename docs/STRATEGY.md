@@ -87,7 +87,8 @@ DataHub, Monid) — but they are no longer the lead story.
 1. **Self-serve editions** (live): $25 one-off, zero-touch. Deterministic
    compute over cached public data means near-zero marginal cost.
 2. **Per-call agent tools** (live): $1 briefings (~$0.65 margin after TTS),
-   $1 probes. Real calls are already happening; volume is unproven.
+   $0.25 probes (repriced for the OKX relist; ~52–96% margin). Real calls are
+   already happening; volume is unproven.
 3. **Sponsored editions** (hypothesis): a brand pays to be named on a trusted
    public artifact — adjacency to credibility, not custom labour.
 4. **Editions over user datasets** (the unlock): point the engine at a Dune
@@ -95,15 +96,20 @@ DataHub, Monid) — but they are no longer the lead story.
    into a shareable, evidence-receipted narrative" is the thing nobody else
    does.
 
-## Competitive Positioning
+## Competitive Positioning (Oct 2026 research — Tavily pass)
 
-| Positioning | Competitor | Our edge |
-|---|---|---|
-| Public accounting / verifiable reports | Dashboard screenshots, ecosystem blogs | Nobody publishes dated, receipted, permalinked accounting |
-| Agent-service quality oracle | Agent directories (list-only) | Probe *measures*; directories just list |
-| Data observability | Monte Carlo, Bigeye, Soda | We don't compete — they monitor private estates; we publish public records |
-| Data communication / briefings | Generic AI assistants | They don't connect to sources, don't compute findings, don't attach receipts |
-| Not a podcast tool | — | Audio is one output of the synthesis layer, kept for the wizard |
+| Positioning | Competitor | Our edge | Evidence |
+|---|---|---|---|
+| Public accounting / verifiable reports | Dashboard screenshots, ecosystem blogs | Nobody publishes dated, receipted, permalinked accounting | Receipt hash + `/verify` offline audit; pinned snapshot |
+| Agent-service quality oracle | Monid (1,700+ tools, `discover→inspect→run`, no ranking), x402 Agent.market (storefront for finding+paying, no scoring), RapidAPI/OpenRouter (usage counts, TrustPilot gripes) | Probe *measures* and pays: 6-dim score, cost receipt, `listing` vs `paid_delivery` honesty | Same "read webpage" job on Monid: $0.02376 vs $0.0009 (26×) at top of list — discovery without measurement misleads |
+| Agent identity / credentials | ERC-8004 (identity + reputation + validation registries), Ligis | Complementary: they answer *who* (driver's license), we answer *how well right now* (Consumer Reports) | `credentialVerified` already an input signal in `probe-scorer.ts`; ERC-8004 explicitly "does not solve payments" |
+| Ecosystem accounting | Token Terminal (chain income statements), Messari (analyst-verified quarterly reports), CoinDesk Benchmark (150+ exchanges, 80+ metrics, thousands of research hours) | Analyst-hours or screenshots vs $25 self-serve pinned edition at ~$0 marginal cost | Parameterised `computeEarnEdition` — same path live + snapshot; no agency labour |
+| Data observability | Monte Carlo ($50–300k/yr), Anomalo ($30–200k/yr), Bigeye ($30–150k/yr) | We don't compete — they monitor private estates to prevent incidents; we publish public records to create proof | "$200k to catch breakage vs $25 to publish proof" |
+| Data catalogs | Atlan (Gartner Leader 2026), Alation (Data Health tab + Open Quality Framework) | Inside-out (quality where analysts search) vs outside-in (permalink the world can check); catalogs have "no feature for embedding trust badges in BI tools" | Receipt + OG card + "commissioned by" attribution travel; catalog context doesn't |
+| Data communication / briefings | Generic AI assistants | They don't connect to sources, don't compute findings, don't attach receipts | Health score + actions alone are copyable — receipt + pinned object is not |
+| Not a podcast tool | — | Audio is one output of the synthesis layer, kept for the wizard; do not lead with it | TTS is 95% of $1 briefing COGS — cost, not moat |
+
+What is NOT distinctive (do not lead): health score 0–100 (arbitrary weights, everyone has one), Alex+Morgan audio (commodity LLM+TTS), multi-source wizard breadth, league/roast/share cards (weekend-copyable).
 
 ## Product Principles
 
