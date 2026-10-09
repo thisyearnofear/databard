@@ -9,7 +9,7 @@ import { buildResearchTrail } from "@/lib/research";
 import { track } from "@/lib/track";
 import { costLine } from "@/lib/cost-framing";
 import { CoverageBar, MiniStat, CriticalTablesList, HotspotChips, resolveColor, rgbToHsl } from "@/components/viz";
-import { PixelIcon } from "@/components/dither-kit";
+import { PixelIcon, type PixelIconName } from "@/components/dither-kit";
 import { MondaySignup } from "@/components/MondaySignup";
 import { HealthBadge } from "@/components/player/HealthBadge";
 import { TableDetail } from "@/components/player/TableDetail";
@@ -386,14 +386,16 @@ export function EpisodePlayer({
     if (!showShareMenu) return;
     const menu = shareMenuRef.current;
     menu?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-    const close = () => setShowShareMenu(false);
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+    const closeIfOutside = (e: MouseEvent) => {
+      if (menu && !menu.contains(e.target as Node)) setShowShareMenu(false);
     };
-    window.addEventListener("click", close);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowShareMenu(false);
+    };
+    window.addEventListener("click", closeIfOutside);
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      window.removeEventListener("click", close);
+      window.removeEventListener("click", closeIfOutside);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [showShareMenu]);
@@ -584,11 +586,27 @@ export function EpisodePlayer({
     }
   }
 
-  function shareVia(platform: string) {
-    if (!shareUrl) return;
+  /** Desktop share affordance: open the preview panel. Mobile uses handleShare (native sheet). */
+  async function openSharePanel() {
+    setShowShareMenu(true);
+    setNudge("share");
+    setTimeout(() => setNudge(null), 8000);
+    if (!shareUrl) {
+      setSharing(true);
+      try {
+        await resolveShareUrl();
+      } finally {
+        setSharing(false);
+      }
+    }
+  }
+
+  async function shareVia(platform: string) {
+    const url = shareUrl ?? (await resolveShareUrl());
+    if (!url) return;
     const card = scoreFromEpisode(currentEpisode);
     track("share", { platform, schema: currentEpisode.schemaName });
-    const taggedUrl = tagShareUrl(shareUrl, platform === "copy" ? "link" : platform, "scorecard");
+    const taggedUrl = tagShareUrl(url, platform, "scorecard");
     const text = shareText(card, taggedUrl);
     const encoded = encodeURIComponent(`${card.name} is ${card.score}. "${card.quote}"`);
     const encodedUrl = encodeURIComponent(taggedUrl);
@@ -610,9 +628,10 @@ export function EpisodePlayer({
   }
 
   async function copyShareLink() {
-    if (!shareUrl) return;
+    const url = shareUrl ?? (await resolveShareUrl());
+    if (!url) return;
     const card = scoreFromEpisode(currentEpisode);
-    const taggedUrl = tagShareUrl(shareUrl, "link", "scorecard");
+    const taggedUrl = tagShareUrl(url, "link", "scorecard");
     track("share", { platform: "copy", schema: currentEpisode.schemaName });
     try {
       await navigator.clipboard.writeText(shareText(card, taggedUrl));
@@ -774,17 +793,9 @@ export function EpisodePlayer({
               </button>
             )}
             <button
-              onClick={() => void handleClip()}
+              onClick={(e) => { e.stopPropagation(); void openSharePanel(); }}
               className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg px-3 py-2.5 cursor-pointer font-medium transition-colors"
-              title="Share a score card — image + finding, ready for Slack"
-            >
-              {clipCopied ? "✓ Copied!" : "Share card"}
-            </button>
-            <button
-              onClick={handleShare}
-              disabled={sharing}
-              className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-2.5 cursor-pointer disabled:opacity-50"
-              title="Share episode"
+              title="Share — card image, link, or straight to a destination"
             >
               {sharing ? "…" : "Share"}
             </button>
@@ -820,33 +831,53 @@ export function EpisodePlayer({
               </button>
             )}
 
-            {/* Share menu (desktop fallback) */}
-            {showShareMenu && (
-              <div
-                ref={shareMenuRef}
-                role="menu"
-                aria-label="Share options"
-                className="absolute top-full right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-10 animate-slide-up min-w-[140px]"
-              >
-                {[
-                  { id: "whatsapp", label: "WhatsApp" },
-                  { id: "telegram", label: "Telegram" },
-                  { id: "twitter", label: "Twitter/X" },
-                  { id: "linkedin", label: "LinkedIn" },
-                  { id: "image", label: "Card image" },
-                  { id: "copy", label: "Copy link" },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    role="menuitem"
-                    onClick={() => (p.id === "copy" ? void copyShareLink() : p.id === "image" ? void copyCardImage() : shareVia(p.id))}
-                    className="block w-full text-left text-xs px-3 py-2 hover:bg-[var(--bg)] cursor-pointer first:rounded-t-lg last:rounded-b-lg"
-                  >
-                    {copiedItem === p.id ? "✓ Copied" : p.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Share panel — what travels, then where to send it */}
+            {showShareMenu && (() => {
+              const menuCard = scoreFromEpisode(currentEpisode);
+              return (
+                <div
+                  ref={shareMenuRef}
+                  role="menu"
+                  aria-label="Share options"
+                  className="absolute top-full right-0 mt-1 w-[264px] bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-10 animate-slide-up overflow-hidden"
+                >
+                  <div className="border-b border-[var(--border)] px-3.5 py-3">
+                    <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[var(--accent)]">
+                      What they&apos;ll see
+                    </p>
+                    <div className="mt-1.5 flex items-baseline gap-2">
+                      <span className={`font-display text-3xl font-bold leading-none tabular-nums ${scoreTextClass(menuCard.score)}`}>
+                        {menuCard.score}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold">{menuCard.name}</span>
+                    </div>
+                    <p className="mt-1.5 text-[11px] leading-snug text-[var(--text-muted)] line-clamp-2">
+                      “{menuCard.quote}”
+                    </p>
+                  </div>
+                  {(
+                    [
+                      { id: "whatsapp", label: "WhatsApp", icon: "arrowUpRight" },
+                      { id: "telegram", label: "Telegram", icon: "arrowUpRight" },
+                      { id: "twitter", label: "Twitter/X", icon: "arrowUpRight" },
+                      { id: "linkedin", label: "LinkedIn", icon: "arrowUpRight" },
+                      { id: "image", label: "Card image", icon: "image" },
+                      { id: "copy", label: "Copy link", icon: "link" },
+                    ] satisfies { id: string; label: string; icon: PixelIconName }[]
+                  ).map((p) => (
+                    <button
+                      key={p.id}
+                      role="menuitem"
+                      onClick={() => (p.id === "copy" ? void copyShareLink() : p.id === "image" ? void copyCardImage() : void shareVia(p.id))}
+                      className="flex items-center gap-2.5 w-full text-left text-xs px-3.5 py-2.5 hover:bg-[var(--bg)] cursor-pointer"
+                    >
+                      <PixelIcon name={p.icon} size={11} className="text-[var(--text-muted)] shrink-0" />
+                      {copiedItem === p.id ? "✓ Copied" : p.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

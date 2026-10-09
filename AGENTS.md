@@ -65,7 +65,7 @@ Funnel (GTM instrumentation):
 - `generate_complete` — analysis finished, landed on dashboard
 - `dashboard_listen_click` — clicked "Listen to this analysis" on dashboard
 - `schedule_setup` — clicked "Set up weekly digest" (Pro path)
-- `clip_share` — clicked "Share card" (score card + deep link)
+- `clip_share` — shared a score card (link text, card image, or onward share from a shared page)
 - `shared_episode_open` — someone opened a shared episode / score-card link
 - `shared_episode_cta_click` — CTA on shared page (league / get this / dashboard)
 - `roast_page_view` — visited /roast
@@ -137,7 +137,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/app/league/page.tsx` — public weekly protocol data-health league
 - `src/lib/league.ts` — league edition builder (live snapshots or seeded roster)
 - `src/lib/score-card.ts` — shareable finding (score + quote); prefers the episode's frozen `healthScore`, falls back to the test pass ratio; shared TTL = 21 days
-- `src/components/EpisodePlayer.tsx` — audio player with drill-down + Share card
+- `src/components/EpisodePlayer.tsx` — audio player with drill-down + consolidated share panel (preview → destinations → card image/link copy)
 - `src/components/MondaySignup.tsx` — one-field Monday email on the finding
 - `src/components/wizard/wizard-context.tsx` — wizard provider (slim, wires together types + reducer + effects)
 - `src/components/wizard/wizard-types.ts` — wizard state shape, action types, initialState

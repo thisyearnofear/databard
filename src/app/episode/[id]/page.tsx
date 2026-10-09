@@ -185,6 +185,8 @@ function SharedEpisodeInner() {
         card={card}
         onPlayClip={audioUrl ? playFinding : undefined}
         clipPlaying={clipPlaying}
+        onShare={() => void shareFinding(card)}
+        shareCopied={reshared}
       />
       {audioUrl && <audio ref={clipRef} src={audioUrl} preload="metadata" className="hidden" />}
 
@@ -223,13 +225,6 @@ function SharedEpisodeInner() {
         >
           Dashboard
         </Link>
-        <button
-          type="button"
-          onClick={() => void shareFinding(card)}
-          className="rounded-md border border-[var(--accent)]/40 px-5 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 text-center cursor-pointer"
-        >
-          {reshared ? "✓ Copied" : "Share this finding"}
-        </button>
       </div>
     </main>
   );

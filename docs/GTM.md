@@ -143,9 +143,10 @@ at this volume). First-touch attribution (`src`/`med`/`cmp` stamped by
 
 Instrumentation: share links get `utm_source=share` + `utm_medium=<channel>`
 at copy/share time via `src/lib/share.ts` (`handleClip`/`shareVia`/
-`copyCardImage`/`copyShareLink` in `EpisodePlayer`, `LeagueBoard` copy
-buttons, `ShareRow`, `CopyReportLink`, and the "Share this finding" re-share
-CTA on `/episode/[id]`). Canonical permalinks and OG URLs stay clean;
+`copyCardImage`/`copyShareLink` in `EpisodePlayer`'s consolidated share
+panel, `LeagueBoard` copy buttons, `ShareRow`, `CopyReportLink`, and the
+"Send this on" re-share CTA on the shared score card in `/episode/[id]`).
+Canonical permalinks and OG URLs stay clean;
 evidence receipts copy verbatim. `clip_share` meta distinguishes the shape:
 `format=image` (PNG card via `/api/og`) vs link copy, and `via=shared_page`
 marks recipient→recipient onward shares. Caveat: pre-tagging shares attribute

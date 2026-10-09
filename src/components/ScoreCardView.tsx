@@ -8,10 +8,14 @@ export function ScoreCardView({
   card,
   onPlayClip,
   clipPlaying = false,
+  onShare,
+  shareCopied = false,
 }: {
   card: ScoreCard;
   onPlayClip?: () => void;
   clipPlaying?: boolean;
+  onShare?: () => void;
+  shareCopied?: boolean;
 }) {
   return (
     <article
@@ -37,17 +41,30 @@ export function ScoreCardView({
         “{card.quote}”
       </blockquote>
       <p className="mt-2 text-xs text-[var(--text-muted)]">— {card.speaker}</p>
-      {onPlayClip && (
-        <button
-          type="button"
-          onClick={() => {
-            track("shared_clip_play", { schema: card.name, segment: String(card.segmentIndex) });
-            onPlayClip?.();
-          }}
-          className="mt-6 bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110"
-        >
-          {clipPlaying ? "Playing…" : "Hear this finding"}
-        </button>
+      {(onPlayClip || onShare) && (
+        <div className="mt-6 flex flex-wrap gap-2">
+          {onPlayClip && (
+            <button
+              type="button"
+              onClick={() => {
+                track("shared_clip_play", { schema: card.name, segment: String(card.segmentIndex) });
+                onPlayClip?.();
+              }}
+              className="bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--bg)] hover:brightness-110"
+            >
+              {clipPlaying ? "Playing…" : "Hear this finding"}
+            </button>
+          )}
+          {onShare && (
+            <button
+              type="button"
+              onClick={onShare}
+              className="border border-[var(--accent)]/40 px-4 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 cursor-pointer"
+            >
+              {shareCopied ? "✓ Copied" : "Send this on"}
+            </button>
+          )}
+        </div>
       )}
     </article>
   );
