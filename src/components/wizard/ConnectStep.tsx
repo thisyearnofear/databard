@@ -6,6 +6,7 @@ import { useGeneration } from "./useGeneration";
 import { useToast } from "@/components/Toast";
 import type { DataSource } from "@/lib/types";
 import { useAccount } from "@/lib/use-account";
+import { PixelIcon, type PixelIconName } from "@/components/dither-kit";
 import { validateCoralSql, getDataAwarePresets } from "./coral-helpers";
 import { CoralForm } from "./sources/CoralForm";
 import { CoralConfigureStep } from "./sources/CoralConfigureStep";
@@ -246,18 +247,18 @@ export function ConnectStep() {
     }
   }
 
-  const MAIN_SOURCES: { value: DataSource; label: string; emoji: string; hint: string }[] = state.persona === "web3"
+  const MAIN_SOURCES: { value: DataSource; label: string; icon: PixelIconName; hint: string }[] = state.persona === "web3"
     ? [
-        { value: "dune", label: "Dune", emoji: "🏜️", hint: "API key" },
-        { value: "the-graph", label: "The Graph", emoji: "🔗", hint: "Subgraph URL" },
-        { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },
-        { value: "datahub", label: "DataHub", emoji: "🧭", hint: "GMS URL" },
+        { value: "dune", label: "Dune", icon: "chart", hint: "API key" },
+        { value: "the-graph", label: "The Graph", icon: "chain", hint: "Subgraph URL" },
+        { value: "openmetadata", label: "OpenMetadata", icon: "search", hint: "Sandbox or custom" },
+        { value: "datahub", label: "DataHub", icon: "book", hint: "GMS URL" },
       ]
     : [
-        { value: "openmetadata", label: "OpenMetadata", emoji: "🔍", hint: "Sandbox or custom" },
-        { value: "datahub", label: "DataHub", emoji: "🧭", hint: "GMS URL" },
-        { value: "dbt-cloud", label: "dbt Cloud", emoji: "☁️", hint: "Account + token" },
-        { value: "dbt-local", label: "dbt Local", emoji: "💻", hint: "Upload manifest" },
+        { value: "openmetadata", label: "OpenMetadata", icon: "search", hint: "Sandbox or custom" },
+        { value: "datahub", label: "DataHub", icon: "book", hint: "GMS URL" },
+        { value: "dbt-cloud", label: "dbt Cloud", icon: "plug", hint: "Account + token" },
+        { value: "dbt-local", label: "dbt Local", icon: "save", hint: "Upload manifest" },
       ];
 
   const showTestButton = state.connectionTested === "error" || state.status?.startsWith("✗") || state.status?.startsWith("Error");
@@ -315,7 +316,7 @@ export function ConnectStep() {
                   : "border-[var(--border)] hover:border-[var(--accent)]"
               }`}
             >
-              <span className="text-xl">🪸</span>
+              <PixelIcon name="shell" size={18} className="text-[var(--accent)]" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-[var(--text)]">Cross-source SQL</p>
                 <p className="text-xs text-[var(--text-muted)]">Join Dune, GitHub, Slack, and 50+ sources in one query</p>
@@ -338,7 +339,7 @@ export function ConnectStep() {
                           : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
                       }`}
                     >
-                      <span>{ds.emoji}</span>
+                      <PixelIcon name={ds.icon} size={11} />
                       <span>{ds.label}</span>
                     </button>
                   ))}
@@ -370,7 +371,7 @@ export function ConnectStep() {
                   : "border-[var(--border)] hover:border-[var(--accent)]"
               }`}
             >
-              <span className="text-xl">💻</span>
+              <PixelIcon name="save" size={18} className="text-[var(--accent)]" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-[var(--text)]">dbt manifest</p>
                 <p className="text-xs text-[var(--text-muted)]">Upload target/manifest.json — health score and roast in about 90 seconds.</p>
@@ -402,7 +403,7 @@ export function ConnectStep() {
                         : "border-[var(--border)] hover:border-[var(--accent)] text-[var(--text-muted)]"
                     }`}
                   >
-                    <span>{ds.emoji}</span>
+                    <PixelIcon name={ds.icon} size={11} />
                     <span>{ds.label}</span>
                   </button>
                 ))}

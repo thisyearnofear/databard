@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useWizard } from "./wizard-context";
 import { useGeneration } from "./useGeneration";
 import { SchemasEmpty, SearchEmpty } from "@/components/EmptyState";
+import { PixelIcon } from "@/components/dither-kit";
 import { validateCoralSql, extractCoralSources, getPresetsForPersona } from "./coral-helpers";
 
 const SCHEMAS_PER_PAGE = 10;
@@ -66,7 +67,7 @@ function CoralInlineEditor({ query, onQueryChange }: { query: string; onQueryCha
       />
       {!validation.valid && query.trim() && validation.hint && (
         <p className="text-xs text-[var(--warning)] flex items-center gap-1 -mt-1">
-          <span>⚠️</span>
+          <PixelIcon name="warning" size={11} />
           <span>{validation.hint}</span>
         </p>
       )}
@@ -176,7 +177,7 @@ export function SchemaPicker() {
       
       {/* Context bar */}
       <div className="flex items-center gap-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
-        <span className="text-lg">{isCoral ? "🪸" : "🔌"}</span>
+        <PixelIcon name={isCoral ? "shell" : "plug"} size={16} className="text-[var(--accent)] shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{sourceLabel[state.source]} · {activeContext}</p>
           <p className="text-xs text-[var(--text-muted)]">
@@ -199,7 +200,7 @@ export function SchemaPicker() {
           ) : <>
           {state.schemas.length > 5 && (
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-sm">🔍</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"><PixelIcon name="search" size={12} /></span>
               <input 
                 data-testid="schema-search"
                 type="text" 
@@ -226,7 +227,7 @@ export function SchemaPicker() {
                           {groupLeaf}
                         </span>
                         <span className="text-xs text-[var(--text-muted)] tabular-nums">({items.length})</span>
-                        {hasRecommended && <span className="text-xs text-[var(--accent)]">⭐</span>}
+                        {hasRecommended && <PixelIcon name="star" size={10} className="text-[var(--accent)]" />}
                         <div className="flex-1 h-px bg-[var(--border)]" />
                       </div>,
                       ...items.map((s) => {
@@ -248,7 +249,7 @@ export function SchemaPicker() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
-                                {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full shrink-0">⭐</span>}
+                                {isRecommended && !isSelected && <span className="bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full shrink-0 inline-flex items-center"><PixelIcon name="star" size={9} /></span>}
                               </div>
                               <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-[var(--bg)]/70" : "text-[var(--text-muted)]"}`}>{s}</p>
                             </div>
@@ -276,7 +277,7 @@ export function SchemaPicker() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className={`text-sm ${isSelected ? "font-semibold" : "font-medium"}`}>{leaf}</span>
-                            {isRecommended && !isSelected && <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full">⭐</span>}
+                            {isRecommended && !isSelected && <span className="bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded-full inline-flex items-center"><PixelIcon name="star" size={9} /></span>}
                           </div>
                           <p className={`text-xs truncate mt-0.5 ${isSelected ? "text-[var(--bg)]/70" : "text-[var(--text-muted)]"}`}>{s}</p>
                         </div>
@@ -311,7 +312,7 @@ export function SchemaPicker() {
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex flex-col gap-3" data-tour="research-question">
             <div className="flex items-center justify-between">
               <label className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-medium">Your question</label>
-              <span className="text-xs text-[var(--accent)] opacity-75" title="A focused question helps the AI hosts investigate specific issues">💡</span>
+              <span className="text-xs text-[var(--accent)] opacity-75" title="A focused question helps the AI hosts investigate specific issues"><PixelIcon name="spark" size={10} /></span>
             </div>
             <textarea
               autoFocus={isCoral}
@@ -325,7 +326,7 @@ export function SchemaPicker() {
                   : "Which data health issue should we investigate first?"}
             />
             <div className="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text-muted)]">
-              <p className="font-medium text-[var(--text)] mb-1">💡 Good questions are specific:</p>
+              <p className="font-medium text-[var(--text)] mb-1 flex items-center gap-1"><PixelIcon name="spark" size={10} className="text-[var(--accent)]" />Good questions are specific:</p>
               <ul className="space-y-0.5 ml-3">
                 <li>✓ "Which tables have failing tests with downstream dependents?"</li>
                 <li>✓ "Where is the biggest PII exposure risk?"</li>
@@ -389,7 +390,7 @@ export function SchemaPicker() {
                         : "border-[var(--border)] hover:border-[var(--accent)]"
                     }`}
                   >
-                    <span className="text-sm">🎙️</span>
+                    <PixelIcon name="mic" size={14} className="text-[var(--accent)]" />
                     <span className="text-xs font-semibold">Full analysis</span>
                     <span className="text-[9px] text-[var(--text-muted)]">10-15 min</span>
                   </button>
@@ -402,7 +403,7 @@ export function SchemaPicker() {
                         : "border-[var(--border)] hover:border-[var(--accent)]"
                     }`}
                   >
-                    <span className="text-sm">📋</span>
+                    <PixelIcon name="book" size={14} className="text-[var(--accent)]" />
                     <span className="text-xs font-semibold">Exec briefing</span>
                     <span className="text-[9px] text-[var(--text-muted)]">2 min</span>
                   </button>
@@ -416,7 +417,7 @@ export function SchemaPicker() {
               disabled={!state.selectedSchema || (isCoral && !validateCoralSql(state.coralQuery).valid)}
               className={`flex flex-col items-center justify-center bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition ease-out hover:scale-[1.01] ${isCoral ? "py-4" : "py-3"}`}
             >
-              <span>{state.outputFormat === "executive-summary" ? "📋 Generate briefing" : "🎙️ Generate analysis"}</span>
+              <span>{state.outputFormat === "executive-summary" ? "Generate briefing" : "Generate analysis"}</span>
               <span className="text-xs opacity-75 font-normal mt-0.5">
                 {state.outputFormat === "executive-summary" ? "2-min executive summary" : "AI hosts · full analysis"}
               </span>

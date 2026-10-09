@@ -9,7 +9,8 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
 - `npm run scorecard` — virality ladder scorecard (`scripts/ladder-scorecard.mjs`; reads `DATABARD_DATA_DIR`/`./data`, see `docs/GTM.md`)
-- `npm run test:unit` — rate-limit, datahub-adapter, fleet-analysis, account, score-card, serial-queue, monid-adapter (`package.json`)
+- `npm run test:unit` — surface-rules guard + rate-limit, datahub-adapter, fleet-analysis, account, score-card, serial-queue, monid-adapter (`package.json`)
+- `npm run check:surfaces` — enforces docs/DESIGN.md mechanical rules (no emoji, no hardcoded hex, noopener on _blank links); runs first in test:unit
 - `./scripts/deploy.sh` — local build → tarball → `snel-bot` (`/opt/databard`), PM2 reload, health gate, installs `ensure-running` cron. Do **not** `npm install` on the box.
 - `npx playwright install` — install required browsers
 - `npx playwright test --project=chromium` — run a single browser project
@@ -160,6 +161,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 ## Docs
 - `docs/STRATEGY.md` — north star (public accounting: reports people share, tools agents call), positioning, principles (rewritten Sep 2026)
 - `docs/GTM.md` — the two distribution loops (edition shares, agent discovery), hooks, manual outreach
+- `docs/DESIGN.md` — surface contract: invariants every page holds (tokens, PixelIcon, tracked CTAs, honest labels) + what check-surface-rules.mjs enforces
 - `docs/OPERATIONS.md` — prod env, schedule cron, stay-alive / shared PM2
 - `docs/UNIT_ECONOMICS.md` — margins per revenue shape (editions, x402 briefing, probe, legacy Pro)
 - `docs/PLAN.md` — roadmap (Phases 1-9 compressed history, 10-14 forward)

@@ -1,5 +1,6 @@
 "use client";
 import type { Bid } from "@/lib/types";
+import { PixelIcon } from "@/components/dither-kit";
 
 const PERSONA_STYLE: Record<string, { color: string; badge: string; tagline: string }> = {
   signal:   { color: "border-[var(--accent-vivid)]", badge: "bg-[var(--accent-vivid)]/20 text-[var(--accent-vivid)]", tagline: "Executive brief" },
@@ -35,8 +36,8 @@ export function BidCard({
           <div className="flex items-center gap-2">
             <span className="font-semibold text-[var(--text)]">{bid.seller.label ?? bid.personaId}</span>
             {isWinner && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--success)]/20 text-[var(--success)] font-medium">
-                ★ AWARDED
+              <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--success)]/20 text-[var(--success)] font-medium inline-flex items-center gap-1">
+                <PixelIcon name="star" size={9} />AWARDED
               </span>
             )}
             {isRunnerUp && (

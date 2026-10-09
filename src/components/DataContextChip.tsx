@@ -13,7 +13,7 @@ export function DataContextChip() {
   if (!ctx) return null;
 
   const style: { ring: string; icon: PixelIconName } = ({
-    demo: { ring: "border-[#eab308]/40 text-[#eab308]", icon: "flask" },
+    demo: { ring: "border-[var(--warning)]/40 text-[var(--warning)]", icon: "flask" },
     sample: { ring: "border-[var(--border)] text-[var(--text-muted)]", icon: "shell" },
     connected: { ring: "border-[var(--accent)]/40 text-[var(--accent)]", icon: "plug" },
   } as const)[ctx.kind];

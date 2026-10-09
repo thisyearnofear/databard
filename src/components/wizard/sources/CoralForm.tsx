@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useWizard } from "../wizard-context";
 import { validateCoralSql, extractCoralSources, parseCoralError, getPresetsForPersona, getDataAwarePresets } from "../coral-helpers";
+import { PixelIcon } from "@/components/dither-kit";
 
 interface CoralFormProps {
   query: string;
@@ -56,7 +57,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
     <>
       {/* Header */}
       <div className="flex items-start gap-3 bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-xl px-4 py-3">
-        <span className="text-lg mt-0.5">🪸</span>
+        <PixelIcon name="shell" size={16} className="mt-0.5 text-[var(--accent)] shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[var(--text)]">Query Any Source</p>
           <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
@@ -156,7 +157,7 @@ export function CoralForm({ query, onQueryChange }: CoralFormProps) {
         </div>
         {!validation.valid && query.trim() && validation.hint && (
           <p className="text-xs text-[var(--warning)] flex items-center gap-1 mt-1.5">
-            <span>⚠️</span>
+            <PixelIcon name="warning" size={11} />
             <span>{validation.hint}</span>
           </p>
         )}

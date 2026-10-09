@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { InsightSummary } from "@/app/api/insights/route";
 import type { AlertSubscription } from "@/lib/mint-stats";
 import { scoreTextClass } from "@/lib/product/score-tone";
+import { PixelIcon } from "@/components/dither-kit";
 
 const inputClass = "w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm focus:border-[var(--accent)] focus:outline-none transition-colors";
 
@@ -69,7 +70,7 @@ export default function AlertsPage() {
         {/* Header */}
         <div className="mb-8">
           <Link href="/" className="inline-flex items-center py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] mb-4">← Back to DataBard</Link>
-          <h1 className="text-2xl font-bold mb-2">🔔 Alerts</h1>
+          <h1 className="text-2xl font-bold mb-2 flex items-center gap-2"><PixelIcon name="bell" size={18} className="text-[var(--accent)]" />Alerts</h1>
           <p className="text-sm text-[var(--text-muted)]">
             Your analyst watches your data 24/7. Get alerted via Slack or webhook when it finds something — no dashboard checking required.
           </p>
@@ -209,10 +210,15 @@ export default function AlertsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-sm font-medium truncate">{alert.schemaName}</span>
-                        {isFiring && <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--danger)]/20 text-[var(--danger)] font-medium">🔴 Firing</span>}
+                        {isFiring && <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--danger)]/20 text-[var(--danger)] font-medium">Firing</span>}
                       </div>
                       <div className="text-xs text-[var(--text-muted)]">
-                        Threshold: {alert.threshold}% · {alert.email ? `📧 ${alert.email}` : alert.walletAddress ? `⛓️ ${alert.walletAddress.slice(0, 8)}…` : "Anonymous"}
+                        Threshold: {alert.threshold}% ·{" "}
+                        {alert.email ? (
+                          <span className="inline-flex items-center gap-1"><PixelIcon name="mail" size={10} />{alert.email}</span>
+                        ) : alert.walletAddress ? (
+                          <span className="inline-flex items-center gap-1"><PixelIcon name="chain" size={10} />{alert.walletAddress.slice(0, 8)}…</span>
+                        ) : "Anonymous"}
                       </div>
                     </div>
                     {currentHealth != null && (
@@ -237,7 +243,7 @@ export default function AlertsPage() {
         {/* Cross-link to schedules */}
         <div className="mt-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium">📅 Scheduled digest podcasts</p>
+            <p className="text-sm font-medium flex items-center gap-1.5"><PixelIcon name="clock" size={12} className="text-[var(--accent)]" />Scheduled digest podcasts</p>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">Automate weekly audio briefings for your team.</p>
           </div>
           <Link href="/pro" className="text-xs bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-3 py-1.5 font-medium shrink-0">

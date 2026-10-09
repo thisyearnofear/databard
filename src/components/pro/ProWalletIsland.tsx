@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { WalletProviderBoundary } from "@/components/pro/WalletProviderBoundary";
+import { PixelIcon } from "@/components/dither-kit";
 
 const WalletConnect = dynamic(
   () => import("@/components/WalletConnect").then((m) => ({ default: m.WalletConnect })),
@@ -16,7 +17,7 @@ interface ProWalletIslandProps {
 
 const walletFallback = (
   <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] border border-[var(--border)] rounded-lg px-4 py-3">
-    🔗 Wallet sign-in is temporarily unavailable right now. You can still sign in with Email or Stripe below.
+    <span className="inline-flex items-center gap-1.5"><PixelIcon name="chain" size={11} className="shrink-0" />Wallet sign-in is temporarily unavailable right now. You can still sign in with Email or Stripe below.</span>
   </div>
 );
 

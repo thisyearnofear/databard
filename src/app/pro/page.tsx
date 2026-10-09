@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import type { ScheduleConfig } from "@/lib/store";
 import type { DataSource } from "@/lib/types";
 import { ProWalletIsland } from "@/components/pro/ProWalletIsland";
+import { PixelIcon } from "@/components/dither-kit";
 
 const PalmUsdCheckout = dynamic(
   () => import("@/components/PalmUsdCheckout").then((m) => ({ default: m.PalmUsdCheckout })),
@@ -380,9 +381,9 @@ function ProSettingsInner() {
                 <span className="text-xs text-[var(--text-muted)]">
                   {s.frequency === "weekly" ? `Every ${DAYS[s.dayOfWeek ?? 1]}` : "Daily"} at {s.hour}:00 UTC
                 </span>
-                <span className="text-xs text-[var(--text-muted)]">Source: {s.source}{s.outputFormat === "executive-summary" ? " · 📋 Exec Summary" : ""}</span>
+                <span className="text-xs text-[var(--text-muted)]">Source: {s.source}{s.outputFormat === "executive-summary" ? " · Exec Summary" : ""}</span>
                 {s.emailRecipients && s.emailRecipients.length > 0 && (
-                  <span className="text-xs text-[var(--text-muted)]">📧 {s.emailRecipients.length} recipient{s.emailRecipients.length > 1 ? "s" : ""}</span>
+                  <span className="text-xs text-[var(--text-muted)] inline-flex items-center gap-1"><PixelIcon name="mail" size={10} />{s.emailRecipients.length} recipient{s.emailRecipients.length > 1 ? "s" : ""}</span>
                 )}
                 {s.nextRunAt && (
                   <span className="text-xs text-[var(--text-muted)]">
@@ -414,7 +415,7 @@ function ProSettingsInner() {
                     href={`/episode/${s.shareId}`}
                     className="text-xs text-[var(--accent)] hover:text-[var(--text)] cursor-pointer shrink-0"
                   >
-                    ⛓️ Attest →
+                    <PixelIcon name="chain" size={10} /> Attest →
                   </a>
                 )}
                 <button
@@ -446,7 +447,7 @@ function ProSettingsInner() {
               <option value="dbt-local">dbt Local</option>
               <option value="the-graph">The Graph</option>
               <option value="dune">Dune Analytics</option>
-              <option value="coral">Coral (Cross-source SQL) ★</option>
+              <option value="coral">Coral (Cross-source SQL, recommended)</option>
             </select>
           </div>
 
@@ -541,8 +542,8 @@ function ProSettingsInner() {
               value={scheduleFormat}
               onChange={(e) => setScheduleFormat(e.target.value as "podcast" | "executive-summary")}
             >
-              <option value="podcast">🎙️ Podcast (10-15 min full analysis)</option>
-              <option value="executive-summary">📋 Executive Summary (2-min briefing)</option>
+              <option value="podcast">Podcast (10-15 min full analysis)</option>
+              <option value="executive-summary">Executive Summary (2-min briefing)</option>
             </select>
           </div>
 

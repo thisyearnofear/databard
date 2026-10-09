@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useWizard } from "./wizard-context";
+import { PixelIcon } from "@/components/dither-kit";
 
 export function EmailGate() {
   const { state, dispatch } = useWizard();
@@ -32,7 +33,7 @@ export function EmailGate() {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-md mx-4 shadow-2xl animate-slide-up">
         <div className="text-center mb-4">
-          <div className="text-3xl mb-2">🎙️</div>
+          <div className="mb-2 flex justify-center"><PixelIcon name="mic" size={26} className="text-[var(--accent)]" /></div>
           <h2 className="text-lg font-semibold">Get early access</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             Leave your email and we&apos;ll notify you when DataBard is ready for your team.

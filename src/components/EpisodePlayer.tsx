@@ -1157,7 +1157,7 @@ export function EpisodePlayer({
                               <span className="uppercase tracking-wider">· {citation.verifiedBy}</span>
                             )}
                             {citation.sourceUrl && citation.sourceUrl.startsWith("http") && (
-                              <a href={citation.sourceUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">
+                              <a href={citation.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
                                 source
                               </a>
                             )}

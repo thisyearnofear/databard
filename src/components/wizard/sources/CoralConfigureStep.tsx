@@ -1,6 +1,7 @@
 "use client";
 
 import { getDataAwarePresets } from "../coral-helpers";
+import { PixelIcon } from "@/components/dither-kit";
 
 interface CoralPreviewData {
   columns: Array<{ name: string; dataType: string; nullCount: number; sampleValues: unknown[] }>;
@@ -42,7 +43,7 @@ export function CoralConfigureStep({
       <div className="bg-[var(--accent)]/5 border border-[var(--accent)]/10 rounded-xl px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg">📊</span>
+            <PixelIcon name="chart" size={16} className="text-[var(--accent)]" />
             <div>
               <p className="text-sm font-semibold text-[var(--text)]">
                 {rowCount} row{rowCount !== 1 ? "s" : ""} from {sources.join(", ") || "Coral"}
@@ -122,7 +123,7 @@ export function CoralConfigureStep({
                 : "border-[var(--border)] hover:border-[var(--accent)]"
             }`}
           >
-            <span className="text-lg mb-1">🎙️</span>
+            <PixelIcon name="mic" size={16} className="mb-1 text-[var(--accent)]" />
             <span className="text-sm font-semibold text-[var(--text)]">Full analysis</span>
             <span className="text-xs text-[var(--text-muted)] mt-0.5">Two AI hosts, 10-15 min</span>
           </button>
@@ -135,7 +136,7 @@ export function CoralConfigureStep({
                 : "border-[var(--border)] hover:border-[var(--accent)]"
             }`}
           >
-            <span className="text-lg mb-1">📋</span>
+            <PixelIcon name="book" size={16} className="mb-1 text-[var(--accent)]" />
             <span className="text-sm font-semibold text-[var(--text)]">Executive briefing</span>
             <span className="text-xs text-[var(--text-muted)] mt-0.5">2-min, top 3 issues + actions</span>
           </button>
@@ -179,8 +180,8 @@ export function CoralConfigureStep({
         {connecting
           ? "Generating…"
           : outputFormat === "anthem"
-            ? "Compose Anthem 🎵"
-            : "Generate Episode 🎙️"}
+            ? "Compose Anthem"
+            : "Generate Episode"}
       </button>
     </div>
   );

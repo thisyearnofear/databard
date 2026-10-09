@@ -1,21 +1,22 @@
 "use client";
 
 import type { WizardStep } from "./wizard-context";
+import { PixelIcon, type PixelIconName } from "@/components/dither-kit";
 
-const WIZARD_STEPS: { key: WizardStep; label: string; icon: string }[] = [
-  { key: "connect", label: "Connect", icon: "🔌" },
-  { key: "pick-schema", label: "Pick a dataset", icon: "📋" },
-  { key: "generating", label: "Create episode", icon: "⚡" },
-  { key: "episode", label: "Listen / Play", icon: "🎧" },
+const WIZARD_STEPS: { key: WizardStep; label: string; icon: PixelIconName }[] = [
+  { key: "connect", label: "Connect", icon: "plug" },
+  { key: "pick-schema", label: "Pick a dataset", icon: "book" },
+  { key: "generating", label: "Create episode", icon: "spark" },
+  { key: "episode", label: "Listen / Play", icon: "play" },
 ];
 
 export function StepIndicator({ current, coral = false }: { current: WizardStep; coral?: boolean }) {
   if (current === "landing") return null;
   const steps = coral
     ? [
-        { key: "connect" as const, label: "Query & ask", icon: "●" },
-        { key: "generating" as const, label: "Generate", icon: "●" },
-        { key: "episode" as const, label: "Briefing", icon: "●" },
+        { key: "connect" as const, label: "Query & ask", icon: "shell" as PixelIconName },
+        { key: "generating" as const, label: "Generate", icon: "spark" as PixelIconName },
+        { key: "episode" as const, label: "Briefing", icon: "play" as PixelIconName },
       ]
     : WIZARD_STEPS;
   const currentIdx = steps.findIndex((s) => s.key === current);
@@ -44,7 +45,7 @@ export function StepIndicator({ current, coral = false }: { current: WizardStep;
                       : "bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]"
                 }`}
               >
-                {isComplete ? "✓" : step.icon}
+                {isComplete ? "✓" : <PixelIcon name={step.icon} size={12} className={isActive ? "text-[var(--bg)]" : undefined} />}
               </div>
               <span className={`text-xs mt-1.5 ${
                 isActive ? "text-[var(--text)] font-medium" : "text-[var(--text-muted)]"

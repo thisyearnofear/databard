@@ -202,8 +202,8 @@ function VerifyPageInner() {
         {!loading && result?.ok && result.verifiable === false && result.settlement && (
           <div className="bg-[var(--surface)] border border-[var(--accent)]/40 rounded-2xl p-6 hover-depth">
             <div className="flex items-center gap-3 mb-1">
-              <span className="w-9 h-9 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center text-lg shrink-0">
-                ⛓
+              <span className="w-9 h-9 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0">
+                <PixelIcon name="chain" size={16} />
               </span>
               <div>
                 <p className="text-base font-bold">Marketplace settlement receipt</p>

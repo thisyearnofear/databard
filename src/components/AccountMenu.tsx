@@ -78,7 +78,7 @@ function SignInModal({ onClose, onSignedIn }: { onClose: () => void; onSignedIn:
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in" onClick={onClose}>
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm mx-4 shadow-2xl animate-slide-up w-full" onClick={(e) => e.stopPropagation()}>
         <div className="text-center mb-4">
-          <div className="text-3xl mb-2">🔐</div>
+          <div className="mb-2 flex justify-center"><PixelIcon name="lock" size={26} className="text-[var(--accent)]" /></div>
           <h2 className="text-lg font-semibold">Sign in to DataBard</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             {step === "email"

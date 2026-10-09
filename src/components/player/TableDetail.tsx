@@ -1,4 +1,5 @@
 import type { TableMeta, LineageEdge } from "@/lib/types";
+import { PixelIcon } from "@/components/dither-kit";
 
 export function TableDetail({ table, lineage }: { table: TableMeta; lineage: LineageEdge[] }) {
   const upstream = lineage.filter((e) => e.toTable.endsWith(`.${table.name}`)).map((e) => e.fromTable.split(".").pop());
@@ -10,9 +11,9 @@ export function TableDetail({ table, lineage }: { table: TableMeta; lineage: Lin
     <div className="mt-2 p-3 bg-[var(--bg)] rounded-lg text-xs space-y-2 animate-slide-up">
       {/* Header: owner + row count + freshness */}
       <div className="flex flex-wrap gap-3 text-[var(--text-muted)]">
-        {table.owner && <span>👤 {table.owner}</span>}
-        {table.rowCount != null && <span>📊 {table.rowCount > 1_000_000 ? `${(table.rowCount / 1_000_000).toFixed(1)}M` : table.rowCount > 1000 ? `${(table.rowCount / 1000).toFixed(0)}K` : table.rowCount} rows</span>}
-        {table.freshness && <span>🕐 {new Date(table.freshness).toLocaleDateString()}</span>}
+        {table.owner && <span className="inline-flex items-center gap-1"><PixelIcon name="user" size={10} />{table.owner}</span>}
+        {table.rowCount != null && <span className="inline-flex items-center gap-1"><PixelIcon name="chart" size={10} />{table.rowCount > 1_000_000 ? `${(table.rowCount / 1_000_000).toFixed(1)}M` : table.rowCount > 1000 ? `${(table.rowCount / 1000).toFixed(0)}K` : table.rowCount} rows</span>}
+        {table.freshness && <span className="inline-flex items-center gap-1"><PixelIcon name="clock" size={10} />{new Date(table.freshness).toLocaleDateString()}</span>}
       </div>
 
       {table.description && (
@@ -21,8 +22,8 @@ export function TableDetail({ table, lineage }: { table: TableMeta; lineage: Lin
 
       {/* PII warning */}
       {table.piiColumns && table.piiColumns.length > 0 && (
-        <div className="px-2 py-1 rounded bg-[var(--danger)]/10 text-[var(--danger)]">
-          🔒 Sensitive data: {table.piiColumns.join(", ")}
+        <div className="px-2 py-1 rounded bg-[var(--danger)]/10 text-[var(--danger)] flex items-center gap-1">
+          <PixelIcon name="lock" size={10} />Sensitive data: {table.piiColumns.join(", ")}
         </div>
       )}
 
@@ -30,7 +31,7 @@ export function TableDetail({ table, lineage }: { table: TableMeta; lineage: Lin
       {table.glossaryTerms && table.glossaryTerms.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {table.glossaryTerms.map((term) => (
-            <span key={term} className="px-1.5 py-0.5 rounded bg-[var(--accent-light)]/20 text-[var(--accent-light)]">📖 {term}</span>
+            <span key={term} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--accent-light)]/20 text-[var(--accent-light)]"><PixelIcon name="book" size={9} />{term}</span>
           ))}
         </div>
       )}

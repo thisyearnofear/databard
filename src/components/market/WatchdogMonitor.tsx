@@ -1,4 +1,5 @@
 "use client";
+import { PixelIcon } from "@/components/dither-kit";
 /**
  * WatchdogMonitor — the autonomous-appearance card.
  *
@@ -35,7 +36,7 @@ export function WatchdogMonitor({
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🐕</span>
+            <PixelIcon name="bell" size={20} className="text-[var(--accent)]" />
             <div>
               <div className="font-semibold text-[var(--text)]">Watchdog</div>
               <div className="text-xs text-[var(--text-muted)]">

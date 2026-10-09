@@ -6,6 +6,7 @@
  * Uses @solana/wallet-adapter-react for wallet state.
  */
 import { useEffect, useState } from "react";
+import { PixelIcon } from "@/components/dither-kit";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { resolveSolDomain } from "@/lib/sns";
@@ -86,7 +87,7 @@ export function SolanaWalletConnect({ onAddressChange, onSolDomainChange }: Sola
         </span>
       </div>
       {solDomain && (
-        <p className="text-xs text-[var(--text-muted)]">🌐 SNS identity verified</p>
+        <p className="text-xs text-[var(--text-muted)] flex items-center gap-1"><PixelIcon name="chain" size={10} /> SNS identity verified</p>
       )}
       <button
         onClick={disconnect}

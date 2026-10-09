@@ -149,7 +149,7 @@ export function SourceFields() {
           <p className="text-xs text-[var(--text-muted)] -mt-1">
             {state.duneQueryUrl
               ? (state.duneQueryUrl.split(",").every(s => s.trim().match(/queries\/(\d+)|^\d+$/))
-                  ? "✓ Valid query ID" : "⚠️ Paste a valid Dune query URL or ID")
+                  ? "✓ Valid query ID" : "Paste a valid Dune query URL or ID")
               : "Paste one or more query URLs — or leave blank to browse your namespace"}
           </p>
         </>

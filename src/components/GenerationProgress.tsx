@@ -1,11 +1,12 @@
 "use client";
 
 import type { LiveBriefingSignal } from "@/components/wizard/wizard-context";
+import { PixelIcon, type PixelIconName } from "@/components/dither-kit";
 
 interface Step {
   label: string;
   status: "pending" | "active" | "complete";
-  icon: string;
+  icon: PixelIconName;
 }
 
 interface Props {
@@ -22,9 +23,9 @@ export function GenerationProgress({ isProtocols = false, currentStep, segmentsC
   const [primaryFinding, ...supportingFindings] = findings;
   const signalTone = signal?.healthLabel === "critical" ? "var(--danger)" : signal?.healthLabel === "at-risk" ? "var(--warning)" : "var(--success)";
   const steps: Step[] = [
-    { label: isProtocols ? "Scanning protocol data" : "Scanning your tables for issues", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "📊" },
-    { label: isProtocols ? "Synthesising findings" : "Synthesising findings", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "✍️" },
-    { label: isProtocols ? "Recording the briefing" : "Recording your briefing", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "🎵" },
+    { label: isProtocols ? "Scanning protocol data" : "Scanning your tables for issues", status: currentStep > 0 ? "complete" : currentStep === 0 ? "active" : "pending", icon: "chart" },
+    { label: isProtocols ? "Synthesising findings" : "Synthesising findings", status: currentStep > 1 ? "complete" : currentStep === 1 ? "active" : "pending", icon: "spark" },
+    { label: isProtocols ? "Recording the briefing" : "Recording your briefing", status: currentStep > 2 ? "complete" : currentStep === 2 ? "active" : "pending", icon: "mic" },
   ];
 
   // ETA calculation based on segments synthesized
@@ -64,7 +65,7 @@ export function GenerationProgress({ isProtocols = false, currentStep, segmentsC
                   : "bg-[var(--border)] scale-90 opacity-50"
               }`}
             >
-              {step.status === "complete" ? "✓" : step.icon}
+              {step.status === "complete" ? "✓" : <PixelIcon name={step.icon} size={15} className={step.status === "active" ? "text-[var(--bg)]" : "text-[var(--text)]"} />}
             </div>
             <div className="flex-1">
               <p

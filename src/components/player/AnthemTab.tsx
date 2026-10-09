@@ -1,11 +1,12 @@
 import type { MusicPlan } from "@/lib/types";
+import { PixelIcon } from "@/components/dither-kit";
 
 export function AnthemTab({ plan }: { plan: MusicPlan }) {
   return (
     <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
       {/* Genre & mood header */}
       <div className="flex items-center gap-3 bg-[var(--bg)] rounded-lg p-3 border border-[var(--border)]">
-        <span className="text-2xl">🎵</span>
+        <PixelIcon name="mic" size={20} className="text-[var(--accent)]" />
         <div>
           <p className="text-sm font-semibold">{plan.genre}</p>
           <p className="text-xs text-[var(--text-muted)]">{plan.mood}</p>

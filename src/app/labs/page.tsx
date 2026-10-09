@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useWizard, WizardProvider } from "@/components/wizard";
 import { useGeneration } from "@/components/wizard/useGeneration";
+import { PixelIcon } from "@/components/dither-kit";
 
 export default function LabsPage() {
   return (
@@ -23,7 +24,7 @@ function LabsPageInner() {
       </div>
 
       <div className="w-full">
-        <h1 className="text-2xl font-bold mb-1">🎵 Labs</h1>
+        <h1 className="text-2xl font-bold mb-1 flex items-center gap-2"><PixelIcon name="flask" size={18} className="text-[var(--accent)]" />Labs</h1>
         <p className="text-sm text-[var(--text-muted)]">
           Experimental features that aren&apos;t part of the core analysis workflow. Have fun, but don&apos;t expect production reliability.
         </p>
@@ -32,7 +33,7 @@ function LabsPageInner() {
       {/* Anthem experiment */}
       <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🎵</span>
+          <PixelIcon name="mic" size={20} className="text-[var(--accent)] shrink-0" />
           <div>
             <h2 className="text-sm font-semibold">Data Anthem</h2>
             <p className="text-xs text-[var(--text-muted)]">Turn your data schema into a song with AI-generated lyrics and music.</p>
@@ -65,7 +66,7 @@ function LabsPageInner() {
               onClick={() => generateAnthem(state.selectedSchema!)}
               className="bg-[var(--accent)] hover:brightness-110 text-[var(--bg)] rounded-lg px-4 py-2.5 text-sm font-semibold transition ease-out hover:scale-[1.01]"
             >
-              🎵 Generate Anthem
+              Generate Anthem
             </button>
           </div>
         )}
@@ -73,7 +74,7 @@ function LabsPageInner() {
 
       {/* Demo anthems */}
       <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 flex flex-col gap-3">
-        <h3 className="text-sm font-semibold">🎧 Demo Anthems</h3>
+        <h3 className="text-sm font-semibold flex items-center gap-1.5"><PixelIcon name="play" size={11} className="text-[var(--accent)]" />Demo Anthems</h3>
         <p className="text-xs text-[var(--text-muted)]">Pre-generated examples so you can hear what a data song sounds like.</p>
         <div className="flex flex-col gap-2">
           <button
@@ -99,7 +100,7 @@ function LabsPageInner() {
             }}
             className="text-left bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-3 text-sm hover:border-[var(--accent)] transition-colors cursor-pointer"
           >
-            <span className="font-medium">{state.persona === "web3" ? "🪐 Web3 Anthem" : "🏢 Enterprise Anthem"}</span>
+            <span className="font-medium">{state.persona === "web3" ? "Web3 Anthem" : "Enterprise Anthem"}</span>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">Pre-generated demo · click to play</p>
           </button>
         </div>

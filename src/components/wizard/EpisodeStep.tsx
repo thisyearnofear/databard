@@ -126,14 +126,14 @@ export function EpisodeStep() {
       {episode.schemaFqn === "analytics.ecommerce" && (
         <div className="w-full max-w-2xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-3 text-center animate-slide-up">
           <p className="text-xs text-[var(--text-muted)]">
-            🎧 Demo episode analyzing a sample <span className="text-[var(--text)]">e-commerce schema</span> — 6 tables, 3 failing tests, PII governance gaps, and stale pipelines
+            Demo episode analyzing a sample <span className="text-[var(--text)]">e-commerce schema</span> — 6 tables, 3 failing tests, PII governance gaps, and stale pipelines
           </p>
         </div>
       )}
       {episode.schemaFqn === "dune.uniswap" && (
         <div className="w-full max-w-2xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl px-4 py-3 text-center animate-slide-up">
           <p className="text-xs text-[var(--text-muted)]">
-            📊 Demo episode analyzing <span className="text-[var(--text)]">Uniswap onchain data</span> via Dune — 6 queries with real column stats, broken whale tracking, and missing documentation
+            Demo episode analyzing <span className="text-[var(--text)]">Uniswap onchain data</span> via Dune — 6 queries with real column stats, broken whale tracking, and missing documentation
           </p>
         </div>
       )}

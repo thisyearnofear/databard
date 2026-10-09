@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { PixelIcon } from "@/components/dither-kit";
 
 /**
  * BadgePanel — shows the live SVG badge for a schema + copy-paste embed code.
@@ -30,7 +31,7 @@ export function BadgePanel({ schemaName }: { schemaName: string }) {
         className="text-xs font-medium text-[var(--text-muted)] cursor-pointer flex items-center gap-1.5 hover:text-[var(--text)] transition-colors"
       >
         <span className={`inline-block transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
-        📛 Embeddable badge
+        <PixelIcon name="link" size={11} /> Embeddable badge
       </button>
       {open && (
         <div className="mt-3 space-y-3">
