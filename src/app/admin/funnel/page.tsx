@@ -16,6 +16,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const EDITION_FUNNEL = [
   { type: "earn_index_view", label: "Visited /earn index" },
   { type: "edition_preview", label: "Opened a preview" },
+  { type: "edition_paywall_click", label: "Clicked publish (paywall)" },
   { type: "edition_intent", label: "Started payment intent" },
   { type: "edition_published", label: "Published edition" },
 ] as const;
@@ -26,6 +27,7 @@ const AGENT_FUNNEL = [
   { type: "agent_demo_run", label: "Ran free health check" },
   { type: "probe_run", label: "Ran a probe" },
   { type: "service_score_lookup", label: "service_score tool call" },
+  { type: "briefing_paid", label: "Paid briefing served (x402)" },
 ] as const;
 
 function countByType(events: UsageEvent[]): Record<string, number> {

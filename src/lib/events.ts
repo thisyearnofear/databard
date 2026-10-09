@@ -61,7 +61,9 @@ export const EVENT_TYPES = [
   "story_expand",             // opened a Why-it-matters / Details disclosure
   "evidence_open",            // opened evidence from a story context
   "finding_share",            // per-segment finding shared
+  "briefing_paid",            // paid x402 briefing served (meta: mode, audio, scope)
   // Commissioned editions (PUSD paywall)
+  "edition_paywall_click",    // clicked the publish button (meta: slug, state=connect|prepare)
   "edition_intent",           // payment intent created for a sponsor edition
   "edition_published",        // edition published after verified PUSD payment
   "edition_preview",

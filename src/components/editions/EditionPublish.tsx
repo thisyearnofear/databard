@@ -482,11 +482,20 @@ export function EditionPublish({ sponsor, slug, pricePusd }: EditionPublishProps
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4 flex-wrap">
         <button
-          onClick={connected && publicKey ? handlePrepare : () => setVisible(true)}
+          onClick={() => {
+            // The missing rung between preview and intent — tells us whether
+            // visitors try to pay or bounce before the wallet step.
+            track("edition_paywall_click", {
+              slug,
+              state: connected && publicKey ? "prepare" : "connect",
+            });
+            if (connected && publicKey) void handlePrepare();
+            else setVisible(true);
+          }}
           disabled={!restored}
           className="relative overflow-hidden rounded-lg px-4 py-2.5 text-sm font-semibold text-white cursor-pointer transition-transform ease-out hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-br from-[var(--palm)] to-[var(--palm-light)] disabled:opacity-50"
         >
-          {connected && publicKey ? `Publish this page — ${payLabel}` : "Connect wallet to publish"}
+          {connected && publicKey ? `Publish this page — ${payLabel}` : `Connect wallet — publish for $${pricePusd}`}
         </button>
         {connected && publicKey && (
           <span className="text-xs text-[var(--text-muted)]">

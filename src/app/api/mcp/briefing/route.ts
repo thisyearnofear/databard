@@ -21,6 +21,7 @@ import { getMonidCost } from "@/lib/monid-adapter";
 import { uploadEpisodeToGrove } from "@/lib/grove-storage";
 import type { Episode } from "@/lib/types";
 import { ValidationError } from "@/lib/validation";
+import { recordEvent } from "@/lib/events";
 import { x402Server, briefingRouteConfig, x402Configured } from "@/lib/x402";
 
 export const runtime = "nodejs";
@@ -138,6 +139,13 @@ async function marketplaceBriefing(
   }
 
   const registry = process.env.PROBE_REGISTRY_ADDRESS;
+  // Fires on handler success — withX402 settles right after; settlement
+  // failures are rare, so this is an honest count of paid calls served.
+  void recordEvent("briefing_paid", {
+    mode: "marketplace",
+    scope: briefing.scope,
+    audio: brief.audio,
+  });
   return NextResponse.json({
     ok: true,
     tool: "databard.briefing",
@@ -276,6 +284,11 @@ async function briefingHandler(req: NextRequest): Promise<NextResponse> {
       ),
     ].slice(0, 5);
 
+    void recordEvent("briefing_paid", {
+      mode: "schema",
+      scope: config.source ?? "schema",
+      audio: audioModeResolved,
+    });
     return NextResponse.json({
       ok: true,
       tool: "databard.briefing",

@@ -86,6 +86,7 @@ Funnel (GTM instrumentation):
 - `marketplace_index_view` — visited `/probe/marketplace` (OKX.AI health index)
 - `service_score_lookup` — `databard_service_score` tool called
 - `pro_payment_recovery` — Pro checkout needed a re-check (meta: method, via=auto|manual, reason)
+- `briefing_paid` — paid x402 `databard_briefing` call served (server-side `recordEvent`; meta: mode=marketplace|schema, scope, audio)
 
 Story layer (progressive disclosure):
 - `story_expand` — opened a Why-it-matters / Details disclosure
@@ -94,6 +95,7 @@ Story layer (progressive disclosure):
 
 Commissioned editions (PUSD paywall):
 - `edition_preview` — sponsor opened their free preview
+- `edition_paywall_click` — clicked the publish button (meta: slug, state=connect|prepare — splits "won't pay" from "wallet wall")
 - `edition_intent` — payment intent created for a sponsor edition
 - `edition_publish_start` — publish flow started
 - `edition_published` — edition published after verified PUSD payment
