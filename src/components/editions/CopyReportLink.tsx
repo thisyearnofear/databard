@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { track } from "@/lib/track";
+import { tagShareUrl } from "@/lib/share";
 
 export function CopyReportLink({ href }: { href: string }) {
   const [state, setState] = useState<"idle" | "copied" | "fallback">("idle");
   const [url, setUrl] = useState("");
   async function copy() {
-    const absolute = new URL(href, window.location.origin).href;
+    const absolute = tagShareUrl(new URL(href, window.location.origin).href, "link", "edition");
     setUrl(absolute);
     try {
       await navigator.clipboard.writeText(absolute);

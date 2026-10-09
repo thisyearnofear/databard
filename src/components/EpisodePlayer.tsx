@@ -19,6 +19,7 @@ import { AnthemTab } from "@/components/player/AnthemTab";
 import { MarkdownRenderer } from "@/components/player/MarkdownRenderer";
 import { workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import { scoreFromEpisode, shareText } from "@/lib/score-card";
+import { tagShareUrl } from "@/lib/share";
 import { bottomLine } from "@/lib/story";
 import { scoreTextClass } from "@/lib/product/score-tone";
 
@@ -68,6 +69,7 @@ export function EpisodePlayer({
   const [sharing, setSharing] = useState(false);
   const [expandedSeg, setExpandedSeg] = useState<number | null>(null);
   const [clipCopied, setClipCopied] = useState(false);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const [speed, setSpeed] = useState<number>(1);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [nudge, setNudge] = useState<string | null>(null);
@@ -547,10 +549,24 @@ export function EpisodePlayer({
 
       if (navigator.share) {
         try {
+          const tagged = tagShareUrl(url, "native", "scorecard");
+          // The card is the artifact — share the PNG itself when the platform
+          // supports files (mobile Slack/WhatsApp), else fall back to the link.
+          try {
+            const shareId = new URL(url).pathname.split("/").filter(Boolean).pop() ?? "";
+            const res = await fetch(`/api/og?id=${encodeURIComponent(shareId)}&seg=${card.segmentIndex}`);
+            if (res.ok) {
+              const file = new File([await res.blob()], "databard-card.png", { type: "image/png" });
+              if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file], text: shareText(card, tagged) });
+                return;
+              }
+            }
+          } catch { /* image share unavailable — fall back to URL */ }
           await navigator.share({
             title: `${card.name} is ${card.score}`,
             text: `"${card.quote}" — ${card.speaker}`,
-            url,
+            url: tagged,
           });
           return;
         } catch {
@@ -572,26 +588,60 @@ export function EpisodePlayer({
     if (!shareUrl) return;
     const card = scoreFromEpisode(currentEpisode);
     track("share", { platform, schema: currentEpisode.schemaName });
-    const text = shareText(card, shareUrl);
+    const taggedUrl = tagShareUrl(shareUrl, platform === "copy" ? "link" : platform, "scorecard");
+    const text = shareText(card, taggedUrl);
     const encoded = encodeURIComponent(`${card.name} is ${card.score}. "${card.quote}"`);
-    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedUrl = encodeURIComponent(taggedUrl);
 
     const urls: Record<string, string> = {
       whatsapp: `https://wa.me/?text=${encoded}%20${encodedUrl}`,
       telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encoded}`,
       twitter: `https://twitter.com/intent/tweet?text=${encoded}&url=${encodedUrl}`,
       linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-      copy: "",
     };
-
-    if (platform === "copy") {
-      navigator.clipboard.writeText(text);
-      setShowShareMenu(false);
-      return;
-    }
 
     window.open(urls[platform], "_blank", "noopener,noreferrer,width=600,height=400");
     setShowShareMenu(false);
+  }
+
+  function flashCopied(item: string) {
+    setCopiedItem(item);
+    setTimeout(() => { setCopiedItem(null); setShowShareMenu(false); }, 1200);
+  }
+
+  async function copyShareLink() {
+    if (!shareUrl) return;
+    const card = scoreFromEpisode(currentEpisode);
+    const taggedUrl = tagShareUrl(shareUrl, "link", "scorecard");
+    track("share", { platform: "copy", schema: currentEpisode.schemaName });
+    try {
+      await navigator.clipboard.writeText(shareText(card, taggedUrl));
+      flashCopied("copy");
+    } catch { /* clipboard may be blocked */ }
+  }
+
+  /** Copy the score card PNG itself — the artifact, not just the link. */
+  async function copyCardImage() {
+    const url = await resolveShareUrl();
+    if (!url) return;
+    const card = scoreFromEpisode(currentEpisode);
+    const shareId = new URL(url).pathname.split("/").filter(Boolean).pop() ?? "";
+    const imgUrl = `/api/og?id=${encodeURIComponent(shareId)}&seg=${card.segmentIndex}`;
+    track("clip_share", { schema: currentEpisode.schemaName, segment: String(card.segmentIndex), format: "image" });
+    try {
+      const res = await fetch(imgUrl);
+      if (!res.ok) throw new Error(`og render ${res.status}`);
+      const blob = await res.blob();
+      const png = blob.type === "image/png" ? blob : new Blob([await blob.arrayBuffer()], { type: "image/png" });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+    } catch {
+      // Clipboard image write unsupported/denied — download instead.
+      const a = document.createElement("a");
+      a.href = imgUrl;
+      a.download = `databard-${card.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-card.png`;
+      a.click();
+    }
+    flashCopied("image");
   }
 
   async function handleDownloadReport() {
@@ -628,7 +678,8 @@ export function EpisodePlayer({
     track(segmentIndex != null ? "finding_share" : "clip_share", { schema: currentEpisode.schemaName, segment: String(card.segmentIndex) });
 
     const baseUrl = (await resolveShareUrl()) ?? window.location.origin + window.location.pathname;
-    const clipUrl = baseUrl.includes("?") ? `${baseUrl}&seg=${card.segmentIndex}` : `${baseUrl}?seg=${card.segmentIndex}`;
+    const untagged = baseUrl.includes("?") ? `${baseUrl}&seg=${card.segmentIndex}` : `${baseUrl}?seg=${card.segmentIndex}`;
+    const clipUrl = tagShareUrl(untagged, segmentIndex != null ? "finding" : "card", "scorecard");
     const clipText = shareText(card, clipUrl);
 
     if (navigator.share) {
@@ -735,7 +786,7 @@ export function EpisodePlayer({
               className="text-xs bg-[var(--bg)] hover:bg-[var(--border)] border border-[var(--border)] rounded-lg px-2.5 py-2.5 cursor-pointer disabled:opacity-50"
               title="Share episode"
             >
-              {sharing ? "…" : shareUrl ? "✓ Share" : "Share"}
+              {sharing ? "…" : "Share"}
             </button>
             {onMint && (
               <button
@@ -782,15 +833,16 @@ export function EpisodePlayer({
                   { id: "telegram", label: "Telegram" },
                   { id: "twitter", label: "Twitter/X" },
                   { id: "linkedin", label: "LinkedIn" },
+                  { id: "image", label: "Card image" },
                   { id: "copy", label: "Copy link" },
                 ].map((p) => (
                   <button
                     key={p.id}
                     role="menuitem"
-                    onClick={() => shareVia(p.id)}
+                    onClick={() => (p.id === "copy" ? void copyShareLink() : p.id === "image" ? void copyCardImage() : shareVia(p.id))}
                     className="block w-full text-left text-xs px-3 py-2 hover:bg-[var(--bg)] cursor-pointer first:rounded-t-lg last:rounded-b-lg"
                   >
-                    {p.label}
+                    {copiedItem === p.id ? "✓ Copied" : p.label}
                   </button>
                 ))}
               </div>

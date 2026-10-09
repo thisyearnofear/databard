@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { track } from "@/lib/track";
+import { tagShareText } from "@/lib/share";
 import { MondaySignup } from "@/components/MondaySignup";
 import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { HealthBar } from "@/components/viz";
@@ -25,16 +26,18 @@ function CopyButton({
   label,
   text,
   channel,
+  link,
 }: {
   label: string;
   text: string;
   channel: "tweet" | "email" | "link";
+  link: string;
 }) {
   const [done, setDone] = useState(false);
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(tagShareText(text, link, channel, "league"));
       setDone(true);
       track("league_share_copy", { channel });
       window.setTimeout(() => setDone(false), 1600);
@@ -157,9 +160,9 @@ export function LeagueBoard() {
 
         {edition && (
           <div className="flex flex-wrap gap-2 mt-5">
-            <CopyButton label="Copy tweet" text={edition.tweet} channel="tweet" />
-            <CopyButton label="Copy email" text={edition.emailBlurb} channel="email" />
-            <CopyButton label="Copy link" text={edition.permalink} channel="link" />
+            <CopyButton label="Copy tweet" text={edition.tweet} channel="tweet" link={edition.permalink} />
+            <CopyButton label="Copy email" text={edition.emailBlurb} channel="email" link={edition.permalink} />
+            <CopyButton label="Copy link" text={edition.permalink} channel="link" link={edition.permalink} />
           </div>
         )}
 

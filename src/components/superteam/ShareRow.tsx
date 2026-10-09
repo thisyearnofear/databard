@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
+import { tagShareText } from "@/lib/share";
 
 function CopyButton({
   label,
@@ -10,6 +11,7 @@ function CopyButton({
   source,
   slug,
   published,
+  link,
 }: {
   label: string;
   text: string;
@@ -17,12 +19,16 @@ function CopyButton({
   source: "superteam" | "edition";
   slug?: string;
   published: boolean;
+  link: string;
 }) {
   const [done, setDone] = useState(false);
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(text);
+      // Receipts copy verbatim; everything else swaps the canonical link for
+      // its UTM-tagged variant so the recipient's events carry attribution.
+      const out = channel === "receipt" ? text : tagShareText(text, link, channel, source);
+      await navigator.clipboard.writeText(out);
       setDone(true);
       if (source === "edition") {
         track("edition_share_copy", {
@@ -83,11 +89,11 @@ export function ShareRow({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <CopyButton label="Copy tweet" text={tweet} channel="tweet" source={source} slug={slug} published={published} />
-      <CopyButton label="Copy LinkedIn" text={linkedin} channel="linkedin" source={source} slug={slug} published={published} />
-      <CopyButton label="Copy email" text={email} channel="email" source={source} slug={slug} published={published} />
-      <CopyButton label="Copy link" text={link} channel="link" source={source} slug={slug} published={published} />
-      <CopyButton label="Copy evidence receipt" text={receipt} channel="receipt" source={source} slug={slug} published={published} />
+      <CopyButton label="Copy tweet" text={tweet} channel="tweet" source={source} slug={slug} published={published} link={link} />
+      <CopyButton label="Copy LinkedIn" text={linkedin} channel="linkedin" source={source} slug={slug} published={published} link={link} />
+      <CopyButton label="Copy email" text={email} channel="email" source={source} slug={slug} published={published} link={link} />
+      <CopyButton label="Copy link" text={link} channel="link" source={source} slug={slug} published={published} link={link} />
+      <CopyButton label="Copy evidence receipt" text={receipt} channel="receipt" source={source} slug={slug} published={published} link={link} />
     </div>
   );
 }

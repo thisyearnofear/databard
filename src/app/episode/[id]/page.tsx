@@ -7,7 +7,8 @@ import { EpisodePlayer } from "@/components/EpisodePlayer";
 import { MondaySignup } from "@/components/MondaySignup";
 import { ScoreCardView } from "@/components/ScoreCardView";
 import { track } from "@/lib/track";
-import { scoreFromEpisode } from "@/lib/score-card";
+import { scoreFromEpisode, shareText } from "@/lib/score-card";
+import { tagShareUrl } from "@/lib/share";
 import { homeHref, workspaceFromSearch, workspaceHref } from "@/lib/product/workspaces";
 import type { Episode } from "@/lib/types";
 
@@ -37,6 +38,7 @@ function SharedEpisodeInner() {
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reshared, setReshared] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expiresIn, setExpiresIn] = useState<number | null>(null);
   const [clipPlaying, setClipPlaying] = useState(false);
@@ -111,6 +113,26 @@ function SharedEpisodeInner() {
     audio.currentTime = start;
     audio.addEventListener("timeupdate", onTime);
     void audio.play().then(() => setClipPlaying(true)).catch(() => setClipPlaying(false));
+  }
+
+  // The loop's onward step: the recipient shares the same finding forward.
+  // Fresh UTM tag so the next hop's landings attribute to src=share too.
+  async function shareFinding(card: ReturnType<typeof scoreFromEpisode>) {
+    const canonical = `${window.location.origin}/episode/${id}${Number.isFinite(segNumber) ? `?seg=${segNumber}` : ""}`;
+    const url = tagShareUrl(canonical, "card", "scorecard");
+    const text = shareText(card, url);
+    track("clip_share", { schema: card.name, segment: String(card.segmentIndex), via: "shared_page" });
+    if (navigator.share) {
+      try {
+        await navigator.share({ text, url });
+        return;
+      } catch { /* cancelled — fall through to clipboard */ }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setReshared(true);
+      setTimeout(() => setReshared(false), 1600);
+    } catch { /* clipboard may be blocked */ }
   }
 
   if (loading) {
@@ -201,6 +223,13 @@ function SharedEpisodeInner() {
         >
           Dashboard
         </Link>
+        <button
+          type="button"
+          onClick={() => void shareFinding(card)}
+          className="rounded-md border border-[var(--accent)]/40 px-5 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 text-center cursor-pointer"
+        >
+          {reshared ? "✓ Copied" : "Share this finding"}
+        </button>
       </div>
     </main>
   );

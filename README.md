@@ -176,6 +176,8 @@ $49/month per team via Stripe:
 
 Free: demo, ad-hoc briefings, shared score cards, `/league`, leaderboard, health badge, verify. Monday email capture on the finding starts the habit before Pro.
 
+**Distribution:** edition shares + league + roast + 21-day score cards are shareable by design — no new share surfaces until the rung above is proven. The virality ladder (share → land → activate → pay) and its scorecard live in [`docs/GTM.md`](docs/GTM.md#the-virality-ladder).
+
 ---
 
 ## Docs

@@ -8,6 +8,7 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 - `npm run build` — production build (81 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
+- `npm run scorecard` — virality ladder scorecard (`scripts/ladder-scorecard.mjs`; reads `DATABARD_DATA_DIR`/`./data`, see `docs/GTM.md`)
 - `npm run test:unit` — rate-limit, datahub-adapter, fleet-analysis, account, score-card, serial-queue, monid-adapter (`package.json`)
 - `./scripts/deploy.sh` — local build → tarball → `snel-bot` (`/opt/databard`), PM2 reload, health gate, installs `ensure-running` cron. Do **not** `npm install` on the box.
 - `npx playwright install` — install required browsers
@@ -112,7 +113,8 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 
 ## Key Files
 - `src/lib/events.ts` — event ledger (whitelist, storage, stats)
-- `src/lib/track.ts` — client-side track() function
+- `src/lib/track.ts` — client-side track() function (first-touch `src`/`med`/`cmp` attribution from UTMs/referrer)
+- `src/lib/share.ts` — UTM tagging for outbound share links (virality ladder in `docs/GTM.md`); canonical permalinks stay clean
 - `src/lib/notifications.ts` — email delivery for scheduled digests
 - `src/lib/script-generator.ts` — LLM script generation (Alex + Morgan)
 - `src/lib/schema-analysis.ts` — health score, critical tables, trend diffs

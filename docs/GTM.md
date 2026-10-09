@@ -124,6 +124,40 @@ The event ledger (`src/lib/events.ts`) already tracks the funnels:
 `roast_cta_click`, `probe_run`, `monday_signup`, plus wizard-era events for
 the supporting surface.
 
+### The virality ladder
+
+One scorecard, four rungs. Prove each rung before building the next share
+surface — the first unproven rung is where effort goes, not a new hook.
+
+| # | Rung | Events that prove it |
+|---|------|----------------------|
+| 1 | Someone shares | `clip_share`, `finding_share`, `league_share_copy`, `superteam_share_copy`, `edition_share_copy` |
+| 2 | Recipient lands | `shared_episode_open`, `shared_clip_play`; `league_page_view` / `edition_preview` carrying share attribution |
+| 3 | Recipient activates | `shared_episode_cta_click`, then `generate_complete` / `connect_start` / `monday_signup` carrying share attribution |
+| 4 | Recipient pays | `edition_intent` → `edition_published`, Pro checkout — carrying share attribution |
+
+A rung is **proven** when it produces ≥5 conversions into the next rung per
+week for three consecutive weeks (absolute counts — percentages are noise
+at this volume). First-touch attribution (`src`/`med`/`cmp` stamped by
+`src/lib/track.ts`) is what chains rungs 2–4 together.
+
+Instrumentation: share links get `utm_source=share` + `utm_medium=<channel>`
+at copy/share time via `src/lib/share.ts` (`handleClip`/`shareVia`/
+`copyCardImage`/`copyShareLink` in `EpisodePlayer`, `LeagueBoard` copy
+buttons, `ShareRow`, `CopyReportLink`, and the "Share this finding" re-share
+CTA on `/episode/[id]`). Canonical permalinks and OG URLs stay clean;
+evidence receipts copy verbatim. `clip_share` meta distinguishes the shape:
+`format=image` (PNG card via `/api/og`) vs link copy, and `via=shared_page`
+marks recipient→recipient onward shares. Caveat: pre-tagging shares attribute
+only by referrer host — DMs and mail clients strip referrers, collapsing to
+"direct" — so rung 3–4 numbers before the tagging deploy are floors, not
+measurements.
+
+Run the scorecard: `npm run scorecard` (reads `DATABARD_DATA_DIR` or `./data`;
+`--data-dir`, `--weeks`, `--json` flags supported). For prod data, scp
+`events.json` + `pageviews.json` off snel-bot — no npm install needed, it's a
+standalone `.mjs`.
+
 The numbers to watch weekly:
 
 - Preview → publish conversion (the $25 decision)
