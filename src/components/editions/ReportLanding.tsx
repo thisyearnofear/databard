@@ -132,7 +132,7 @@ export function ReportLanding() {
           <div className="relative grid gap-10 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] md:items-center">
             <div>
               <p className="enter-up font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--accent)]">
-                Public accounting · Superteam Earn
+                Public accounting · Division 01
               </p>
               <h1 className="enter-up enter-delay-1 mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
                 Your data.
@@ -140,9 +140,9 @@ export function ReportLanding() {
                 A story worth sharing.
               </h1>
               <p className="enter-up enter-delay-2 mt-6 max-w-[42ch] text-base leading-relaxed text-[var(--text-muted)] md:text-lg">
-                Public reports for ecosystem teams. Understand the numbers, check the evidence,
-                and publish a dated edition that holds up. Start with your organization on
-                Superteam Earn.
+                DataBard turns any data estate — public listings, your warehouse, your
+                protocol — into a measured, narrated, receipted report. Division 01 of the
+                public registry is live: Superteam Earn.
               </p>
               <div className="enter-up enter-delay-3 mt-8 flex flex-wrap items-center gap-4">
                 <ReportLink
@@ -197,7 +197,7 @@ export function ReportLanding() {
                 n: "01",
                 title: "Public record",
                 desc: "Superteam Earn organizations, measured from public listings",
-                meta: "Open filings · free to read",
+                meta: `Free preview · $${price} edition`,
                 href: "/earn",
                 cta: "reports" as const,
                 arrow: "→",
@@ -259,7 +259,7 @@ export function ReportLanding() {
                 {
                   kicker: "Source",
                   title: "Find your organization",
-                  body: "Reports are built from Superteam Earn's public listings — the same source anyone can read. Search the directory and open a free preview.",
+                  body: "Division 01 reports are built from Superteam Earn's public listings — the same source anyone can read. Search the directory and open a free preview.",
                 },
                 {
                   kicker: "Read",
@@ -287,6 +287,13 @@ export function ReportLanding() {
                 </span>{" "}
                 — dated, receipted, attributed, retained five years.{" "}
                 <span className="text-[var(--text-muted)]">SOL, USDC or PUSD; network fees additional.</span>
+                <br />
+                <span className="text-[var(--text-muted)]">
+                  On your own sources (divisions 02–03) the briefing is free — scheduled
+                  digests run on{" "}
+                </span>
+                <Link href="/pro" className="text-[var(--accent)] hover:underline">Pro</Link>
+                <span className="text-[var(--text-muted)]">.</span>
               </p>
               <ReportLink
                 href="/earn"
@@ -357,10 +364,12 @@ export function ReportLanding() {
                 <span aria-hidden="true" className="text-[var(--text-muted)] transition-transform group-open:rotate-45">+</span>
               </summary>
               <p className="mt-3 text-sm leading-relaxed text-[var(--text-muted)]">
-                Public report publishing currently supports Superteam Earn organizations. Our
-                separate analysis tools support dbt, catalogs, Dune and subgraphs; they do not
-                yet produce this same public report.{" "}
-                <a href="#divisions" className="text-[var(--accent)] hover:underline">See the division index above</a>.
+                Public report publishing currently supports Superteam Earn organizations. The
+                same engine runs on dbt, catalogs, Dune and subgraphs — free briefings today,
+                scheduled digests on{" "}
+                <Link href="/pro" className="text-[var(--accent)] hover:underline">Pro</Link>
+                {" "}— and publishing to the public registry is next.{" "}
+                <a href="#divisions" className="text-[var(--accent)] hover:underline">See the division index</a>.
               </p>
             </details>
             <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
