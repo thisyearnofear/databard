@@ -21,6 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/earn",
     "/agents",
     "/probe",
+    "/benchmarks/beam",
     "/privacy",
     "/terms",
   ];

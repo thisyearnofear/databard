@@ -19,7 +19,7 @@ function formatNum(n: number): string {
   return n % 1 === 0 ? String(n) : n.toFixed(2);
 }
 
-interface ScriptContext {
+export interface ScriptContext {
   researchQuestion?: string;
   researchTrail?: ResearchTrail;
   tableStats?: Record<string, TableStatSummary>;
@@ -44,7 +44,7 @@ function hashSchema(schema: SchemaMeta, context?: ScriptContext): string {
   return (h >>> 0).toString(36);
 }
 
-const SYSTEM_PROMPT = `You are a script writer for DataBard, a question-first analytics experience that turns data catalogs into a podcast-style answer. Write a conversational two-host podcast script.
+export const SYSTEM_PROMPT = `You are a script writer for DataBard, a question-first analytics experience that turns data catalogs into a podcast-style answer. Write a conversational two-host podcast script.
 
 HOSTS:
 - Alex: Enthusiastic data advocate. Gets excited about well-designed schemas, interesting column names, and good documentation. Speaks naturally, uses analogies.
@@ -70,7 +70,7 @@ RULES:
 - No markdown, no code blocks — just the JSON array
 - If dataHighlights are present, narrate actual data findings. Reference specific numbers, ranges, and notable values. For numeric columns mention min/max/avg ranges. For categorical columns mention the most common values. Don't just list column names — tell the story the data reveals.`;
 
-const EXECUTIVE_SUMMARY_PROMPT = `You are a script writer for DataBard's Executive Summary mode. Write a concise 2-minute briefing for a busy executive who needs the bottom line on their data health.
+export const EXECUTIVE_SUMMARY_PROMPT = `You are a script writer for DataBard's Executive Summary mode. Write a concise 2-minute briefing for a busy executive who needs the bottom line on their data health.
 
 HOSTS:
 - Alex: Brief, professional delivery. States facts and recommendations clearly.
@@ -87,7 +87,7 @@ RULES:
 - If a research question is provided, answer it in one sentence
 - No markdown, no code blocks — just the JSON array`;
 
-function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): string {
+export function buildUserPrompt(schema: SchemaMeta, insights: SchemaInsights, context?: ScriptContext): string {
   const tables = schema.tables.map((t) => ({
     name: t.name,
     description: t.description,

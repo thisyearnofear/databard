@@ -120,6 +120,10 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/share.ts` — UTM tagging for outbound share links (virality ladder in `docs/GTM.md`); canonical permalinks stay clean
 - `src/lib/notifications.ts` — email delivery for scheduled digests
 - `src/lib/script-generator.ts` — LLM script generation (Alex + Morgan)
+- `src/lib/llm-providers.ts` — provider fallback chain (Venice → NVIDIA NIM → Anthropic) + opt-in Beam providers (`reflection`/`openrouter`/`hf`) via `LOOP_PROVIDER_ORDER`; see `docs/BEAM.md`
+- `scripts/beam-bench.mjs` — Beam benchmark harness: runs the exact production synthesis prompts over the demo fixtures, grades JSON validity/shape/grounding, writes `data/beam-bench.json` (free on Reflection's daily allowance)
+- `src/lib/beam-bench.ts` + `src/app/benchmarks/beam/page.tsx` — frozen benchmark report page (renders the harness output uncurated)
+- `scripts/export-agent-service-quality.mjs` — assembles the HF dataset (`data/exports/agent-service-quality/`: verdicts.jsonl, service-index.jsonl, services.json, dataset card); re-run on the VPS for the full data, `HF_DATASET_ID` overrides the repo name
 - `src/lib/schema-analysis.ts` — health score, critical tables, trend diffs
 - `src/lib/x402.ts` — OKX x402 payment server setup (facilitator + resource server + briefing & probe route configs)
 - `src/lib/mcp.ts` — shared A2MCP input parser (one-shot connection config from request body)
@@ -173,6 +177,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 - `docs/CANDIDATE_TRACKER.md` — PARKED until after Monid: Campaign Lab candidate-website longitudinal tracker (separate vertical experiment, not the data-health roadmap)
 - `docs/AZURE.md` — Azure OpenAI migration guide
 - `docs/OKX_DEV_DAY_2026.md` — OKX Dev Day 2026 hackathon: DataBard Probe (agent-service quality oracle on X Layer)
+- `docs/BEAM.md` — Beam × HF $20k competition (deadline Mon Nov 2): benchmark entry plan + Beam access routes (all wired in `src/lib/llm-providers.ts` as `reflection`/`openrouter`/`hf` providers, off the default chain)
 
 ## OKX.AI A2MCP ASP
 DataBard is registered as an Agent Service Provider (ASP) on OKX.AI, exposing the synthesis engine as two A2MCP (Agent-to-MCP) pay-per-call / free tools. The endpoints are stateless one-shot wrappers over the same libs the wizard/synthesize pipeline uses — no session dependency.

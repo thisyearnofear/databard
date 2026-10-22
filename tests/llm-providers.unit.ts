@@ -1,4 +1,4 @@
-import { parseJsonFromText } from "../src/lib/llm-providers";
+import { parseJsonFromText, registeredProviders } from "../src/lib/llm-providers";
 
 let passed = 0;
 let failed = 0;
@@ -60,6 +60,14 @@ function assert(condition: boolean, label: string) {
     threw = true;
   }
   assert(threw, "prose-wrapped JSON throws (honest)");
+}
+
+// All expected providers registered (Beam routes opt-in via LOOP_PROVIDER_ORDER)
+{
+  const names = registeredProviders();
+  for (const expected of ["venice", "nvidia", "anthropic", "reflection", "openrouter", "hf"]) {
+    assert(names.includes(expected), `provider registered: ${expected}`);
+  }
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

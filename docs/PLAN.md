@@ -90,6 +90,9 @@ The edition is the business; prove the loop loops before building more of it.
 - [ ] Free → paid conversion instrumentation on the A2MCP funnel
 - [ ] Probe attestation volume on X Layer; OKX/Monid listing optimisation
 - [ ] Monday live-scan cron for `/league` (carried from Phase 7)
+- [ ] Bulk service checks as a tool (index already computes them) + `suggest_services` ("which endpoints should I probe?")
+- [ ] Stripe/MPP rails next to x402 so humans can buy briefings without X Layer wallets
+- [ ] Status endpoint per paid call; advertise portable evidence receipts (anti-lock-in)
 - Gate: sustained weekly paid calls from agents we don't know personally.
 
 ### Parked (not the roadmap)

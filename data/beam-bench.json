@@ -1,0 +1,853 @@
+{
+  "generatedAt": "2026-10-22T16:05:15.666Z",
+  "harness": "scripts/beam-bench.mjs",
+  "config": {
+    "runsPerTask": 2,
+    "models": [
+      "beam",
+      "prod"
+    ]
+  },
+  "models": {
+    "beam": {
+      "label": "Beam 1.0 501B-A23B (Reflection API)",
+      "model": "Beam-1.0-501B-A23B",
+      "thinking": true
+    },
+    "prod": {
+      "label": "Production synthesis model (llama-3.3-70b)",
+      "model": "llama-3.3-70b",
+      "thinking": false
+    }
+  },
+  "tasks": [
+    {
+      "id": "web3-podcast",
+      "fixture": "web3",
+      "format": "podcast",
+      "researchQuestion": null
+    },
+    {
+      "id": "ecom-podcast",
+      "fixture": "ecommerce",
+      "format": "podcast",
+      "researchQuestion": null
+    },
+    {
+      "id": "web3-exec",
+      "fixture": "web3",
+      "format": "executive-summary",
+      "researchQuestion": null
+    },
+    {
+      "id": "ecom-exec",
+      "fixture": "ecommerce",
+      "format": "executive-summary",
+      "researchQuestion": null
+    },
+    {
+      "id": "web3-question",
+      "fixture": "web3",
+      "format": "podcast",
+      "researchQuestion": "Which tables carry the biggest cascading risk if they fail?"
+    },
+    {
+      "id": "ecom-question",
+      "fixture": "ecommerce",
+      "format": "podcast",
+      "researchQuestion": "Where are the governance gaps in this warehouse?"
+    }
+  ],
+  "summary": {
+    "beam": {
+      "runs": 12,
+      "ok": 12,
+      "scoreSum": 7.8,
+      "latencySum": 92676,
+      "tokensIn": 20118,
+      "tokensOut": 26206,
+      "reasoningTokens": 19166,
+      "perTask": {
+        "web3-podcast": {
+          "runs": 2,
+          "scoreSum": 1.8,
+          "ok": 2,
+          "meanScore": 0.9
+        },
+        "ecom-podcast": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        },
+        "web3-exec": {
+          "runs": 2,
+          "scoreSum": 0,
+          "ok": 2,
+          "meanScore": 0
+        },
+        "ecom-exec": {
+          "runs": 2,
+          "scoreSum": 0,
+          "ok": 2,
+          "meanScore": 0
+        },
+        "web3-question": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        },
+        "ecom-question": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        }
+      },
+      "passRate": 1,
+      "meanScore": 0.65,
+      "meanLatencyMs": 7723
+    },
+    "prod": {
+      "runs": 12,
+      "ok": 12,
+      "scoreSum": 11.8,
+      "latencySum": 626570,
+      "tokensIn": 30856,
+      "tokensOut": 6307,
+      "reasoningTokens": 0,
+      "perTask": {
+        "web3-podcast": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        },
+        "ecom-podcast": {
+          "runs": 2,
+          "scoreSum": 1.8,
+          "ok": 2,
+          "meanScore": 0.9
+        },
+        "web3-exec": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        },
+        "ecom-exec": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        },
+        "web3-question": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        },
+        "ecom-question": {
+          "runs": 2,
+          "scoreSum": 2,
+          "ok": 2,
+          "meanScore": 1
+        }
+      },
+      "passRate": 1,
+      "meanScore": 0.9833333333333334,
+      "meanLatencyMs": 52214
+    }
+  },
+  "results": [
+    {
+      "task": "web3-podcast",
+      "model": "beam",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 12288,
+      "wallMs": 12289,
+      "usage": {
+        "promptTokens": 1697,
+        "completionTokens": 2922,
+        "reasoningTokens": 1939
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": false
+      },
+      "stats": {
+        "segments": 19,
+        "words": 585,
+        "avgWords": 31
+      },
+      "failMode": null,
+      "score": 0.8,
+      "outputChars": 4546
+    },
+    {
+      "task": "web3-podcast",
+      "model": "beam",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 8124,
+      "wallMs": 8124,
+      "usage": {
+        "promptTokens": 1697,
+        "completionTokens": 2163,
+        "reasoningTokens": 1545
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 15,
+        "words": 373,
+        "avgWords": 25
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 2904
+    },
+    {
+      "task": "web3-podcast",
+      "model": "prod",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 61293,
+      "wallMs": 61294,
+      "usage": {
+        "promptTokens": 2594,
+        "completionTokens": 651
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 13,
+        "words": 316,
+        "avgWords": 24
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 2666
+    },
+    {
+      "task": "web3-podcast",
+      "model": "prod",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 66466,
+      "wallMs": 66466,
+      "usage": {
+        "promptTokens": 2594,
+        "completionTokens": 790
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 13,
+        "words": 425,
+        "avgWords": 33
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 3424
+    },
+    {
+      "task": "ecom-podcast",
+      "model": "beam",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 6528,
+      "wallMs": 6528,
+      "usage": {
+        "promptTokens": 1827,
+        "completionTokens": 2536,
+        "reasoningTokens": 1821
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 16,
+        "words": 365,
+        "avgWords": 23
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 3188
+    },
+    {
+      "task": "ecom-podcast",
+      "model": "beam",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 10752,
+      "wallMs": 10753,
+      "usage": {
+        "promptTokens": 1827,
+        "completionTokens": 3826,
+        "reasoningTokens": 2791
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 16,
+        "words": 602,
+        "avgWords": 38
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 4646
+    },
+    {
+      "task": "ecom-podcast",
+      "model": "prod",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 50666,
+      "wallMs": 50666,
+      "usage": {
+        "promptTokens": 2717,
+        "completionTokens": 581
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": false,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 11,
+        "words": 318,
+        "avgWords": 29
+      },
+      "failMode": null,
+      "score": 0.8,
+      "outputChars": 2533
+    },
+    {
+      "task": "ecom-podcast",
+      "model": "prod",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 57611,
+      "wallMs": 57614,
+      "usage": {
+        "promptTokens": 2717,
+        "completionTokens": 627
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 12,
+        "words": 343,
+        "avgWords": 29
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 2734
+    },
+    {
+      "task": "web3-exec",
+      "model": "beam",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3494,
+      "wallMs": 3494,
+      "usage": {
+        "promptTokens": 1426,
+        "completionTokens": 1043,
+        "reasoningTokens": 1008
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": false,
+        "segmentCountInRange": false,
+        "speakersValid": false,
+        "textSane": false,
+        "mentionsHealthScore": false
+      },
+      "stats": {
+        "segments": 0,
+        "words": 0
+      },
+      "failMode": "object-not-array",
+      "score": 0,
+      "outputChars": 108
+    },
+    {
+      "task": "web3-exec",
+      "model": "beam",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 6036,
+      "wallMs": 6037,
+      "usage": {
+        "promptTokens": 1426,
+        "completionTokens": 840,
+        "reasoningTokens": 778
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": false,
+        "segmentCountInRange": false,
+        "speakersValid": false,
+        "textSane": false,
+        "mentionsHealthScore": false
+      },
+      "stats": {
+        "segments": 0,
+        "words": 0
+      },
+      "failMode": "object-not-array",
+      "score": 0,
+      "outputChars": 203
+    },
+    {
+      "task": "web3-exec",
+      "model": "prod",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 24311,
+      "wallMs": 24312,
+      "usage": {
+        "promptTokens": 2327,
+        "completionTokens": 215
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 5,
+        "words": 127,
+        "avgWords": 25
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 1072
+    },
+    {
+      "task": "web3-exec",
+      "model": "prod",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 16418,
+      "wallMs": 16419,
+      "usage": {
+        "promptTokens": 2327,
+        "completionTokens": 210
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 5,
+        "words": 123,
+        "avgWords": 25
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 998
+    },
+    {
+      "task": "ecom-exec",
+      "model": "beam",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3198,
+      "wallMs": 3200,
+      "usage": {
+        "promptTokens": 1556,
+        "completionTokens": 714,
+        "reasoningTokens": 669
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": false,
+        "segmentCountInRange": false,
+        "speakersValid": false,
+        "textSane": false,
+        "mentionsHealthScore": false
+      },
+      "stats": {
+        "segments": 0,
+        "words": 0
+      },
+      "failMode": "object-not-array",
+      "score": 0,
+      "outputChars": 172
+    },
+    {
+      "task": "ecom-exec",
+      "model": "beam",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 5723,
+      "wallMs": 5723,
+      "usage": {
+        "promptTokens": 1556,
+        "completionTokens": 1506,
+        "reasoningTokens": 1467
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": false,
+        "segmentCountInRange": false,
+        "speakersValid": false,
+        "textSane": false,
+        "mentionsHealthScore": false
+      },
+      "stats": {
+        "segments": 0,
+        "words": 0
+      },
+      "failMode": "object-not-array",
+      "score": 0,
+      "outputChars": 108
+    },
+    {
+      "task": "ecom-exec",
+      "model": "prod",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 29294,
+      "wallMs": 29294,
+      "usage": {
+        "promptTokens": 2450,
+        "completionTokens": 306
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 7,
+        "words": 181,
+        "avgWords": 26
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 1558
+    },
+    {
+      "task": "ecom-exec",
+      "model": "prod",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 32846,
+      "wallMs": 32846,
+      "usage": {
+        "promptTokens": 2450,
+        "completionTokens": 286
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true
+      },
+      "stats": {
+        "segments": 7,
+        "words": 161,
+        "avgWords": 23
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 1419
+    },
+    {
+      "task": "web3-question",
+      "model": "beam",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 8795,
+      "wallMs": 8802,
+      "usage": {
+        "promptTokens": 1713,
+        "completionTokens": 2015,
+        "reasoningTokens": 1312
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 12,
+        "words": 423,
+        "avgWords": 35
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 3260
+    },
+    {
+      "task": "web3-question",
+      "model": "beam",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 7554,
+      "wallMs": 7555,
+      "usage": {
+        "promptTokens": 1713,
+        "completionTokens": 2257,
+        "reasoningTokens": 1392
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 17,
+        "words": 485,
+        "avgWords": 29
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 3814
+    },
+    {
+      "task": "web3-question",
+      "model": "prod",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 82684,
+      "wallMs": 82685,
+      "usage": {
+        "promptTokens": 2610,
+        "completionTokens": 692
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 14,
+        "words": 378,
+        "avgWords": 27
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 2933
+    },
+    {
+      "task": "web3-question",
+      "model": "prod",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 61278,
+      "wallMs": 61278,
+      "usage": {
+        "promptTokens": 2610,
+        "completionTokens": 682
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 13,
+        "words": 319,
+        "avgWords": 25
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 2731
+    },
+    {
+      "task": "ecom-question",
+      "model": "beam",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 11445,
+      "wallMs": 11446,
+      "usage": {
+        "promptTokens": 1840,
+        "completionTokens": 3308,
+        "reasoningTokens": 2392
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 16,
+        "words": 506,
+        "avgWords": 32
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 4105
+    },
+    {
+      "task": "ecom-question",
+      "model": "beam",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 8739,
+      "wallMs": 8740,
+      "usage": {
+        "promptTokens": 1840,
+        "completionTokens": 3076,
+        "reasoningTokens": 2052
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 18,
+        "words": 590,
+        "avgWords": 33
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 4803
+    },
+    {
+      "task": "ecom-question",
+      "model": "prod",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 92376,
+      "wallMs": 92376,
+      "usage": {
+        "promptTokens": 2730,
+        "completionTokens": 732
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 12,
+        "words": 367,
+        "avgWords": 31
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 3121
+    },
+    {
+      "task": "ecom-question",
+      "model": "prod",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 51327,
+      "wallMs": 51327,
+      "usage": {
+        "promptTokens": 2730,
+        "completionTokens": 535
+      },
+      "finishReason": "stop",
+      "checks": {
+        "jsonValid": true,
+        "segmentCountInRange": true,
+        "speakersValid": true,
+        "textSane": true,
+        "mentionsHealthScore": true,
+        "mentionsQuestion": true
+      },
+      "stats": {
+        "segments": 12,
+        "words": 301,
+        "avgWords": 25
+      },
+      "failMode": null,
+      "score": 1,
+      "outputChars": 2494
+    }
+  ]
+}

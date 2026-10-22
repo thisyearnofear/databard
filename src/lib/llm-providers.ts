@@ -10,6 +10,12 @@
  *   2. NVIDIA NIM — OSS model fallback
  *   3. Anthropic — last-resort
  *
+ * Extra Beam providers (not in the default order — opt in via LOOP_PROVIDER_ORDER):
+ *   - reflection — Reflection's own OpenAI-compatible API (api.reflection.ai)
+ *   - openrouter — OpenRouter listing (cheap: $0.25/M in, $1/M out)
+ *   - hf — Hugging Face Inference Providers router (spends claimed HF credits)
+ * See docs/BEAM.md.
+ *
  * All providers expose the same async shape:
  *   chat({ system, user, maxTokens }) => Promise<string>
  *
@@ -18,6 +24,33 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 const DEFAULT_ORDER = ["venice", "nvidia", "anthropic"];
+
+/**
+ * Beam is a thinking model — reasoning tokens count against `max_tokens`
+ * (verified Oct 2026: a 32-token budget produced empty content because
+ * reasoning consumed it all). Inflate the budget for Beam providers.
+ */
+export function beamBudget(input: ChatInput): ChatInput {
+  const base = Math.max(input.maxTokens ?? 1024, 512);
+  return { ...input, maxTokens: Math.min(base * 4, 16_384) };
+}
+
+/** Beam access defaults — each overridable via env (see docs/BEAM.md). */
+const BEAM_DEFAULTS = {
+  reflection: {
+    baseUrl: "https://api.reflection.ai/openai/v1",
+    model: "Beam-1.0-501B-A23B",
+  },
+  openrouter: {
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "reflection/beam-1.0-501b-a23b",
+  },
+  hf: {
+    // router.huggingface.co/<provider>/v1 — provider picks the inference backend
+    baseUrl: `https://router.huggingface.co/${process.env.HF_INFERENCE_PROVIDER ?? "together"}/v1`,
+    model: "reflection/Beam-1.0-501B-A23B",
+  },
+};
 
 export interface ChatInput {
   system: string;
@@ -54,7 +87,34 @@ async function openaiCompatChat(
   model: string,
   input: ChatInput,
 ): Promise<string> {
+  return (await openaiCompatChatDetailed(baseUrl, apiKey, model, input)).text;
+}
+
+export interface ChatUsage {
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens?: number;
+}
+
+export interface ChatDetailed {
+  text: string;
+  usage?: ChatUsage;
+  finishReason?: string;
+  ms: number;
+}
+
+/**
+ * Same call as openaiCompatChat, but keeps usage + latency + finish reason —
+ * used by the Beam benchmark harness (scripts/beam-bench.mjs).
+ */
+export async function openaiCompatChatDetailed(
+  baseUrl: string,
+  apiKey: string,
+  model: string,
+  input: ChatInput,
+): Promise<ChatDetailed> {
   const key = `${baseUrl}|${model}`;
+  const t0 = Date.now();
   const send = (json: boolean) =>
     fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
@@ -90,11 +150,27 @@ async function openaiCompatChat(
     }
   }
   const json = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+    usage?: {
+      prompt_tokens?: number;
+      completion_tokens?: number;
+      completion_tokens_details?: { reasoning_tokens?: number };
+    };
   };
   const text = json.choices?.[0]?.message?.content ?? "";
   if (!text) throw new Error("empty response");
-  return text;
+  return {
+    text,
+    ms: Date.now() - t0,
+    finishReason: json.choices?.[0]?.finish_reason,
+    usage: json.usage
+      ? {
+          promptTokens: json.usage.prompt_tokens ?? 0,
+          completionTokens: json.usage.completion_tokens ?? 0,
+          reasoningTokens: json.usage.completion_tokens_details?.reasoning_tokens,
+        }
+      : undefined,
+  };
 }
 
 /**
@@ -144,6 +220,45 @@ const PROVIDERS: Record<string, ProviderConfig> = {
       );
     },
   },
+  reflection: {
+    name: "reflection",
+    envKey: "REFLECTION_API_KEY",
+    defaultModel: process.env.LOOP_REFLECTION_MODEL ?? BEAM_DEFAULTS.reflection.model,
+    async chat(input) {
+      return openaiCompatChat(
+        (process.env.REFLECTION_BASE_URL ?? BEAM_DEFAULTS.reflection.baseUrl).replace(/\/+$/, ""),
+        process.env.REFLECTION_API_KEY!,
+        this.defaultModel,
+        beamBudget(input),
+      );
+    },
+  },
+  openrouter: {
+    name: "openrouter",
+    envKey: "OPENROUTER_API_KEY",
+    defaultModel: process.env.LOOP_OPENROUTER_MODEL ?? BEAM_DEFAULTS.openrouter.model,
+    async chat(input) {
+      return openaiCompatChat(
+        BEAM_DEFAULTS.openrouter.baseUrl,
+        process.env.OPENROUTER_API_KEY!,
+        this.defaultModel,
+        beamBudget(input),
+      );
+    },
+  },
+  hf: {
+    name: "hf",
+    envKey: "HF_API_KEY",
+    defaultModel: process.env.LOOP_HF_MODEL ?? BEAM_DEFAULTS.hf.model,
+    async chat(input) {
+      return openaiCompatChat(
+        BEAM_DEFAULTS.hf.baseUrl,
+        process.env.HF_API_KEY!,
+        this.defaultModel,
+        beamBudget(input),
+      );
+    },
+  },
   anthropic: {
     name: "anthropic",
     envKey: "ANTHROPIC_API_KEY",
@@ -163,6 +278,11 @@ const PROVIDERS: Record<string, ProviderConfig> = {
     },
   },
 };
+
+/** Registered provider names — used by unit tests and diagnostics. */
+export function registeredProviders(): string[] {
+  return Object.keys(PROVIDERS);
+}
 
 function orderedEnabled(): ProviderConfig[] {
   const order = (process.env.LOOP_PROVIDER_ORDER ?? DEFAULT_ORDER.join(","))

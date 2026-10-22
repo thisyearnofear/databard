@@ -118,6 +118,9 @@ DataBard is registered as an [Agent Service Provider](https://www.okx.ai) (ASP #
 
 Description in user words (“is my data healthy?”). Free health check first (discovery + mid-conversation recommendation). Narrated `briefing` stays on product URLs / existing accounts — **not** in-plugin checkout (OpenAI allows plugin commerce for physical goods only; keep x402/paid APIs on `/api/mcp/briefing` and [/pro](https://databard.persidian.com/pro)).
 
+### Pocket hackathon — free `health-check` submission (deadline Oct 12 — **PASSED, not built**)
+Status Oct 22: window closed with nothing shipped (no RelayMiner work in git). Decide: ask Pocket for a late/next-round entry, or drop. Original plan if revived: testnet service ID + endpoint + test tx + repo. Front the existing keyless endpoint with a RelayMiner; `/api/mcp/tools` doubles as the metadata card source. Keep paid `briefing`/`probe` off-Pocket — header-based x402 won't pass gateways. JSON-only responses already; verify no header dependence before registering.
+
 ### DataBard Probe — service-quality oracle (OKX Dev Day 2026)
 
 Before an agent pays another agent, it asks Probe: *is this service worth it?*
