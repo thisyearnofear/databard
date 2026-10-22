@@ -63,8 +63,13 @@ Data source (DataHub, OpenMetadata, dbt, The Graph, Dune)
 | Dune Analytics | `src/lib/dune-adapter.ts` | ✅ Shipped |
 | Coral (50+ sources via SQL) | `src/lib/coral-adapter.ts` | ✅ Shipped (escape hatch for long-tail sources) |
 | Monid (1,900+ metered endpoints) | `src/lib/monid-adapter.ts` | ✅ Shipped (per-call cost receipt) |
+| Community CSV (paste/upload) | `src/lib/community-health.ts` | ✅ Shipped (deterministic, nothing stored) |
 
 See [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) for the tiered adapter design and graduation tracking.
+
+### For community organisers
+
+Your member list is a data estate too. [`/community`](https://databard.persidian.com/community) scores a pasted or uploaded CSV — duplicates, dead columns, undeliverable emails, staleness — with a deterministic rubric, no account and nothing stored. Built for community leads (Expedite London hackathon, Oct 2026); the same engine powers the narrated Monday briefing and the free agent health-check tool below.
 
 ---
 

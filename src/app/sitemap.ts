@@ -24,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/benchmarks/beam",
     "/labs",
     "/labs/beam-audit",
+    "/community",
     "/privacy",
     "/terms",
   ];
