@@ -78,18 +78,22 @@ exists but the account has no credits and we do not plan to add any.
       discipline on the short-format task; that IS the honest story the page
       publishes.
 - [ ] Claim $25 HF credits (link in contest tweet) → set `HF_API_KEY`
-- [ ] Assemble `databard/agent-service-quality` dataset card + files on HF
-      — exporter done (`scripts/export-agent-service-quality.mjs`, writes
-      `data/exports/agent-service-quality/`). **Re-run it on the VPS**
-      (`cd /opt/databard && DATABARD_DATA_DIR=/opt/databard/data node
-      scripts/export-agent-service-quality.mjs`) — prod has up to 50 verdicts
-      + the scored marketplace index; this laptop has 1 verdict. Then
+- [x] Exporter done (`scripts/export-agent-service-quality.mjs`); full export
+      assembled from prod data (see above) — only the HF upload remains.
       `huggingface-cli login` + the printed upload command
-      (`HF_DATASET_ID` overrides the repo name).
-- [ ] **Deploy** `./scripts/deploy.sh`, then copy the frozen artifact into the
-      prod data dir (it does NOT sync automatically):
-      `scp data/beam-bench.json snel-bot:/opt/databard/data/beam-bench.json`
-      — then verify `curl -s https://databard.persidian.com/benchmarks/beam | grep "65%"`.
+      (`HF_DATASET_ID` overrides the repo name — verify the `databard` org
+      exists on HF first, otherwise use your username).
+- [x] **Deployed Oct 22** — `./scripts/deploy.sh` (build needed `rm -rf .next`
+      first: next/font/google cache corruption) + artifact copied:
+      `scp data/beam-bench.json snel-bot:/opt/databard/data/beam-bench.json`.
+      Verified: `https://databard.persidian.com/benchmarks/beam` → HTTP 200
+      with the real 65%/98% numbers.
+- [x] Dataset export assembled from PROD data (pulled to /tmp/prod-data):
+      3 verdicts (12 rows) + 153 scored index rows + 153 listings →
+      `/tmp/prod-data/exports/agent-service-quality/`. Note: the exporter
+      script is NOT in the release tarball — run it locally against
+      scp'd prod data, or add it to prepare-standalone.mjs if it should
+      live on the box.
 - [ ] **Comment both links on `reflection/Beam-1.0-501B-A23B` repo page
       before Mon Nov 2** — paste-ready text below
 - [ ] Record any weirdness for the comment (refusal rate was 0; reasoning
