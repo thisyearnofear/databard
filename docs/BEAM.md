@@ -94,7 +94,8 @@ exists but the account has no credits and we do not plan to add any.
 - [x] Prod env: `REFLECTION_API_KEY` appended to `/opt/databard/.env`
       (md5 integrity-verified; no .bak left behind). Required for the live
       demo in prod.
-- [ ] Deploy demo (`./scripts/deploy.sh`) + verify prod `/labs/beam-audit`
+- [x] Deployed + verified in prod (Oct 22): page/bench/labs all 200; SSE
+      fixture run returned clean segments in 11.6s (2347 reasoning tokens).
 - [ ] Claim $25 HF credits (link in contest tweet) — optional now; all
       entry artifacts are live without them
 - [x] Dry-run smoke: `reflection` provider returns PONG (free allowance)
