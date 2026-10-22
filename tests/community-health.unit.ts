@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseCsv, analyzeCommunityData, SAMPLE_CSV } from "../src/lib/community-health";
+import { parseCsv, analyzeCommunityData, SAMPLE_CSV, SAMPLES, verdictFor } from "../src/lib/community-health";
 
 test("parseCsv: basic comma split", () => {
   const { header, rows } = parseCsv("a,b,c\n1,2,3\n4,5,6");
@@ -71,4 +71,25 @@ test("analyze: thin data is flagged, not scored as healthy", () => {
   const r = analyzeCommunityData(["a"], [["1"]]);
   assert.equal(r.checks.find((c) => c.id === "volume")?.state, "fail");
   assert.ok(r.score <= 70);
+});
+
+test("verdict: leaky data wins over a high score", () => {
+  const { header, rows } = parseCsv(SAMPLE_CSV); // 86/100 but has a dupe
+  const r = analyzeCommunityData(header, rows);
+  assert.equal(verdictFor(r).title, "Alive, but leaking");
+});
+
+test("verdict: stale list named even at mid score", () => {
+  const stale = SAMPLES.find((s) => s.key === "stale")!;
+  const { header, rows } = parseCsv(stale.csv);
+  const r = analyzeCommunityData(header, rows);
+  assert.equal(verdictFor(r).title, "This list has quietly stopped");
+});
+
+test("verdict: clean list gets the tended verdict", () => {
+  const clean = SAMPLES.find((s) => s.key === "healthy")!;
+  const { header, rows } = parseCsv(clean.csv);
+  const r = analyzeCommunityData(header, rows);
+  assert.equal(r.score, 100);
+  assert.equal(verdictFor(r).title, "A list someone tends to");
 });

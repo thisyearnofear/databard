@@ -248,3 +248,53 @@ George Iqbal,george.iqbal@yahoo.com,London,,yes,
 Hana Suzuki,hana.suzuki@gmail.com,London,2026-10-01,yes,brings two friends usually
 Ivan Petrov,ivan.petrov@gmail.com,London,2026-10-03,no,
 Jade Williams,jade.williams@gmail.com,Bristol,2026-05-22,no,"moved teams, might be inactive"`.trim();
+
+/** Demo sample — a genuinely cared-for list. */
+export const SAMPLE_HEALTHY = `name,email,city,joined_at,last_seen
+Ruth Adler,ruth.adler@gmail.com,London,${rel(-12)},${rel(-3)}
+Sam Okafor,sam.okafor@outlook.com,London,${rel(-19)},${rel(-6)}
+Priya Nair,priya.nair@gmail.com,London,${rel(-27)},${rel(-2)}
+Tom Whitfield,tom.whitfield@gmail.com,London,${rel(-40)},${rel(-9)}
+Lena Hoffmann,lena.hoffmann@web.de,London,${rel(-55)},${rel(-4)}
+Marcus Boateng,marcus.boateng@gmail.com,London,${rel(-61)},${rel(-11)}
+Sofia Reyes,sofia.reyes@gmail.com,London,${rel(-75)},${rel(-5)}
+Dan Kowalski,dan.kowalski@gmail.com,London,${rel(-83)},${rel(-8)}`.trim();
+
+/** Demo sample — a list that quietly died half a year ago. */
+export const SAMPLE_STALE = `name,email,joined
+P. Whitmore,pwhitmore@uni.ac.uk,${rel(-410)}
+K. Adeyemi,kadeyemi92@gmail.com,${rel(-380)}
+J. Lindqvist,j.lindqvist@,${rel(-350)}
+R. Chowdhury,rchowdhury@uni.ac.uk,${rel(-320)}
+M. Delacroix,mdelacroix@,${rel(-290)}
+S. Okonkwo,sokonkwo@gmail.com,${rel(-260)}
+T. Nakamura,t.nakamura@uni.ac.uk,${rel(-230)}`.trim();
+
+function rel(days: number): string {
+  return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+export const SAMPLES = [
+  { key: "messy", name: "A messy meetup list", csv: SAMPLE_CSV, blurb: "growing, but leaking members through dupes and bad emails" },
+  { key: "healthy", name: "A cared-for run club", csv: SAMPLE_HEALTHY, blurb: "recent joins, clean contacts, kept fresh" },
+  { key: "stale", name: "A society list gone quiet", csv: SAMPLE_STALE, blurb: "nobody has joined in over a year" },
+] as const;
+
+/** One-line verdict for the top of a report. Deterministic, never flattering. */
+export function verdictFor(r: CommunityReport): { title: string; blurb: string } {
+  const dup = r.checks.find((c) => c.id === "duplicates");
+  const fresh = r.checks.find((c) => c.id === "freshness");
+  const contact = r.checks.find((c) => c.id === "contactable");
+  // Staleness and leaky data are the stories a lead must hear, even when the
+  // overall score is high — so they win over the raw score band.
+  if (fresh?.state === "fail") {
+    return { title: "This list has quietly stopped", blurb: "The newest entry is months old. The community may still be alive — the record of it isn't." };
+  }
+  if (dup?.state === "fail" || dup?.state === "partial" || contact?.state === "fail" || contact?.state === "partial") {
+    return { title: "Alive, but leaking", blurb: "Members are duplicated or emails bounce. The real headcount is smaller than this sheet says." };
+  }
+  if (r.score >= 80) {
+    return { title: "A list someone tends to", blurb: "Clean enough to act on this week — keep the habit going." };
+  }
+  return { title: "Held together by hope", blurb: "Too many gaps to trust for decisions. One hour of cleanup buys back a source of truth." };
+}
