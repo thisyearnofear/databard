@@ -18,7 +18,7 @@ current production model. Publish as a shareable report page at
 A2MCP endpoints are exactly that workload — the angle writes itself.
 
 **B. Dataset (bonus link in the same comment).** Publish the Probe verdicts /
-marketplace service-quality index as `databard/agent-service-quality` on HF.
+marketplace service-quality index as `Papajams/agent-service-quality` on HF.
 Cheap to assemble from `data/probe-verdicts.json` + the marketplace index.
 
 Option C (RL env around `probe-scorer`) is parked — too heavy for the deadline.
@@ -78,11 +78,10 @@ exists but the account has no credits and we do not plan to add any.
       discipline on the short-format task; that IS the honest story the page
       publishes.
 - [ ] Claim $25 HF credits (link in contest tweet) → set `HF_API_KEY`
-- [x] Exporter done (`scripts/export-agent-service-quality.mjs`); full export
-      assembled from prod data (see above) — only the HF upload remains.
-      `huggingface-cli login` + the printed upload command
-      (`HF_DATASET_ID` overrides the repo name — verify the `databard` org
-      exists on HF first, otherwise use your username).
+- [x] Exporter done (`scripts/export-agent-service-quality.mjs`); dataset
+      **UPLOADED** to `Papajams/agent-service-quality` (Oct 22 — no `databard`
+      HF org exists; account is `Papajams`). Re-upload any time via the
+      printed `hf upload` command (`HF_DATASET_ID` overrides the repo name).
 - [x] **Deployed Oct 22** — `./scripts/deploy.sh` (build needed `rm -rf .next`
       first: next/font/google cache corruption) + artifact copied:
       `scp data/beam-bench.json snel-bot:/opt/databard/data/beam-bench.json`.
@@ -90,7 +89,7 @@ exists but the account has no credits and we do not plan to add any.
       with the real 65%/98% numbers.
 - [x] Dataset export assembled from PROD data (pulled to /tmp/prod-data):
       3 verdicts (12 rows) + 153 scored index rows + 153 listings →
-      `/tmp/prod-data/exports/agent-service-quality/`. Note: the exporter
+      uploaded to `Papajams/agent-service-quality`. Note: the exporter
       script is NOT in the release tarball — run it locally against
       scp'd prod data, or add it to prepare-standalone.mjs if it should
       live on the box.
@@ -114,7 +113,7 @@ site and upload the dataset FIRST — both links must be live.
 > grading, no curation.
 >
 > **Live report:** https://databard.persidian.com/benchmarks/beam
-> **Dataset:** https://huggingface.co/datasets/databard/agent-service-quality
+> **Dataset:** https://huggingface.co/datasets/Papajams/agent-service-quality
 > (measured quality scores for 150+ pay-per-call agent services — the
 > workload context Beam was benchmarked against)
 >

@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const DATA = process.env.DATABARD_DATA_DIR || path.join(ROOT, "data");
 const OUT = path.join(DATA, "exports", "agent-service-quality");
-const DATASET_ID = process.env.HF_DATASET_ID || "databard/agent-service-quality"; // your HF org/user
+const DATASET_ID = process.env.HF_DATASET_ID || "Papajams/agent-service-quality"; // HF user/org
 
 function readJson(p) {
   try {
@@ -122,7 +122,7 @@ const agg = index?.aggregates;
 const card = `---
 license: cc-by-4.0
 task_categories:
-  - tabular
+  - tabular-classification
   - other
 tags:
   - agent-services
@@ -191,5 +191,5 @@ console.log(`  verdicts.jsonl       ${verdictRows.length} rows (${verdicts.lengt
 console.log(`  service-index.jsonl  ${indexRows} rows ${index ? "" : "(no index on this host)"}`);
 console.log(`  services.json        ${snapshot ? `${snapshot.services?.length ?? 0} listings` : "(no snapshot)"}`);
 console.log(`  README.md            dataset card`);
-console.log(`\nUpload (after 'huggingface-cli login'):`);
-console.log(`  huggingface-cli upload ${DATASET_ID} ${OUT} --repo-type dataset`);
+console.log(`\nUpload (after 'hf auth login' — or 'huggingface-cli login'):`);
+console.log(`  hf upload ${DATASET_ID} ${OUT} --repo-type dataset`);
