@@ -30,6 +30,16 @@ function LabsPageInner() {
         </p>
       </div>
 
+      {/* Beam audit lab */}
+      <Link href="/labs/beam-audit" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 flex items-center gap-4 no-underline hover:border-[var(--accent)] transition-colors">
+        <PixelIcon name="flask" size={22} className="text-[var(--accent)] shrink-0" />
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-[var(--text)]">Beam audits your database <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[var(--accent)]">new</span></h2>
+          <p className="text-xs text-[var(--text-muted)]">Paste your DDL — reflection/Beam-1.0-501B parses it, the production rubric scores it, two hosts narrate it. Reasoning visible. Beam × HF contest entry.</p>
+        </div>
+        <span className="ml-auto text-[var(--accent)] shrink-0">→</span>
+      </Link>
+
       {/* Anthem experiment */}
       <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">

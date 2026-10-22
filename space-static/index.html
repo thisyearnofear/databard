@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beam audits your database — DataBard × Beam</title>
+<meta name="description" content="Paste your DDL. reflection/Beam-1.0-501B-A23B parses it, scores it, and two hosts narrate the findings — reasoning visible. Beam × Hugging Face contest entry.">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #120e1c; color: #f0eef8; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+  .dither { width: 100%; max-width: 860px; height: 16px; background: repeating-linear-gradient(90deg, #8b5cf6 0 8px, #201830 8px 16px); image-rendering: pixelated; margin-bottom: 40px; }
+  main { width: 100%; max-width: 860px; }
+  .kicker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: #8b5cf6; }
+  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; letter-spacing: -.02em; margin: 14px 0 10px; }
+  .sub { color: #9690aa; font-size: 15px; line-height: 1.6; max-width: 640px; }
+  .sub a { color: #b39ddb; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 34px; }
+  a.card { display: block; text-decoration: none; color: inherit; border: 1px solid #3a3355; border-radius: 12px; padding: 20px; background: #1c1730; transition: border-color .15s, transform .15s; }
+  a.card:hover { border-color: #8b5cf6; transform: translateY(-2px); }
+  .card .tag { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #8b5cf6; }
+  .card h2 { font-size: 17px; margin: 8px 0 6px; }
+  .card p { font-size: 13px; color: #9690aa; line-height: 1.55; }
+  .stats { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 36px; border-top: 1px solid #3a3355; padding-top: 22px; }
+  .stat b { display: block; font-size: 30px; font-weight: 700; color: #f5c842; }
+  .stat.ok b { color: #5bf58c; }
+  .stat span { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: #9690aa; }
+  footer { margin-top: 44px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #6f6a85; line-height: 1.7; max-width: 860px; }
+  footer a { color: #9690aa; }
+</style>
+</head>
+<body>
+<div class="dither"></div>
+<main>
+  <div class="kicker">DataBard × reflection/Beam-1.0-501B-A23B</div>
+  <h1>Paste your DDL.<br>Beam audits it. Alex &amp; Morgan narrate.</h1>
+  <p class="sub">
+    Our entry for the <a href="https://huggingface.co/reflection/Beam-1.0-501B-A23B">Beam × Hugging Face</a> build
+    contest: we ran the 501B open model through a real data-analyst workload — and shipped the live demo,
+    the graded benchmark, and the measured dataset. The demo runs on Reflection's <em>free daily allowance</em>;
+    when it's exhausted, it says so honestly.
+  </p>
+
+  <div class="cards">
+    <a class="card" href="https://databard.persidian.com/labs/beam-audit">
+      <div class="tag">Live demo</div>
+      <h2>Beam audits your database →</h2>
+      <p>Beam parses your DDL into a schema (agentic structured output), the deterministic production rubric scores it, then Beam writes a two-host analysis — with its raw reasoning stream visible throughout.</p>
+    </a>
+    <a class="card" href="https://databard.persidian.com/benchmarks/beam">
+      <div class="tag">Benchmark</div>
+      <h2>Beam vs our production model →</h2>
+      <p>The same synthesis workload, 24 graded runs: JSON validity, shape, grounding. Frozen artifact — measured, never curated. Includes Beam's famous exec-summary shape failure.</p>
+    </a>
+    <a class="card" href="https://huggingface.co/datasets/Papajams/agent-service-quality">
+      <div class="tag">Dataset</div>
+      <h2>Agent-service quality index →</h2>
+      <p>Measured quality scores for 150+ pay-per-call agent services (x402 gates, latency, delivery) — the workload context the benchmark ran against.</p>
+    </a>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>65%</b><span>Beam mean check score</span></div>
+    <div class="stat ok"><b>7.7s</b><span>avg latency (7× faster than prod)</span></div>
+    <div class="stat ok"><b>24</b><span>graded benchmark runs</span></div>
+    <div class="stat"><b>153</b><span>services in the dataset</span></div>
+  </div>
+</main>
+<footer>
+  DataBard is an AI data analyst and Agent Service Provider #9878 on OKX.AI.
+  This Space is the static doorway — the demo itself runs on databard.persidian.com so the model key never touches a browser.
+  Sources: <a href="https://databard.persidian.com">databard.persidian.com</a>
+</footer>
+</body>
+</html>

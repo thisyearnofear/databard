@@ -17,6 +17,23 @@ current production model. Publish as a shareable report page at
 `/benchmarks/beam`. Beam is sold on tool-use/agentic quality, and DataBard's
 A2MCP endpoints are exactly that workload — the angle writes itself.
 
+**Demo — `/labs/beam-audit` (interactive, built Oct 22).** Three stages, all
+live: (1) Beam parses pasted DDL into a strict SchemaMeta via agentic
+structured output; (2) the deterministic production rubric scores it; (3)
+Beam narrates a two-host analysis with its raw `reasoning_content` streamed
+into a visible "Beam's thoughts" panel. SSE route `/api/labs/beam-audit`,
+quota guard (280/day global, 8/IP, resets 00:00 UTC with Reflection), cache,
+one honest retry on shape failure, never caches failures. Featured datasets
+get their pre-recorded production audio briefings.
+
+**HF doorway — static Space (free).** Gradio Spaces now require HF Pro
+($9/mo) — discovered at upload time (402 on cpu-basic) — so the tested
+Gradio build stays in `space/` as the local/roadshow version, and
+`space-static/` ships as a static HF Space at
+`https://huggingface.co/spaces/Papajams/beam-data-audit` (served from
+`https://papajams-beam-data-audit.static.hf.space`) linking demo + benchmark
++ dataset. $0.
+
 **B. Dataset (bonus link in the same comment).** Publish the Probe verdicts /
 marketplace service-quality index as `Papajams/agent-service-quality` on HF.
 Cheap to assemble from `data/probe-verdicts.json` + the marketplace index.
@@ -65,7 +82,21 @@ exists but the account has no credits and we do not plan to add any.
 
 - [x] Reflection platform account + API key (free daily allowance) → `.env`
 - [x] OpenRouter key stored (no credits; backup only)
-- [ ] Claim $25 HF credits (link in contest tweet) → set `HF_API_KEY`
+- [x] **Interactive demo `/labs/beam-audit`** (Oct 22): SSE route
+      `/api/labs/beam-audit` + `src/lib/beam-audit.ts`; verified locally —
+      fixture podcast run clean (16.5s), custom-DDL run parses PII/lineage
+      and scores 55, exec-summary reproduces the shape-failure card by
+      design. Labs index card + sitemap entries added.
+- [x] **Static HF Space doorway** `Papajams/beam-data-audit` (free tier;
+      served at papajams-beam-data-audit.static.hf.space). Gradio hosting
+      402'd — Pro-only now — so the tested Gradio app lives on in `space/`
+      for local/roadshow use; `space-static/` is what ships to HF.
+- [x] Prod env: `REFLECTION_API_KEY` appended to `/opt/databard/.env`
+      (md5 integrity-verified; no .bak left behind). Required for the live
+      demo in prod.
+- [ ] Deploy demo (`./scripts/deploy.sh`) + verify prod `/labs/beam-audit`
+- [ ] Claim $25 HF credits (link in contest tweet) — optional now; all
+      entry artifacts are live without them
 - [x] Dry-run smoke: `reflection` provider returns PONG (free allowance)
 - [x] `scripts/beam-bench.mjs` built (6 tasks × exact production prompts, graded
       like the pipeline; run with `npx tsx scripts/beam-bench.mjs`)
@@ -77,7 +108,6 @@ exists but the account has no credits and we do not plan to add any.
       llama-3.3-70b: 98% at 52s avg. Beam is ~7× faster but loses shape
       discipline on the short-format task; that IS the honest story the page
       publishes.
-- [ ] Claim $25 HF credits (link in contest tweet) → set `HF_API_KEY`
 - [x] Exporter done (`scripts/export-agent-service-quality.mjs`); dataset
       **UPLOADED** to `Papajams/agent-service-quality` (Oct 22 — no `databard`
       HF org exists; account is `Papajams`). Re-upload any time via the
@@ -93,41 +123,41 @@ exists but the account has no credits and we do not plan to add any.
       script is NOT in the release tarball — run it locally against
       scp'd prod data, or add it to prepare-standalone.mjs if it should
       live on the box.
-- [ ] **Comment both links on `reflection/Beam-1.0-501B-A23B` repo page
-      before Mon Nov 2** — paste-ready text below
+- [ ] **Comment the links on `reflection/Beam-1.0-501B-A23B` repo page
+      before Mon Nov 2** — paste-ready text below. Links: HF Space doorway,
+      live demo, benchmark, dataset.
 - [ ] Record any weirdness for the comment (refusal rate was 0; reasoning
       dominance noted on the page)
 
 ## Paste-ready comment for the model repo page
 
 Post at https://huggingface.co/reflection/Beam-1.0-501B-A23B (Community →
-discussions, or comment under the contest announcement thread). Deploy the
-site and upload the dataset FIRST — both links must be live.
+discussions, or comment under the contest announcement thread). All links
+below are live (verified Oct 22).
 
-> **Benchmark: Beam 1.0 501B as a data analyst (live report + dataset)**
+> **We built three things with Beam: a live demo, a graded benchmark, and a dataset**
 >
 > We run DataBard, an AI data analyst that turns schema metadata into
 > narrated health reports — and we're an Agent Service Provider on OKX.AI,
-> so agentic tool-use workloads are our day job. For the contest we put Beam
-> through our actual production synthesis pipeline: same prompts, same
-> grading, no curation.
+> so agentic tool-use workloads are our day job.
 >
-> **Live report:** https://databard.persidian.com/benchmarks/beam
-> **Dataset:** https://huggingface.co/datasets/Papajams/agent-service-quality
-> (measured quality scores for 150+ pay-per-call agent services — the
-> workload context Beam was benchmarked against)
+> 1. **Live demo:** https://huggingface.co/spaces/Papajams/beam-data-audit →
+>    https://databard.persidian.com/labs/beam-audit — paste your DDL; Beam
+>    parses it into a schema (agentic structured output), our deterministic
+>    production rubric scores it, and Beam narrates a two-host analysis with
+>    its raw reasoning stream visible throughout. Runs on your free daily
+>    allowance; when it's exhausted, it says so.
+> 2. **Benchmark:** https://databard.persidian.com/benchmarks/beam — the
+>    exact production synthesis prompts, 24 graded runs: Beam 65% mean check
+>    score at 7.7s avg vs our production Llama-3.3-70B at 98% / 52s. The
+>    interesting failure: on executive-summary format Beam returned a single
+>    JSON object instead of the required array — valid JSON, wrong shape —
+>    while long-form podcast scripts were flawless. 73% of its output tokens
+>    were reasoning (we had to inflate max_tokens or content came back empty
+>    — worth knowing behind an OpenAI-compatible router).
+> 3. **Dataset:** https://huggingface.co/datasets/Papajams/agent-service-quality
+>    — measured quality scores for 150+ pay-per-call agent services (x402
+>    gates, latency, delivery), the workload context we benchmarked against.
 >
-> Headline from 24 runs across 6 tasks (podcast scripts, executive summaries,
-> research-question answering):
-> - Beam 501B: 65% mean check score at **7.7s avg** — ~7× faster than our
->   production Llama-3.3-70B (98%, 52s avg)
-> - The interesting failure mode: on the short executive-summary format, Beam
->   4/4 times returned a single JSON object instead of the required array —
->   valid JSON, wrong shape. On long-form podcast scripts it was flawless.
-> - Reasoning tokens dominated output (19k of 26k) — the harness has to
->   inflate max_tokens or content comes back empty. Worth knowing if you're
->   serving it behind an OpenAI-compatible router.
->
-> The harness reruns for free against Reflection's daily allowance, so the
-> report is a measured artifact, not a one-off screenshot. Code:
-> scripts/beam-bench.mjs in our repo.
+> The harness reruns for free against the daily allowance, so the benchmark
+> is a measured artifact, not a one-off screenshot. Code: scripts/beam-bench.mjs.

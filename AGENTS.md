@@ -124,6 +124,8 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `scripts/beam-bench.mjs` — Beam benchmark harness: runs the exact production synthesis prompts over the demo fixtures, grades JSON validity/shape/grounding, writes `data/beam-bench.json` (free on Reflection's daily allowance)
 - `src/lib/beam-bench.ts` + `src/app/benchmarks/beam/page.tsx` — frozen benchmark report page (renders the harness output uncurated)
 - `scripts/export-agent-service-quality.mjs` — assembles the HF dataset (`data/exports/agent-service-quality/`: verdicts.jsonl, service-index.jsonl, services.json, dataset card); re-run on the VPS for the full data, `HF_DATASET_ID` overrides the repo name
+- `src/lib/beam-audit.ts` + `src/app/api/labs/beam-audit/route.ts` + `src/components/beam-audit/BeamAudit.tsx` + `src/app/labs/beam-audit/page.tsx` — the interactive Beam demo (DDL parse → deterministic score → narrated analysis, reasoning stream visible, SSE, quota guard + cache; needs `REFLECTION_API_KEY` in the env)
+- `space/` — tested Gradio version of the demo (local/roadshow; HF Gradio hosting is now Pro-only) · `space-static/` — the free static HF Space doorway (`Papajams/beam-data-audit`)
 - `src/lib/schema-analysis.ts` — health score, critical tables, trend diffs
 - `src/lib/x402.ts` — OKX x402 payment server setup (facilitator + resource server + briefing & probe route configs)
 - `src/lib/mcp.ts` — shared A2MCP input parser (one-shot connection config from request body)
