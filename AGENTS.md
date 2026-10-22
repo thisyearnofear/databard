@@ -5,7 +5,7 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 
 ## Build & Dev Commands
 - `npm run dev` — start dev server on localhost:3000
-- `npm run build` — production build (81 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
+- `npm run build` — production build (83 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
 - `npm run scorecard` — virality ladder scorecard (`scripts/ladder-scorecard.mjs`; reads `DATABARD_DATA_DIR`/`./data`, see `docs/GTM.md`)

@@ -27,6 +27,14 @@ briefings remain as a supporting surface.
 - **Kept, supporting:** the wizard (trimmed Oct 2 after prod data confirmed
   near-zero usage of dead actions; connect dbt, catalogs, Dune, subgraphs,
   DataHub, Monid → synthesis + optional audio briefing), Pro digests, alerts.
+- **Live (Oct 22):** Beam × HF contest entry shipped — `/benchmarks/beam`
+  (Beam 1.0 501B graded on the production synthesis workload: 65% checks at
+  7.7s vs prod llama-3.3-70b 98% at 52s), `/labs/beam-audit` interactive demo
+  (DDL → parse → score → narrated analysis, reasoning stream visible, free
+  Reflection allowance + quota guard), dataset
+  `Papajams/agent-service-quality` on HF, static HF Space doorway
+  (`Papajams/beam-data-audit`). Entry comment due on the Beam model repo page
+  by Mon Nov 2 — see `docs/BEAM.md`.
 - **Infra (Oct 2):** paid-briefing latency monitor (daily) + probe-payer float
   docs in OPERATIONS; `/admin/funnel` dashboard with remediation plan; payment
   verification polling instead of recovery dead-ends.
