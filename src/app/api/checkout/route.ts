@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const stripe = getStripe();
-    const origin = req.nextUrl.origin;
+    const origin = (process.env.NEXT_PUBLIC_URL || "https://databard.persidian.com").replace(/\/$/, "");
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
