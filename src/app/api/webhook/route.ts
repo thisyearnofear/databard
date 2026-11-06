@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { activateStripePro, cancelStripePro } from "@/lib/settlement/backends/stripe";
+import { recordAuditOrder } from "@/lib/audit-orders";
 
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -44,6 +45,21 @@ export async function POST(req: NextRequest) {
         const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
         activateStripePro({ customerId, subscriptionId });
         console.log(`[Webhook] Pro account activated: ${customerId}`);
+      } else if (session.mode === "payment" && session.metadata?.plan?.startsWith("health_") && session.payment_status === "paid") {
+        const paymentIntentId = typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id ?? null;
+        await recordAuditOrder({
+          sessionId: session.id,
+          sku: session.metadata.sku ?? "unknown",
+          plan: session.metadata.plan,
+          email: session.customer_details?.email ?? null,
+          amountTotal: session.amount_total,
+          currency: session.currency,
+          paymentIntentId,
+          paidAt: new Date().toISOString(),
+        });
+        console.log(`[Webhook] Audit paid: ${session.metadata.plan} (${session.id})`);
       }
       break;
     }

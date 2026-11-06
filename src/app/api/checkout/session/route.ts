@@ -17,11 +17,18 @@ export async function GET(req: NextRequest) {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
 
-    if (!customerId) {
+    if (!customerId && session.mode === "subscription") {
       return NextResponse.json({ ok: false, error: "No customer found" }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true, customerId });
+    return NextResponse.json({
+      ok: true,
+      customerId: customerId ?? null,
+      paymentStatus: session.payment_status,
+      mode: session.mode,
+      sku: session.metadata?.sku ?? null,
+      email: session.customer_details?.email ?? null,
+    });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
