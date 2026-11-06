@@ -154,7 +154,13 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/components/wizard/wizard-reducer.ts` — composed reducer (5 domain reducers: core, connection, schema, generation, episode)
 - `src/components/wizard/wizard-effects.ts` — extracted effect hooks (persona sync, connection persistence, mint stats, schema defaults, deep links)
 - `src/components/wizard/LandingStep.tsx` — landing page (default workspace: Protocols)
-- `src/app/roast/page.tsx` — "Roast my data" landing variant
+- `src/app/roast/page.tsx` — "Roast my data" landing variant (+ `AuditUpsell` three-tier pricing ladder below the free CTA)
+- `src/components/AuditUpsell.tsx` — one-off audit pricing tiers (£29/£99/£249, decoy/target/anchor) → `POST /api/checkout/audit`
+- `src/app/api/checkout/audit/route.ts` — Stripe payment-mode Checkout Sessions for the health SKUs; price resolved server-side from `STRIPE_PRICE_HEALTH_*`; card-only; success_url/cancel_url resolve via `NEXT_PUBLIC_URL` (never `req.nextUrl.origin` — it returns the internal bind behind the prod proxy)
+- `src/lib/audit-orders.ts` — paid-audit ledger (`data/audit-orders.json`), idempotent on sessionId; webhook `checkout.session.completed` `mode=payment` + `plan=health_*` writes it
+- `src/app/audit/[sku]/page.tsx` — post-checkout success page, verifies session via `GET /api/checkout/session`
+- `src/lib/audit-report.ts` — audit report generator: internal findings + Tavily-researched category benchmarks; unmeasured inputs are caveats, never fabricated
+- `src/app/api/audit/deliver/route.ts` — ADMIN_SECRET-gated fulfillment: generates + emails the report (`sendAuditReportEmail` in `notifications.ts`), marks delivered only when the email path is real
 - `src/lib/product/score-tone.ts` — the one score→colour mapping (80/50 thresholds) for text classes, tints and server-side image hexes
 - `src/components/dither-kit/` — the chart pack (canvas-rendered ordered dither, alpha-modulated so it works on both themes): composable Area/Line/Bar/Pie/Radar charts, `Sparkline`, plus standalone `Gauge` (half-annulus dial with threshold `ticks`), `SlopeChart` (two-column slopegraph, direction-coloured threads, de-collided labels, gutters clamp on narrow screens), `Meter` (thin dithered bar, `segments` for split-bar compositions) and `ActivityHeatmap` (GitHub-style week×day grid, dither density = intensity). `icon.tsx` holds the `PixelIcon` glyph set (8×8 bitmaps rendered as crisp-edged SVG); use these instead of emoji on shell, landing, dashboard, player, league and onchain surfaces. `scoreDitherColor(score)` in `score-tone.ts` maps a health score to a `DitherColor`
 - `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)

@@ -34,14 +34,26 @@
 
 **Pricing alignment:** maps to `docs/STRATEGY.md`'s two front doors — free `/roast` preview → one-off audit ladder (£29/£99/£249) → **Pro £40/mo** for continuity.
 
+## State as of 6 Nov — the loop is live (test mode)
+
+Proven end-to-end on production with two real Stripe test purchases (£29 + £99):
+`/roast` upsell → `POST /api/checkout/audit` → hosted Checkout → webhook writes
+`data/audit-orders.json` → `/audit/[sku]` success page → `POST /api/audit/deliver`
+generates the report (Tavily benchmarks, honest caveats) and emails it via the
+notifications ladder.
+
+- Stripe: product `DataBard Health Audit` + 3 `price_*` in prod's account; webhook endpoint already existed; `STRIPE_PRICE_HEALTH_*` + `ADMIN_SECRET` + `TAVILY_API_KEY` set in prod `.env`.
+- Bugs the live E2E caught: checkout sessions were card-only'd (payment-method picker removed); `req.nextUrl.origin` → `0.0.0.0` behind the proxy (also fixed latent Pro-checkout bug); SMTP `:465` is outbound-blocked on the host (moved to `:587`; timeouts added so a dead channel fails fast, not silently).
+- **Blockers for real money:** prod runs `sk_test` (flip = live keys + recreate prices in live mode + new whsec); Resend free tier only emails the account owner until `persidian.com` is verified at resend.com/domains.
+
 ## Build plan (Build 5–13 Nov)
 
 | Day | Work | Cursor |
 |---|---|---|
 | 5 Nov | `docs/SHIPYARD_MMM_2026.md` plan + @Organiser pre-approval check (rule 09) | yes |
-| 6 Nov | `src/lib/elfa.ts` adapter (social + market reference fetch) + benchmark join + `ELFA_API_KEY` in `.env.example` | yes |
-| 7 Nov | `/roast` → paid-upgrade modal + new Stripe `price_health_plus` + webhook guard (not Elfa-dependent — ship internal-data findings if the adapter slips) | yes |
-| 8 Nov | Audit-report renderer (PDF + 3-step action plan) + Pro upsell CTA | yes |
+| 6 Nov | ✅ DONE: checkout endpoint + prices + webhook ledger + `/audit/[sku]` success page + `/roast` three-tier upsell + deliver route + report email — E2E-tested live (test mode) | yes |
+| 7 Nov | Descoped Elfa adapter (context-only for web3 targets; benchmarks come from Tavily instead) → report renderer polish: PDF export + internal-data intake for paid orders | yes |
+| 8 Nov | Buyer-side internal-data capture (roast → order handoff so `score`/`findings` auto-fill at delivery) + Pro upsell CTA | yes |
 | 9 Nov | Replit landing page + 50 Tavily-researched targets | yes |
 | 10 Nov | End-to-end test: roast → Checkout → report + Pro | yes |
 | 11–13 Nov | Push to first strangers (growth-discord crews, indie-founder list) | yes |
