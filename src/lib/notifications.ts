@@ -230,7 +230,12 @@ export async function sendAuditReportEmail(opts: {
     try {
       const nodemailer = await (Function("return import('nodemailer')")() as Promise<any>);
       if (nodemailer) {
-        const transporter = nodemailer.createTransport(smtpUrl, {
+        const u = new URL(smtpUrl);
+        const transporter = nodemailer.createTransport({
+          host: u.hostname,
+          port: Number(u.port || (u.protocol === "smtps:" ? 465 : 587)),
+          secure: u.protocol === "smtps:",
+          auth: u.username ? { user: decodeURIComponent(u.username), pass: decodeURIComponent(u.password) } : undefined,
           connectionTimeout: 8_000,
           greetingTimeout: 8_000,
           socketTimeout: 15_000,

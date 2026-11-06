@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     sessionId?: string;
     category?: string;
     internal?: { score?: number; findings?: string[] };
+    emailOverride?: string;
   };
   if (!body.sessionId) {
     return NextResponse.json({ ok: false, error: "sessionId required" }, { status: 400 });
@@ -47,8 +48,9 @@ export async function POST(req: NextRequest) {
   // Deliver to the buyer when we have an address. "delivered" only sticks when
   // the email actually sent, dev-mode skipped, or there was no email to send to
   // (operator hand-delivery via the returned JSON).
-  const email = order.email
-    ? await sendAuditReportEmail({ email: order.email, report })
+  const recipient = body.emailOverride ?? order.email;
+  const email = recipient
+    ? await sendAuditReportEmail({ email: recipient, report })
     : { sent: false, method: "no-address" };
   const delivered = email.sent || email.method === "dev" || email.method === "no-address";
   if (delivered) await markAuditDelivered(order.sessionId);
