@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useWizard, WizardProvider } from "@/components/wizard";
 import { PixelIcon } from "@/components/dither-kit";
+import { AuditUpsell } from "@/components/AuditUpsell";
 import { track } from "@/lib/track";
 
 export default function RoastPage() {
@@ -80,6 +81,8 @@ function RoastPageInner() {
           Or listen to a demo first (no signup)
         </Link>
       </div>
+
+      <AuditUpsell />
 
       {/* What you'll get */}
       <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 space-y-3 hover-depth">
