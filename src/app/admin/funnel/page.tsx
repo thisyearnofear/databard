@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ActivityHeatmap } from "@/components/dither-kit";
 import { EVENT_TYPES, listEvents, type UsageEvent } from "@/lib/events";
 import { getPageviewStats } from "@/lib/pageviews";
 
@@ -67,6 +68,12 @@ export default async function FunnelAdminPage({
   const topSources = Object.entries(pageviews.bySource).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const eventRows = EVENT_TYPES.map((t) => ({ type: t, all: all[t] ?? 0, week: week[t] ?? 0 }))
     .sort((a, b) => b.all - a.all || a.type.localeCompare(b.type));
+
+  const byDay: Record<string, number> = {};
+  for (const e of events) {
+    const day = e.createdAt.slice(0, 10);
+    byDay[day] = (byDay[day] ?? 0) + 1;
+  }
 
   return (
     <main className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
@@ -137,6 +144,21 @@ export default async function FunnelAdminPage({
           all={all}
           week={week}
         />
+
+        {/* Event cadence — gaps show up as ghost cells. */}
+        <section className="mt-10" aria-label="Event cadence">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
+            Event cadence
+          </h2>
+          <div className="mt-3 border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+            <ActivityHeatmap
+              data={byDay}
+              weeks={26}
+              color="purple"
+              formatTooltip={(date, v) => `${date} · ${v} event${v === 1 ? "" : "s"}`}
+            />
+          </div>
+        </section>
 
         {/* Acquisition context */}
         <section className="mt-10 grid sm:grid-cols-2 gap-6" aria-label="Traffic sources">

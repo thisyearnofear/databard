@@ -7,7 +7,8 @@ import { tagShareText } from "@/lib/share";
 import { MondaySignup } from "@/components/MondaySignup";
 import { IntegrationCTA } from "@/components/IntegrationCTA";
 import { HealthBar } from "@/components/viz";
-import { scoreTextClass } from "@/lib/product/score-tone";
+import { Gauge, SlopeChart } from "@/components/dither-kit";
+import { scoreDitherColor } from "@/lib/product/score-tone";
 import { LeaderboardIndex } from "./LeaderboardIndex";
 import type { LeagueEdition } from "@/lib/league";
 import { homeHref, workspaceHref } from "@/lib/product/workspaces";
@@ -193,14 +194,52 @@ export function LeagueBoard() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className={`font-display text-4xl font-bold tabular-nums ${scoreTextClass(edition.headline.score)}`}>
-                    {edition.headline.score}
-                  </div>
+                  <Gauge
+                    value={edition.headline.score}
+                    color={scoreDitherColor(edition.headline.score)}
+                    ticks={[50, 80]}
+                    bloom="low"
+                    bloomOnHover
+                    className="w-24"
+                  />
                   <Change value={edition.headline.change} />
                 </div>
               </div>
               <div className="mt-4">
                 <MondaySignup schema={edition.headline.schemaName} source="monday:league" />
+              </div>
+            </section>
+
+            <section className="mt-8" aria-labelledby="moves-title">
+              <div className="flex items-baseline justify-between gap-3 mb-3">
+                <h2 id="moves-title" className="text-sm font-semibold">The week in one look</h2>
+                <p className="font-mono text-xs text-[var(--text-muted)]">hover a thread</p>
+              </div>
+              <div className="border border-[var(--border)] bg-[var(--surface)] px-3 py-4">
+                <SlopeChart
+                  data={edition.rows.map((row) => ({
+                    key: row.schemaFqn,
+                    name: row.schemaName,
+                    prev: row.score - row.change,
+                    current: row.score,
+                  }))}
+                  leftHeader="last week"
+                  rightHeader="this week"
+                  leftGutter={148}
+                  rightGutter={76}
+                  rightLabel={(d) =>
+                    `${Math.round(d.current)}${
+                      d.current > d.prev
+                        ? ` ↑${Math.round(d.current - d.prev)}`
+                        : d.current < d.prev
+                          ? ` ↓${Math.round(d.prev - d.current)}`
+                          : ""
+                    }`
+                  }
+                  height={Math.min(360, Math.max(160, edition.rows.length * 18 + 44))}
+                  bloom="low"
+                  bloomOnHover
+                />
               </div>
             </section>
 

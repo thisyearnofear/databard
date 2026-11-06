@@ -54,6 +54,16 @@ export function scoreHex(score: number): string {
   return TONE_HEX[scoreTone(score)];
 }
 
+/**
+ * The score's tone as a dither-kit palette hue — for canvas charts that take a
+ * `DitherColor` instead of a CSS var. Literal union stays assignable to
+ * `DitherColor` without importing the kit into lib.
+ */
+export function scoreDitherColor(score: number): "green" | "orange" | "red" {
+  const tone = scoreTone(score);
+  return tone === "good" ? "green" : tone === "warn" ? "orange" : "red";
+}
+
 /** The health word that matches a score's tone — one definition for every surface. */
 export type HealthLabel = "healthy" | "at-risk" | "critical";
 

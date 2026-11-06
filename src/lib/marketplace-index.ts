@@ -1537,6 +1537,13 @@ async function readHistory(): Promise<{ runAt: string; results: { serviceId: str
   }
 }
 
+/** Index run history (newest last) — for cadence surfaces and uptime audits. */
+export async function getIndexHistory(): Promise<
+  { runAt: string; results: { serviceId: string; status: string }[] }[]
+> {
+  return readHistory();
+}
+
 function computeUptime(
   history: { runAt: string; results: { serviceId: string; status: string }[] }[],
 ): Map<string, number> {

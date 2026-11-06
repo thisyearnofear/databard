@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getLatestIndex, type IndexedService } from "@/lib/marketplace-index";
+import { getIndexHistory, getLatestIndex, type IndexedService } from "@/lib/marketplace-index";
 import { getLatestBriefing } from "@/lib/marketplace-briefing";
 import { scoreTextClass, scoreTintClass } from "@/lib/product/score-tone";
-import { PixelIcon } from "@/components/dither-kit";
+import { ActivityHeatmap, PixelIcon } from "@/components/dither-kit";
 import { DitherField } from "@/components/editions/DitherField";
 import { buildMarketplaceSeries, seedFromString } from "@/lib/dither-field";
 import { ServiceLookup } from "@/components/probe/ServiceLookup";
@@ -41,7 +41,14 @@ export default async function MarketplacePage({
   const filter = STATUS_FILTERS.includes(status as never) ? (status as string) : "all";
   const index = await getLatestIndex();
   const briefing = await getLatestBriefing();
+  const history = index ? await getIndexHistory() : [];
   void recordEvent("marketplace_index_view", { filter });
+
+  const checksByDay: Record<string, number> = {};
+  for (const run of history) {
+    const day = run.runAt.slice(0, 10);
+    checksByDay[day] = (checksByDay[day] ?? 0) + run.results.length;
+  }
 
   const visible = (index?.services ?? []).filter(
     (s) => filter === "all" || s.status === filter,
@@ -112,6 +119,23 @@ export default async function MarketplacePage({
                 ))}
               </ol>
             </details>
+          </section>
+        )}
+
+        {index && history.length > 1 && (
+          <section className="mt-6 border border-[var(--border)] bg-[var(--surface)] px-5 py-4" aria-labelledby="check-cadence">
+            <h2 id="check-cadence" className="text-sm font-semibold">Check cadence</h2>
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+              Services checked per day across {history.length} index runs — public record, gaps included.
+            </p>
+            <div className="mt-3">
+              <ActivityHeatmap
+                data={checksByDay}
+                weeks={20}
+                color="blue"
+                formatTooltip={(date, v) => `${date} · ${v} service${v === 1 ? "" : "s"} checked`}
+              />
+            </div>
           </section>
         )}
 

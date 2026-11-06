@@ -1,6 +1,7 @@
 "use client";
 
-import { scoreColor, scoreTextClass } from "@/lib/product/score-tone";
+import { scoreDitherColor, scoreTextClass } from "@/lib/product/score-tone";
+import { Gauge, Meter } from "@/components/dither-kit";
 
 interface PaymentInfo {
   challengeReceived: boolean;
@@ -66,16 +67,29 @@ export function ResultCard({
             {endpoint}
           </p>
         </div>
-        <div className="text-right">
-          <span
-            className={`text-2xl font-bold font-display ${
-              reachable ? scoreTextClass(score) : "text-[var(--text-muted)]"
-            }`}
-          >
-            {score}
-          </span>
-          <span className="text-xs text-[var(--text-muted)]"> / 100</span>
-          <p className="text-xs text-[var(--text-muted)]">{label}</p>
+        <div className="text-right shrink-0">
+          {reachable ? (
+            <>
+              <Gauge
+                value={score}
+                color={scoreDitherColor(score)}
+                ticks={[50, 80]}
+                bloom="low"
+                bloomOnHover
+                className="w-[88px]"
+                valueClassName={scoreTextClass(score)}
+              />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">{label}</p>
+            </>
+          ) : (
+            <>
+              <span className="text-2xl font-bold font-display text-[var(--text-muted)]">
+                {score}
+              </span>
+              <span className="text-xs text-[var(--text-muted)]"> / 100</span>
+              <p className="text-xs text-[var(--text-muted)]">{label}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -112,15 +126,13 @@ export function ResultCard({
               <span className="text-[11px] text-[var(--text-muted)] w-20 shrink-0">
                 {breakdownLabels[key] ?? key}
               </span>
-              <div className="flex-1 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.min(100, Math.max(0, value))}%`,
-                    backgroundColor: scoreColor(value),
-                  }}
-                />
-              </div>
+              <Meter
+                value={Math.min(100, Math.max(0, value))}
+                color={scoreDitherColor(value)}
+                height={6}
+                animate={false}
+                className="flex-1"
+              />
               <span className="text-[11px] font-medium w-8 text-right">
                 {Math.round(value)}
               </span>

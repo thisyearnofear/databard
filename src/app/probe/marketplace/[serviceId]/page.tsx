@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLatestIndex } from "@/lib/marketplace-index";
-import { scoreTextClass, scoreTintClass } from "@/lib/product/score-tone";
+import { Gauge } from "@/components/dither-kit";
+import { scoreDitherColor, scoreTintClass } from "@/lib/product/score-tone";
 
 export const dynamic = "force-dynamic";
 
@@ -70,10 +71,21 @@ export default async function MarketplaceServicePage({
               </p>
             </div>
             <div className="text-right shrink-0">
-              <span className={`font-display text-4xl font-bold tabular-nums ${svc.score === null ? "text-[var(--text-muted)]" : scoreTextClass(svc.score)}`}>
-                {svc.score ?? "—"}
-              </span>
-              <span className="text-sm text-[var(--text-muted)]">{svc.score === null ? " not scored" : " /100"}</span>
+              {svc.score === null ? (
+                <>
+                  <span className="font-display text-4xl font-bold tabular-nums text-[var(--text-muted)]">—</span>
+                  <span className="text-sm text-[var(--text-muted)]"> not scored</span>
+                </>
+              ) : (
+                <Gauge
+                  value={svc.score}
+                  color={scoreDitherColor(svc.score)}
+                  ticks={[50, 80]}
+                  bloom="low"
+                  bloomOnHover
+                  className="w-24"
+                />
+              )}
               <p className={`mt-1 inline-block rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${scoreTintClass(svc.score ?? 0)}`}>
                 {svc.status}
               </p>

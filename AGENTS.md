@@ -156,7 +156,7 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/components/wizard/LandingStep.tsx` — landing page (default workspace: Protocols)
 - `src/app/roast/page.tsx` — "Roast my data" landing variant
 - `src/lib/product/score-tone.ts` — the one score→colour mapping (80/50 thresholds) for text classes, tints and server-side image hexes
-- `src/components/dither-kit/icon.tsx` — `PixelIcon` glyph set (8×8 bitmaps rendered as crisp-edged SVG); use these instead of emoji on shell, landing, dashboard, player, league and onchain surfaces
+- `src/components/dither-kit/` — the chart pack (canvas-rendered ordered dither, alpha-modulated so it works on both themes): composable Area/Line/Bar/Pie/Radar charts, `Sparkline`, plus standalone `Gauge` (half-annulus dial with threshold `ticks`), `SlopeChart` (two-column slopegraph, direction-coloured threads, de-collided labels, gutters clamp on narrow screens), `Meter` (thin dithered bar, `segments` for split-bar compositions) and `ActivityHeatmap` (GitHub-style week×day grid, dither density = intensity). `icon.tsx` holds the `PixelIcon` glyph set (8×8 bitmaps rendered as crisp-edged SVG); use these instead of emoji on shell, landing, dashboard, player, league and onchain surfaces. `scoreDitherColor(score)` in `score-tone.ts` maps a health score to a `DitherColor`
 - `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)
 - `scripts/probe-smoke.mjs` — paid x402 smoke test for `/api/agent/probe` (pays the challenge with `PROBE_PAYER_PK` from `.env`, prints the verdict)
 - `src/lib/marketplace-index.ts` — OKX.AI marketplace health index: unpaid listing checks (x402 gate + price match, never pays), scoring, persistence, optional budgeted deep checks. Index checks verify the listing/payment gate only — NOT paid output quality; "gate not reached" is a neutral flag, not an accusation. Our own ASP #9878 rows are marked `ours` and excluded from aggregates. Also exports `recheckServicesLive` — the paid-briefing scoped path (live unpaid checks + budgeted paid re-verify for named services only, per-service timeout, cached fallback, shared spend ledger).
@@ -452,3 +452,13 @@ stack trace); **soft** (timeout / rate-limit / exec / empty / parse) degrade via
 - `ReportEvidenceExplorer` links report questions to charts, comparisons, and methodology. `PublicationFrame` reflects actual checkout states; it never simulates payment progress.
 - Focused non-browser checks: `DATABARD_DATA_DIR=/tmp/databard-interaction-tests npx tsx --test tests/report-examples.unit.ts tests/report-surfaces.unit.tsx tests/checkout-recovery.unit.ts`, then `npx tsc --noEmit`.
 - The current ESLint configuration does not match TS/TSX files; an ignored-file warning is not a successful lint check.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

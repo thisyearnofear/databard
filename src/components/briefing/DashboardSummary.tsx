@@ -1,6 +1,6 @@
-import { Sparkline as DitherSparkline } from "@/components/dither-kit";
+import { Sparkline as DitherSparkline, Gauge } from "@/components/dither-kit";
 import { healthTone } from "@/lib/briefing-health";
-import { scoreColor } from "@/lib/product/score-tone";
+import { scoreDitherColor, scoreTextClass } from "@/lib/product/score-tone";
 import type { SourceCard } from "./types";
 
 /** Point-wise mean of every card's history, aligned from the most recent point. */
@@ -42,7 +42,7 @@ export function DashboardSummary({ cards, avgHealth, totalFailing, totalMints, i
       </div>
       <div className="hover-depth bg-[var(--surface)] border border-[var(--border)] rounded-xl px-4 py-3">
         <div className="flex items-end justify-between gap-2">
-          <div className="font-display text-2xl font-extrabold tabular-nums" style={{ color: scoreColor(avgHealth) }}>{avgHealth}%</div>
+          <Gauge value={avgHealth} color={scoreDitherColor(avgHealth)} ticks={[50, 80]} bloom="aura" valueClassName={scoreTextClass(avgHealth)} className="w-[76px]" />
           <div className="w-16 h-7 mb-0.5"><DitherSparkline data={averageHealthSeries(cards)} color={healthTone(avgHealth)} bloom="aura" /></div>
         </div>
         <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mt-1">Avg health</div>

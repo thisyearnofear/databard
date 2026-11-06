@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { PixelIcon } from "@/components/dither-kit";
+import { Gauge, PixelIcon } from "@/components/dither-kit";
 import { MondaySignup } from "@/components/MondaySignup";
 import { track } from "@/lib/track";
-import { scoreTextClass, scoreTintClass, scoreLabel } from "@/lib/product/score-tone";
+import { scoreDitherColor, scoreTextClass, scoreTintClass, scoreLabel } from "@/lib/product/score-tone";
 import { SAMPLES, parseCsv, verdictFor, type CommunityReport } from "@/lib/community-health";
 
 export default function CommunityPage() {
@@ -214,24 +214,6 @@ export default function CommunityPage() {
   );
 }
 
-/** Score number that counts up for the reveal. */
-function ScoreCountUp({ target }: { target: number }) {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    let raf = 0;
-    const start = performance.now();
-    const dur = 900;
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - start) / dur);
-      setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target]);
-  return <>{n}</>;
-}
-
 function ReportCard({ report, copied, onCopy }: { report: CommunityReport; copied: boolean; onCopy: () => void }) {
   const stateColor = { pass: "text-[var(--success)]", partial: "text-[var(--warning)]", fail: "text-[var(--danger)]" } as const;
   const verdict = verdictFor(report);
@@ -241,9 +223,15 @@ function ReportCard({ report, copied, onCopy }: { report: CommunityReport; copie
     <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 flex flex-col gap-5">
       {/* Verdict + score */}
       <div className="flex flex-wrap items-center gap-4">
-        <span className={`font-display text-6xl font-extrabold ${scoreTextClass(report.score)}`}>
-          <ScoreCountUp target={report.score} />
-        </span>
+        <Gauge
+          value={report.score}
+          color={scoreDitherColor(report.score)}
+          ticks={[50, 80]}
+          bloom="low"
+          bloomOnHover
+          valueClassName={scoreTextClass(report.score)}
+          className="w-32 shrink-0"
+        />
         <div className="min-w-0">
           <span className={`inline-block font-mono text-[10px] uppercase tracking-[0.18em] px-2.5 py-1 rounded ${scoreTintClass(report.score)}`}>
             {scoreLabel(report.score)}
