@@ -26,7 +26,12 @@ them.
 ## Judgment rules (not scriptable — check in review)
 
 - **Score color comes from `scoreTextClass` / `score-tone.ts`.** Never invent
-  a second score→color mapping; the OG image and the UI must agree.
+  a second score→color mapping; the OG image and the UI must agree. Canvas
+  charts take `scoreDitherColor(score)` for the same reason.
+- **Canvas charts modulate alpha, never shades.** dither-kit painters draw one
+  palette hue per series and vary only opacity (see the colour-vs-opacity note
+  in `dither-paint.ts`) so the same render reads correctly on dark and light
+  themes. Don't introduce per-theme colour sets or lighter "line" shades.
 - **Every meaningful action is tracked.** New CTAs fire a whitelisted `track()`
   event (`src/lib/events.ts`); meta stays ≤5 string keys. If a door isn't
   measured, it doesn't ship.
@@ -46,7 +51,12 @@ them.
 ## Adding a new surface
 
 1. Reuse primitives before writing new ones: `PixelIcon`, `CopyButton`,
-   `ScoreCardView`, `ReportLink`, `IntegrationCTA`, `dither-kit` charts.
+   `ScoreCardView`, `ReportLink`, `IntegrationCTA`, `dither-kit` charts —
+   composable `AreaChart`/`LineChart`/`BarChart`/`PieChart`/`RadarChart` for
+   series data; standalone `Gauge` (0–max dials, threshold `ticks`),
+   `SlopeChart` (two-point moves), `Meter` (thin bars, `segments` for
+   split-bar compositions), `ActivityHeatmap` (day-cadence grids) for
+   single-metric surfaces.
 2. Add a render assertion to `tests/report-surfaces.unit.tsx` (the convention:
    `renderToStaticMarkup` + content/ARIA checks) and cover the golden path in
    Playwright if it's a money surface.
