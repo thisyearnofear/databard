@@ -13,19 +13,26 @@
 - **Built-in viral hook:** `/roast` and `/league` are already on the live site and shareable by design — the cheap, stranger-paying funnel Shipyard rewards.
 - **Partner credits:** Tavily (prospect research + the `/roast` differentiation pass), Replit (landing page), SurrealDB (per-team audit memory), ElevenLabs (optional narrated audit brief).
 
-## The Elfa-powered SKU: `databard_health_plus`
+## The SKU ladder: `databard_health_*`
 
-**Hook:** A brand shares its `/roast` card (e.g. "my review velocity is 40% below category"). DataBard asks for read access and shows a £99 Market-Benchmark Audit report — Stripe Checkout.
+**Hook:** A brand shares its `/roast` card (e.g. "my review velocity is 40% below category"). DataBard offers a tiered, one-off audit — Stripe Checkout.
 
-**What Elfa does:** fetches **social + market context** (category review-rate norms, ad-CPM benchmarks, competitive mention share, community growth) and *joins it to the brand's own data* to surface the *one* lever that actually moved revenue — keeping the output an internal data-quality diagnosis, not an investment signal:
+**Three prices (compromise-effect structure):**
 
-- "your conversion is fine — your reviews are stale, 40% below Elfa category benchmark" → staff the review flow
-- "CAC is 30% above category norm, but retention is healthy" → renegotiate ads
-- "inventory turns beat market, but ad spend lags" → reallocate budget
+| Price | SKU | Deliverable | Role |
+|---|---|---|---|
+| £29 | `databard_health_snapshot` | Score + top finding + one benchmark stat — instant, automated | **Decoy** — makes £99 the obvious compromise |
+| £99 | `databard_health_plus` | Full audit report + category benchmarks + 3-step action plan | **Target** — the one we want to sell |
+| £249 | `databard_health_operator` | Audit + 30-min analyst call + 4 weekly re-checks | **Anchor** — reframes £99 as sensible, covers real time if taken |
+| £40/mo | existing Pro | Weekly digest | Underneath — recurring ≠ one-off, sold post-purchase ("get this every Monday") |
 
-**Output:** a dated, receipted (`docs/PORTABLE_EVIDENCE.md`) PDF + 3-step action plan (£99 one-off), with an upsell to £40/mo Pro for weekly benchmarks.
+**Output:** a dated, receipted (`docs/PORTABLE_EVIDENCE.md`) report + action plan. Stripe `price_*` per SKU; same Checkout + webhook path, price resolved server-side from `STRIPE_PRICE_HEALTH_*` env vars.
 
-**Pricing alignment:** maps directly to the `docs/STRATEGY.md` two front doors — free `/roast` preview → commissioned edition (£25 today) → **Pro £40/mo**. The Shipyard SKU is the commissioned-edition upsell + Pro, priced in GBP for Shipyard Stripe.
+**Landscape check (Tavily, 5 Nov):** subscriptions (Triple Whale ~$429/mo, Polar $300–450/mo) sell dashboards, not answers; agency audits run $1,500–$5,000; "free audits" are lead-gen. The one-off, instant, receipted audit sits in a real gap.
+
+**Benchmark sourcing — honest correction:** Elfa is a *crypto* social-intelligence API (token attention, KOL momentum) — it does not carry e-comm category benchmarks. Benchmarks come from **Tavily-researched published studies** (Varos/Klaviyo/Yotpo category norms) joined to the brand's data; **Elfa is a context layer for web3-adjacent targets only**, not the benchmark engine. Either way the output stays an internal data-quality diagnosis, not an investment signal.
+
+**Pricing alignment:** maps to `docs/STRATEGY.md`'s two front doors — free `/roast` preview → one-off audit ladder (£29/£99/£249) → **Pro £40/mo** for continuity.
 
 ## Build plan (Build 5–13 Nov)
 
