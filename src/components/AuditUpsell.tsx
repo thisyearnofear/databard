@@ -53,7 +53,7 @@ export function AuditUpsell() {
         Heading into a budget review or agency renewal?
       </h2>
       <p className="text-xs text-[var(--text-muted)] text-center">
-        A dated, cited verdict on whether your numbers are actually below market — from someone who isn&apos;t selling you the retainer.
+        Every &ldquo;free audit&rdquo; ends in a retainer pitch. This one ends in a receipt — a dated, cited verdict on whether your numbers are actually below market. Nothing to renew.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg mx-auto">
         {TIERS.map((t) => (

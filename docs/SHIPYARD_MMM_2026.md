@@ -19,7 +19,20 @@
 
 **Why the moment, not the persona:** the need is episodic and urgent (renewal is a date, not a mood); the stakes are $2.5–10k/mo retainers so £99 is trivial; and Tavily shows "hold your agency accountable / evaluate before renewal" is a searched genre where agencies write the advice but nobody sells the evidence.
 
-**Landscape checks (Tavily, 5–6 Nov):** subscriptions (Triple Whale ~$429/mo, Polar $300–450/mo, Varos benchmarks) sell dashboards, not verdicts; agency audits run $1,500–$5,000 *and are lead-gen for retainers*; Fiverr sells human Shopify audits at £50–200 with no benchmark stakes; SEO-audit history proves standalone paid audits survive **only with human involvement** — so the analyst-call tier is the legitimizer, not a luxury. White-label lead-gen widgets are commoditized ($39/mo SEO tools) — skipped.
+**Landscape checks (Tavily, 5–6 Nov):** every alternative monetizes the *relationship*, not the moment:
+
+| Alternative | Price | Motion | Why it loses |
+|---|---|---|---|
+| Free agency audits | £0 | Lead-gen → sales call | Auditor wants the retainer — the verdict is the pitch |
+| Triple Whale / Polar / Varos | $199–450/mo | Free tier → demo → sales | Dashboard you operate yourself; bills monthly for a once-a-quarter question |
+| Agency audits | $1,500–5,000 | Referral networks | Deep but pre-sold on their own retainer; days of turnaround |
+| Fiverr/Upwork gigs | £50–200 | Marketplace SEO | No benchmark citations, no receipt that survives a meeting |
+| Fractional CMO | $3–10k/mo | Boutique WOM | Solves ongoing leadership, not one-off proof |
+| ChatGPT / free scans | £0 | — | "AI told me" isn't ammunition; no cited norms |
+
+SEO-audit history proves standalone paid audits survive **only with human involvement** — so the analyst-call tier is the legitimizer, not a luxury. White-label lead-gen widgets are commoditized ($39/mo SEO tools) — skipped.
+
+**The fourth motion:** every comparable funnels the buyer into a relationship they didn't want — retainer, subscription, or labor marketplace. Nobody lets you *just buy the answer*. The Scorecard is **Stripe Checkout for a verdict**: fixed price, dated receipt, nothing to renew. The moat isn't the analysis — it's being the only option that wants nothing else from the buyer. The exposure is the same: one-off pricing needs volume of people *in the moment*, so the roast → shared-Scorecard loop is the distribution, not ads.
 
 **Two prices + the call:**
 
