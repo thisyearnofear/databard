@@ -13,26 +13,29 @@
 - **Built-in viral hook:** `/roast` and `/league` are already on the live site and shareable by design — the cheap, stranger-paying funnel Shipyard rewards.
 - **Partner credits:** Tavily (prospect research + the `/roast` differentiation pass), Replit (landing page), SurrealDB (per-team audit memory), ElevenLabs (optional narrated audit brief).
 
-## The SKU ladder: `databard_health_*`
+## The wedge: the verdict for the agency conversation
 
-**Hook:** A brand shares its `/roast` card (e.g. "my review velocity is 40% below category"). DataBard offers a tiered, one-off audit — Stripe Checkout.
+**Repositioned 6 Nov** after landscape + incentive analysis. We do *not* sell "data audits" — nobody wakes up wanting one, the free roast undersells the paid one, and audits-as-homework have no purchase motive. The buyer is a **marketing director or founder heading into a renewal / QBR / budget fight** who needs third-party proof their numbers are (or aren't) below market. The deliverable is ammunition, dated and cited, from someone who isn't selling the retainer.
 
-**Three prices (compromise-effect structure):**
+**Why the moment, not the persona:** the need is episodic and urgent (renewal is a date, not a mood); the stakes are $2.5–10k/mo retainers so £99 is trivial; and Tavily shows "hold your agency accountable / evaluate before renewal" is a searched genre where agencies write the advice but nobody sells the evidence.
+
+**Landscape checks (Tavily, 5–6 Nov):** subscriptions (Triple Whale ~$429/mo, Polar $300–450/mo, Varos benchmarks) sell dashboards, not verdicts; agency audits run $1,500–$5,000 *and are lead-gen for retainers*; Fiverr sells human Shopify audits at £50–200 with no benchmark stakes; SEO-audit history proves standalone paid audits survive **only with human involvement** — so the analyst-call tier is the legitimizer, not a luxury. White-label lead-gen widgets are commoditized ($39/mo SEO tools) — skipped.
+
+**Two prices + the call:**
 
 | Price | SKU | Deliverable | Role |
 |---|---|---|---|
-| £29 | `databard_health_snapshot` | Score + top finding + one benchmark stat — instant, automated | **Decoy** — makes £99 the obvious compromise |
-| £99 | `databard_health_plus` | Full audit report + category benchmarks + 3-step action plan | **Target** — the one we want to sell |
-| £249 | `databard_health_operator` | Audit + 30-min analyst call + 4 weekly re-checks | **Anchor** — reframes £99 as sensible, covers real time if taken |
-| £40/mo | existing Pro | Weekly digest | Underneath — recurring ≠ one-off, sold post-purchase ("get this every Monday") |
+| £99 | `databard_health_plus` | "The Scorecard" — benchmarked verdict report + cited category norms + 3-step plan, same-day | **Target** — the evidence |
+| £249 | `databard_health_operator` | Scorecard + 30-min analyst prep call + 4 weekly re-checks | **Legitimizer** — the person who defends it |
+| £40/mo | existing Pro | Weekly verdict digest | Continuity — sold post-purchase |
 
-**Output:** a dated, receipted (`docs/PORTABLE_EVIDENCE.md`) report + action plan. Stripe `price_*` per SKU; same Checkout + webhook path, price resolved server-side from `STRIPE_PRICE_HEALTH_*` env vars.
-
-**Landscape check (Tavily, 5 Nov):** subscriptions (Triple Whale ~$429/mo, Polar $300–450/mo) sell dashboards, not answers; agency audits run $1,500–$5,000; "free audits" are lead-gen. The one-off, instant, receipted audit sits in a real gap.
+*Dropped: £29 snapshot. At ammunition stakes, £29 reads as not-credible, not cheap — two prices is cleaner. (The Stripe price + SKU still exist server-side for any early orders.)*
 
 **Benchmark sourcing — honest correction:** Elfa is a *crypto* social-intelligence API (token attention, KOL momentum) — it does not carry e-comm category benchmarks. Benchmarks come from **Tavily-researched published studies** (Varos/Klaviyo/Yotpo category norms) joined to the brand's data; **Elfa is a context layer for web3-adjacent targets only**, not the benchmark engine. Either way the output stays an internal data-quality diagnosis, not an investment signal.
 
-**Pricing alignment:** maps to `docs/STRATEGY.md`'s two front doors — free `/roast` preview → one-off audit ladder (£29/£99/£249) → **Pro £40/mo** for continuity.
+**Distribution shift:** ads don't target "growth teams" — they target the *moment*: "evaluate agency", "agency renewal", "QBR marketing" queries and director-level communities. The roast stays the viral free front door; the verdict card it produces is the teaser.
+
+**Pricing alignment:** maps to `docs/STRATEGY.md`'s two front doors — free `/roast` verdict → one-off scorecard (£99/£249) → **Pro £40/mo** for continuity.
 
 ## State as of 6 Nov — the loop is live (test mode)
 

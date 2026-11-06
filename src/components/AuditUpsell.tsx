@@ -4,12 +4,23 @@ import { useState } from "react";
 import { track } from "@/lib/track";
 
 const TIERS = [
-  { sku: "snapshot", name: "Snapshot", price: "£29", line: "Score + top finding + one benchmark", featured: false },
-  { sku: "plus", name: "Benchmark Audit", price: "£99", line: "Full report + benchmarks + 3-step plan", featured: true },
-  { sku: "operator", name: "Operator Pack", price: "£249", line: "Audit + analyst call + 4 re-checks", featured: false },
+  {
+    sku: "plus",
+    name: "The Scorecard",
+    price: "£99",
+    line: "Benchmarked verdict on your numbers vs the category — the third-party proof for the agency conversation. Same-day report.",
+    featured: true,
+  },
+  {
+    sku: "operator",
+    name: "Scorecard + Analyst",
+    price: "£249",
+    line: "Everything in the Scorecard plus a 30-min call with an analyst who'll pressure-test the argument with you before the meeting.",
+    featured: false,
+  },
 ] as const;
 
-/** Three-tier one-off audit ladder (Shipyard) — decoy / target / anchor. */
+/** Two-tier audit ladder — the verdict for the agency conversation (Shipyard). */
 export function AuditUpsell() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +50,12 @@ export function AuditUpsell() {
   return (
     <section className="w-full space-y-3" aria-labelledby="audit-upsell">
       <h2 id="audit-upsell" className="text-sm font-semibold text-center">
-        Or skip the roast and get the full audit
+        Heading into a budget review or agency renewal?
       </h2>
       <p className="text-xs text-[var(--text-muted)] text-center">
-        A receipted, one-off data-health audit — benchmarks included, report by email.
+        A dated, cited verdict on whether your numbers are actually below market — from someone who isn&apos;t selling you the retainer.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg mx-auto">
         {TIERS.map((t) => (
           <button
             key={t.sku}

@@ -11,14 +11,14 @@ const TIERS: Record<string, { name: string; price: string; includes: string[] }>
     includes: ["Health score", "Top finding", "One category benchmark"],
   },
   plus: {
-    name: "Benchmark Audit",
+    name: "The Scorecard",
     price: "£99",
-    includes: ["Full audit report", "Category benchmarks", "3-step action plan"],
+    includes: ["Benchmarked verdict report", "Cited category norms", "3-step action plan", "Same-day delivery"],
   },
   operator: {
-    name: "Operator Pack",
+    name: "Scorecard + Analyst",
     price: "£249",
-    includes: ["Everything in the Audit", "30-min analyst call", "4 weekly re-checks"],
+    includes: ["Everything in the Scorecard", "30-min analyst prep call", "4 weekly re-checks"],
   },
 };
 
