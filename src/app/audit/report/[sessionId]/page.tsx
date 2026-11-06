@@ -5,6 +5,7 @@ import { getAuditOrder } from "@/lib/audit-orders";
 import { Gauge } from "@/components/dither-kit";
 import { scoreDitherColor, scoreTextClass } from "@/lib/product/score-tone";
 import type { AuditReport } from "@/lib/audit-report";
+import { BenchmarkSignup } from "@/components/BenchmarkSignup";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +143,9 @@ export default async function AuditReportPage({ params }: { params: Promise<{ se
                 {new Date(report.generatedAt).toUTCString()}.{" "}
                 <Link href="/roast" className="text-[var(--accent)] no-underline hover:underline">Get yours →</Link>
               </p>
+              <div className="mt-4 max-w-xs">
+                <BenchmarkSignup />
+              </div>
             </div>
           </>
         )}

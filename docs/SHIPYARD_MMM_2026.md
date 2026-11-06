@@ -48,6 +48,13 @@ SEO-audit history proves standalone paid audits survive **only with human involv
 
 **Distribution shift:** ads don't target "growth teams" — they target the *moment*: "evaluate agency", "agency renewal", "QBR marketing" queries and director-level communities. The roast stays the viral free front door; the verdict card it produces is the teaser.
 
+**Distribution woven into the product (6 Nov):** Thiel — the product should distribute itself. The Scorecard is a *company* purchase but every buyer is an *individual* who shares things that make them look sharp. Two layers:
+
+- **Individual habit (list-build):** "one metric vs your category, every Monday" — a free weekly micro-verdict (one benchmarked stat + cited source, via `MondaySignup`). Career equipment: ammunition for the weekly standup that quietly accumulates 12 weeks of receipts before the renewal meeting. Converts at the seasonal peaks.
+- **Shareable artifacts (reach):** roast verdict cards, category-vs-me score posts, and the public "audit the auditors" teardown series — each impression routes back to roast → verdict → "want the cited version? £99". Every artifact carries the moment forward explicitly (renewals cluster Q4 + year-start — concentrate spend there, not steady-state).
+
+**Sequence:** weekly benchmark list + teardown series now → roast/scorecard artifacts carry "get yours" through the quiet months → renewal-season push at the peaks. The weekly email is the product; the Scorecard is the upgrade.
+
 **Pricing alignment:** maps to `docs/STRATEGY.md`'s two front doors — free `/roast` verdict → one-off scorecard (£99/£249) → **Pro £40/mo** for continuity.
 
 ## State as of 6 Nov — the loop is live (test mode)

@@ -273,6 +273,67 @@ export async function sendAuditReportEmail(opts: {
 }
 
 /**
+ * Sends one weekly benchmark stat (the Monday micro-verdict list).
+ * Same delivery ladder: Resend → SMTP → webhook → dev log.
+ */
+export async function sendBenchmarkEmail(opts: {
+  email: string;
+  category: string;
+  metric: string;
+  claim: string;
+  source: string;
+}): Promise<{ sent: boolean; method: string }> {
+  const { email, category, metric, claim, source } = opts;
+  const subject = `Monday benchmark — ${category}`;
+  const textBody = [
+    `One metric vs the ${category} category this week:`,
+    ``,
+    `${metric}: ${claim}`,
+    ``,
+    `Source: ${source}`,
+    ``,
+    `Heading into a renewal or QBR? The £99 Scorecard benchmarks all of it — databard.persidian.com/roast`,
+    `— DataBard`,
+  ].join("\n");
+
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: process.env.EMAIL_FROM || "DataBard <benchmarks@databard.dev>",
+          to: [email],
+          subject,
+          text: textBody,
+        }),
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (res.ok) return { sent: true, method: "resend" };
+      console.error("[notifications] Resend benchmark error:", res.status, await res.text());
+    } catch (e) {
+      console.error("[notifications] Resend benchmark failed:", e);
+    }
+  }
+  const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: email, subject, text: textBody, metric, source }),
+      });
+      return { sent: true, method: "webhook" };
+    } catch (e) {
+      console.error("[notifications] Email webhook benchmark failed:", e);
+    }
+  }
+  console.log(`[notifications] Benchmark for ${email} (dev mode — not sent)`);
+  return { sent: false, method: "dev" };
+}
+
+/**
  * Sends a passwordless sign-in code for the given email.
  * Uses the same delivery ladder as digests: Resend → SMTP → webhook → dev log.
  */
