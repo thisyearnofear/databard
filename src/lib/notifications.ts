@@ -216,6 +216,7 @@ export async function sendAuditReportEmail(opts: {
           text: textBody,
           html,
         }),
+        signal: AbortSignal.timeout(12_000),
       });
       if (res.ok) return { sent: true, method: "resend" };
       console.error("[notifications] Resend audit-report error:", res.status, await res.text());
@@ -229,7 +230,11 @@ export async function sendAuditReportEmail(opts: {
     try {
       const nodemailer = await (Function("return import('nodemailer')")() as Promise<any>);
       if (nodemailer) {
-        const transporter = nodemailer.createTransport(smtpUrl);
+        const transporter = nodemailer.createTransport(smtpUrl, {
+          connectionTimeout: 8_000,
+          greetingTimeout: 8_000,
+          socketTimeout: 15_000,
+        });
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || "DataBard <audit@databard.dev>",
           to: email,
