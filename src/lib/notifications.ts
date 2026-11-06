@@ -155,6 +155,114 @@ export async function sendDigestEmail(notification: DigestNotification): Promise
 }
 
 /**
+ * Sends a paid audit report (Shipyard `databard_health_*` SKUs).
+ * Same delivery ladder: Resend → SMTP → webhook → dev log.
+ */
+export async function sendAuditReportEmail(opts: {
+  email: string;
+  report: {
+    plan: string;
+    orderRef: string;
+    generatedAt: string;
+    category: string | null;
+    score: number | null;
+    findings: string[];
+    benchmarks: { metric: string; claim: string; source: string }[];
+    actions: string[];
+    caveats: string[];
+  };
+}): Promise<{ sent: boolean; method: string }> {
+  const { email, report } = opts;
+  const tierLabel = report.plan.replace(/^health_/, "");
+  const subject = `DataBard ${tierLabel} audit — ${report.category ?? "your data"}`;
+  const lines = [
+    `Your ${tierLabel} audit is ready (order ${report.orderRef}).`,
+    ``,
+    report.score !== null ? `Score: ${report.score}/100` : `Score: not assessed (see caveats)`,
+    ``,
+    ...(report.findings.length ? ["Findings:", ...report.findings.map((f) => `- ${f}`), ``] : []),
+    ...(report.benchmarks.length
+      ? ["Benchmarks:", ...report.benchmarks.map((b) => `- ${b.metric}: ${b.claim} (${b.source})`), ``]
+      : []),
+    ...(report.actions.length ? ["Action plan:", ...report.actions.map((a, i) => `${i + 1}. ${a}`), ``] : []),
+    ...(report.caveats.length ? ["Caveats:", ...report.caveats.map((c) => `- ${c}`), ``] : []),
+    `Generated ${report.generatedAt}.`,
+    `— DataBard`,
+  ];
+  const textBody = lines.join("\n");
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const html = `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+    <h2 style="margin-bottom: 0.25rem;">Your ${esc(tierLabel)} audit</h2>
+    <p style="color: #666; font-size: 0.8rem;">order ${esc(report.orderRef)} · ${esc(report.category ?? "general")}</p>
+    ${report.score !== null ? `<div style="font-size: 2rem; font-weight: bold; color: ${scoreHex(report.score)};">${report.score}/100</div>` : ""}
+    ${report.findings.length ? `<h3>Findings</h3><ul>${report.findings.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+    ${report.benchmarks.length ? `<h3>Benchmarks</h3><ul>${report.benchmarks.map((b) => `<li><strong>${esc(b.metric)}</strong>: ${esc(b.claim)} <a href="${esc(b.source)}">source</a></li>`).join("")}</ul>` : ""}
+    ${report.actions.length ? `<h3>Action plan</h3><ol>${report.actions.map((a) => `<li>${esc(a)}</li>`).join("")}</ol>` : ""}
+    ${report.caveats.length ? `<p style="font-size: 0.75rem; color: #999;">${report.caveats.map(esc).join("<br>")}</p>` : ""}
+    <hr style="border: none; border-top: 1px solid #eee; margin: 1.5rem 0;">
+    <p style="font-size: 0.75rem; color: #999;">DataBard · generated ${esc(report.generatedAt)}</p>
+  </div>`;
+
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: process.env.EMAIL_FROM || "DataBard <audit@databard.dev>",
+          to: [email],
+          subject,
+          text: textBody,
+          html,
+        }),
+      });
+      if (res.ok) return { sent: true, method: "resend" };
+      console.error("[notifications] Resend audit-report error:", res.status, await res.text());
+    } catch (e) {
+      console.error("[notifications] Resend audit-report failed:", e);
+    }
+  }
+
+  const smtpUrl = process.env.SMTP_URL;
+  if (smtpUrl) {
+    try {
+      const nodemailer = await (Function("return import('nodemailer')")() as Promise<any>);
+      if (nodemailer) {
+        const transporter = nodemailer.createTransport(smtpUrl);
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || "DataBard <audit@databard.dev>",
+          to: email,
+          subject,
+          text: textBody,
+          html,
+        });
+        return { sent: true, method: "smtp" };
+      }
+    } catch (e) {
+      console.error("[notifications] SMTP audit-report failed:", e);
+    }
+  }
+
+  const webhookUrl = process.env.EMAIL_WEBHOOK_URL;
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: email, subject, text: textBody, report }),
+      });
+      return { sent: true, method: "webhook" };
+    } catch (e) {
+      console.error("[notifications] Email webhook audit-report failed:", e);
+    }
+  }
+
+  console.log(`[notifications] Audit report for ${email} (no delivery configured — dev mode)`);
+  return { sent: false, method: "dev" };
+}
+
+/**
  * Sends a passwordless sign-in code for the given email.
  * Uses the same delivery ladder as digests: Resend → SMTP → webhook → dev log.
  */

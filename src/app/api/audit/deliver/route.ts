@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listAuditOrders, markAuditDelivered } from "@/lib/audit-orders";
 import { generateAuditReport } from "@/lib/audit-report";
+import { sendAuditReportEmail } from "@/lib/notifications";
 
 /**
  * Operator delivery endpoint (Shipyard MVP).
@@ -43,6 +44,14 @@ export async function POST(req: NextRequest) {
     internal: body.internal ?? null,
   });
 
-  await markAuditDelivered(order.sessionId);
-  return NextResponse.json({ ok: true, report });
+  // Deliver to the buyer when we have an address. "delivered" only sticks when
+  // the email actually sent, dev-mode skipped, or there was no email to send to
+  // (operator hand-delivery via the returned JSON).
+  const email = order.email
+    ? await sendAuditReportEmail({ email: order.email, report })
+    : { sent: false, method: "no-address" };
+  const delivered = email.sent || email.method === "dev" || email.method === "no-address";
+  if (delivered) await markAuditDelivered(order.sessionId);
+
+  return NextResponse.json({ ok: true, report, email, delivered });
 }
