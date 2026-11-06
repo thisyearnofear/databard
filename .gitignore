@@ -19,6 +19,7 @@ __pycache__/
 # Video (Remotion scaffold + renders stay local, not committed)
 /video/
 /videos/
+/demo-video/
 
 # Rust / Anchor build artifacts
 contracts/escrow/target/

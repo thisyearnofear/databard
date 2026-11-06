@@ -247,3 +247,15 @@ For a hackathon demo window, option (3) is simplest.
   X post — so the X post must go up before the form is submitted.
 - The ASP must pass OKX's internal review and go live to remain eligible — if the
   listing is rejected, the hackathon submission is invalid.
+
+---
+
+## Shipyard × Make Me Money 2026 · Elfa form + Stripe SKU
+
+**Q1 — "What are you planning to build with Elfa's API?"** (≤500 chars):
+
+> An Elfa-powered "Business Data Health" audit for growth teams: databard joins a company's messy internal data (sales, reviews, ads, inventory) with Elfa's social + market context to find the real revenue driver, then returns a ranked action plan (win share / cut cost / lift conversion). Sold as a £99 one-off report + £40/mo Pro subscription via Stripe Checkout on databard.persidian.com. Actionable business insights, not trading advice.
+
+**SKU.** `databard_health_plus` — free trigger from `/roast` → £99 Market-Benchmark audit report (new Stripe `price_*`, one Checkout Session via `src/app/api/pro/auth/stripe/route.ts`) → £40/mo Pro. Reuses existing Checkout + webhook; the £100 budget buys Replit + a Tavily-researched ad push to ~50 growth-marketing leads.
+
+**Shipyard-safe positioning.** Data-audit + BI service (an allowed category). Elfa market data is *context* to explain a brand's *own* numbers — never a trade/investment signal. Per rule 09, pre-approve with @Organiser in #support before build days.
