@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { MondaySignup } from "@/components/MondaySignup";
 
 const TIERS: Record<string, { name: string; price: string; includes: string[] }> = {
   snapshot: {
@@ -30,11 +31,14 @@ type SessionInfo = {
   error?: string;
 };
 
+type OrderInfo = { ok: boolean; status?: string; reportUrl?: string | null };
+
 export default function AuditSuccessPage() {
   const { sku } = useParams<{ sku: string }>();
   const search = useSearchParams();
   const sessionId = search.get("session_id");
   const [info, setInfo] = useState<SessionInfo | null>(null);
+  const [order, setOrder] = useState<OrderInfo | null>(null);
   const tier = TIERS[sku] ?? null;
 
   useEffect(() => {
@@ -44,6 +48,20 @@ export default function AuditSuccessPage() {
       .then(setInfo)
       .catch(() => setInfo({ ok: false, error: "Could not verify the session" }));
   }, [sessionId]);
+
+  // Poll order status until the report is delivered, then offer the link.
+  useEffect(() => {
+    if (!sessionId || order?.reportUrl) return;
+    let cancelled = false;
+    const poll = () =>
+      fetch(`/api/audit/order?session_id=${encodeURIComponent(sessionId)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (!cancelled && d?.ok) setOrder(d); })
+        .catch(() => {});
+    poll();
+    const t = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [sessionId, order?.reportUrl]);
 
   const paid = info?.ok && info.paymentStatus === "paid";
 
@@ -90,6 +108,18 @@ export default function AuditSuccessPage() {
                   </li>
                 ))}
               </ul>
+              {order?.reportUrl ? (
+                <a
+                  href={order.reportUrl}
+                  className="mt-4 inline-block rounded-lg bg-[var(--accent)] px-5 py-2.5 text-sm font-bold text-[var(--bg)] no-underline hover:brightness-110 transition"
+                >
+                  View your Scorecard →
+                </a>
+              ) : (
+                <p className="mt-4 font-mono text-[11px] text-[var(--text-muted)]">
+                  Generating your report — the link appears here when it&apos;s ready.
+                </p>
+              )}
             </>
           )}
 
@@ -101,6 +131,15 @@ export default function AuditSuccessPage() {
             </>
           )}
         </div>
+
+        {paid && (
+          <div className="mt-6 border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">Keep the verdict coming</p>
+            <div className="mt-2">
+              <MondaySignup schema={tier?.name ?? "audit"} source="monday:audit" />
+            </div>
+          </div>
+        )}
 
         <p className="mt-6 text-[11px] text-[var(--text-muted)]">
           Questions about an order? Reply to your Stripe receipt — it reaches us.

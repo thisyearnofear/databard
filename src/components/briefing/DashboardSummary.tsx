@@ -1,6 +1,9 @@
+"use client";
+
 import { Sparkline as DitherSparkline, Gauge } from "@/components/dither-kit";
 import { healthTone } from "@/lib/briefing-health";
 import { scoreDitherColor, scoreTextClass } from "@/lib/product/score-tone";
+import { track } from "@/lib/track";
 import type { SourceCard } from "./types";
 
 /** Point-wise mean of every card's history, aligned from the most recent point. */
@@ -55,6 +58,24 @@ export function DashboardSummary({ cards, avgHealth, totalFailing, totalMints, i
         <div className="font-display text-2xl font-extrabold tabular-nums">{totalMints}</div>
         <div className="font-mono text-xs text-[var(--text-muted)] uppercase tracking-wider mt-1">On-chain records</div>
       </div>}
+      {avgHealth < 80 && (
+        <button
+          onClick={() => {
+            track("integration_cta_click", { surface: "dashboard_summary", cta: "audit_scorecard" });
+            void fetch("/api/checkout/audit", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sku: "plus" }),
+            })
+              .then((r) => r.json())
+              .then((d) => { if (d.ok && d.url) window.location.href = d.url; });
+          }}
+          className="sm:col-span-full text-left border border-[var(--accent)]/40 bg-[var(--accent)]/5 rounded-xl px-4 py-2.5 text-xs text-[var(--text-muted)] hover:border-[var(--accent)] transition-colors"
+        >
+          Taking this number into a review?{" "}
+          <span className="text-[var(--accent)] font-semibold">Get the benchmarked third-party Scorecard →</span>
+        </button>
+      )}
     </section>
   );
 }

@@ -53,7 +53,13 @@ export async function POST(req: NextRequest) {
     ? await sendAuditReportEmail({ email: recipient, report })
     : { sent: false, method: "no-address" };
   const delivered = email.sent || email.method === "dev" || email.method === "no-address";
-  if (delivered) await markAuditDelivered(order.sessionId);
+  if (delivered) await markAuditDelivered(order.sessionId, report);
 
-  return NextResponse.json({ ok: true, report, email, delivered });
+  return NextResponse.json({
+    ok: true,
+    report,
+    email,
+    delivered,
+    reportUrl: delivered ? `/audit/report/${order.sessionId}` : null,
+  });
 }

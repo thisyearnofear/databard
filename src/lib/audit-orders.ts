@@ -28,6 +28,8 @@ export interface AuditOrder {
   status: AuditOrderStatus;
   paidAt: string;
   deliveredAt?: string;
+  /** The generated report, persisted at delivery so /audit/report/[sessionId] can render it. */
+  report?: unknown;
 }
 
 async function readAll(): Promise<AuditOrder[]> {
@@ -56,14 +58,21 @@ export async function listAuditOrders(status?: AuditOrderStatus): Promise<AuditO
   return status ? all.filter((o) => o.status === status) : all;
 }
 
-export async function markAuditDelivered(sessionId: string): Promise<boolean> {
+export async function markAuditDelivered(sessionId: string, report?: unknown): Promise<boolean> {
   return serial("audit-orders", async () => {
     const all = await readAll();
     const order = all.find((o) => o.sessionId === sessionId);
     if (!order) return false;
     order.status = "delivered";
     order.deliveredAt = new Date().toISOString();
+    if (report !== undefined) order.report = report;
     await fs.writeFile(ORDERS_FILE, JSON.stringify(all), "utf-8");
     return true;
   });
+}
+
+/** Lookup by session id — used by the public report page; the session id is the bearer secret. */
+export async function getAuditOrder(sessionId: string): Promise<AuditOrder | null> {
+  const all = await serial("audit-orders", readAll);
+  return all.find((o) => o.sessionId === sessionId) ?? null;
 }
