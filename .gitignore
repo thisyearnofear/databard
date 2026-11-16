@@ -62,3 +62,5 @@ next-env.d.ts
 data/pageviews.json
 data/probe-verdicts.json
 data/exports/
+
+anna/node_modules/

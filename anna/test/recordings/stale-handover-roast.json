@@ -1,0 +1,16 @@
+{
+  "model": "Beam-1.0-501B-A23B",
+  "recordedAt": "2026-11-16T20:29:34.270Z",
+  "sample": "stale",
+  "purpose": "handover",
+  "tone": "roast",
+  "replies": [
+    {
+      "content": {
+        "type": "text",
+        "text": "{\"headline\":\"The spreadsheet stopped 231 days ago: 7 rows, only 5 contactable emails.\",\"claim\":\"You can hand over 7 complete, unique rows; 5 of 7 emails are contactable, 2 are malformed, and the newest \\\"joined\\\" date is 231 days old.\",\"risk\":\"If used as-is, 2 of 7 emails bounce and the recipient gets a list whose \\\"joined\\\" column stopped 231 days ago.\",\"steps\":[\"Fix or remove the 2 malformed addresses in \\\"email\\\" before handing over the list.\",\"Rebuild the capture flow behind \\\"joined\\\"; its newest entry is 231 days old.\"]}"
+      },
+      "stopReason": "endTurn"
+    }
+  ]
+}

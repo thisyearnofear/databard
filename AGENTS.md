@@ -166,6 +166,8 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `scripts/ensure-running.sh` — prod stay-alive watchdog (cron every 2 min)
 - `scripts/probe-smoke.mjs` — paid x402 smoke test for `/api/agent/probe` (pays the challenge with `PROBE_PAYER_PK` from `.env`, prints the verdict)
 - `src/lib/marketplace-index.ts` — OKX.AI marketplace health index: unpaid listing checks (x402 gate + price match, never pays), scoring, persistence, optional budgeted deep checks. Index checks verify the listing/payment gate only — NOT paid output quality; "gate not reached" is a neutral flag, not an accusation. Our own ASP #9878 rows are marked `ours` and excluded from aggregates. Also exports `recheckServicesLive` — the paid-briefing scoped path (live unpaid checks + budgeted paid re-verify for named services only, per-service timeout, cached fallback, shared spend ledger).
+- `anna/` — bundle-only Anna App: deterministic score + audited model reading (`anna/README.md`); `community-health.js` in the bundle is GENERATED from `src/lib/community-health.ts`
+- `scripts/build-anna-scorer.mjs` — regenerates `anna/bundle/community-health.js`; `anna/test/scorer.mjs` fails on drift
 - `scripts/crawl-okx-marketplace.mjs` — rebuilds `src/lib/okx-marketplace.snapshot.json` via `onchainos agent search` + `service-list` for explicit agent ids (9878)
 - `GET /api/probe/marketplace` — latest index; `POST /api/probe/marketplace/refresh` — cron-secret refresh (`attest`, `deepBudget`, `dryRun`); `GET /api/probe/badge/[serviceId]` — shields SVG; `POST /api/mcp/service-score` — free `databard_service_score` lookup tool; pages `/probe/marketplace` + `/probe/marketplace/[serviceId]`
 - `src/lib/probe-verdicts.ts` — published Probe verdict store (`data/probe-verdicts.json`, rolling 50) + shared preview-pipeline scoring helpers; `POST /api/probe/verdicts/refresh` — cron-secret weekly publish (unpaid, curated defaults only, withheld on unclean runs); public page `/probe/verdicts`
@@ -186,6 +188,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 - `docs/CANDIDATE_TRACKER.md` — PARKED until after Monid: Campaign Lab candidate-website longitudinal tracker (separate vertical experiment, not the data-health roadmap)
 - `docs/AZURE.md` — Azure OpenAI migration guide
 - `docs/OKX_DEV_DAY_2026.md` — OKX Dev Day 2026 hackathon: DataBard Probe (agent-service quality oracle on X Layer)
+- `docs/ANNA_PROGRAM.md` — Anna AI App Builder program: why the health-check + AI reading shape, status (submitted, `pending_review`, app id 939)
 - `docs/BEAM.md` — Beam × HF $20k competition (deadline Mon Nov 2): benchmark entry plan + Beam access routes (all wired in `src/lib/llm-providers.ts` as `reflection`/`openrouter`/`hf` providers, off the default chain)
 
 ## OKX.AI A2MCP ASP

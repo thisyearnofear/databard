@@ -36,6 +36,15 @@ export interface CommunityReport {
   columns: ColumnReport[];
   findings: string[];
   actions: string[];
+  /** Counts the checks already computed — exposed so callers (e.g. the anna
+   *  bundle's report payload) don't re-derive them from detail strings. */
+  stats?: {
+    duplicates: number;
+    validEmails: number | null;
+    invalidEmails: number | null;
+    completeness: number; // 0-100
+    hasEmailColumn: boolean;
+  };
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -183,11 +192,15 @@ export function analyzeCommunityData(header: string[], rows: string[][]): Commun
   }
 
   // 5. Contactable (valid email format)
+  let validEmails: number | null = null;
+  let invalidEmails: number | null = null;
   if (emailCols.length > 0) {
     const c = emailCols[0];
     const idx = columns.indexOf(c);
     const vals = rows.map((r) => r[idx] ?? "").filter((v) => v !== "");
     const invalid = vals.filter((v) => !EMAIL_RE.test(v)).length;
+    validEmails = vals.length - invalid;
+    invalidEmails = invalid;
     const validRate = vals.length > 0 ? Math.round(((vals.length - invalid) / vals.length) * 100) : 0;
     checks.push({
       id: "contactable", name: "Emails are deliverable-shaped",
@@ -233,7 +246,16 @@ export function analyzeCommunityData(header: string[], rows: string[][]): Commun
   const label = score >= 80 ? "healthy" : score >= 50 ? "at-risk" : "critical";
   if (actions.length === 0) actions.push("Keep this export fresh — monthly is enough.");
 
-  return { score, label, rowCount, columnCount, checks, columns, findings, actions };
+  return {
+    score, label, rowCount, columnCount, checks, columns, findings, actions,
+    stats: {
+      duplicates: dupCount,
+      validEmails,
+      invalidEmails,
+      completeness,
+      hasEmailColumn: emailCols.length > 0,
+    },
+  };
 }
 
 /** Demo sample — deliberately imperfect, so the report has something to say. */

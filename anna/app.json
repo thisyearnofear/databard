@@ -1,0 +1,8 @@
+{
+  "name": "DataBard",
+  "version": "0.1.1",
+  "tagline": "How healthy is your sheet?",
+  "description": "DataBard scores a member list, RSVP export or sponsor tracker and writes a short reading of the report.\n\nPaste a CSV or TSV in the window — or pick a sample sheet — and a deterministic scorer checks it: completeness, member identity, duplicates, stale dates, contactable rows. Then one model call writes a purpose-specific reading — what you can say, what goes wrong as-is, and the order to fix things — and a deterministic audit decides what ships: every number must come from the report, every quoted name must be a real column, nothing that looks like an email or a URL is allowed through. If the reading can't be checked, it isn't shown.\n\nYour rows never leave the window — only scores and column names reach the model. Results save to your own Anna storage and can be reopened or copied as text. A 'roast the sheet' tone is available for when you want the verdict less gently; the roast is about the spreadsheet, never the people in it.",
+  "category": "productivity",
+  "slug": "databard"
+}

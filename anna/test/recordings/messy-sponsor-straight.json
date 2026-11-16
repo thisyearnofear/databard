@@ -1,0 +1,16 @@
+{
+  "model": "Beam-1.0-501B-A23B",
+  "recordedAt": "2026-11-16T20:29:13.276Z",
+  "sample": "messy",
+  "purpose": "sponsor",
+  "tone": "straight",
+  "replies": [
+    {
+      "content": {
+        "type": "text",
+        "text": "{\"headline\": \"Report 9 unique members, not 10 rows.\", \"claim\": \"You can report 9 unique members today; the 10 rows include 1 duplicate email and 1 malformed email, and 90% of cells are filled.\", \"risk\": \"If used as-is, membership is overstated by 1 duplicate email and 1 of 10 emails is malformed, so outreach can bounce.\", \"steps\": [\"Merge the duplicate in \\\"email\\\" before reporting membership numbers to sponsors.\", \"Fix or remove the malformed email in \\\"email\\\" before the next send.\"]}"
+      },
+      "stopReason": "endTurn"
+    }
+  ]
+}

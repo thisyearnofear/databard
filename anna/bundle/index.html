@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>DataBard</title>
+    <link rel="stylesheet" href="./app.css" />
+    <script src="./app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="topbar"><span class="kicker">DataBard · data health</span></header>
+
+    <div id="startup-panel" role="status">
+      <p id="startup-message">Opening the workbench…</p>
+      <button id="btn-startup-retry" type="button" hidden>Retry</button>
+      <p class="hint" id="startup-help" hidden>
+        Something went wrong during start-up. Saved readings are untouched. Retry, or check the app connection.
+      </p>
+    </div>
+
+    <main id="root" hidden>
+      <div id="resume-banner" class="banner" hidden>
+        <p id="resume-text"></p>
+        <div class="row-actions">
+          <button id="btn-resume" type="button" hidden>Resume</button>
+          <button id="btn-start-over" type="button" hidden>Start over</button>
+          <button id="btn-discard-checkpoint" type="button" hidden>Discard</button>
+        </div>
+      </div>
+
+      <section id="screen-input" class="screen" hidden>
+        <h1 class="display">How healthy is your sheet?</h1>
+        <p class="lede">Paste a member list, RSVP export or sponsor tracker — a deterministic score first, then a short reading of it.</p>
+
+        <div id="last-reading-card" class="banner" hidden>
+          <p><span class="kicker">Last reading</span><br /><span id="last-reading-line"></span></p>
+          <button id="btn-last-reading" type="button" class="textlink">Reopen it</button>
+        </div>
+
+        <label class="kicker" for="csv-input">Paste CSV or TSV</label>
+        <textarea id="csv-input" rows="8" spellcheck="false"
+          placeholder="name,email,city&#10;Ada Lovelace,ada@example.org,London"></textarea>
+        <div class="row-actions input-actions">
+          <label class="file-btn">
+            <input id="file-input" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" hidden />
+            Choose a file
+          </label>
+          <span class="sample-row"><span class="kicker">Or try:</span>
+            <span id="sample-buttons"></span>
+          </span>
+        </div>
+        <p id="input-error" class="error-line" hidden></p>
+        <p class="privacy-line">Your rows stay in this window. Only the scores and column names are sent to the model.</p>
+
+        <label class="kicker">What is this list for?</label>
+        <div class="control-strip" role="group" aria-label="Purpose">
+          <button type="button" id="purpose-sponsor" class="purpose" data-purpose="sponsor">Sponsor numbers</button>
+          <button type="button" id="purpose-send" class="purpose" data-purpose="send">Email the list</button>
+          <button type="button" id="purpose-invite" class="purpose" data-purpose="invite">Event invites</button>
+          <button type="button" id="purpose-handover" class="purpose" data-purpose="handover">Hand it over</button>
+          <button type="button" id="purpose-cleanup" class="purpose" data-purpose="cleanup">General cleanup</button>
+        </div>
+
+        <div class="row-actions run-row">
+                    <div class="control-strip" role="group" aria-label="Tone">
+            <button type="button" id="tone-straight" class="tone on">Straight</button>
+            <button type="button" id="tone-roast" class="tone">Roast the sheet</button>
+          </div>
+          <button id="btn-run" class="primary" type="button">Run</button>
+        </div>
+      </section>
+
+      <section id="screen-run" class="screen" hidden>
+        <p class="kicker">Working <span class="caret">▌</span></p>
+        <div id="run-feed" class="feed" aria-live="polite"></div>
+        <div class="row-actions">
+          <button id="btn-cancel-run" type="button" class="textlink">Cancel</button>
+        </div>
+      </section>
+
+      <section id="screen-result" class="screen" hidden>
+        <div class="row-actions result-actions">
+          <span class="gauge-wrap"><span class="gauge-canvas"><canvas id="score-gauge" width="200" height="118" aria-hidden="true"></canvas>
+            <span class="gauge-num"><span id="score-pill" class="score-num"></span></span></span>
+            <span id="score-detail" class="kicker gauge-caption"></span></span>
+          <span class="spacer"></span>
+          <button id="btn-copy" type="button" class="ghost-btn">Copy as text</button>
+          <button id="btn-again" type="button" class="ghost-btn">Another sheet</button>
+        </div>
+        <article id="result-doc" class="result-doc"></article>
+        <button id="btn-reading-retry" type="button" class="textlink" hidden>Retry the reading</button>
+        <p id="save-warn" class="error-line" hidden>
+          The reading could not be saved to your storage.
+          <button id="btn-save-retry" type="button" class="textlink">Retry save</button>
+        </p>
+      </section>
+
+      <section id="screen-error" class="screen" hidden>
+        <p class="kicker">Stopped</p>
+        <p id="error-message" class="error-line"></p>
+        <div class="row-actions">
+          <button id="btn-error-retry" class="primary" type="button">Retry</button>
+          <button id="btn-error-home" type="button" class="textlink">Back</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

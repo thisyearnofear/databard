@@ -1,0 +1,47 @@
+{
+  "schema": 4,
+  "required_executas": [],
+  "tags": [
+    "data",
+    "health",
+    "community"
+  ],
+  "storage": {
+    "scopes": {
+      "user": "rw"
+    }
+  },
+  "system_prompt_addendum": "DataBard's primary function is a saved, purpose-specific data-health reading of a CSV the person pastes in its window \u2014 opening the window is NOT the result. When a user wants a member list, RSVP export or similar sheet checked, open the app window with open_app_view with app_id 939 (payload may carry {\"tone\": \"straight\"|\"roast\", \"purpose\": \"sponsor\"|\"send\"|\"invite\"|\"handover\"|\"cleanup\"} only when the user asked for that). Never ask the user to paste CSV rows into chat, and never score, summarise or describe their data yourself \u2014 the window scores it deterministically, keeps every row on the user's side, and sends only scores and column names to the model. Your visible chat reply must be exactly this sentence and nothing else: Opening DataBard. Paste your sheet there and press Run.",
+  "ui": {
+    "bundle": {
+      "format": "static-spa",
+      "entry": "index.html",
+      "external_origins": []
+    },
+    "views": [
+      {
+        "name": "main",
+        "title": "DataBard",
+        "default": true,
+        "default_size": {
+          "w": 520,
+          "h": 560
+        },
+        "min_size": {
+          "w": 320,
+          "h": 420
+        },
+        "single_instance": true,
+        "summary_template": "Data health reading"
+      }
+    ],
+    "state_merge": "last_writer_wins",
+    "form_factors": [
+      "desktop",
+      "mobile"
+    ]
+  },
+  "dev": {
+    "user_id": 1
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "anna-app-identity/v1",
+  "host": "https://anna.partners",
+  "app_id": 939,
+  "slug": "databard",
+  "handle": "papa",
+  "first_published_at": "2026-11-16T23:07:16.621Z"
+}

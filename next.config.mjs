@@ -24,6 +24,7 @@ const nextConfig = {
   // and prepare-standalone.mjs's binary filter strips them from its own copy.
   outputFileTracingExcludes: {
     "*": [
+      "./anna/**/*",
       "./contracts/**/*",
       "./contracts-src/**/*",
       "./video/**/*",
