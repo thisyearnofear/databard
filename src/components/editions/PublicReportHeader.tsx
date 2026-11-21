@@ -13,10 +13,9 @@ export function PublicReportHeader() {
     }`;
 
   const items = [
-    { href: "/earn", label: "Reports", active: pathname === "/earn" || pathname.startsWith("/earn/"), extra: "" },
-    { href: "/agents", label: "Agent services", active: pathname === "/agents" || pathname.startsWith("/probe"), extra: "" },
-    { href: "/superteam", label: "Example", active: pathname.startsWith("/superteam"), extra: "" },
-    { href: "/#divisions", label: "Connect your data", active: false, extra: "hidden md:inline-flex" },
+    { href: "/earn", label: "Reports", active: pathname === "/earn" || pathname.startsWith("/earn/") || pathname === "/superteam", extra: "" },
+    { href: "/agents", label: "Agents", active: pathname === "/agents" || pathname.startsWith("/probe"), extra: "" },
+    { href: "/#divisions", label: "Connect", active: false, extra: "" },
   ];
 
   return (
@@ -32,7 +31,7 @@ export function PublicReportHeader() {
             DataBard
           </span>
         </Link>
-        <nav aria-label="Reports navigation" className="flex items-center gap-1">
+        <nav aria-label="Reports navigation" className="flex min-w-0 flex-wrap items-center justify-end gap-1">
           {items.map((item) => (
             <Link
               key={item.href}

@@ -6,6 +6,22 @@ rules: [forum topic 205](https://forum.anna.partners/t/turn-your-ai-agents-apps-
 Review lessons come from Brume on the same builder account
 (`brume/docs/ANNA.md` §12).
 
+## Current decision, 2026-11-21
+
+Anna rejected v0.1.1 (app 939, version 2400). The developer team's feedback
+identified a missing logo and screenshots, checks too limited to offer useful
+data-specific repair guidance, and an AI role too close to narrating fixed
+validations. They explicitly requested a full Cloud Agent test from a fresh
+install before resubmission. Local QA and listing assets on disk do not meet
+those requirements. No later submission or approval is claimed here.
+
+Do not infer member headcount from distinct emails or attendance from
+registrations. Test substantive diagnosis against real decisions. The
+[contact-import pilot and independent sponsor research](CONTACT_IMPORT_PILOT.md)
+are discovery, not fixes sufficient to pass review. For a new candidate, add
+the logo and screenshots to the actual listing, then test the exact cut from
+fresh install through a useful diagnosis and repair recommendation.
+
 ## Corrections to the first version of this file
 
 - **The window runs to 31 March 2027**, not 30 November. Any calendar month
@@ -111,7 +127,7 @@ an "open in Anna" link on `/community` and `/roast` results, and the
 audience is community leads with a member export — distinct from the other
 two apps' users, which is what a portfolio needs.
 
-## Status, 2026-11-16
+## Historical submission, 2026-11-16
 
 **Submitted for review.** App id 939, slug `databard`, review candidate
 **v0.1.1** (`version_id=2400`), status `pending_review`. v0.1.0 was cut first

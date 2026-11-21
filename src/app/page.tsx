@@ -4,10 +4,10 @@ import { ReportLanding } from "@/components/editions/ReportLanding";
 import { hasWizardParam } from "@/lib/product/workspaces";
 
 export const metadata: Metadata = {
-  title: "DataBard — Reports worth sharing",
-  description: "One engine turns any data estate — public listings, your warehouse, your protocol — into a report worth sharing. Public division 01: Superteam Earn.",
-  openGraph: { title: "DataBard — Reports worth sharing", description: "Any data estate, explained in a report worth sharing." },
-  twitter: { title: "DataBard — Reports worth sharing", description: "Any data estate, explained in a report worth sharing." },
+  title: "DataBard — Superteam Earn · Public reports",
+  description: "Find your organization's report — listings, rewards and builder submissions on Superteam Earn. The same engine can analyze your own data.",
+  openGraph: { title: "DataBard — Superteam Earn · Public reports", description: "Listings, rewards and builder submissions on Superteam Earn — and your own data estate." },
+  twitter: { title: "DataBard — Superteam Earn · Public reports", description: "Listings, rewards and builder submissions on Superteam Earn — and your own data estate." },
 };
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

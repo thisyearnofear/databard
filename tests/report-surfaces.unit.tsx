@@ -20,8 +20,8 @@ it("renders a real initial report, native selectors and a matching report link",
   assert.match(html, /href="\/earn\/jupiter"/);
   assert.match(html, /aria-pressed="true"/);
   assert.match(html, /aria-expanded="false"/);
-  assert.match(html, /Snapshot example/);
-  assert.match(html, /Why this finding/);
+  assert.match(html, /Snapshot data/);
+  assert.match(html, /Evidence/);
 });
 
 it("the free health example starts with explicit scope and no fabricated results", () => {

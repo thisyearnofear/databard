@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { loadEarnEdition, loadEarnListings, sponsorFocus } from "@/lib/superteam-earn";
-import { getPageviewCount } from "@/lib/pageviews";
 import { sponsorForSlug } from "@/lib/editions";
 import { editionPricePusd } from "@/lib/pusd";
 import { SponsorEdition, SponsorEditionShareRow } from "@/components/editions/SponsorEdition";
@@ -69,8 +68,6 @@ export default async function EarnSponsorPage({ params }: PageProps) {
   const terrain = edition ? focusSeriesFromRace(edition.race, edition.focus.name) : [];
   const showTerrain = terrain.length >= 2 && terrain.some((v) => v > 0);
 
-  // Reads-on-record: the internal pageview ledger, surfaced as social proof.
-  const views = await getPageviewCount(`/earn/${slug}`);
 
   return (
     <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
@@ -82,38 +79,38 @@ export default async function EarnSponsorPage({ params }: PageProps) {
           ← All reports
         </Link>
 
-        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
-          <span>DataBard Registry — Earn division</span>
-          {views > 0 && <span>{views.toLocaleString("en-US")} reads on record</span>}
-          <span>{published ? "Dated edition · filed" : "Open filing · preview"}</span>
-        </div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)] mt-4">
+        <p className="mt-6 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)]">
           {published
-            ? "Published edition"
-            : `Free preview · ${edition?.source === "snapshot" ? "snapshot data" : "public data"}`}
+            ? `Published edition · frozen ${new Date(published.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`
+            : edition
+              ? `Free to read · ${edition.source === "snapshot" ? "Snapshot data" : "Public data"} · observed ${new Date(edition.observedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`
+              : "Free to read"}
         </p>
         <h1 className="text-[28px] sm:text-[34px] font-extrabold tracking-tight mt-2">
           {name}, measured
         </h1>
-        <p className="text-sm text-[var(--text-muted)] mt-2">
-          {published
-            ? `Published ${new Date(published.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} — the report computed at publication, preserved.`
-            : edition
-              ? `${edition.totals.listings.toLocaleString("en-US")} listings · ${edition.totals.submissions.toLocaleString("en-US")} submissions · computed from Superteam Earn's public API`
-              : `A public report on ${name}'s place in the Earn economy.`}
-        </p>
-        {!published && (
-          <div className="mt-3 flex flex-wrap items-center gap-4">
-            <p className="text-sm text-[var(--text-muted)]">
-              Read the report free. Publish to file it — dated, commissioned, checkable.
+        {edition ? (
+          <div className="mt-3 max-w-[62ch]">
+            <p className="text-base font-semibold leading-snug sm:text-lg">{edition.headline.claim}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">{edition.headline.line}</p>
+            <p className="mt-2 text-xs leading-relaxed text-[var(--text-muted)]">
+              Stablecoin-denominated rewards; submissions are entries, not unique builders.
             </p>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--text-muted)] mt-2">
+            {`A public report on ${name}'s place in the Earn economy.`}
+          </p>
+        )}
+        {!published && edition && (
+          <p className="mt-3">
             <a
               href="#publish-report"
-              className="inline-flex items-center whitespace-nowrap rounded-lg bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-[var(--bg)] transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+              className="inline-flex min-h-11 items-center text-xs font-medium text-[var(--text-muted)] underline decoration-[var(--border)] underline-offset-4 hover:text-[var(--text)]"
             >
-              Publish report — {"$"}{price}
+              Publish a dated edition · {"$"}{price} ↓
             </a>
-          </div>
+          </p>
         )}
 
         {edition && (
@@ -177,34 +174,18 @@ export default async function EarnSponsorPage({ params }: PageProps) {
               ) : (
                 <>
                   <h2 id="publish-title" className="text-sm font-semibold">
-                    Make it official
+                    Publish a dated edition
                   </h2>
                   <p className="mt-1 font-display text-2xl font-bold tabular-nums">
                     {"$"}{price} <span className="text-xs font-normal text-[var(--text-muted)]">one-time</span>
                   </p>
                   <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
-                    Anyone can quote a number. A published edition is a dated public
-                    record of this finding — commissioned by you, receipted on-chain,
-                    and frozen so the version you cite is the version everyone sees.
+                    Keep the report as it was at publication, with evidence hashes and
+                    payment attribution. Retained for five years. Pay with SOL, USDC or
+                    PUSD; network fees are extra.
                   </p>
-                  <div className="mt-3 border border-dashed border-[var(--palm)]/40 bg-[var(--palm)]/5 px-3 py-2.5 flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[var(--palm-light)] shrink-0 opacity-70" aria-hidden="true" />
-                    <p className="text-[10px] leading-relaxed text-[var(--text-muted)]">
-                      Adds to this page:{" "}
-                      <span className="text-[var(--text)]">
-                        “Commissioned edition · paid ${price} · published {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}”
-                      </span>{" "}
-                      + payment receipt link
-                    </p>
-                  </div>
-                  <ul className="mt-4 flex flex-col gap-2 text-xs leading-relaxed text-[var(--text-muted)]">
-                    <li>Permanent permalink — the report as computed at publication</li>
-                    <li>Evidence receipt stays attached; anyone can verify the numbers</li>
-                    <li>Payment attribution shows the subject commissioned it</li>
-                  </ul>
-                  <p className="mt-4 text-[11px] leading-relaxed text-[var(--text-muted)]">
-                    Free previews recompute live; published editions do not. Five-year
-                    retention. Network fees additional.
+                  <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                    A payment receipt on-chain is not evidence of source accuracy.
                   </p>
                   <div className="mt-4">
                     <EditionCheckout sponsor={name} slug={slug} pricePusd={price} />

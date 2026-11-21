@@ -71,6 +71,7 @@ Funnel (GTM instrumentation):
 - `shared_episode_cta_click` — CTA on shared page (league / get this / dashboard)
 - `roast_page_view` — visited /roast
 - `roast_cta_click` — clicked "Roast my data" on /roast
+- `import_check_run` — ran the browser-local shared-email check on /community/import-check (meta: source=sample|paste|file; no data-derived metadata by design)
 - `league_page_view` — visited `/league` (weekly protocol accounting magnet)
 - `league_share_copy` — copied tweet, email, or permalink from the league
 - `superteam_page_view` — visited `/superteam` (Earn economy accounting)
@@ -188,7 +189,7 @@ Dark-first. An inline pre-hydration script in `layout.tsx` reads `localStorage["
 - `docs/CANDIDATE_TRACKER.md` — PARKED until after Monid: Campaign Lab candidate-website longitudinal tracker (separate vertical experiment, not the data-health roadmap)
 - `docs/AZURE.md` — Azure OpenAI migration guide
 - `docs/OKX_DEV_DAY_2026.md` — OKX Dev Day 2026 hackathon: DataBard Probe (agent-service quality oracle on X Layer)
-- `docs/ANNA_PROGRAM.md` — Anna AI App Builder program: why the health-check + AI reading shape, status (submitted, `pending_review`, app id 939)
+- `docs/ANNA_PROGRAM.md` — Anna review feedback (v0.1.1 rejected, app id 939); `docs/CONTACT_IMPORT_PILOT.md` — independent web experiment and five-user decision gate
 - `docs/BEAM.md` — Beam × HF $20k competition (deadline Mon Nov 2): benchmark entry plan + Beam access routes (all wired in `src/lib/llm-providers.ts` as `reflection`/`openrouter`/`hf` providers, off the default chain)
 
 ## OKX.AI A2MCP ASP

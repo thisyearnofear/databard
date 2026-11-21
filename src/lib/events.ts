@@ -44,6 +44,7 @@ export const EVENT_TYPES = [
   "roast_cta_click",          // clicked "Roast my data" on /roast
   "community_page_view",      // visited /community (member-list health check)
   "community_health_run",     // scored a pasted/uploaded CSV (meta: rows, cols, score, label)
+  "import_check_run",         // local shared-email conflict check on /community/import-check (meta: source=sample|paste|file — no data-derived metadata)
   "league_page_view",         // visited /league (weekly accounting magnet)
   "league_share_copy",        // copied tweet, email, or permalink
   "superteam_page_view",      // visited /superteam (Earn economy accounting)

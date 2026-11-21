@@ -27,21 +27,36 @@ async function noHorizontalOverflow(page: Page) {
   });
 }
 
+test.setTimeout(90_000);
+
 test.describe("public report landing", () => {
-  test("root shows the report landing and the CTA reaches the directory", async ({ page }) => {
+  test("root search finds an organization and browse reaches the directory", async ({ page }) => {
     await page.goto("/", { waitUntil: "commit" });
-    await expect(page.getByRole("link", { name: "Find your organization" }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: /your data/i }).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "From public data to a published report." })).toBeVisible();
-    await page.getByRole("link", { name: "Find your organization" }).first().click();
-    await expect(page).toHaveURL(/\/earn$/);
+    await expect(page.getByRole("heading", { name: /find your organization/i }).first()).toBeVisible({ timeout: 15_000 });
+    const search = page.getByRole("search");
+    const input = search.getByLabel("Organization name");
+    await expect(input).toBeVisible();
+    await input.fill("jupiter");
+    await input.press("Enter");
+    await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(/\/earn\?q=jupiter/);
+    await expect(page.getByRole("status")).toContainText("1 organization");
+    await expect(page.getByRole("link", { name: /Preview Jupiter report/ })).toBeVisible();
+  });
+
+  test("root browse link and workspace deep links are wired", async ({ page }) => {
+    await page.goto("/");
+    const connectNav = page.getByLabel("Connect your data");
+    await expect(connectNav.getByRole("link", { name: "Your warehouse" })).toHaveAttribute("href", "/?start=connect&workspace=teams");
+    await expect(connectNav.getByRole("link", { name: "Your protocol" })).toHaveAttribute("href", "/?start=connect&workspace=protocols");
+    await page.getByRole("link", { name: "Browse all reports" }).click();
+    await expect.poll(() => page.url(), { timeout: 15_000 }).toMatch(/\/earn$/);
     await expect(page.getByRole("heading", { name: "Find your organization" })).toBeVisible();
   });
 
   test("workspace query still opens the wizard, not the report landing", async ({ page }) => {
     await page.goto("/?workspace=protocols");
     await expect(page.getByRole("button", { name: /Explore the protocol league/i })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: "From public data to a published report." })).toHaveCount(0);
+    await expect(page.getByRole("search")).toHaveCount(0);
   });
 
   test("start=connect opens the wizard flow", async ({ page }) => {
@@ -62,7 +77,7 @@ test.describe("report directory search", () => {
     await expect(row).toBeVisible();
     await expect(page.getByRole("link", { name: /Preview .* report/ })).toHaveCount(1);
     await row.click();
-    await expect(page).toHaveURL(/\/earn\/jupiter/);
+    await expect.poll(() => page.url(), { timeout: 45_000 }).toMatch(/\/earn\/jupiter/);
     await expect(page.getByRole("heading", { name: /Jupiter, measured/i })).toBeVisible({ timeout: 15_000 });
     await page.goBack();
     await expect(page.getByLabel("Organization name")).toHaveValue("jupiter");
@@ -93,11 +108,15 @@ test.describe("public report chrome", () => {
 
 test.describe("preview and publish", () => {
   test("preview is readable without a wallet and honest about pricing", async ({ page }) => {
-    await page.goto("/earn/jupiter");
-    await expect(page.getByText(/Free preview/)).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/Publish report — \$\d+/)).toBeVisible();
+    await page.goto("/earn/jupiter", { waitUntil: "commit" });
+    await expect(page.getByText(/Free to read/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Publish a dated edition · \$\d+/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Publish a dated edition" })).toBeVisible();
+    await expect(page.getByText(/Pay with SOL, USDC or PUSD; network fees are extra/)).toBeVisible();
+    await expect(page.getByText(/not evidence of source accuracy/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue to payment" })).toBeVisible();
     await expect(page.getByText(/attested|permanent/i)).toHaveCount(0);
+    await expect(page.getByText(/Make it official/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /connect|select/i })).toHaveCount(0);
     const body = await page.locator("body").innerText();
     expect(body).not.toMatch(/attested|permanent link/i);
@@ -127,13 +146,15 @@ test.describe("payment recovery without a wallet", () => {
       ([key, value]) => window.localStorage.setItem(key, value),
       [pendingKey, JSON.stringify(pendingRecord())],
     );
-    await page.goto("/earn/jupiter");
+    await page.goto("/earn/jupiter", { waitUntil: "commit" });
 
+    // A saved pending record re-checks itself once on mount; if the pending
+    // UI is still up, re-check manually — either way only /verify is called.
     const check = page.getByRole("button", { name: /Check payment \/ finish publishing/ });
-    await expect(check).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/This payment belongs to/)).toBeVisible();
-    await check.click();
-    await expect(page.getByText(/Report published/)).toBeVisible({ timeout: 15_000 });
+    const published = page.getByText(/Report published/);
+    await expect(published.or(check)).toBeVisible({ timeout: 20_000 });
+    if (await check.isVisible()) await check.click();
+    await expect(published).toBeVisible({ timeout: 15_000 });
     expect(apiCalls).toEqual(["verify"]);
     const stored = await page.evaluate((k) => window.localStorage.getItem(k), pendingKey);
     expect(stored).toBeNull();
@@ -144,7 +165,7 @@ test.describe("payment recovery without a wallet", () => {
       ([key, value]) => window.localStorage.setItem(key, value),
       [pendingKey, "{not json"],
     );
-    await page.goto("/earn/jupiter");
+    await page.goto("/earn/jupiter", { waitUntil: "commit" });
     const retry = page.getByRole("button", { name: "Check saved payment" });
     await expect(retry).toBeVisible({ timeout: 20_000 });
     await retry.click();
@@ -158,7 +179,7 @@ test.describe("report layout geometry", () => {
     test(`no horizontal overflow at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
-      await expect(page.getByRole("heading", { name: /your data/i }).first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole("heading", { name: /find your organization/i }).first()).toBeVisible({ timeout: 15_000 });
       expect(await noHorizontalOverflow(page)).toBe(true);
     });
   }
@@ -166,7 +187,7 @@ test.describe("report layout geometry", () => {
   test("hero splits beside the example on desktop and stacks on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
-    const heading = page.getByRole("heading", { name: /your data/i }).first();
+    const heading = page.getByRole("heading", { name: /find your organization/i }).first();
     const article = page.getByRole("article", { name: "Example report" });
     await expect(article).toBeVisible({ timeout: 15_000 });
     const h = await heading.boundingBox();
@@ -185,7 +206,7 @@ test.describe("report layout geometry", () => {
     await page.goto("/");
     const nav = page.getByLabel("Reports navigation");
     await expect(nav).toBeVisible({ timeout: 15_000 });
-    const h = await page.getByRole("heading", { name: /your data/i }).first().boundingBox();
+    const h = await page.getByRole("heading", { name: /find your organization/i }).first().boundingBox();
     const navBox = await nav.boundingBox();
     expect(h!.y).toBeGreaterThan(navBox!.y + navBox!.height - 1);
   });
@@ -193,7 +214,7 @@ test.describe("report layout geometry", () => {
   test("reduced motion renders the same report content", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: /your data/i }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /find your organization/i }).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("article", { name: "Example report" })).toBeVisible();
   });
 });

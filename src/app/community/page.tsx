@@ -135,8 +135,15 @@ export default function CommunityPage() {
         </h1>
         <p className="text-[var(--text-muted)] max-w-xl mx-auto">
           Every community runs on a spreadsheet — members, RSVPs, sponsors. Drop yours here and get a
-          deterministic health score in seconds: duplicates, dead columns, undeliverable emails, staleness.
-          No LLM, no account, nothing stored — the list never leaves the check.
+          deterministic health score in seconds: duplicates, dead columns, malformed emails, staleness.
+          No LLM, no account, nothing stored — the list is checked on our server and never saved.
+        </p>
+        <p className="text-sm text-[var(--text-muted)] max-w-xl mx-auto">
+          Importing into a CRM and worried it will merge different people who share one email? Try the{" "}
+          <Link href="/community/import-check" className="text-[var(--accent)] no-underline hover:underline">
+            browser-local import conflict check
+          </Link>{" "}
+          — unlike this score (which is computed server-side), that one never leaves your device.
         </p>
       </div>
 

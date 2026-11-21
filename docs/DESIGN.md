@@ -63,6 +63,14 @@ them.
 3. `npm run check:surfaces && npm run test:e2e` before merge.
 4. New PixelIcon glyphs go in `icon.tsx` — 8×8 bitmap strings, `1` = filled.
 
+## Editorial rule
+
+- One question per page; lead with the finding or the action.
+- Remove repetition before adding disclosure — say it once, then disclose.
+- Keep source and scope beside the figures they describe.
+- Material payment terms go before purchase, not after.
+- Success is measured by first-click behavior, not arbitrary word count.
+
 ## The litmus test
 
 A new surface is consistent if a reviewer can answer "which rule does this

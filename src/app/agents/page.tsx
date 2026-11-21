@@ -49,31 +49,28 @@ export default function AgentsPage() {
           <div className="relative grid items-start gap-12 lg:grid-cols-[minmax(0,.95fr)_minmax(0,1.05fr)]">
           <div>
             <p className="enter-up font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent)]">DataBard for agents</p>
-            <h1 className="enter-up enter-delay-1 mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Useful answers.<br />Inspectable evidence.</h1>
-            <p className="enter-up enter-delay-2 mt-6 max-w-[44ch] text-base leading-relaxed text-[var(--text-muted)]">Give your agent a health check, compare services before paying, or inspect an anchored report. Start free; paid calls require explicit authorization.</p>
-            <p className="enter-up enter-delay-3 mt-5 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 font-mono text-[11px] text-[var(--text-muted)]">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--success)]" aria-hidden="true" />
-              Also listed on
-              <a href="https://www.okx.ai" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">OKX.AI ↗</a>
-              · ASP #9878
-            </p>
-            <ol className="enter-up enter-delay-3 mt-10 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+            <h1 className="enter-up enter-delay-1 mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Check a service before you pay</h1>
+            <p className="enter-up enter-delay-2 mt-6 max-w-[44ch] text-base leading-relaxed text-[var(--text-muted)]">Try a free data health check or compare services before paying. The preview never authorizes a payment.</p>
+            <ul className="enter-up enter-delay-3 mt-10 divide-y divide-[var(--border)] border-y border-[var(--border)]">
               {[
-                { title: "Analyze a data source", href: "#try-health-check", description: "Get a health summary, key findings, and a recommended next step.", label: "Try a free example", icon: "check" },
-                { title: "Check a service before you pay", href: "/probe", description: "Compare the default service set in a free preview. Paid responses and custom candidates require the agent endpoint.", label: "Compare services", icon: "search" },
-                { title: "Marketplace health index", href: "/probe/marketplace", description: "Every A2MCP service on OKX.AI, checked with one unpaid request — or call databard_service_score for a lookup before paying.", label: "See the index", icon: "chart" },
-                { title: "Check an anchored report", href: "/verify", description: "Inspect a report commitment separately from its payment receipt. No wallet connection needed.", label: "Check a record", icon: "link" },
-              ].map((item, index) => (
-                <li key={item.href} className="flex gap-4 py-6">
-                  <span className="pt-1 font-mono text-xs text-[var(--accent)]">{String(index + 1).padStart(2, "0")}</span>
-                  <div>
-                    <h2 className="flex items-center gap-2 text-base font-semibold"><PixelIcon name={item.icon as "check" | "search" | "chart" | "link"} size={14} className="shrink-0 text-[var(--accent)]" />{item.title}</h2>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">{item.description}</p>
-                    <Link href={item.href} className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-[var(--accent)] hover:underline">{item.label} →</Link>
-                  </div>
+                { title: "Check your data — free example", href: "#try-health-check", note: "Demo data", icon: "check" },
+                { title: "Check a service — free preview", href: "/probe", note: "Gate check only, not paid output", icon: "search" },
+                { title: "Marketplace health index", href: "/probe/marketplace", note: "Unpaid listing checks", icon: "chart" },
+                { title: "Check an anchored report", href: "/verify", note: "No wallet needed", icon: "link" },
+              ].map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="group flex min-h-11 items-center gap-3 py-3 focus-visible:outline-2 focus-visible:outline-[var(--accent)]">
+                    <PixelIcon name={item.icon as "check" | "search" | "chart" | "link"} size={14} className="shrink-0 text-[var(--accent)]" />
+                    <span className="min-w-0 flex-1 text-sm font-semibold transition-colors group-hover:text-[var(--accent)]">{item.title}</span>
+                    <span className="hidden shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] sm:inline">{item.note}</span>
+                    <span aria-hidden="true" className="shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-[var(--accent)]">→</span>
+                  </Link>
                 </li>
               ))}
-            </ol>
+            </ul>
+            <p className="enter-up enter-delay-3 mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
+              Checks listing access, not paid results.
+            </p>
           </div>
           <AgentHealthDemo />
           </div>

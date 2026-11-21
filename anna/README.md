@@ -5,8 +5,9 @@ CSV/TSV → deterministic health score (`community-health.js`, generated —
 never edited) → one `llm.complete` writes a reading → a deterministic audit
 decides what ships → saved result. Rows never leave the window.
 
-**Status:** submitted for review 16 Nov 2026 — v0.1.1 (`version_id=2400`),
-app id 939, `pending_review`. Program context and checklist:
+**Status, 21 Nov 2026:** v0.1.1 (`version_id=2400`, app id 939) was rejected.
+Listing assets, diagnostic depth, substantive AI reasoning and a fresh-install
+Cloud Agent test are outstanding. Program context and checklist:
 `../docs/ANNA_PROGRAM.md`.
 
 ## Layout

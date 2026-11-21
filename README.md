@@ -26,7 +26,9 @@ cp .env.example .env
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000) → default workspace is **Protocols** (switch to Teams anytime) → Try the demo (lands on this week's [league](https://databard.persidian.com/league)) or connect a source → Dashboard / briefing → Share a score card.
+Open [localhost:3000](http://localhost:3000) to search Superteam Earn organizations or read a featured finding. Search opens the filtered reports directory; each report leads with its finding, figures and source. Reading is free. The optional dated edition and its payment terms are on the report page.
+
+For your own data, use **Connect** and choose [Your warehouse](http://localhost:3000/?start=connect&workspace=teams) or [Your protocol](http://localhost:3000/?start=connect&workspace=protocols). The separate [contact import pilot](docs/CONTACT_IMPORT_PILOT.md) runs at `/community/import-check`.
 
 **Roast my data:** [/roast](https://databard.persidian.com/roast) — the emotional hook variant; same product, different framing. Shareable by design.
 
@@ -69,7 +71,7 @@ See [`docs/DATA_SOURCES_ARCHITECTURE.md`](docs/DATA_SOURCES_ARCHITECTURE.md) for
 
 ### For community organisers
 
-Your member list is a data estate too. [`/community`](https://databard.persidian.com/community) scores a pasted or uploaded CSV — duplicates, dead columns, undeliverable emails, staleness — with a deterministic rubric, no account and nothing stored. Built for community leads (Expedite London hackathon, Oct 2026); the same engine powers the narrated Monday briefing and the free agent health-check tool below.
+Your member list is a data estate too. [`/community`](https://databard.persidian.com/community) scores a pasted or uploaded CSV — duplicates, dead columns, malformed emails, staleness — with a deterministic rubric, no account and nothing stored. A companion `/community/import-check` runs entirely in the browser to flag rows that share a key but have differing fields before a CRM import. Built for community leads (Expedite London hackathon, Oct 2026); the same engine powers the narrated Monday briefing and the free agent health-check tool below.
 
 ---
 

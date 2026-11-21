@@ -6,6 +6,10 @@ accounting for humans, agent tools for machines.*
 
 ## North Star
 
+Current small experiment (21 Nov 2026): [contact import conflicts](CONTACT_IMPORT_PILOT.md).
+Measure changed decisions and repeat use, not tutorial views; this does not
+replace the edition or agent distribution loops.
+
 DataBard turns public data into public accounting — reports people share and
 agents call, every finding dated, receipted, and checkable. Distribution is
 built into the artifact: the subject shares the report because it is flattering

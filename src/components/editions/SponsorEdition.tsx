@@ -74,21 +74,10 @@ export function SponsorEdition({ edition, published, showAcquisition = true }: S
         className="mt-8 border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-5 py-5"
         aria-labelledby="focus-headline"
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]">
-              The headline
-            </p>
-            <h2 id="focus-headline" className="text-xl md:text-2xl font-bold mt-3 leading-snug">
-              {edition.headline.claim}
-            </h2>
-            <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
-              {edition.headline.line}
-            </p>
-          </div>
-          <DitherAvatar name={focus.name} size={44} className="rounded-lg shrink-0 mt-1" />
-        </div>
-        <div className="mt-5 grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
+        <h2 id="focus-headline" className="sr-only">
+          {focus.name} key figures
+        </h2>
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
           <div>
             <div className="font-display text-3xl font-bold tabular-nums">{focus.listings}</div>
             <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">

@@ -62,21 +62,24 @@ export default async function SuperteamPage() {
           ← DataBard
         </Link>
 
-        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--text-muted)]">
-          <span>DataBard Registry — Earn division</span>
-          <span>Flagship accounting · free to read</span>
-        </div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--accent)] mt-4">
-          {edition?.source === "snapshot" ? "Snapshot edition · public data" : "Live accounting · public data"}
+        <p className="mt-6 border-b border-[var(--border)] pb-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)]">
+          {edition
+            ? `Free to read · ${edition.source === "snapshot" ? "Snapshot data" : "Public data"} · observed ${new Date(edition.observedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`
+            : "Free to read"}
         </p>
         <h1 className="text-[28px] sm:text-[34px] font-extrabold tracking-tight mt-2">
           The Superteam Earn economy, measured
         </h1>
-        <p className="text-sm text-[var(--text-muted)] mt-2">
-          {edition
-            ? `${edition.totals.listings.toLocaleString("en-US")} listings · ${edition.totals.submissions.toLocaleString("en-US")} submissions · computed from Superteam Earn's public API`
-            : "A public accounting of the Superteam Earn listings economy."}
-        </p>
+        {edition ? (
+          <div className="mt-3 max-w-[62ch]">
+            <p className="text-base font-semibold leading-snug sm:text-lg">{edition.headline.claim}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">{edition.headline.line}</p>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--text-muted)] mt-2">
+            A public accounting of the Superteam Earn listings economy.
+          </p>
+        )}
 
         {edition && (
           <div className="mt-5">
@@ -116,20 +119,12 @@ export default async function SuperteamPage() {
               aria-labelledby="uk-headline"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--accent)]">
-                    The headline
-                  </p>
-                  <h2 id="uk-headline" className="text-xl md:text-2xl font-bold mt-3 leading-snug">
-                    {edition.headline.claim}
-                  </h2>
-                  <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
-                    {edition.headline.line}
-                  </p>
-                </div>
-                <DitherAvatar name="Superteam UK" size={44} className="rounded-lg shrink-0 mt-1" />
+                <h2 id="uk-headline" className="sr-only">
+                  Superteam UK key figures
+                </h2>
+                <DitherAvatar name="Superteam UK" size={44} className="rounded-lg shrink-0" />
               </div>
-              <div className="mt-5 grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
                 <div>
                   <div className="font-display text-3xl font-bold tabular-nums">{edition.focus.listings}</div>
                   <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)] mt-1">

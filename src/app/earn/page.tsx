@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { loadEarnListings } from "@/lib/superteam-earn";
 import { listPublished, slugifySponsor } from "@/lib/editions";
-import { editionPricePusd } from "@/lib/pusd";
 import { DitherAvatar } from "@/components/dither-kit";
 import { SponsorSearch } from "@/components/editions/SponsorSearch";
 import { PageViewTracker } from "@/components/editions/PageViewTracker";
@@ -59,7 +58,6 @@ export default async function EarnIndexPage({ searchParams }: PageProps) {
     loadError = true;
   }
   const published = listPublished();
-  const price = editionPricePusd();
 
   return (
     <main className="report-surface enter-up min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10" id="main-content">
@@ -72,34 +70,9 @@ export default async function EarnIndexPage({ searchParams }: PageProps) {
           Find your organization
         </h1>
         <p className="text-sm text-[var(--text-muted)] mt-2 leading-relaxed">
-          Preview a report built from public Superteam Earn listings. No wallet needed. Publish a
-          dated edition for {"$"}{price}, one-time.
+          Reports on Superteam Earn organizations, free to read — no wallet needed.
         </p>
         <hr className="dither-rule mt-6" aria-hidden="true" />
-
-        {published.length > 0 && (
-          <section className="mt-8" aria-labelledby="published-title">
-            <h2 id="published-title" className="text-sm font-semibold">
-              Published reports
-            </h2>
-            <ul className="mt-3 flex flex-col gap-2">
-              {published.map((p) => (
-                <li key={p.slug}>
-                  <Link
-                    href={`/earn/${p.slug}`}
-                    className="flex items-center gap-3 border border-[var(--palm)]/40 bg-[var(--palm)]/10 px-4 py-3 no-underline hover:brightness-110"
-                  >
-                    <DitherAvatar name={p.sponsor} size={26} className="rounded-md shrink-0" />
-                    <span className="flex-1 text-sm font-medium">{p.sponsor}</span>
-                    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--palm-light)]">
-                      published {new Date(p.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
 
         <section className="mt-8" aria-labelledby="picker-title">
           <div className="flex items-baseline justify-between gap-3 mb-3">
@@ -130,6 +103,31 @@ export default async function EarnIndexPage({ searchParams }: PageProps) {
             />
           )}
         </section>
+
+
+        {published.length > 0 && (
+          <section className="mt-8" aria-labelledby="published-title">
+            <h2 id="published-title" className="text-sm font-semibold">
+              Published reports
+            </h2>
+            <ul className="mt-3 flex flex-col gap-2">
+              {published.map((p) => (
+                <li key={p.slug}>
+                  <Link
+                    href={`/earn/${p.slug}`}
+                    className="flex items-center gap-3 border border-[var(--palm)]/40 bg-[var(--palm)]/10 px-4 py-3 no-underline hover:brightness-110"
+                  >
+                    <DitherAvatar name={p.sponsor} size={26} className="rounded-md shrink-0" />
+                    <span className="flex-1 text-sm font-medium">{p.sponsor}</span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--palm-light)]">
+                      published {new Date(p.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <p className="mt-8 text-[11px] leading-relaxed text-[var(--text-muted)]">
           Previews compute from Earn&apos;s public listings and move as new listings close.
