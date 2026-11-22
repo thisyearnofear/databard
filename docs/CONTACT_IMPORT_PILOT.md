@@ -4,6 +4,13 @@ Decision, 21 November 2026: test a browser-local conflict review at
 `/community/import-check`. This is a web experiment, not an Anna resubmission
 or evidence of willingness to pay. Do not build a general list cleaner yet.
 
+Status, 21 November 2026: the demo is implemented in `src/app/community/import-check/page.tsx`
+with grouping/parsing in `src/lib/import-conflicts.ts`, committed in `8dc52b1`,
+but not deployed publicly. Local verification: 16 unit tests
+(`tests/import-conflicts.unit.ts`), 4 Playwright tests (`tests/import-check.spec.ts`),
+`npm run check:surfaces` and `npx tsc --noEmit` passed. No participants or
+outcomes recorded yet; treat the page as the pilot demo, not demand evidence.
+
 ## Evidence for and against
 
 - A [membership organiser importing siblings](https://community.hubspot.com/t/importing-data-and-i-want-to-keep-duplicates/90788)

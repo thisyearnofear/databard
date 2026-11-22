@@ -130,12 +130,13 @@ two apps' users, which is what a portfolio needs.
 ## Historical submission, 2026-11-16
 
 **Submitted for review.** App id 939, slug `databard`, review candidate
-**v0.1.1** (`version_id=2400`), status `pending_review`. v0.1.0 was cut first
-to obtain the app id; v0.1.1 adds the id to the system prompt addendum and is
-otherwise identical.
+**v0.1.1** (`version_id=2400`). At submission the status was `pending_review`;
+Anna has since rejected this candidate (see Current decision, 2026-11-21).
+v0.1.0 was cut first to obtain the app id; v0.1.1 adds the id to the system
+prompt addendum and is otherwise identical.
 
-Submitted without a fresh-install Cloud Agent pass (the developer account's
-Anna quota is spent) and without listing images in the Developer Console —
-the eight images in `anna/listing/` are ready to upload there. Local work is
-uncommitted. A version cut after this point is not part of the review until
-`anna-app apps submit-review` is run again.
+It was submitted without a fresh-install Cloud Agent pass (the developer
+account's Anna quota is spent) and without listing images in the Developer
+Console — the eight images in `anna/listing/` are ready to upload there. The
+local work has since been committed and pushed. A version cut after this point
+is not part of any review until `anna-app apps submit-review` is run again.
