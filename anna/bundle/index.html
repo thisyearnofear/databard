@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>DataBard</title>
+    <script src="./clock.js"></script>
     <link rel="stylesheet" href="./app.css" />
     <script src="./app.js" type="module"></script>
   </head>
@@ -88,6 +88,18 @@
           <button id="btn-again" type="button" class="ghost-btn">Another sheet</button>
         </div>
         <article id="result-doc" class="result-doc"></article>
+
+        <section id="repair-block" class="repair-block" hidden>
+          <span class="kicker">Cleaned copy</span>
+          <p id="repair-summary" class="repair-summary"></p>
+          <ul id="repair-changes" class="plain repair-changes"></ul>
+          <div class="row-actions">
+            <button id="btn-repair-copy" type="button" class="ghost-btn">Copy cleaned CSV</button>
+            <button id="btn-repair-download" type="button" class="textlink">Download .csv</button>
+          </div>
+          <p id="repair-status" class="hint" hidden></p>
+        </section>
+
         <button id="btn-reading-retry" type="button" class="textlink" hidden>Retry the reading</button>
         <p id="save-warn" class="error-line" hidden>
           The reading could not be saved to your storage.

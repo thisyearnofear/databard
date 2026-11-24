@@ -1,8 +1,16 @@
 {
   "name": "DataBard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "tagline": "How healthy is your sheet?",
-  "description": "DataBard scores a member list, RSVP export or sponsor tracker and writes a short reading of the report.\n\nPaste a CSV or TSV in the window — or pick a sample sheet — and a deterministic scorer checks it: completeness, member identity, duplicates, stale dates, contactable rows. Then one model call writes a purpose-specific reading — what you can say, what goes wrong as-is, and the order to fix things — and a deterministic audit decides what ships: every number must come from the report, every quoted name must be a real column, nothing that looks like an email or a URL is allowed through. If the reading can't be checked, it isn't shown.\n\nYour rows never leave the window — only scores and column names reach the model. Results save to your own Anna storage and can be reopened or copied as text. A 'roast the sheet' tone is available for when you want the verdict less gently; the roast is about the spreadsheet, never the people in it.",
+  "description": "DataBard turns a messy member list, RSVP export or sponsor tracker into a report you can act on — and a cleaned copy of the file.\n\nPaste a CSV or TSV in the window, or pick a sample. A deterministic scorer checks completeness, member identity, duplicates, stale dates and contactable rows. Then one model call reads the report for your stated purpose — reporting numbers to a sponsor, emailing the list, inviting people, handing it over, or a general cleanup — and gives a verdict for that purpose plus the order to fix the report's checks in. Run the same sheet again and the reading says what moved since your last check. A deterministic audit decides what ships: every number must come from the report, every quoted name must be a real column, nothing that looks like an email or a URL is allowed through. If the reading cannot be checked, it is not shown.\n\nYou also get a cleaned copy of the sheet — duplicate rows merged by email, addresses normalised, empty rows dropped, whitespace trimmed — with a change log that says what moved. The repair happens in the window; your rows never leave it. Only scores, column names and counts reach the model.\n\nResults save to your own Anna storage and can be reopened or copied as text. A 'roast the sheet' tone is available when you want the verdict less gently; the roast is about the spreadsheet, never the people in it.",
   "category": "productivity",
-  "slug": "databard"
+  "slug": "databard",
+  "screenshots": [
+    "listing/home-520.png",
+    "listing/home-390.png",
+    "listing/run-520.png",
+    "listing/result-messy-520.png",
+    "listing/result-messy-390.png",
+    "listing/result-stale-520.png"
+  ]
 }

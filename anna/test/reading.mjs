@@ -133,6 +133,140 @@ test("audit allows label, verdict and check states as quoted tokens", () => {
   assert.equal(out.dropped.length, 0);
 });
 
+// ── the model's repair plan: a decision over the report's own checks ─────
+const firstCheck = payload.checks[0].name;
+const secondCheck = payload.checks[1]?.name ?? payload.checks[0].name;
+const planned = {
+  ...cleanReading,
+  priority: [
+    { check: firstCheck, why: "This is the one that changes what you can send." },
+    { check: secondCheck, why: "Cheaper to fix once the first one is done." },
+  ],
+};
+
+test("the prompt asks for a priority list over the report's checks", () => {
+  const p = buildReadingPrompt(payload, "straight", "sponsor");
+  assert.ok(p.includes('"priority"'));
+  assert.ok(/exact check name/i.test(p));
+});
+
+test("parseReading accepts a valid priority list and keeps the order", () => {
+  const r = parseReading(JSON.stringify(planned));
+  assert.deepEqual(r.priority.map((p) => p.check), [firstCheck, secondCheck]);
+});
+
+test("parseReading rejects a malformed priority list", () => {
+  assert.throws(() => parseReading(JSON.stringify({ ...cleanReading, priority: [] })), /priority/);
+  assert.throws(() => parseReading(JSON.stringify({ ...cleanReading, priority: [{ check: "x" }] })), /priority/);
+});
+
+test("a reading without priority stays valid — older drafts and recordings", () => {
+  const r = parseReading(JSON.stringify(cleanReading));
+  assert.equal(r.priority, null);
+  const out = auditReading(r, payload);
+  assert.equal(out.reading.priority, null);
+  assert.equal(out.narrated, true);
+});
+
+test("audit keeps a plan whose checks are real and whose reasons add no figures", () => {
+  const out = auditReading(parseReading(JSON.stringify(planned)), payload);
+  assert.equal(out.narrated, true);
+  assert.equal(out.dropped.length, 0);
+  assert.deepEqual(out.reading.priority.map((p) => p.check), [firstCheck, secondCheck]);
+});
+
+test("audit drops a plan entry that names a check the report does not have", () => {
+  const r = parseReading(JSON.stringify({
+    ...cleanReading,
+    priority: [{ check: "Vibes", why: "It feels wrong." }],
+  }));
+  const out = auditReading(r, payload);
+  assert.equal(out.reading.priority, null);
+  assert.equal(out.dropped[0].field, "priority");
+  assert.match(out.dropped[0].reason, /unknown check/);
+});
+
+test("audit drops a plan entry that smuggles in a figure", () => {
+  const r = parseReading(JSON.stringify({
+    ...cleanReading,
+    priority: [{ check: firstCheck, why: "Fixing this recovers 9999% of the list." }],
+  }));
+  const out = auditReading(r, payload);
+  assert.equal(out.reading.priority, null);
+  assert.equal(out.dropped[0].field, "priority");
+});
+
+test("a plan entry cannot leak an email either", () => {
+  const r = parseReading(JSON.stringify({
+    ...cleanReading,
+    priority: [{ check: firstCheck, why: "Ask ada@example.org to confirm." }],
+  }));
+  const out = auditReading(r, payload);
+  assert.equal(out.reading.priority, null);
+});
+
+// ── the purpose verdict: a model decision, audited like the headline ────
+
+test("the prompt asks for a purpose verdict distinct from the label", () => {
+  const p = buildReadingPrompt(payload, "straight", "sponsor");
+  assert.ok(p.includes('"verdict"'));
+  assert.ok(/verdict for this purpose/.test(p));
+});
+
+test("parse keeps a valid verdict; a missing one stays null; oversized rejects", () => {
+  assert.equal(
+    parseReading(JSON.stringify({ ...cleanReading, verdict: "Sendable once the duplicate is merged." })).verdict,
+    "Sendable once the duplicate is merged.",
+  );
+  assert.equal(parseReading(JSON.stringify(cleanReading)).verdict, null);
+  assert.throws(() => parseReading(JSON.stringify({ ...cleanReading, verdict: "x".repeat(141) })), /verdict/);
+});
+
+test("audit keeps a verdict grounded in the report", () => {
+  const out = auditReading(parseReading(JSON.stringify({
+    ...cleanReading,
+    verdict: `Fine to send once the "email" duplicate is merged.`,
+  })), payload);
+  assert.equal(out.reading.verdict, 'Fine to send once the "email" duplicate is merged.');
+  assert.equal(out.dropped.length, 0);
+});
+
+test("audit drops a verdict with an invented figure or a restated label", () => {
+  const fig = auditReading(parseReading(JSON.stringify({
+    ...cleanReading,
+    verdict: "9999% ready to send.",
+  })), payload);
+  assert.equal(fig.reading.verdict, null);
+  assert.equal(fig.dropped[0].field, "verdict");
+  const label = auditReading(parseReading(JSON.stringify({
+    ...cleanReading,
+    verdict: `This list is ${payload.label}.`,
+  })), payload);
+  assert.equal(label.reading.verdict, null);
+  assert.equal(label.dropped[0].field, "verdict");
+});
+
+// ── the diff rides inside the payload, so its numbers are auditable ──────
+
+test("a claim may cite sinceLast figures — but the same claim fails without them", () => {
+  const withSince = {
+    ...payload,
+    sinceLast: {
+      days: 7,
+      changed: true,
+      entries: [{ key: "score", label: "Score", from: 61, to: payload.score, delta: payload.score - 61, good: true }],
+    },
+  };
+  const r = parseReading(JSON.stringify({
+    ...cleanReading,
+    claim: `The score climbed ${payload.score - 61} points from 61 since the last check.`,
+  }));
+  const out = auditReading(r, withSince);
+  assert.equal(out.reading.claim, `The score climbed ${payload.score - 61} points from 61 since the last check.`);
+  const noSince = auditReading(r, payload);
+  assert.equal(noSince.reading.claim, null);
+});
+
 // pipeline: claim+risk+steps must all survive — anything less is unnarrated
 test("unnarrated path: two model calls, narrated false, reading null", async () => {
   const bad = { headline: "fine headline here", claim: "99% invented figure", risk: "it could go badly", steps: ["do a thing"] };

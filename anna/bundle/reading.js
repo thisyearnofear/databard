@@ -116,12 +116,15 @@ export function buildReadingPrompt(payload, tone, purpose) {
     `- Refer to a column only by its exact name, in double quotes.`,
     `- No emoji, no email addresses, no URLs.`,
     `- Do not invent facts about the community that the report does not contain (no guesses about why data is missing).`,
+    `- "verdict": your one-line verdict for this purpose — the call the score alone cannot make; a list can be fine to email yet wrong to quote to a sponsor. Do not restate the score or the label.`,
     `- "headline": the one thing that matters for this purpose. Do not state the score or the label.`,
     `- "claim": what the person can truthfully say or do with this list today for that purpose, using the report's numbers.`,
     `- "risk": what goes wrong if they use the list as-is for that purpose.`,
     `- "steps": the order to fix things in for that purpose; name the column a step touches in double quotes when one applies.`,
+    `- "priority": order the report's own checks by what to fix first for this purpose — 1 to 4 entries. Each "check" must be copied exactly from the report's checks list; "why" is one short sentence, no new numbers.`,
+    `- If "sinceLast" is present it is the deterministic diff against the previous check of the same sheet — its numbers count as report numbers; say what moved when it matters for the purpose.`,
     `- Reply with ONLY a JSON object — no prose, no markdown fence:`,
-    `{"headline": "<=100 chars", "claim": "<=240 chars", "risk": "<=240 chars", "steps": ["<2-3 strings, each <=200 chars>"]}`,
+    `{"headline": "<=100 chars", "verdict": "<=140 chars", "claim": "<=240 chars", "risk": "<=240 chars", "steps": ["<2-3 strings, each <=200 chars>"], "priority": [{"check": "<exact check name>", "why": "<=160 chars"}]}`,
   ].join("\n");
 }
 
@@ -149,17 +152,41 @@ export function parseReading(text) {
     throw new DraftError("reading is not an object");
   }
   if (!isStr(obj.headline, 1, 100)) throw new DraftError("bad headline");
+  // Optional: the model's purpose verdict. Older drafts and recordings
+  // without it stay valid — the UI falls back to the deterministic verdict.
+  let verdict = null;
+  if (obj.verdict != null) {
+    if (!isStr(obj.verdict, 1, 140)) throw new DraftError("bad verdict");
+    verdict = obj.verdict.trim();
+  }
   if (!isStr(obj.claim, 1, 240)) throw new DraftError("bad claim");
   if (!isStr(obj.risk, 1, 240)) throw new DraftError("bad risk");
   if (!Array.isArray(obj.steps) || obj.steps.length < 1 || obj.steps.length > 3
       || !obj.steps.every((p) => isStr(p, 1, 200))) {
     throw new DraftError("bad steps");
   }
+  // Optional: the model's ordering of the report's own checks. Older
+  // recordings and drafts without it stay valid — the UI falls back to
+  // severity order.
+  let priority = null;
+  if (obj.priority != null) {
+    if (!Array.isArray(obj.priority) || obj.priority.length < 1 || obj.priority.length > 6) {
+      throw new DraftError("bad priority");
+    }
+    priority = obj.priority.map((p) => {
+      if (!p || typeof p !== "object" || !isStr(p.check, 1, 60) || !isStr(p.why, 1, 160)) {
+        throw new DraftError("bad priority entry");
+      }
+      return { check: p.check.trim(), why: p.why.trim() };
+    });
+  }
   return {
     headline: obj.headline.trim(),
+    verdict,
     claim: obj.claim.trim(),
     risk: obj.risk.trim(),
     steps: obj.steps.map((p) => p.trim()),
+    priority,
   };
 }
 
@@ -206,7 +233,8 @@ export function auditReading(reading, payload) {
   // word, or the score figure next to the word "score", fails it too.
   const labelRe = new RegExp(`\\b${payload.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
   const scoreNumRe = new RegExp(`\\b${payload.score}\\b`);
-  if (hReasons.length === 0 && (labelRe.test(headline) || (/\bscore\b/i.test(headline) && scoreNumRe.test(headline)))) {
+  const restates = (s) => labelRe.test(s) || (/\bscore\b/i.test(s) && scoreNumRe.test(s));
+  if (hReasons.length === 0 && restates(headline)) {
     hReasons.push("restates the score or the label");
   }
   if (hReasons.length) {
@@ -214,12 +242,50 @@ export function auditReading(reading, payload) {
     headline = payload.verdict;
   }
 
+  // The verdict is the model's purpose judgement — audited like the
+  // headline: no invented figures, and no restating the deterministic
+  // label it is meant to weigh against the purpose.
+  let verdict = reading.verdict;
+  if (verdict != null) {
+    const vReasons = stringViolations(verdict, allowedFigures, allowedNames);
+    if (vReasons.length === 0 && restates(verdict)) vReasons.push("restates the score or the label");
+    if (vReasons.length) {
+      dropped.push({ field: "verdict", reason: vReasons.join("; ") });
+      verdict = null;
+    }
+  }
+
   const claim = keep("claim", reading.claim);
   const risk = keep("risk", reading.risk);
   const steps = reading.steps.filter((s) => keep("steps", s) !== null);
 
+  // The plan is a decision over the report's own vocabulary: an entry that
+  // names a check the report does not have, or smuggles in a figure, is
+  // dropped rather than repaired.
+  const checkNames = new Set(payload.checks.map((c) => c.name));
+  const priority = [];
+  for (const p of reading.priority ?? []) {
+    if (!checkNames.has(p.check)) {
+      dropped.push({ field: "priority", reason: `unknown check: "${p.check}"` });
+      continue;
+    }
+    const reasons = stringViolations(p.why, allowedFigures, allowedNames);
+    if (reasons.length) {
+      dropped.push({ field: "priority", reason: reasons.join("; ") });
+      continue;
+    }
+    priority.push(p);
+  }
+
   return {
-    reading: { headline, claim, risk, steps },
+    reading: {
+      headline,
+      verdict,
+      claim,
+      risk,
+      steps,
+      priority: priority.length ? priority : null,
+    },
     dropped,
     narrated: claim !== null && risk !== null && steps.length > 0,
   };

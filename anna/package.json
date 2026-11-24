@@ -5,7 +5,7 @@
   "type": "module",
   "description": "DataBard \u2014 Anna App. Saved data-health reading of a pasted CSV. Bundle-only (no executas). Isolated from the parent Next.js toolchain.",
   "scripts": {
-    "test": "node --test test/scorer.mjs test/reading.mjs test/recovery.mjs test/dither.mjs && node test/smoke.mjs",
+    "test": "node --test test/scorer.mjs test/reading.mjs test/repair.mjs test/recovery.mjs test/dither.mjs test/compare.mjs && node test/smoke.mjs",
     "test:browser": "node test/browser-qa.mjs"
   },
   "devDependencies": {

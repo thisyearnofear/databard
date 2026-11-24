@@ -10,6 +10,8 @@ import {
   SAMPLES,
 } from "./community-health.js";
 import { reportPayload, readReport, TONES, PURPOSES, PURPOSE_LABELS, quotaMessage } from "./reading.js";
+import { planRepair } from "./repair.js";
+import { snapshotOf, diffSnapshots } from "./compare.js";
 import {
   readActiveTask,
   writeCheckpoint,
@@ -60,6 +62,12 @@ const els = {
   doc: $("result-doc"),
   btnCopy: $("btn-copy"),
   btnAgain: $("btn-again"),
+  repairBlock: $("repair-block"),
+  repairSummary: $("repair-summary"),
+  repairChanges: $("repair-changes"),
+  btnRepairCopy: $("btn-repair-copy"),
+  btnRepairDownload: $("btn-repair-download"),
+  repairStatus: $("repair-status"),
   btnCancelRun: $("btn-cancel-run"),
   saveWarn: $("save-warn"),
   btnSaveRetry: $("btn-save-retry"),
@@ -78,6 +86,8 @@ let tone = "straight";
 let purpose = null; // required — Run refuses without it
 let lastContext = null; // {payload, tone, purpose} for Retry
 let currentResult = null; // record for copy
+let cleanCsv = null; // cleaned copy of the sheet in this session only
+let cleanKey = null; // record.at the cleaned copy belongs to
 let lastRecord = null;
 let pendingRecord = null;
 
@@ -92,6 +102,10 @@ function showError(message) {
 
 function scoreToneClass(score) {
   return score >= 80 ? "good" : score >= 50 ? "warn" : "bad"; // same thresholds as score-tone.ts
+}
+
+function sinceAgo(days) {
+  return days <= 0 ? "earlier today" : days === 1 ? "yesterday" : `${days} days ago`;
 }
 
 const CHECK_ICON = { pass: "pass", partial: "warning", fail: "fail" };
@@ -258,7 +272,7 @@ function wire() {
   for (const b of els.purposeBtns) b.onclick = () => setPurpose(b.dataset.purpose);
   els.btnAgain.onclick = () => showScreen("input");
   els.btnReadingRetry.onclick = () => {
-    if (lastContext) runReading(lastContext.payload, lastContext.tone, lastContext.purpose);
+    if (lastContext) runReading(lastContext.payload, lastContext.tone, lastContext.purpose, lastContext.repair);
   };
   els.btnCancelRun.onclick = () => { activeRunId = null; showScreen("input"); };
   els.btnSaveRetry.onclick = async () => {
@@ -271,10 +285,12 @@ function wire() {
   };
   els.btnErrorHome.onclick = () => showScreen("input");
   els.btnErrorRetry.onclick = () => {
-    if (lastContext) runReading(lastContext.payload, lastContext.tone, lastContext.purpose);
+    if (lastContext) runReading(lastContext.payload, lastContext.tone, lastContext.purpose, lastContext.repair);
     else showScreen("input");
   };
   els.btnLast.onclick = () => { if (lastRecord) renderResult(lastRecord); };
+  els.btnRepairCopy.onclick = copyCleanCsv;
+  els.btnRepairDownload.onclick = downloadCleanCsv;
   els.btnCopy.onclick = () => {
     if (!currentResult) return;
     navigator.clipboard?.writeText(resultAsText(currentResult)).then(
@@ -330,24 +346,55 @@ function wire() {
     }
     const report = analyzeCommunityData(header, rows);
     const payload = reportPayload(report);
-    lastContext = { payload, tone, purpose };
-    runReading(payload, tone, purpose);
+    const repair = planRepair(header, rows);
+    lastContext = { payload, tone, purpose, repair };
+    runReading(payload, tone, purpose, repair);
   };
 }
 
 // ── run ─────────────────────────────────────────────────────────────────
 
-async function runReading(payload, runTone, runPurpose) {
+async function runReading(payload, runTone, runPurpose, repair = null) {
   const runId = `run-${Date.now()}`;
   activeRunId = runId;
   els.feed.replaceChildren();
   feed("scored", `${payload.score} / 100 — ${payload.label}; ${payload.rowCount} rows × ${payload.columnCount} columns`);
+  if (repair?.changed) feed("repaired", repair.summary);
   showScreen("run");
+
+  // The cleaned copy lives in this session only — the record carries the
+  // change log (counts and column names), never a row.
+  cleanCsv = repair?.csv ?? null;
+  cleanKey = null;
+  const repairSummary = repair
+    ? {
+        summary: repair.summary,
+        changes: repair.changes,
+        before: repair.before,
+        after: repair.after,
+        duplicateCount: repair.duplicateCount,
+        emptyDropped: repair.emptyDropped,
+      }
+    : null;
+
+  // Compare with the previous saved check of the same sheet. The diff is
+  // computed here; it rides inside the model payload so its numbers may be
+  // cited — and audited — like any other report figure. A different sheet
+  // yields no diff rather than a meaningless one.
+  const prev = await readLastReading(anna).catch(() => null);
+  const since = prev?.payload
+    ? diffSnapshots(snapshotOf(prev.payload, prev.at), snapshotOf(payload))
+    : null;
+  if (since) {
+    feed("since", since.changed
+      ? `${since.entries.length} change${since.entries.length === 1 ? "" : "s"} since your check ${sinceAgo(since.days)}`
+      : `same sheet as your check ${sinceAgo(since.days)} — nothing moved`);
+  }
 
   try {
     await writeCheckpoint(anna, { v: 1, id: runId, stage: "reading", tone: runTone, purpose: runPurpose, payload }).catch(() => {});
     feed("drafting", `asking the model for a reading for ${PURPOSE_LABELS[runPurpose] ?? "this purpose"}`);
-    const out = await readReport(anna, payload, runTone, runPurpose);
+    const out = await readReport(anna, since ? { ...payload, sinceLast: since } : payload, runTone, runPurpose);
     if (activeRunId !== runId) return;
 
     const record = {
@@ -357,7 +404,10 @@ async function runReading(payload, runTone, runPurpose) {
       tone: runTone,
       purpose: runPurpose,
       at: Date.now(),
+      repair: repairSummary,
+      sinceLast: since,
     };
+    cleanKey = record.at;
     try {
       await saveReading(anna, record);
       await clearCheckpoint(anna);
@@ -378,7 +428,7 @@ async function runReading(payload, runTone, runPurpose) {
     if (quota) {
       // the deterministic report is the honest result — show it with the
       // quota numbers and a Retry instead of an error screen
-      const record = { payload, reading: null, narrated: false, tone: runTone, purpose: runPurpose, at: Date.now(), quotaNote: quota };
+      const record = { payload, reading: null, narrated: false, tone: runTone, purpose: runPurpose, at: Date.now(), quotaNote: quota, repair: repairSummary, sinceLast: since };
       currentResult = record;
       renderResult(record);
       return;
@@ -421,18 +471,42 @@ function renderResult(record) {
   // the reading is the hero
   if (narrated && reading) {
     els.doc.append(el("h2", "reading-head", reading.headline));
+    if (reading.verdict) {
+      // the model's purpose verdict — the call the score alone cannot make
+      els.doc.append(el("span", "kicker", `Verdict — ${PURPOSE_LABELS[record.purpose] ?? "this purpose"}`));
+      els.doc.append(el("p", "verdict-line", reading.verdict));
+    }
     els.doc.append(el("span", "kicker", "What you can say"));
     els.doc.append(el("p", "pull-quote", reading.claim));
     els.doc.append(el("span", "kicker warn", "What goes wrong as-is"));
     els.doc.append(el("p", "risk-line", reading.risk));
-    els.doc.append(el("span", "kicker", "Fix in this order"));
-    const ol = el("ol", "steps");
-    for (const st of reading.steps) ol.append(stepNode(st));
-    els.doc.append(ol);
+    if (reading.priority?.length) {
+      // the model's ordering over the report's own checks — a decision,
+      // not a narration, and audited against the check list above
+      els.doc.append(el("span", "kicker", "Fix in this order"));
+      const ol = el("ol", "steps");
+      for (const p of reading.priority) {
+        const li = el("li", "step");
+        li.append(el("code", "chip", p.check), document.createTextNode(` ${p.why}`));
+        ol.append(li);
+      }
+      els.doc.append(ol);
+      els.doc.append(el("span", "kicker", "How"));
+      const ul = el("ul", "plain");
+      for (const st of reading.steps) ul.append(stepNode(st));
+      els.doc.append(ul);
+    } else {
+      els.doc.append(el("span", "kicker", "Fix in this order"));
+      const ol = el("ol", "steps");
+      for (const st of reading.steps) ol.append(stepNode(st));
+      els.doc.append(ol);
+    }
   } else {
     els.doc.append(el("h2", "", payload.verdict));
     els.doc.append(el("p", "unnarrated", record.quotaNote ?? "The reading could not be checked against your numbers, so it is not shown."));
   }
+
+  renderSince(record);
 
   // deterministic checks + columns sit below as the evidence
   els.doc.append(el("hr", "rule"));
@@ -480,7 +554,89 @@ function renderResult(record) {
   els.doc.append(table);
 
   currentResult = record;
+  renderRepair(record);
   showScreen("result");
+}
+
+/** The since-last-check strip: a deterministic diff of this run against the
+ *  previous saved check of the same sheet. Absent for a first run or a
+ *  different sheet — a diff across two different lists would be a lie. */
+function renderSince(record) {
+  const since = record?.sinceLast;
+  if (!since) return;
+  els.doc.append(el("hr", "rule"));
+  els.doc.append(el("span", "kicker", `Since your last check · ${sinceAgo(since.days)}`));
+  if (!since.changed) {
+    els.doc.append(el("p", "unnarrated", "Same sheet — nothing moved."));
+    return;
+  }
+  const ul = el("ul", "since-list");
+  for (const e of since.entries) {
+    const li = el("li", "since-row");
+    li.append(
+      el("span", "since-label", e.label),
+      el("span", `since-delta ${e.good ? "good" : "bad"}`, `${e.from} → ${e.to}`),
+    );
+    ul.append(li);
+  }
+  els.doc.append(ul);
+}
+
+/** The cleaned-copy block: the change log always shows; copy/download only
+ *  when this session still holds the cleaned file (rows are never stored). */
+function renderRepair(record) {
+  const r = record?.repair;
+  els.repairBlock.hidden = !r;
+  els.repairStatus.hidden = true;
+  if (!r) return;
+  els.repairSummary.textContent = r.summary;
+  els.repairChanges.replaceChildren();
+  for (const c of r.changes ?? []) els.repairChanges.append(el("li", "", c.text));
+  const canSave = Boolean(cleanCsv) && cleanKey === record.at;
+  els.btnRepairCopy.hidden = !canSave;
+  els.btnRepairDownload.hidden = !canSave;
+}
+
+function repairStatus(msg) {
+  els.repairStatus.textContent = msg;
+  els.repairStatus.hidden = !msg;
+}
+
+async function copyCleanCsv() {
+  if (!cleanCsv) return;
+  try {
+    await navigator.clipboard.writeText(cleanCsv);
+    repairStatus("Cleaned CSV copied.");
+  } catch {
+    // clipboard needs permission in some iframes — fall back to a selection
+    const ta = document.createElement("textarea");
+    ta.value = cleanCsv;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.append(ta);
+    ta.select();
+    const ok = document.execCommand?.("copy");
+    ta.remove();
+    repairStatus(ok ? "Cleaned CSV copied." : "Copy is blocked here — use Download.");
+  }
+}
+
+function downloadCleanCsv() {
+  if (!cleanCsv) return;
+  try {
+    const url = URL.createObjectURL(new Blob([cleanCsv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "databard-cleaned.csv";
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    repairStatus("Cleaned CSV downloaded.");
+  } catch {
+    repairStatus("Download is blocked here — use Copy.");
+  }
 }
 
 function resultAsText(record) {
@@ -497,14 +653,31 @@ function resultAsText(record) {
     "READING",
   ];
   if (narrated && reading) {
+    lines.push(reading.headline, "");
+    if (reading.verdict) {
+      lines.push(`Verdict — ${PURPOSE_LABELS[record.purpose] ?? "this purpose"}:`, reading.verdict, "");
+    }
     lines.push(
-      reading.headline, "",
       "What you can say:", reading.claim, "",
       "What goes wrong as-is:", reading.risk, "",
-      "Fix in this order:", ...reading.steps.map((s, i) => `${i + 1}. ${s}`),
     );
+    if (reading.priority?.length) {
+      lines.push("Fix in this order:", ...reading.priority.map((p, i) => `${i + 1}. ${p.check} — ${p.why}`), "");
+    }
+    lines.push("How:", ...reading.steps.map((s, i) => `${i + 1}. ${s}`));
   } else {
     lines.push("The reading could not be checked against the numbers, so it is not shown.");
+  }
+  if (record.sinceLast) {
+    lines.push("", `SINCE YOUR LAST CHECK (${sinceAgo(record.sinceLast.days)})`);
+    if (record.sinceLast.changed) {
+      lines.push(...record.sinceLast.entries.map((e) => `- ${e.label}: ${e.from} → ${e.to}`));
+    } else {
+      lines.push("Same sheet — nothing moved.");
+    }
+  }
+  if (record.repair?.changed) {
+    lines.push("", "CLEANED COPY", record.repair.summary, ...record.repair.changes.map((c) => `- ${c.text}`));
   }
   if (payload.findings.length) lines.push("", "FINDINGS", ...payload.findings.map((f) => `- ${f}`));
   if (payload.actions.length) lines.push("", "ACTIONS", ...payload.actions.map((a) => `- ${a}`));
@@ -516,7 +689,7 @@ async function refreshLast() {
     const record = await readLastReading(anna);
     if (record?.payload) {
       lastRecord = record;
-      els.lastLine.textContent = `${record.payload.verdict} — score ${record.payload.score}`;
+      els.lastLine.textContent = `${record.reading?.verdict ?? record.payload.verdict} — score ${record.payload.score}`;
       els.lastCard.hidden = false;
       return;
     }

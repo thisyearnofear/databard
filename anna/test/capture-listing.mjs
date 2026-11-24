@@ -28,14 +28,6 @@ async function waitScreen(id, tries = 60) {
   throw new Error(`screen ${id} never appeared (at ${await screen()})`);
 }
 
-const freezeClock = (iso) => fev(`d=>{
-  const T=${JSON.stringify(iso)};
-  const R=window.__RealDate ?? (window.__RealDate=Date);
-  const t=new R(T).getTime();
-  function F(...a){ return a.length? new R(...a) : new R(t); }
-  F.now=()=>t; F.parse=R.parse; F.UTC=R.UTC; F.prototype=R.prototype;
-  window.Date=F; return true}`);
-
 async function shot(name, expected, width, height) {
   await waitScreen(expected);
   // set the width FIRST, then measure the content bottom at that width —
@@ -58,9 +50,10 @@ async function runRecording(name, shots) {
   const replies = rec.replies.map((r) => ({ text: r.content.text, stopReason: r.stopReason ?? "endTurn" }));
   if ((shots.running ?? []).length && replies.length) replies[0].delayMs = 1200;
   await post("/__script", { responses: replies });
-  await cli("open", BASE);
+  // the clock is pinned in index.html BEFORE the bundle loads, so the
+  // relative sample dates and the recorded reading agree
+  await cli("open", `${BASE}?clock=${encodeURIComponent(rec.recordedAt)}`);
   await waitScreen("screen-input");
-  await freezeClock(rec.recordedAt);
   for (const [n, w, h] of shots.before ?? []) await shot(n, "screen-input", w, h);
   const idx = SAMPLE_INDEX[rec.sample] ?? 0;
   await fev(`d=>{[...d.querySelectorAll(".sample-btn")][${idx}].click();return true}`);
@@ -88,14 +81,15 @@ try {
   await cli("set", "media", "dark"); // databard's listing is its dark scheme — pinned, not machine-dependent
 
   const messy = await runRecording("messy-sponsor-straight", {
-    before: [["home-1280.png", 1280, 800], ["home-390.png", 390, 844]],
-    running: [["run-1280.png", 1280, 800], ["run-390.png", 390, 844]],
-    result: [["result-messy-1280.png", 1280, 800], ["result-messy-390.png", 390, 844]],
+    // window width, not website width — the Anna window is 520×560
+    before: [["home-520.png", 520, 560], ["home-390.png", 390, 700]],
+    running: [["run-520.png", 520, 560]],
+    result: [["result-messy-520.png", 520, 620], ["result-messy-390.png", 390, 700]],
   });
   console.log("messy:", messy ? `narrated=${messy.narrated}` : "NOT SAVED");
 
   const stale = await runRecording("stale-handover-roast", {
-    result: [["result-stale-1280.png", 1280, 800], ["result-stale-390.png", 390, 844]],
+    result: [["result-stale-520.png", 520, 620]],
   });
   console.log("stale:", stale ? `narrated=${stale.narrated}` : "NOT SAVED");
 } finally {

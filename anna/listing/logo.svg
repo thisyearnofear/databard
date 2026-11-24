@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="DataBard">
+  <!-- DataBard store mark: the score gauge from the product, in the dither
+       register. Full-bleed dark so the store can mask it. -->
+  <defs>
+    <pattern id="dither" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#a855f7"/>
+      <circle cx="2" cy="2" r="1.5" fill="#d8b4fe"/>
+      <circle cx="6" cy="6" r="1.5" fill="#6d28d9"/>
+      <circle cx="2" cy="6" r="0.9" fill="#8b5cf6"/>
+    </pattern>
+  </defs>
+
+  <rect width="512" height="512" fill="#150f20"/>
+
+  <!-- track -->
+  <path d="M 70 372 A 186 186 0 0 1 442 372"
+        fill="none" stroke="#372a4d" stroke-width="36" stroke-linecap="round"/>
+
+  <!-- filled to 86 of 100 — the same score band the app calls Good -->
+  <path d="M 70 372 A 186 186 0 0 1 442 372"
+        fill="none" stroke="url(#dither)" stroke-width="36" stroke-linecap="round"
+        stroke-dasharray="503 585"/>
+</svg>

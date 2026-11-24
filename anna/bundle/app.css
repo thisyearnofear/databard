@@ -30,6 +30,15 @@
 
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  /* Anna's mobile shell injects --anna-safe-area-*; env() is the fallback
+     when the bundle runs in a plain browser. Both are 0 on desktop, so
+     applying them is always safe (Anna mobile checklist). */
+  --safe-top: var(--anna-safe-area-top, env(safe-area-inset-top, 0px));
+  --safe-right: var(--anna-safe-area-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--anna-safe-area-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--anna-safe-area-left, env(safe-area-inset-left, 0px));
+  --tap: 44px;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -81,14 +90,17 @@ h2 { font-size: clamp(20px, 4.6vw, 26px); margin: 0 0 14px; line-height: 1.15; }
 
 .topbar {
   position: sticky; top: 0; z-index: 10;
-  padding: 10px 14px;
+  padding: calc(10px + var(--safe-top)) calc(14px + var(--safe-right)) 10px calc(14px + var(--safe-left));
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
 #startup-panel { padding: 44px 20px; text-align: center; color: var(--text-muted); }
 .hint { font-size: 12px; color: var(--text-muted); }
 
-main { display: block; max-width: 660px; margin: 0 auto; padding: 0 16px 40px; }
+main {
+  display: block; max-width: 660px; margin: 0 auto;
+  padding: 0 calc(16px + var(--safe-right)) calc(40px + var(--safe-bottom)) calc(16px + var(--safe-left));
+}
 
 .banner {
   margin: 14px 0 0;
@@ -121,12 +133,15 @@ main { display: block; max-width: 660px; margin: 0 auto; padding: 0 16px 40px; }
 }
 .sample-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 
-.purpose, .tone, .ghost-btn, .sample-btn {
+.purpose, .tone, .ghost-btn, .sample-btn, .file-btn {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-size: 11px;
   letter-spacing: 0.06em;
   padding: 9px 13px;
-  min-height: 36px;
+  min-height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -134,6 +149,7 @@ main { display: block; max-width: 660px; margin: 0 auto; padding: 0 16px 40px; }
   cursor: pointer;
   transition: color var(--dur-s) var(--ease-out), border-color var(--dur-s) var(--ease-out);
 }
+.file-btn { color: var(--text); }
 .purpose:hover, .tone:hover, .ghost-btn:hover, .sample-btn:hover { color: var(--text); border-color: var(--text-muted); }
 .purpose.on, .tone.on { color: var(--text); border-color: var(--accent); }
 .control-strip { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 16px; align-items: center; }
@@ -155,20 +171,23 @@ main { display: block; max-width: 660px; margin: 0 auto; padding: 0 16px 40px; }
 .primary:active { transform: translateY(1px); }
 
 button.textlink, .textlink {
-  background: none; border: none; padding: 8px 0; min-height: 40px;
+  background: none; border: none; padding: 8px 0; min-height: var(--tap);
   font: inherit; color: var(--accent-light);
   text-decoration: underline; text-decoration-style: dotted; cursor: pointer;
 }
 
 /* run feed — terminal lines, no spinner */
 .feed { margin-top: 12px; }
-.feed p {
+.feed p, .feed-row {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-size: 12px; color: var(--text-muted);
   margin: 0; padding: 5px 0;
   border-bottom: 1px dashed var(--border);
   animation: row-in var(--dur-m) var(--ease-out) both;
 }
+.feed-row { display: flex; gap: 10px; align-items: baseline; }
+.feed-row .kicker { flex: none; min-width: 62px; }
+.feed-note { flex: 1; min-width: 0; }
 @keyframes row-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .caret { animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
@@ -222,6 +241,28 @@ button.textlink, .textlink {
   color: var(--text-muted);
   font-size: 13px;
 }
+.verdict-line {
+  margin: 6px 0 14px;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent-light);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* the since-last-check strip — a deterministic diff, good/bad coloured */
+.since-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.since-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 5px 0; border-bottom: 1px dashed var(--border);
+  font-size: 12.5px;
+}
+.since-label { color: var(--text); }
+.since-delta {
+  font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;
+  white-space: nowrap; color: var(--text-muted);
+}
+.since-delta.good { color: var(--success); }
+.since-delta.bad { color: var(--danger); }
 .steps { margin: 8px 0 0; padding-left: 22px; counter-reset: step; }
 .steps .step { margin-bottom: 7px; }
 .chip {
@@ -235,6 +276,19 @@ button.textlink, .textlink {
 }
 
 .rule { border: none; border-top: 1px solid var(--border); margin: 18px 0 10px; }
+
+/* cleaned copy — the repair happens in the window; this block is its receipt */
+.repair-block {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+}
+.repair-summary { margin: 6px 0 8px; font-size: 13px; color: var(--text); }
+.repair-changes { margin: 0 0 10px; }
+.repair-changes li { font-size: 12.5px; color: var(--text-muted); }
+.repair-changes li strong { color: var(--text); font-weight: 600; }
+.repair-block .row-actions { gap: 10px; }
 
 .check-row { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px dashed var(--border); }
 .check-state { width: 18px; flex: none; display: inline-flex; align-items: center; }

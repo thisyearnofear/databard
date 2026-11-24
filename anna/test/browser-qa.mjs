@@ -56,6 +56,7 @@ const fresh = async (suffix = "") => {
 
 const GOOD = JSON.stringify({
   headline: 'The "email" column is the whole story',
+  verdict: 'Sendable once the "email" duplicate is merged.',
   claim: "You can defend 9 unique members once the 1 duplicate in \"email\" is merged.",
   risk: "Sending as-is bounces the 1 malformed address and double-counts a member.",
   steps: ["Merge the duplicate rows in \"email\".", "Fix the malformed entry in \"email\"."],
@@ -435,6 +436,82 @@ try {
     await cli("set", "viewport", "1024", "800");
   });
 
+  await ok("mobile checklist: no viewport meta, safe-area tokens, 44px targets", async () => {
+    await fresh();
+    await cli("set", "viewport", "320", "568");
+    await waitScreen("screen-input");
+    assert.equal(await ev('document.querySelectorAll("meta[name=viewport]").length'), 0,
+      "the shell injects the viewport meta; the bundle must not declare one");
+    const cssText = await ev(`[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules].map(r=>r.cssText)}catch{return []}}).join("\\n")`);
+    assert.ok(cssText.includes("--anna-safe-area-top"), "safe-area custom property missing");
+    assert.ok(cssText.includes("safe-area-inset-top"), "env() fallback missing");
+    const small = await ev(`[...document.querySelectorAll(".purpose,.tone,.ghost-btn,.sample-btn,.file-btn,.textlink,.primary")]
+      .filter(n=>n.offsetParent!==null)
+      .map(n=>({id:n.id||n.className,h:Math.round(n.getBoundingClientRect().height)}))
+      .filter(x=>x.h<44)`);
+    assert.deepEqual(small, [], "interactive controls under 44px at 320px");
+    await cli("set", "viewport", "1024", "800");
+  });
+
+  await ok("the cleaned copy renders with a change log and no cell values", async () => {
+    await fresh();
+    await post("/__script", { responses: [{ text: GOOD }] });
+    await waitScreen("screen-input");
+    await pickSample(0);
+    await pickPurpose();
+    await clickRun();
+    await waitScreen("screen-result", 80);
+    assert.equal(await ev('document.getElementById("repair-block").hidden'), false, "repair block hidden");
+    const summary = await ev('document.getElementById("repair-summary").textContent');
+    assert.ok(summary.trim().length > 0, "empty repair summary");
+    const items = await ev('[...document.querySelectorAll("#repair-changes li")].map(n=>n.textContent)');
+    assert.ok(items.length > 0, "no change log entries");
+    assert.ok(!items.join(" ").includes("@"), "change log leaked an email");
+    assert.equal(await ev('document.getElementById("btn-repair-copy").hidden'), false, "copy button hidden");
+    // reopening the saved record keeps the log but not the rows
+    await cli("open", "about:blank");
+    await sleep(300);
+    await cli("open", BASE);
+    await sleep(1200);
+    await waitScreen("screen-input");
+    await ev('document.getElementById("btn-last-reading").click()');
+    await waitScreen("screen-result", 40);
+    assert.equal(await ev('document.getElementById("repair-block").hidden'), false, "restored log hidden");
+    assert.equal(await ev('document.getElementById("btn-repair-download").hidden'), true, "download offered without rows");
+  });
+
+  await ok("a second check of the same sheet shows what moved — and a third says nothing did", async () => {
+    await fresh();
+    await post("/__script", { responses: [{ text: GOOD }, { text: GOOD }, { text: GOOD }] });
+    await waitScreen("screen-input");
+    await ev('document.getElementById("csv-input").value="name,email\\nA Person,a@example.org\\nB Person,not-an-email\\n"');
+    await pickPurpose();
+    await clickRun();
+    await waitScreen("screen-result", 80);
+    // second run — same columns, the malformed email fixed
+    await ev('document.getElementById("btn-again").click()');
+    await waitScreen("screen-input");
+    await ev('document.getElementById("csv-input").value="name,email\\nA Person,a@example.org\\nB Person,b@example.org\\n"');
+    await clickRun();
+    await waitScreen("screen-result", 80);
+    const doc = await ev('document.getElementById("result-doc").textContent');
+    assert.ok(doc.includes("Since your last check"), "diff strip missing");
+    const rows = await ev('[...document.querySelectorAll("#result-doc .since-row")].map(n=>n.textContent)');
+    assert.ok(rows.length > 0, "no diff entries");
+    assert.ok(rows.join("|").includes("→"), "no from → to shown");
+    // third run — the identical sheet diffs to an honest "nothing moved"
+    await ev('document.getElementById("btn-again").click()');
+    await waitScreen("screen-input");
+    await ev('document.getElementById("csv-input").value="name,email\\nA Person,a@example.org\\nB Person,b@example.org\\n"');
+    await clickRun();
+    await waitScreen("screen-result", 80);
+    assert.ok((await ev('document.getElementById("result-doc").textContent')).includes("nothing moved"),
+      "an identical sheet should report no change");
+    // the diff numbers ride inside the model payload — the wire carried them
+    const wire = JSON.stringify((await post("/__dump")).llmCalls);
+    assert.ok(wire.includes("sinceLast"), "the model never saw the diff");
+  });
+
   await ok("keyboard-only flow, focus rings, fonts and motion are deliberate", async () => {
     await fresh();
     await post("/__script", { responses: [{ text: GOOD }] });
@@ -463,6 +540,7 @@ try {
       const n=document.querySelector("#result-doc ."+c); return n? n.getBoundingClientRect().top : -1}).join("|")`);
     const tops = order.split("|").map(Number);
     assert.ok(tops.every((t) => t > 0) && tops[0] < tops[1] && tops[1] < tops[2] && tops[2] < tops[3], order);
+    assert.ok(await ev('document.querySelector("#result-doc .verdict-line")!==null'), "purpose verdict missing");
   });
 
   await ok("the gauge canvas is sized right and the numeral sits inside it", async () => {

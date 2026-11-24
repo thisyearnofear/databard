@@ -1,6 +1,6 @@
 {
   "model": "Beam-1.0-501B-A23B",
-  "recordedAt": "2026-11-16T20:29:34.270Z",
+  "recordedAt": "2026-11-24T13:19:01.816Z",
   "sample": "stale",
   "purpose": "handover",
   "tone": "roast",
@@ -8,7 +8,7 @@
     {
       "content": {
         "type": "text",
-        "text": "{\"headline\":\"The spreadsheet stopped 231 days ago: 7 rows, only 5 contactable emails.\",\"claim\":\"You can hand over 7 complete, unique rows; 5 of 7 emails are contactable, 2 are malformed, and the newest \\\"joined\\\" date is 231 days old.\",\"risk\":\"If used as-is, 2 of 7 emails bounce and the recipient gets a list whose \\\"joined\\\" column stopped 231 days ago.\",\"steps\":[\"Fix or remove the 2 malformed addresses in \\\"email\\\" before handing over the list.\",\"Rebuild the capture flow behind \\\"joined\\\"; its newest entry is 231 days old.\"]}"
+        "text": "{\"headline\":\"The spreadsheet has 7 names and 5 working emails, all at least 231 days old.\",\"verdict\":\"Hand it over as a stale 7-row artifact with 5 usable emails, not as a current member list.\",\"claim\":\"You can truthfully transfer 7 unique rows with no empty cells and no duplicate emails, but only 5 of those emails are usable and the newest joined date is 231 days old.\",\"risk\":\"The recipient may treat 7 names as active members, email 2 malformed addresses, and plan around a list whose newest joined date is 231 days old.\",\"steps\":[\"Fix or remove the 2 malformed values in \\\"email\\\" before anyone sends or quotes counts.\",\"Rebuild the capture flow; the newest \\\"joined\\\" date is 231 days old.\",\"Hand over only the 5 contactable rows until the capture flow is rebuilt.\"],\"priority\":[{\"check\":\"Emails are deliverable-shaped\",\"why\":\"Handing over bad email values makes the list unusable for contact.\"},{\"check\":\"Recently active\",\"why\":\"The newest dated entry is 231 days old, so the handoff is stale.\"}]}"
       },
       "stopReason": "endTurn"
     }

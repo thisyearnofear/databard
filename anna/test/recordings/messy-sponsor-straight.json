@@ -1,6 +1,6 @@
 {
   "model": "Beam-1.0-501B-A23B",
-  "recordedAt": "2026-11-16T20:29:13.276Z",
+  "recordedAt": "2026-11-24T13:18:31.611Z",
   "sample": "messy",
   "purpose": "sponsor",
   "tone": "straight",
@@ -8,7 +8,7 @@
     {
       "content": {
         "type": "text",
-        "text": "{\"headline\": \"Report 9 unique members, not 10 rows.\", \"claim\": \"You can report 9 unique members today; the 10 rows include 1 duplicate email and 1 malformed email, and 90% of cells are filled.\", \"risk\": \"If used as-is, membership is overstated by 1 duplicate email and 1 of 10 emails is malformed, so outreach can bounce.\", \"steps\": [\"Merge the duplicate in \\\"email\\\" before reporting membership numbers to sponsors.\", \"Fix or remove the malformed email in \\\"email\\\" before the next send.\"]}"
+        "text": "{\"headline\": \"The list has 9 unique members, not 10 rows.\", \"verdict\": \"Emailable as-is, but its row count overstates unique members for sponsor reporting.\", \"claim\": \"You can report 9 unique members and 9 contactable from 10 rows; 90% of cells are filled and \\\"notes\\\" is at 50%.\", \"risk\": \"Using 10 rows as the member count overstates unique membership by 1; 1 malformed \\\"email\\\" is not deliverable-shaped.\", \"steps\": [\"Merge duplicate \\\"email\\\" rows so membership is reported as 9, not 10.\", \"Fix or remove the malformed \\\"email\\\" before quoting contactable reach.\", \"Fill missing \\\"notes\\\" and \\\"joined_at\\\" cells before quoting record completeness.\"], \"priority\": [{\"check\": \"No duplicate members\", \"why\": \"Duplicate emails inflate the member count used for sponsor reporting.\"}, {\"check\": \"Emails are deliverable-shaped\", \"why\": \"Malformed emails make contact counts unreliable for sponsor reporting.\"}, {\"check\": \"Fields filled in\", \"why\": \"Missing fields weaken the completeness numbers quoted to sponsors.\"}, {\"check\": \"Recently active\", \"why\": \"The newest dated entry is 53 days old, so activity claims need care.\"}]}"
       },
       "stopReason": "endTurn"
     }
