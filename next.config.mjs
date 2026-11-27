@@ -7,6 +7,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
+    agentUpgrade: "security",
     // Reduce parallelism during static generation to stay within memory limits
     workerThreads: false,
     cpus: 1,
