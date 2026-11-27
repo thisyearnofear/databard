@@ -21,9 +21,9 @@ briefings remain as a supporting surface.
   X Layer), $0.25 `probe` (service-quality oracle, repriced for the relist),
   `writeback`, `tools` discovery. ChatGPT plugin: free `health_check` via
   Streamable HTTP at `/mcp` (Oct 7; usage-only scoreboard). Published probe
-  verdicts at `/probe/verdicts` (cron-gated). Listed on OKX.AI (relist pending
-  after Sep de-listing, `approvalStatus: 6`); Monid adapter shipped. Real calls
-  happening; volume unproven.
+  verdicts at `/probe/verdicts` (cron-gated). OKX.AI relist resubmitted Nov 27
+  (round 4 — structured service-info fix, `approvalStatus: 3` under final
+  review); Monid adapter shipped. Real calls happening; volume unproven.
 - **Kept, supporting:** the wizard (trimmed Oct 2 after prod data confirmed
   near-zero usage of dead actions; connect dbt, catalogs, Dune, subgraphs,
   DataHub, Monid → synthesis + optional audio briefing), Pro digests, alerts.

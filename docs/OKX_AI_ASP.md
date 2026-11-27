@@ -55,8 +55,8 @@ settlement so funds flow to the same place OKX associates with the builder.
 
 ## Deploy state
 
-- **Commit:** `92cba6a` ("Add A2MCP endpoints for OKX.AI ASP marketplace")
-- **Release:** `20260728_021040` on `snel-bot` (PM2 reloaded, health check 200)
+- **Commit:** `707f50f` (Nov 27, 2026 — includes Next.js 16.4.6 security upgrade)
+- **Release:** `20261127_141629` on `snel-bot` (PM2 reloaded, health check 200)
 - **Live URL:** `https://databard.persidian.com`
 - **Bundle:** 85.3MB (under 90MB warn threshold; x402 server SDK + viem traced in)
 - **Env vars** (in `/opt/databard/.env` on the server, symlinked per release):
@@ -97,12 +97,28 @@ grep -i payment-required /tmp/h.txt | cut -d: -f2- | tr -d ' \r' | base64 -d | j
 7. **2026-07-28 ~03:13 UTC** — `okx-a2a doctor --fix --json` → 8/8 checks pass, identity #9878 added to A2A runtime (activeClients=3).
 8. **2026-07-28 ~03:14 UTC** — `agent activate --agent-id 9878 --preferred-language en-US` → submitApproval succeeded (approvalStatus: 2 → 3, "Listing under review", AI quality "suggested pass").
 
+8. **2026-11-27** — Round-4 resubmission. Root cause this time: NOT the
+   timeout — the platform moved to structured service-information review and
+   the on-file `reqExample` values were broken (literal `__DACS_SCHEMA_FQN__`
+   placeholders; Briefing's token = the USDT0 contract address). Fix: both
+   services updated with accurate `inputSchema` + working examples
+   (Health Check `{"demo": true}`, Briefing `{}`) + Briefing description
+   rewritten to match delivery. Update tx
+   `0x7716a69366974aa20c062aa7efcaa0193be803f64082ef194ca2e3bc84ac93bb`,
+   then `agent activate` → `approvalStatus` 6 → 3 (under final review).
+   Paid x402 path verified same day with a $0.25 probe smoke (settlement
+   tx `0xfc10494dab3fcf3dfc1e4ccf9d095ee5ffa516b27af4b1102a402f801005973c`).
+   Run update/activate ON THE VPS — correct owner session + a2a runtime live
+   there; CLI 4.6.13, a2a-node 0.2.19. See AGENTS.md round-4 entry for the
+   full lessons list.
+
 ## Remaining steps (user actions)
 
-1. **Wait for OKX final approval** — status flips from "under review" to "listed". Check:
+1. **Wait for OKX final approval** — resubmitted Nov 27 (round 4), review
+   usually completes within two days per the submission notice. Check ON THE VPS:
    ```bash
-   onchainos agent get-agents --agent-ids 9878
-   # look for approvalDisplayStatus / statusLabel flipping to "listed"
+   ssh snel-bot 'export PATH="$HOME/.local/bin:$PATH"; onchainos agent service-list --agent-id 9878'
+   # approvalStatus 3 → 4 means listed; 6 means rejected again (read approvalRemark)
    ```
 2. **Record a 90s X demo post** with `#OKXAI` — see shot list below.
 3. **Submit the [OKX.AI Genesis Hackathon Google form](https://forms.gle/mddEUagmDbyV37ws8)** (deadline was Jul 28 23:59 UTC; CoinLive reported an extension to Jul 28 — verify before submitting). The form asks for ASP details + a link to the X post.

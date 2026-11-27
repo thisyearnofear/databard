@@ -299,10 +299,45 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
   the named services, answering `freshness: live|partial|cached` + per-service
   `fresh`/`checkedAt` (`fresh:false` opts out). Unit-tested:
   `tests/briefing-live.unit.ts` (10 tests, in `test:unit`). Relist pending.
+  NOTE: the `syncSettle:false` mention above is stale — async settlement was
+  tried and reverted the same day: verified payments settled nothing. Source
+  of truth is `src/lib/x402.ts` (`syncSettle:true`, guarded by
+  `tests/briefing-config.unit.ts`).
+- **Round-4 rejection root cause + RESUBMITTED (Nov 27, 2026):** the round-3+
+  rejection remark was NOT the timeout anymore — the platform had moved to
+  structured service-information review ("Update Service" flow): the on-file
+  `reqExample` for Health Check still carried literal placeholders
+  (`__DACS_SCHEMA_FQN__`/`__DACS_TOKEN__`) and Briefing's was garbage (token =
+  USDT0 contract address, FQN = a URL), so the reviewer could not complete a
+  test call. Fix shipped Nov 27: production deployed to `707f50f` (incl. the
+  Next.js 16.4.6 security upgrade), then both services updated via
+  `agent update` with accurate `inputSchema` (matching `parseMcpInput` /
+  `parseBriefingRequest` reality — everything optional), working `reqExample`
+  (Health Check `{"demo": true}` → complete labelled demo in ~0.14s; Briefing
+  `{}` → whole-marketplace text briefing ~1s after payment), and the Briefing
+  description rewritten to match what it actually delivers (marketplace
+  intelligence or schema synthesis; audio opt-in). Update tx
+  `0x7716a69366974aa20c062aa7efcaa0193be803f64082ef194ca2e3bc84ac93bb`;
+  re-activated → `approvalStatus` 6 → 3 (under final review). Lessons:
+  - `agent update --service` DOES pass through `method`/`reqType`/
+    `inputSchema`/`reqExample` keys even though `--help` doesn't document them
+    (verified round-trip via `service-list`).
+  - The update/activate commands must run ON THE VPS (`snel-bot`,
+    `~/.local/bin` on PATH): the correct owner-account session lives there
+    (email login) AND `agent update` hard-requires a ready okx-a2a runtime,
+    which is not installed on the Mac. VPS CLI was upgraded 4.6.2 → 4.6.13
+    (`npx -y @okxweb3/onchainos-installer install` — `preflight` is deprecated)
+    and a2a-node 0.2.16 → 0.2.19 (`npm install -g --prefix ~/.local` — the
+    default npm prefix `/usr` is root-owned and EACCES-fails).
+  - `okx-a2a doctor --fix` installs a systemd user unit — uninstall it again
+    (`okx-a2a daemon autostart uninstall`); PM2 is the supervisor per
+    OPERATIONS.md.
+  - Paid x402 path re-verified post-deploy with a $0.25 probe smoke: HTTP 200,
+    settlement success, tx `0xfc10494dab3fcf3dfc1e4ccf9d095ee5ffa516b27af4b1102a402f801005973c`.
 Before resubmitting: deploy, run the self-check above against prod, then
 resubmit the listing through the Agent conversation as the email instructs.
 
-### Registration status (registered; listing currently NOT live — see de-listing note above)
+### Registration status (registered; resubmitted Nov 27, 2026 — under final review, approvalStatus 3)
 - **ASP identity #9878** — `DataBard`, registered on X Layer (chainIndex 196).
   - Owner address: `0x5e32740122999bb98a50055d68593f94d2a0711e` (Agentic Wallet, `papaandthejimjams@gmail.com`).
   - Create tx: `0xcb9d3fd178b0b90ee1a9553f4431359d2906afad50c68deafc261e5c65d4019d`
@@ -321,7 +356,7 @@ resubmit the listing through the Agent conversation as the email instructs.
 - Local `.env` is gitignored; the deploy script never ships it. Never dump env into repo files either (`*.bak` / `.env.bak*` are gitignored as a backstop — Sep 2026: a plaintext `.env.bak` with live keys sat unignored in the root until deleted). Never `npm install` on `snel-bot` for this app.
 
 ### Remaining steps (user actions)
-1. ~~Wait for OKX final approval~~ Listed Sep 8, 2026 — **de-listed by Sep 23 (approvalStatus 6); relist pending.**
+1. ~~Wait for OKX final approval~~ Listed Sep 8, 2026 — de-listed by Sep 23 (approvalStatus 6); **resubmitted Nov 27 after the round-4 structured-info fix — watch `onchainos agent service-list --agent-id 9878` on the VPS for approvalStatus flipping 3 → 4 (listed).**
 2. Record a 90s X demo post with `#OKXAI` — see `docs/OKX_AI_ASP.md` for the shot list.
 3. Submit the [OKX.AI Genesis Hackathon Google form](https://forms.gle/mddEUagmDbyV37ws8) (deadline was Jul 28 23:59 UTC; may be extended — verify before submitting).
 
