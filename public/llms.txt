@@ -37,11 +37,13 @@ tab-bound transport.
 ## Probe Receipts — BNB Chain validation (pre-deployment)
 
 Canonical single-shot Probe evidence artifacts are under `/probe/receipts/`;
-the machine-readable manifest is `/probe/receipts/manifest.json`. These are
-measurement artifacts only. No BNB `ProbeReceiptRegistry` contract address has
-been published yet — do not send a transaction based on this file, and do not
-treat this as BNB x402 support. When deployed, this section will carry the exact
-verified contract address and `requestProbe` calldata instructions.
+the machine-readable manifest is `/probe/receipts/manifest.json`. Current MCP
+artifacts measure `tools/list` interface health only: they do not invoke tools
+or prove tool-output correctness. These are measurement artifacts only. No BNB
+`ProbeReceiptRegistry` contract address has been published yet — do not send a
+transaction based on this file, and do not treat this as BNB x402 support.
+When deployed, this section will carry the exact verified contract address and
+`requestProbe` calldata instructions.
 
 ## Humans
 

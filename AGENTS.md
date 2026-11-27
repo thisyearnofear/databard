@@ -5,11 +5,11 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 
 ## Build & Dev Commands
 - `npm run dev` — start dev server on localhost:3000
-- `npm run build` — production build (83 static pages) + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
+- `npm run build` — production build + bundle size guard. Requires `DATABARD_DATA_DIR` set (the `data-dir.ts` guard throws in production mode without it); locally use `DATABARD_DATA_DIR=/tmp/databard-build-data npm run build`
 - `npx tsc --noEmit` — type check only
 - `npm run test:e2e` — Playwright E2E tests (chromium + Mobile Safari)
 - `npm run scorecard` — virality ladder scorecard (`scripts/ladder-scorecard.mjs`; reads `DATABARD_DATA_DIR`/`./data`, see `docs/GTM.md`)
-- `npm run test:unit` — surface-rules guard + rate-limit, datahub-adapter, fleet-analysis, account, score-card, serial-queue, monid-adapter (`package.json`)
+- `npm run test:unit` — surface-rules guard + unit suite including rate-limit, adapters, receipts, probe-runner/probe-receipt, marketplace, editions, and scorecard tests (`package.json` is authoritative)
 - `npm run check:surfaces` — enforces docs/DESIGN.md mechanical rules (no emoji, no hardcoded hex, noopener on _blank links); runs first in test:unit
 - `./scripts/deploy.sh` — local build → tarball → `snel-bot` (`/opt/databard`), PM2 reload, health gate, installs `ensure-running` cron. Do **not** `npm install` on the box.
 - `npx playwright install` — install required browsers
@@ -19,13 +19,14 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 ## Bundle Size Guard
 The build runs `scripts/check-bundle-size.mjs` after `prepare-standalone.mjs`.
 It fails the build if `.next/standalone/` exceeds 120MB or if `contracts/` or
-`video/` directories appear in the standalone output. Current healthy size:
-~69MB. It had drifted to ~107MB because libs reading via `path.join(process.cwd(), …)`
-made the file tracer include the whole project root (demo-assets, screenshots-review,
+`video/` directories appear in the standalone output. It had drifted to ~107MB
+because libs reading via `path.join(process.cwd(), …)` made the file tracer
+include the whole project root (demo-assets, screenshots-review,
 test-results) in API route bundles — fixed by scoping `outputFileTracingExcludes` to
 `"*"` in `next.config.mjs`. Keep `public/` traced: demo fixtures read episode MP3s from
 it at runtime, and the binary filter in `prepare-standalone.mjs` strips them from its
-own copy. Warn threshold 90MB. If the guard fails, check `outputFileTracingExcludes` in
+own copy. Current healthy size after the Next.js 16.4.6 security upgrade: ~80MB.
+Warn threshold 90MB. If the guard fails, check `outputFileTracingExcludes` in
 `next.config.mjs` and the binary asset filter in `prepare-standalone.mjs`.
 
 ## Production Environment
