@@ -334,6 +334,19 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
     OPERATIONS.md.
   - Paid x402 path re-verified post-deploy with a $0.25 probe smoke: HTTP 200,
     settlement success, tx `0xfc10494dab3fcf3dfc1e4ccf9d095ee5ffa516b27af4b1102a402f801005973c`.
+- **Briefing repositioned mid-review (Nov 27, same day):** competitive analysis
+  against the Probe marketplace index (153 services) showed the buyer majority
+  is finance agents, not data teams — 36 paid finance services, 21 of them
+  degraded/broken/unreachable at measurement time (58% blind-payment failure
+  rate; degraded services charging up to $199). The Data Briefing description
+  was rewritten buyer-first: "which marketplace services are actually
+  delivering right now — measured live, not self-reported — before you spend
+  on signals, research, or yield data". Update tx
+  `0x860f07552641a3d21278c1179c4c5bb6657402ee5725ae5256cf4c5a5966db6e` —
+  approvalStatus stayed 3 (review not reset). External landscape finding:
+  x402 Bazaar/TraceRank rank by payment flow (popularity), ERC-8004 reputation
+  is self-reported feedback — nobody else measures service quality; Probe is
+  structurally differentiated but distribution is the bottleneck, as always.
 Before resubmitting: deploy, run the self-check above against prod, then
 resubmit the listing through the Agent conversation as the email instructs.
 
