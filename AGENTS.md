@@ -336,9 +336,14 @@ error. A reviewer with no credentials could never succeed. Fixes (in code):
     settlement success, tx `0xfc10494dab3fcf3dfc1e4ccf9d095ee5ffa516b27af4b1102a402f801005973c`.
 - **Briefing repositioned mid-review (Nov 27, same day):** competitive analysis
   against the Probe marketplace index (153 services) showed the buyer majority
-  is finance agents, not data teams — 36 paid finance services, 21 of them
-  degraded/broken/unreachable at measurement time (58% blind-payment failure
-  rate; degraded services charging up to $199). The Data Briefing description
+  is finance agents, not data teams. Corrected figure (Nov 27 evening, after
+  hand-verification — an earlier draft of this note said "21 of 36, 58%", which
+  was wrong): 36 paid finance services, 11 failed the interface probe, and
+  hand-re-checking all 11 from a second independent network confirmed 10 hard
+  failures (dead DNS, 5xx, replicated timeouts — including the $50/$199 海豚
+  endpoints) plus 1 reachable service flagged for payment-gate integrity. The
+  honest claim is "~30% undeliverable at the interface level, replicated from
+  two networks", never "agents lose the bet X% of the time". The Data Briefing description
   was rewritten buyer-first: "which marketplace services are actually
   delivering right now — measured live, not self-reported — before you spend
   on signals, research, or yield data". Update tx

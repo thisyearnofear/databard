@@ -1,0 +1,178 @@
+{
+ "kind": "databard.probe.deep-check.v1",
+ "checkedAt": "2026-11-27T17:36:36.524Z",
+ "subject": {
+  "endpoint": "https://mcp.barker.money/barker_pool_detail",
+  "serviceName": "Barker Pool Detail",
+  "feeUsd": 0.005
+ },
+ "methodology": {
+  "summary": "Paid correctness verification: positive control cross-checked against independent ground truth (DefiLlama), negative control tests fabrication on nonexistent input.",
+  "caveat": "One-shot paid measurement. APY values drift over time; small divergence from ground truth is expected and reflected in the verdict rubric."
+ },
+ "positiveControl": {
+  "poolUid": "spark_susdc_arbitrum",
+  "url": "https://mcp.barker.money/barker_pool_detail?pool_uid=spark_susdc_arbitrum",
+  "unpaidStatus": 402,
+  "paidStatus": 200,
+  "latencyMs": 2519,
+  "settlementTx": "0x53757a2104e213f33ce4f07c57a8e8b1b8d2ee58f65260a8b6674b83bc2ef159",
+  "body": {
+   "source": "defi",
+   "pool_uid": "spark_susdc_arbitrum",
+   "pool_name": "Spark Savings USDC",
+   "pool_url": null,
+   "protocol_uid": "spark",
+   "protocol_name": "Spark",
+   "chain_uid": "arbitrum",
+   "chain_name": "Arbitrum",
+   "asset_symbol": "USDC",
+   "asset_master_uid": "usdc",
+   "apy_total": 3.8,
+   "apy_base": 3.8,
+   "apy_reward": null,
+   "apy_30d": 3.8,
+   "tvl_usd": 317529679.08172077,
+   "supply_token_address": "0x940098b108fb7d0a7e374f6eded7760787464609",
+   "supply_token_type": "canonical",
+   "chain_id": 42161,
+   "is_composable": true,
+   "execution_adapters": [
+    "lifi"
+   ],
+   "curator_uid": null,
+   "curator_name": null,
+   "curators": [],
+   "signals": {
+    "apy_outlier": false,
+    "stale": false,
+    "low_tvl": false,
+    "apy_7d": 3.8,
+    "apy_30d": 3.8,
+    "apy_vs_30d_ratio": 0.9998,
+    "rate_semantics": "trailing_return",
+    "time_semantics": "trailing_short",
+    "return_profile": "steady",
+    "tvl_available_usd": null,
+    "tvl_available_ratio": null,
+    "utilization_rate": null,
+    "cap_reached": false,
+    "maturity_timestamp": null,
+    "redemption": null,
+    "rewards": null,
+    "costs": null,
+    "stability": {
+     "samples": 29,
+     "days_observed": 29,
+     "apy_mean": 0.038,
+     "apy_stddev": 0,
+     "apy_variation": 0.0006,
+     "apy_min": 0.0379,
+     "apy_max": 0.0381
+    },
+    "concerns": []
+   },
+   "updated_at": "2026-11-27 15:28:08.986178+00",
+   "display": {
+    "title": "Spark \u00b7 Spark Savings USDC",
+    "apy_text": "3.80%",
+    "apy_base_text": null,
+    "apy_reward_text": null,
+    "tvl_text": "$317.5M",
+    "asset_text": "USDC",
+    "venue_label": "\u534f\u8bae",
+    "venue_value": "Spark",
+    "chain_text": "Arbitrum",
+    "window_text": null,
+    "lock_text": "\u7075\u6d3b\uff0c\u968f\u65f6\u8d4e\u56de",
+    "amount_text": null,
+    "executable_text": "\u652f\u6301 Agent wallet \u76f4\u63a5\u5b58\u5165",
+    "quota_text": null,
+    "reason": "DeFi \u6c60\u5b50\uff0c\u9002\u5408\u7ed3\u5408 TVL\u3001\u94fe\u548c\u534f\u8bae\u98ce\u9669\u4e00\u8d77\u6bd4\u8f83\u3002"
+   },
+   "links": {
+    "barker_url": "https://app.barker.money/protocols/spark",
+    "app_url": "https://app.barker.money/protocols/spark",
+    "external_url": null,
+    "announcement_url": null
+   },
+   "barker_agent": {
+    "note": "For richer data and a smoother experience, meet Barker's yield agent.",
+    "url": "https://app.barker.money/agent"
+   }
+  },
+  "apyClaims": [
+   3.8,
+   3.8,
+   3.8,
+   3.8,
+   3.8,
+   0.9998,
+   0.038,
+   0.0006,
+   0.0379,
+   0.0381
+  ],
+  "tvlClaims": [
+   317529679.08172077
+  ]
+ },
+ "negativeControl": {
+  "poolUid": "nonexistent_pool_deepcheck_control",
+  "unpaidStatus": 404,
+  "paidStatus": null,
+  "fabricated": false,
+  "bodySnippet": "\"\""
+ },
+ "groundTruth": {
+  "source": "https://yields.llama.fi/pools",
+  "note": "DefiLlama does not track an sUSDC-Arbitrum pool under that exact symbol; the Spark Savings Rate is a unified cross-chain rate, so the consensus rate across spark-savings USDC/USDS entries is the correct cross-check. TVL is not directly comparable across assets and is excluded from the verdict.",
+  "sparkSavingsRateConsensusPct": [
+   3.8
+  ],
+  "entries": [
+   {
+    "chain": "Arbitrum",
+    "symbol": "USDS",
+    "apy": 3.8,
+    "tvlUsd": 477301471
+   },
+   {
+    "chain": "Ethereum",
+    "symbol": "USDC",
+    "apy": 3.8,
+    "tvlUsd": 193428376
+   },
+   {
+    "chain": "Xlayer",
+    "symbol": "USDC",
+    "apy": 3.8,
+    "tvlUsd": 63943698
+   },
+   {
+    "chain": "Base",
+    "symbol": "USDS",
+    "apy": 3.8,
+    "tvlUsd": 12104952
+   },
+   {
+    "chain": "Avalanche",
+    "symbol": "USDC",
+    "apy": 0,
+    "tvlUsd": 97670
+   }
+  ]
+ },
+ "verdict": "match",
+ "verdictDetail": {
+  "apyClaimPct": 3.8,
+  "groundTruthRatePct": [
+   3.8
+  ],
+  "diffPp": 0.0,
+  "apyVerdict": "match",
+  "tvlNote": "Claimed TVL $317.5M for the sUSDC-Arbitrum pool could not be cross-checked: DefiLlama tracks no such pool under that symbol. Not counted for or against.",
+  "negativeControl": "nonexistent pool_uid returned 404 before payment \u2014 no charge, no fabricated data. Honest.",
+  "paymentTx": "0x53757a2104e213f33ce4f07c57a8e8b1b8d2ee58f65260a8b6674b83bc2ef159"
+ }
+}

@@ -516,3 +516,72 @@ Do not optimize only for the 30-address minimum.
   the exact probe request, but it does not prove tool-output correctness.
 - Whether contract-only projects can be included as honest unmeasured entries
   without diluting the meaning of a Probe receipt.
+
+## Skeptic review corrections — November 27, 2026 (evening)
+
+The pitch was fielded with critical reviewers before deployment. Their pushback
+and what changed:
+
+### The headline stat was wrong — corrected and hand-verified
+
+An earlier draft claimed "21 of 36 paid finance services degraded/broken/
+unreachable — agents lose the bet 58% of the time". Both the number and the
+inference were wrong. Corrected: of 36 paid finance services, **11 failed the
+interface probe**; all 11 were hand-re-checked from a second independent
+network (the VPS probes from its own network; the re-check ran from a separate
+residential network):
+
+- **10 hard failures replicated from both networks** — dead DNS/instant connect
+  failure (botmate ×2), server errors (530 entropicapi, 525 rootedge,
+  503 vivra, 502 unlockguard), 12s timeouts from both locations (haitun ×2 —
+  the $50 and $199 "trading agent" endpoints — and sangjiege ×2)
+- **1 misframed**: 美股AI半导体信号 is reachable (HTTP 200, ~270ms) — its
+  "degraded" label is a payment-gate-integrity finding (substantive payload,
+  no enforced 402), which is a marketplace-integrity issue, not buyer harm
+
+The honest claim: **~30% of paid finance services were undeliverable at the
+interface level at measurement time, replicated from two independent networks.**
+Never claim output incorrectness from interface failure; never infer "agents
+lose the bet" — a service can pass the probe and return garbage, and a
+correctly enforced x402 gate rejecting an unpaid probe is evidence the gate
+works, not a failure.
+
+### Deep-check: first paid correctness verification (the missing layer)
+
+`scripts/probe-deep-check.mts` — pays real money and verifies output
+correctness against independent ground truth, with positive AND negative
+controls. First run (tx cost $0.005):
+
+- **Subject**: Barker Pool Detail (`mcp.barker.money`), their own documented
+  example pool `spark_susdc_arbitrum`
+- **Positive control**: paid 402 → 200 in 2519ms, settlement tx
+  `0x53757a2104e213f33ce4f07c57a8e8b1b8d2ee58f65260a8b6674b83bc2ef159`.
+  Claimed APY **3.80%** vs DefiLlama Spark Savings Rate consensus **3.8%** —
+  verdict **match** (0.0pp diff). Claimed TVL $317.5M not cross-checkable
+  (DefiLlama tracks no sUSDC-Arbitrum pool under that symbol) — excluded from
+  verdict, not counted either way
+- **Negative control**: nonexistent pool_uid → 404 *before payment* — no
+  charge, no fabricated data. Honest
+- Artifact: `public/probe/receipts/deep-check-barker-pool-detail-ccce79806f.json`
+  (live at `/probe/receipts/…`, in the manifest)
+
+Notable: Barker rejects invalid input *before* issuing the x402 challenge —
+"no x402 challenge was issued and nothing was charged". That is what a
+well-built paid service looks like, and the deep-check can now say so with
+receipts.
+
+### Other corrections adopted
+
+- **Why on-chain, honestly**: timestamping and tamper-evidence for parties who
+  do not trust our server — the chain is the notary, not the oracle. An agent
+  can just call the API; most will. No grander claim.
+- **Demand signal honesty**: hackathon-window `requestProbe` transactions are
+  incentivized by the 30-address mechanic — they are not validation. Validation
+  is organic requests after the window closes.
+- **The wedge is high-stakes calls**: for a $0.01 call, burning the money is
+  cheaper than checking. The product is for agents about to spend dollars.
+- **Sharpened ask**: one question only — "before your agents pay a service,
+  would they read a measured receipt?"
+- **Methodology page hardened** (`/probe/marketplace` bottom): status-label
+  definitions, known false-positive sources, the two-network replication rule,
+  and a copy-pasteable re-check command so skeptics can verify in 30 seconds.
