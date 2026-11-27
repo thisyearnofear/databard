@@ -41,6 +41,26 @@ briefings remain as a supporting surface.
 - **Honest gaps:** no proven edition sales yet; league live-scan cron still
   open; user interviews still owed (Phase 7 debt, carried into Phase 11).
 
+## Active timeboxed validation (Nov 27 – Dec 9)
+
+The Binance Agent ID hackathon is a **validation candidate, not an entered
+commitment**. It is a distribution experiment for Probe receipts, not a roadmap
+change: enter only if the 48-hour contract-interaction, evidence-model, x402,
+and external-distribution gates in
+[`BINANCE_AGENT_ID_HACKATHON.md`](BINANCE_AGENT_ID_HACKATHON.md) pass by Nov 29.
+If they do not, skip the submission and at most publish the hackathon
+service-quality index as a Probe marketing artifact. Phase 11 user interviews
+and manual outreach remain the plan of record unless those gates prove a
+time-limited exception is worth taking.
+
+Validation progress on Nov 27: the Option B receipt/request contract is
+implemented and locally proven (including a real BSC fork simulation against
+the official Agent ID registry); the first Reckon/MintBeacon/Pokter receipt
+evidence artifacts exist under `public/probe/receipts/`; BNB x402 is cut from
+v1 unless Binance Web3 API credentials arrive; deployment, verification, and
+external-wallet traction remain unresolved. First-market scan:
+[`AGENT_ID_HACKATHON_INVENTORY.md`](AGENT_ID_HACKATHON_INVENTORY.md).
+
 ## History (compressed)
 
 | Phase | Era | Outcome |

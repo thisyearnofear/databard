@@ -14,6 +14,7 @@ DataBard is an AI data analyst that monitors your data estate, synthesises what 
 - `./scripts/deploy.sh` — local build → tarball → `snel-bot` (`/opt/databard`), PM2 reload, health gate, installs `ensure-running` cron. Do **not** `npm install` on the box.
 - `npx playwright install` — install required browsers
 - `npx playwright test --project=chromium` — run a single browser project
+- `cd contracts/probe-receipts && $HOME/.foundry/bin/forge test` — ProbeReceiptRegistry Solidity tests. Use the explicit `$HOME/.foundry/bin/forge` path on this machine: `~/.local/bin/forge` is a different AI CLI. If `lib/forge-std` is missing, clone `foundry-rs/forge-std` tag `v1.9.7` there first. Set `BSC_FORK_RPC_URL` to include the live-BSC fork validation.
 
 ## Bundle Size Guard
 The build runs `scripts/check-bundle-size.mjs` after `prepare-standalone.mjs`.
@@ -135,6 +136,11 @@ Scheduled digest emails use `src/lib/notifications.ts`. Two methods:
 - `src/lib/probe-runner.ts` — DataBard Probe: fetches & measures A2MCP endpoints, x402 client payment, returns ProbeMetrics
 - `src/lib/probe-scorer.ts` — composite 6-dimension quality score (schema, latency, freshness, price/value, reliability, credentials)
 - `src/lib/probe-attestation.ts` — writes verdict hash to X Layer via viem (zero-value self-send); signs with `PROBE_ATTESTATION_PK`, falling back to `PROBE_PAYER_PK`
+- `contracts/probe-receipts/` — Foundry project for the BNB Chain ProbeReceiptRegistry validation contract (Agent ID-gated `requestProbe`, publisher-only `publishReceipt`); see `docs/BINANCE_AGENT_ID_HACKATHON.md` runbook before deploying
+- `src/lib/probe-receipt.ts` — canonical Probe receipt evidence, subject/evidence hashes, status mapping, contract input construction
+- `scripts/probe-receipt-measure.mts` — measures first Agent ID ecosystem MCP candidates and writes canonical evidence JSON
+- `scripts/probe-receipt-request.mts` — prints zero-value `requestProbe` calldata for an Agent ID holder; never broadcasts
+- `scripts/publish-probe-receipt.mts` — dry-runs or explicitly broadcasts publisher receipt writes with `PROBE_RECEIPTS_*` env
 - `src/app/api/agent/probe/route.ts` — PAID A2MCP tool (x402, $0.25): probes candidate services, returns ranked verdict + cost receipt + optional on-chain attestation
 - `src/app/api/probe/preview/route.ts` — FREE preview of Probe (default candidates, outbound payments disabled, 10/hr rate limit) for browser demos
 - `src/app/probe/page.tsx` — Probe demo UI (question input, free preview, paid-endpoint check with 402 explainer, ranked result cards, cost + attestation)

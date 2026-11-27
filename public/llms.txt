@@ -2,7 +2,8 @@
 
 DataBard is an AI data analyst: connect a source, get health scores, trend
 narratives, and a 2-minute audio briefing. No email, no sales call — self-serve.
-Also listed on OKX.AI as ASP #9878 (health check, briefing, probe).
+The A2MCP endpoints below are the canonical integration surface (health check,
+briefing, probe); marketplace listing status can change independently.
 
 ## Direct integration (preferred — no credentials needed to try)
 
@@ -15,7 +16,7 @@ Also listed on OKX.AI as ASP #9878 (health check, briefing, probe).
 - Write findings back to DataHub: `POST /api/mcp/writeback`
 - Probe agent-service quality (free preview, no payment):
   `POST /api/probe/preview` with `{}` — add `{"stream": true}` for live NDJSON progress
-- Probe agent-service quality (paid, $1/call x402, optional on-chain verdict):
+- Probe agent-service quality (paid, $0.25/call x402 on X Layer, optional on-chain verdict):
   `POST /api/agent/probe` with `{}` or `{"attest": true}`
 
 Every paid tool returns a decision-ready payload: `summary` (quotable
@@ -32,6 +33,15 @@ Pages expose `databard_runDemoHealthCheck`, `databard_getTools`, and
 `databard_startConnect` via `document.modelContext` when the browser supports
 WebMCP (Chromium 146+ with #enable-webmcp-testing). Same tools as above,
 tab-bound transport.
+
+## Probe Receipts — BNB Chain validation (pre-deployment)
+
+Canonical single-shot Probe evidence artifacts are under `/probe/receipts/`;
+the machine-readable manifest is `/probe/receipts/manifest.json`. These are
+measurement artifacts only. No BNB `ProbeReceiptRegistry` contract address has
+been published yet — do not send a transaction based on this file, and do not
+treat this as BNB x402 support. When deployed, this section will carry the exact
+verified contract address and `requestProbe` calldata instructions.
 
 ## Humans
 

@@ -204,6 +204,8 @@ Free: demo, ad-hoc briefings, shared score cards, `/league`, leaderboard, health
 | [`docs/MONID_HACKATHON.md`](docs/MONID_HACKATHON.md) | Monid "We Kill" hackathon packet, kill framing, judging-criteria map |
 | [`docs/MONID_VIDEO_SCRIPT.md`](docs/MONID_VIDEO_SCRIPT.md) | Video script archive + current render/approval status |
 | [`docs/OKX_AI_ASP.md`](docs/OKX_AI_ASP.md) | OKX.AI ASP registration, listing review rounds, shot list |
+| [`docs/BINANCE_AGENT_ID_HACKATHON.md`](docs/BINANCE_AGENT_ID_HACKATHON.md) | Binance Agent ID opportunity, Probe wedge, validation gates, execution path |
+| [`docs/AGENT_ID_HACKATHON_INVENTORY.md`](docs/AGENT_ID_HACKATHON_INVENTORY.md) | First-market scan: measurable services, outreach candidates, competitive warnings |
 | [`docs/AZURE.md`](docs/AZURE.md) | Azure OpenAI + Container Apps migration guide |
 
 ---
