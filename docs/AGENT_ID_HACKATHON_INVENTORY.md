@@ -109,6 +109,85 @@ facts; do not imply end-to-end tool correctness from a `tools/list` probe.
 Do not ask targets to interact before the contract is verified. Never offer
 compensation for interactions.
 
+## Personalized outreach pack — November 27, 2026
+
+Evidence URLs are LIVE (verified 200). Rules: never offer compensation; do not
+ask for contract interaction until the registry is deployed + verified; the
+first-touch ask is consent/interest only. Adapt channel to target (GitHub
+issue/discussion, X DM, Telegram — whatever their repo/profile advertises).
+
+### 1. Reckon (measured — score 72, 1537ms tools/list)
+
+> Subject: Probe receipt for Reckon — measured Agent ID service evidence
+>
+> Hi — I'm validating Probe Receipts for the Agent ID ecosystem. We measured
+> Reckon's public MCP interface on Nov 27 as a single-shot interface-health
+> check: HTTP 200, 1537ms tools/list response. The exact evidence and
+> methodology: https://databard.persidian.com/probe/receipts/reckon-mcp-ad747ad662.json
+>
+> Honest scope: this is an interface-health measurement, not a review or proof
+> of tool-output correctness. We're preparing an Agent ID-gated receipt
+> registry where holders can request Probe measurement and measured receipts
+> get anchored on-chain. Would you like your receipt anchored once the
+> contract is live, or prefer to be left out of the public index?
+>
+> Happy to share raw request/response evidence and correct anything
+> mischaracterised.
+
+### 2. MintBeacon (measured — score 77, 362ms)
+
+Same structure; substitute: "HTTP 200, 362ms tools/list response" and
+https://databard.persidian.com/probe/receipts/mintbeacon-mcp-ca2e7b86d6.json
+
+### 3. Pokter (measured — score 77, 148ms; also the closest competitor)
+
+Same structure; substitute: "HTTP 200, 148ms tools/list response" and
+https://databard.persidian.com/probe/receipts/pokter-mcp-12b4993a5a.json
+Add one honest line for Pokter only:
+
+> You are the closest thing to a benchmark in this space — measured agent
+> reliability is your thesis too. If you see the measurement model differently,
+> I would rather hear it now than after the index ships.
+
+### 4. SINCOR (agent-card confirmed, not yet measured)
+
+> Subject: Agent ID service evidence — measuring SINCOR's public interface?
+>
+> Hi — I'm validating Probe Receipts for the Agent ID ecosystem: measured,
+> dated, checkable evidence about whether agent services are worth paying.
+> Your /.well-known/agent-card.json is live and machine-readable, which puts
+> you ahead of most of the hackathon field. Would you be open to us measuring
+> your public interface (single-shot, read-only, nothing stored beyond the
+> measurement) and anchoring the receipt in the Agent ID-gated registry once
+> it is live? Happy to share methodology and raw evidence first, and you can
+> opt out of the public index entirely.
+
+### 5. BGOAT (machine-readable manifest, not MCP)
+
+> Subject: Receipts for machine-readable agent services
+>
+> Hi — validating Probe Receipts for the Agent ID ecosystem. BGOAT already
+> publishes agent.json/agent.txt instructions, which is exactly the kind of
+> machine-readability the ecosystem needs more of. Your surface is not an MCP
+> endpoint, so we would not fake a quality measurement — but the registry can
+> carry an honest "machine-readable manifest verified" style receipt. Want in
+> once the contract is live, or prefer to sit out?
+
+### 6–9. sqrJOBS / Agent Delegate / AgentTrust / AgentBoard (contract-only)
+
+Hold until the registry is deployed — for contract-only projects the honest
+offer is a "contract interaction verified, service unmeasured" receipt page,
+and that page does not exist yet. Contact in the second wave, after deploy.
+
+## Send order + conversion path
+
+1. Send 1–3 today (measured, strongest evidence).
+2. When the registry is live + verified, follow up with exact interaction
+   instructions: one zero-value `requestProbe` contract call from their Agent
+   ID wallet — calldata printed by `scripts/probe-receipt-request.mts`.
+3. Log every reply (or non-reply after 48h) back into this file — the go/no-go
+   gate counts real external wallets, not sends.
+
 ## Next validation actions
 
 - Probe the three confirmed MCP services through the real Probe runner rather
