@@ -299,6 +299,32 @@ export default async function MarketplacePage({
               score.
             </li>
             <li>
+              <span className="text-[var(--text)] font-medium">What the status labels mean.</span>{" "}
+              Healthy: every measured check passed. Degraded: the service responds, but a measured
+              check failed or only partially passed (for example slow, stale, or a payment gate
+              that does not match the listed price). Broken: the server answers with an error
+              status, or the payment gate cannot be reached at all. Unreachable: DNS failure,
+              refused connection, or timeout. These labels describe the interface we measured —
+              not the correctness of whatever a paid call would return.
+            </li>
+            <li>
+              <span className="text-[var(--text)] font-medium">Known false-positive sources.</span>{" "}
+              A single-shot probe can fail for reasons that are not the service&apos;s fault:
+              rate limiting, geo-blocking, bot filtering, or the prober&apos;s own network. Before
+              a hard-failure label is published for a paid service we re-probe it from a second
+              independent network location; only failures replicated from both are reported as
+              broken or unreachable. A correctly enforced x402 gate that rejects our unpaid probe
+              is evidence the gate works, never a failure.
+            </li>
+            <li>
+              <span className="text-[var(--text)] font-medium">Re-check it yourself in 30 seconds.</span>{" "}
+              Every service detail page publishes the exact request we sent. Anyone can replicate
+              the availability measurement with one command, substituting the endpoint and the
+              published request body:{" "}
+              <code className="font-mono text-[11px]">{'curl -s -o /dev/null -w "%{http_code} %{time_total}s" -X POST <endpoint> -H "Content-Type: application/json" -d "<published request body>"'}</code>.
+              If your result differs from ours, that is a finding — tell us and we will correct the record.
+            </li>
+            <li>
               <span className="text-[var(--text)] font-medium">Ours — not ranked.</span>{" "}
               DataBard&apos;s own listings appear labelled and are excluded from every aggregate
               and ranking.
