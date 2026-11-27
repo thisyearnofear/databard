@@ -342,7 +342,7 @@ export async function probeEndpoint(
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "application/json, text/event-stream",
       },
     };
 
@@ -434,11 +434,11 @@ export async function probeEndpoint(
     try {
       parsed = JSON.parse(bodyText);
     } catch {
-      // Not JSON
+      parsed = parseSseJsonRpc(bodyText);
     }
 
     // Extract metrics from the response
-    const metrics = extractMetrics({
+    const metrics = extractProbeMetrics({
       reachable: true,
       statusCode,
       latencyMs,
@@ -549,7 +549,33 @@ export async function probeAll(
 
 // ── Metric extraction helpers ──────────────────────────────────────────────
 
-interface ExtractInput {
+/** Parse the last JSON-RPC object from an SSE body, including multi-line data events. */
+export function parseSseJsonRpc(bodyText: string): unknown {
+  let last: unknown = null;
+  for (const block of bodyText.split(/\r?\n\r?\n/)) {
+    const data = block
+      .split(/\r?\n/)
+      .filter((line) => line.trimStart().startsWith("data:"))
+      .map((line) => line.trimStart().slice(5).trimStart())
+      .join("\n");
+    if (!data) continue;
+    try {
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        (parsed.jsonrpc === "2.0" || parsed.result !== undefined || parsed.error !== undefined)
+      ) {
+        last = parsed;
+      }
+    } catch {
+      // Non-JSON SSE data is not probe evidence.
+    }
+  }
+  return last;
+}
+
+export interface ExtractInput {
   reachable: boolean;
   statusCode: number;
   latencyMs: number;
@@ -558,7 +584,7 @@ interface ExtractInput {
   knownPriceUsd: number | null;
 }
 
-function extractMetrics(input: ExtractInput): ProbeMetrics {
+export function extractProbeMetrics(input: ExtractInput): ProbeMetrics {
   const { reachable, statusCode, latencyMs, parsed, knownPriceUsd } = input;
 
   if (!reachable) {
@@ -579,7 +605,19 @@ function extractMetrics(input: ExtractInput): ProbeMetrics {
     };
   }
 
-  const obj = (parsed && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
+  const envelope = (parsed && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
+  // MCP Streamable HTTP endpoints answer JSON-RPC envelopes. Measure the
+  // result payload (for example result.tools from tools/list), not the outer
+  // jsonrpc/id wrapper, while still treating a top-level JSON-RPC error as an
+  // error below.
+  const obj = (
+    envelope.jsonrpc === "2.0" &&
+    envelope.result &&
+    typeof envelope.result === "object" &&
+    !Array.isArray(envelope.result)
+      ? envelope.result
+      : envelope
+  ) as Record<string, unknown>;
 
   // Detect A2MCP /tools response shape
   const hasInputSchema = detectInputSchema(obj);
@@ -599,6 +637,7 @@ function extractMetrics(input: ExtractInput): ProbeMetrics {
   // Error detection
   const hasError =
     statusCode >= 400 ||
+    envelope.error !== undefined ||
     obj.error !== undefined ||
     obj.ok === false;
 
@@ -688,6 +727,16 @@ function detectFreshness(obj: Record<string, unknown>): {
 
 function countFields(obj: Record<string, unknown>): number {
   const keys = Object.keys(obj);
+  const tools = obj.tools ?? obj.services ?? obj.endpoints;
+  if (Array.isArray(tools)) {
+    // Tool-listing responses are rich primarily because of their entries.
+    // Count a bounded amount of per-tool shape as well as the number of tools.
+    const perToolFields = tools.slice(0, 10).reduce((sum, tool) => {
+      if (!tool || typeof tool !== "object" || Array.isArray(tool)) return sum;
+      return sum + Object.keys(tool as Record<string, unknown>).length;
+    }, 0);
+    return keys.length + tools.length + perToolFields;
+  }
   // If there's a data/result payload, count its fields too
   const nested = obj.data ?? obj.result ?? obj.response ?? obj.payload;
   if (nested && typeof nested === "object" && !Array.isArray(nested)) {
