@@ -638,6 +638,12 @@ the manifest records both hashes; the publish pipeline re-verified end-to-end
 (dry-run simulation passes). `scripts/probe-deep-check.mts` artifacts are a
 different kind and are not subject to the registry binding.
 
+Public review artifact: https://github.com/thisyearnofear/databard/issues/1 —
+pre-deployment review round 2 request with commit-pinned links, pre-seeded
+analysis, run instructions, and the commitment to publish all findings. Drop
+this link in outreach rather than the raw contract; the public review log is
+itself a credibility asset for the submission.
+
 Deployment status: still not deployed. Blockers unchanged — publisher key
 funding (~0.02 BNB) and `BSCSCAN_API_KEY` for verification. Window extended:
 the real distribution sprint is Dec 1–7; outreach has been going out slowly
