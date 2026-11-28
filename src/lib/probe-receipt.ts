@@ -1,9 +1,11 @@
 /**
  * Probe Receipt evidence payloads for the BNB Chain ProbeReceiptRegistry.
  *
- * The receipt artifact is canonical JSON. Its sha256 is the bytes32 evidence
- * hash anchored on-chain; the subject hash is keccak256 of the canonical
- * subject URI enforced by the contract. Pure construction/validation helpers
+ * The receipt artifact is canonical JSON. Its sha256 is the contentHash;
+ * the evidenceHash anchored on-chain is the subject-bound commitment
+ * keccak256(abi.encode(subjectHash, contentHash)), computed by the contract
+ * itself so evidence can never be cross-paired with the wrong subject. Pure
+ * construction/validation helpers
  * live here so measurement, publication, and tests all use the same shape.
  */
 import { createHash } from "crypto";
@@ -72,13 +74,16 @@ export interface ReceiptContractInput {
   score: number;
   status: number;
   checkedAt: number;
-  evidenceHash: `0x${string}`;
+  contentHash: `0x${string}`;
   evidenceUri: string;
 }
 
 export interface ProbeReceiptArtifact {
   evidence: ProbeReceiptEvidence;
   canonicalJson: string;
+  /** sha256 of the canonical evidence JSON — what verifiers recompute from the bytes. */
+  contentHash: `0x${string}`;
+  /** subject-bound on-chain commitment: keccak256(abi.encode(subjectHash, contentHash)). */
   evidenceHash: `0x${string}`;
   contractInput: ReceiptContractInput;
 }
@@ -104,6 +109,13 @@ export function stableStringify(value: unknown): string {
 
 export function sha256Bytes32(payload: string): `0x${string}` {
   return ("0x" + createHash("sha256").update(payload).digest("hex")) as `0x${string}`;
+}
+
+/** Subject-bound evidence commitment, identical to the contract's own
+    computation: keccak256(abi.encode(subjectHash, contentHash)). For two
+    bytes32 words abi.encode is plain concatenation. */
+export function boundEvidenceHash(subjectHash: `0x${string}`, contentHash: `0x${string}`): `0x${string}` {
+  return keccak256((subjectHash + contentHash.slice(2)) as `0x${string}`);
 }
 
 /** Normalize the endpoint portion of a subject URI without changing its path meaning. */
@@ -223,7 +235,7 @@ export function createProbeReceiptArtifact(
   evidenceUri: string,
 ): ProbeReceiptArtifact {
   const canonicalJson = stableStringify(evidence);
-  const evidenceHash = sha256Bytes32(canonicalJson);
+  const contentHash = sha256Bytes32(canonicalJson);
   const checkedAt = Math.floor(Date.parse(evidence.measurement.measuredAt) / 1000);
   if (!Number.isFinite(checkedAt) || checkedAt <= 0) throw new Error("invalid measuredAt timestamp");
   if (!/^https:\/\//.test(evidenceUri)) throw new Error("evidenceUri must be an https URL");
@@ -232,17 +244,19 @@ export function createProbeReceiptArtifact(
   const score = Math.round(evidence.score.total);
   if (score < 0 || score > 100) throw new Error("score outside uint8 receipt range");
 
+  const subjectHash = subjectHashFor(evidence.subject.uri);
   return {
     evidence,
     canonicalJson,
-    evidenceHash,
+    contentHash,
+    evidenceHash: boundEvidenceHash(subjectHash, contentHash),
     contractInput: {
-      subjectHash: subjectHashFor(evidence.subject.uri),
+      subjectHash,
       subjectUri: evidence.subject.uri,
       score,
       status: RECEIPT_STATUS_CODES[evidence.assessment.status],
       checkedAt,
-      evidenceHash,
+      contentHash,
       evidenceUri,
     },
   };

@@ -144,7 +144,7 @@
               "internalType": "uint40"
             },
             {
-              "name": "evidenceHash",
+              "name": "contentHash",
               "type": "bytes32",
               "internalType": "bytes32"
             },
@@ -199,6 +199,11 @@
               "internalType": "uint8"
             },
             {
+              "name": "version",
+              "type": "uint32",
+              "internalType": "uint32"
+            },
+            {
               "name": "checkedAt",
               "type": "uint40",
               "internalType": "uint40"
@@ -207,6 +212,11 @@
               "name": "publishedAt",
               "type": "uint40",
               "internalType": "uint40"
+            },
+            {
+              "name": "contentHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
             },
             {
               "name": "evidenceHash",
@@ -356,6 +366,12 @@
           "internalType": "bytes32"
         },
         {
+          "name": "version",
+          "type": "uint32",
+          "indexed": false,
+          "internalType": "uint32"
+        },
+        {
           "name": "score",
           "type": "uint8",
           "indexed": false,
@@ -380,6 +396,12 @@
           "internalType": "uint40"
         },
         {
+          "name": "contentHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        },
+        {
           "name": "evidenceHash",
           "type": "bytes32",
           "indexed": false,
@@ -402,7 +424,7 @@
     },
     {
       "type": "error",
-      "name": "EmptyEvidenceHash",
+      "name": "EmptyContentHash",
       "inputs": []
     },
     {
@@ -433,6 +455,11 @@
     {
       "type": "error",
       "name": "NotPublisher",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "StaleReceipt",
       "inputs": []
     },
     {

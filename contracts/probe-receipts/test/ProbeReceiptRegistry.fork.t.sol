@@ -16,7 +16,11 @@ contract ProbeReceiptRegistryForkTest is Test {
             return;
         }
 
-        vm.createSelectFork(rpcUrl);
+        // Pin the fork block so the test is deterministic: if the reckon Agent ID
+        // is ever transferred/burned or the registry migrates, latest-block forking
+        // would break CI mysteriously. If the RPC cannot serve state this far back,
+        // use an archive endpoint via BSC_FORK_RPC_URL.
+        vm.createSelectFork(rpcUrl, 136200000);
         ProbeReceiptRegistry registry = new ProbeReceiptRegistry(BSC_AGENT_ID_REGISTRY);
         assertTrue(registry.hasAgentId(RECKON_AGENT_ID_OWNER));
 

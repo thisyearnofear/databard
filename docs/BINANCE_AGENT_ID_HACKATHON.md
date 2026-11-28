@@ -585,3 +585,60 @@ receipts.
 - **Methodology page hardened** (`/probe/marketplace` bottom): status-label
   definitions, known false-positive sources, the two-network replication rule,
   and a copy-pasteable re-check command so skeptics can verify in 30 seconds.
+
+## Contract hardening from external review — November 28, 2026
+
+A detailed external security review (plus DataBard's own second read) found the
+contract sound for purpose but surfaced five improvements, all implemented
+**before deployment** in the v2 revision (13/13 forge tests pass, including a
+pinned-block live BSC fork test):
+
+1. **Subject-bound evidence commitments.** The contract now computes
+   `evidenceHash = keccak256(abi.encode(subjectHash, contentHash))` itself,
+   where `contentHash = sha256(canonical evidence JSON)`. Evidence can never be
+   cross-paired with the wrong subject, even by publisher error. Off-chain
+   verification: fetch evidenceUri → canonicalize → sha256 → compare
+   contentHash → recompute evidenceHash → compare. The evidence document also
+   embeds the subject URI, so the binding is double-anchored.
+2. **Freshness monotonicity.** `publishReceipt` reverts with `StaleReceipt` if
+   the new `checkedAt` is older than the stored one — a receipt update can
+   never move the measurement backwards in time. Corrections re-measure.
+   (Same-timestamp republication of the same measurement remains allowed.)
+3. **Version counter.** Per-subject monotonic `version` in the receipt and in
+   `ReceiptPublished`, so indexers can detect replacements and ordering despite
+   overwrite storage semantics. The event log remains the permanent audit trail.
+4. **NatSpec-documented hash schemes and status codes** (1 healthy, 2 degraded,
+   3 broken, 4 unreachable; statuses describe the measured interface only).
+5. **Fork test pinned to block 136200000** — requires an archive-capable
+   `BSC_FORK_RPC_URL` (verified working: blastapi/meowrpc free endpoints;
+   publicnode and bsc-dataseed prune historical state).
+
+Review findings deliberately NOT adopted, with reasons:
+
+- **Multisig publisher (deferred, not rejected).** A 2-of-3 Safe as publisher
+  adds no rug surface and improves custody — but it is incompatible with
+  automated continuous publishing, which is how receipts are produced. Since
+  the registry is immutable, custody upgrades require redeployment to a new
+  address anyway; the honest phasing is hot key while publishing is automated,
+  documented and monitored, with the blast radius limited by the system's core
+  property: **the publisher can forge a score but cannot forge the evidence** —
+  every receipt links to publicly re-measurable evidence, so a forged receipt
+  is provably false. The design fails visible, not silent.
+- **Severity of the pre-fix evidence binding.** The reviewer rated the missing
+  on-chain binding Medium; the evidence document always embedded its subject
+  URI inside the hashed bytes, so cross-subject pairing was already detectable
+  off-chain and only the (already-trusted) publisher could exploit it. The fix
+  was implemented anyway because pre-deployment changes are cheap and the
+  commitment-level binding is cleaner cryptography.
+
+Pipeline updates: `createProbeReceiptArtifact` now emits `contentHash` plus the
+bound `evidenceHash`; the measure script derives hash-bearing filenames from
+contentHash (unchanged semantics — existing artifact filenames remain correct);
+the manifest records both hashes; the publish pipeline re-verified end-to-end
+(dry-run simulation passes). `scripts/probe-deep-check.mts` artifacts are a
+different kind and are not subject to the registry binding.
+
+Deployment status: still not deployed. Blockers unchanged — publisher key
+funding (~0.02 BNB) and `BSCSCAN_API_KEY` for verification. Window extended:
+the real distribution sprint is Dec 1–7; outreach has been going out slowly
+and ramps up now that the reviewed artifacts exist.

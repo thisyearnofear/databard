@@ -75,7 +75,7 @@ for (const result of results) {
   // The filename is hash-bearing, but the hash is computed over the canonical
   // evidence only — never over the URL at which the evidence is hosted.
   const provisional = createProbeReceiptArtifact(evidence, "https://evidence.invalid/pending.json");
-  const filename = `${slugify(result.candidate.name)}-${provisional.evidenceHash.slice(2, 12)}.json`;
+  const filename = `${slugify(result.candidate.name)}-${provisional.contentHash.slice(2, 12)}.json`;
   const evidenceUri = `${evidenceBaseUrl}/${filename}`;
   const artifact = createProbeReceiptArtifact(evidence, evidenceUri);
   const filePath = path.join(outDir, filename);
@@ -85,6 +85,7 @@ for (const result of results) {
     service: result.candidate.name,
     evidenceFile: path.relative(process.cwd(), filePath),
     evidenceUri,
+    contentHash: artifact.contentHash,
     evidenceHash: artifact.evidenceHash,
     subjectUri: evidence.subject.uri,
     subjectHash: artifact.contractInput.subjectHash,

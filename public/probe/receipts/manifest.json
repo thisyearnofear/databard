@@ -5,7 +5,7 @@
    "service": "Reckon MCP",
    "evidenceFile": "public/probe/receipts/reckon-mcp-ad747ad662.json",
    "evidenceUri": "https://databard.persidian.com/probe/receipts/reckon-mcp-ad747ad662.json",
-   "evidenceHash": "0xad747ad662ed15e99801b8e9e672495ee307614826df2b8321e23fddd28c1f24",
+   "evidenceHash": "0x42e141b85890a89a301bbdd4beae82f92d7efe92f0ce4e7529e2cde7e35ec385",
    "subjectUri": "probe:mcp:https://reckon.markets/api/mcp",
    "subjectHash": "0xfc6f66571e411e9a4050d4169fd0f97099234acdac65f0c93a8efcc86f13382a",
    "score": 72,
@@ -13,13 +13,14 @@
    "statusLabel": "healthy",
    "checkedAt": 1795786167,
    "httpStatus": 200,
-   "latencyMs": 1537
+   "latencyMs": 1537,
+   "contentHash": "0xad747ad662ed15e99801b8e9e672495ee307614826df2b8321e23fddd28c1f24"
   },
   {
    "service": "MintBeacon MCP",
    "evidenceFile": "public/probe/receipts/mintbeacon-mcp-ca2e7b86d6.json",
    "evidenceUri": "https://databard.persidian.com/probe/receipts/mintbeacon-mcp-ca2e7b86d6.json",
-   "evidenceHash": "0xca2e7b86d6d9f4ea9ffd4d65281c2d3ad6c8b536eb4b398de412a4b4fa107302",
+   "evidenceHash": "0xf841647d2308470c1c5e8afbeef405ea05c24cefca44988b01a473a3ebf3b6f8",
    "subjectUri": "probe:mcp:https://mintbeacon-mcp.wisp.uno/mcp",
    "subjectHash": "0x4f75c4b5f06211912738ada95656fc5b929adecfa46e77dc3efa19a3335e8484",
    "score": 77,
@@ -27,13 +28,14 @@
    "statusLabel": "healthy",
    "checkedAt": 1795786167,
    "httpStatus": 200,
-   "latencyMs": 362
+   "latencyMs": 362,
+   "contentHash": "0xca2e7b86d6d9f4ea9ffd4d65281c2d3ad6c8b536eb4b398de412a4b4fa107302"
   },
   {
    "service": "Pokter MCP",
    "evidenceFile": "public/probe/receipts/pokter-mcp-12b4993a5a.json",
    "evidenceUri": "https://databard.persidian.com/probe/receipts/pokter-mcp-12b4993a5a.json",
-   "evidenceHash": "0x12b4993a5aab8a2e670dbdb3725de8f572c36ae7f172844c99ce71bb6257e96e",
+   "evidenceHash": "0xee9ea530dcf96aad26c28e4ce3409d49071ca4aa1f068124a69651fafd513a94",
    "subjectUri": "probe:mcp:https://pokter.xyz/api/mcp",
    "subjectHash": "0x2aa1ccb2fc228980ae622a9ea8787459601c613931de52a38d11da39517b07e6",
    "score": 77,
@@ -41,10 +43,11 @@
    "statusLabel": "healthy",
    "checkedAt": 1795786167,
    "httpStatus": 200,
-   "latencyMs": 148
+   "latencyMs": 148,
+   "contentHash": "0x12b4993a5aab8a2e670dbdb3725de8f572c36ae7f172844c99ce71bb6257e96e"
   },
   {
-   "service": "Barker Pool Detail \u2014 deep-check (paid correctness verification)",
+   "service": "Barker Pool Detail — deep-check (paid correctness verification)",
    "evidenceFile": "public/probe/receipts/deep-check-barker-pool-detail-ccce79806f.json",
    "evidenceUri": "https://databard.persidian.com/probe/receipts/deep-check-barker-pool-detail-ccce79806f.json",
    "evidenceHash": "0x78aad97753b82676aec43feb046ddf4713617eebc4738cdbe836ea554b7d6ecb",
